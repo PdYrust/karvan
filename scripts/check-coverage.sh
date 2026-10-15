@@ -3,7 +3,7 @@
 set -euo pipefail
 
 min=80
-core="config secret store auth audit httpapi httpapi/middleware httpapi/handlers settings"
+core="config secret store auth audit settings httpapi httpapi/middleware httpapi/handlers httpapi/respond"
 
 cd "$(git rev-parse --show-toplevel)"
 out=$(go test -cover ./internal/... 2>&1) || { echo "$out"; exit 1; }
