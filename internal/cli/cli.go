@@ -15,6 +15,9 @@ type IO struct {
 	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
+	// StdoutIsTerminal is false when output goes to a pipe or a file, where
+	// one-time secrets could end up stored.
+	StdoutIsTerminal bool
 }
 
 type command struct {
@@ -28,6 +31,9 @@ var errUsage = errors.New("usage")
 
 func commands() []command {
 	return []command{
+		{name: "init", summary: "Set up a new installation and print the sign-in details once", run: runInit},
+		{name: "serve", summary: "Run the web panel", run: runServe},
+		{name: "reset", summary: "Regenerate the path, username, password or port; or turn two-step off", run: runReset},
 		{name: "version", summary: "Print version information", run: runVersion},
 	}
 }

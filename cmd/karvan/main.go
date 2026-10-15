@@ -11,8 +11,14 @@ import (
 
 func main() {
 	os.Exit(cli.Run(context.Background(), os.Args[1:], cli.IO{
-		Stdin:  os.Stdin,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
+		Stdin:            os.Stdin,
+		Stdout:           os.Stdout,
+		Stderr:           os.Stderr,
+		StdoutIsTerminal: isTerminal(os.Stdout),
 	}))
+}
+
+func isTerminal(f *os.File) bool {
+	info, err := f.Stat()
+	return err == nil && info.Mode()&os.ModeCharDevice != 0
 }
