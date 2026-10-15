@@ -1,0 +1,31 @@
+# Local working notes and reference sources
+.tmp/
+*.tmp
+
+# Local environment and secrets
+.env
+.env.*
+*.key
+*.pem
+
+# Build output
+/bin/
+/dist/
+web/dist/*
+!web/dist/.gitkeep
+coverage.out
+web/coverage/
+
+# Dependencies
+node_modules/
+
+# Local runtime data
+/data/
+*.db
+*.db-shm
+*.db-wal
+
+# Editors and OS
+.vscode/
+.idea/
+.DS_Store
