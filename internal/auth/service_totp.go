@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"errors"
 
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/secret"
@@ -57,20 +58,38 @@ func (s *Service) DisableTOTP(ctx context.Context, operatorID int64, password se
 	if err != nil {
 		return err
 	}
+	if wait, err := s.Limiter.Check(ctx, ip, op.Username); err != nil {
+		return err
+	} else if wait > 0 {
+		return &LockedError{RetryAfter: wait}
+	}
 	ok, err := VerifyPassword(op.PasswordHash, password.Reveal())
 	if err != nil {
 		return err
 	}
 	if !ok {
-		_ = s.record(ctx, op.Username, ip, audit.ActionTOTPDisable, audit.Failure, map[string]string{"reason": "bad_password"})
-		return ErrInvalidCredentials
+		return s.failDisable(ctx, op.Username, ip, "bad_password", ErrInvalidCredentials)
 	}
 	if err := s.checkTOTP(ctx, operatorID, code); err != nil {
-		_ = s.record(ctx, op.Username, ip, audit.ActionTOTPDisable, audit.Failure, map[string]string{"reason": "bad_totp"})
-		return err
+		if !errors.Is(err, ErrTOTPInvalid) {
+			return err
+		}
+		return s.failDisable(ctx, op.Username, ip, "bad_totp", err)
 	}
 	if err := s.Operators.DisableTOTP(ctx, operatorID); err != nil {
 		return err
 	}
 	return s.record(ctx, op.Username, ip, audit.ActionTOTPDisable, audit.Success, nil)
+}
+
+// failDisable counts a failed attempt against the same limits as sign-in, so
+// a stolen session cannot be used to guess the password.
+func (s *Service) failDisable(ctx context.Context, username, ip, reason string, cause error) error {
+	if _, err := s.Limiter.Fail(ctx, ip, username); err != nil {
+		return err
+	}
+	if err := s.record(ctx, username, ip, audit.ActionTOTPDisable, audit.Failure, map[string]string{"reason": reason}); err != nil {
+		return err
+	}
+	return cause
 }

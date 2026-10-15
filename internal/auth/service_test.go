@@ -178,6 +178,15 @@ func TestDisableTOTPNeedsPasswordAndCode(t *testing.T) {
 	if err := s.svc.DisableTOTP(ctx, s.op.ID, secret.NewValue(goodPassword), code, ""); err != nil {
 		t.Fatal(err)
 	}
+	var failures int
+	for _, e := range s.events(t) {
+		if e.Action == audit.ActionTOTPDisable && e.Outcome == audit.Failure {
+			failures++
+		}
+	}
+	if failures != 2 {
+		t.Fatalf("audited %d failed disables, want 2", failures)
+	}
 	if _, err := s.login("owner", goodPassword, ""); err != nil {
 		t.Fatalf("login after disabling TOTP: %v", err)
 	}
