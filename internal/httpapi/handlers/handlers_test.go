@@ -160,7 +160,7 @@ func TestPagesAndAssets(t *testing.T) {
 	if res := e.do(http.MethodGet, "/"+base+"/favicon.svg", nil); res.status != http.StatusOK {
 		t.Errorf("favicon: %d", res.status)
 	}
-	if got := e.raw(http.MethodGet, "/"+base+"/favicon.ico"); !bytes.Equal(got, notFound) {
+	if got := e.raw(http.MethodGet, "/"+base+"/boot.js"); !bytes.Equal(got, notFound) {
 		t.Errorf("missing static file: %s", got)
 	}
 

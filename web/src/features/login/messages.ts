@@ -1,0 +1,55 @@
+import type { Messages } from '../../i18n/locale';
+
+const en = {
+  pageTitle: 'Sign in · Karvan',
+  title: 'Sign in',
+  subtitle: 'Use the username and password Karvan showed when it was installed.',
+  username: 'Username',
+  password: 'Password',
+  showPassword: 'Show password',
+  hidePassword: 'Hide password',
+  submit: 'Sign in',
+  submitting: 'Signing in…',
+  totpTitle: 'Two-step code',
+  totpHint: 'Open your authenticator app and enter the 6-digit code for Karvan.',
+  totpCode: 'Code',
+  totpSubmit: 'Verify and sign in',
+  totpBack: 'Use a different account',
+  errorRequired: 'Enter your username and password.',
+  errorInvalid: 'The username or password is wrong.',
+  errorTotpInvalid:
+    'That code didn’t work. Codes change every 30 seconds, so enter the one on screen now.',
+  errorLocked: 'Too many failed tries. You can try again in {time}.',
+  lostAccess: 'Lost access? On the server, run:',
+  tagline: 'Move your users to a new panel. Their configs keep working.',
+  taglineDetail: 'UUIDs and passwords stay the same, so nobody has to set up their app again.',
+};
+
+type Key = keyof typeof en;
+
+const fa: Record<Key, string> = {
+  pageTitle: 'ورود · کاروان',
+  title: 'ورود',
+  subtitle: 'با نام کاربری و رمزی وارد شوید که کاروان هنگام نصب نشان داد.',
+  username: 'نام کاربری',
+  password: 'رمز عبور',
+  showPassword: 'نمایش رمز',
+  hidePassword: 'پنهان کردن رمز',
+  submit: 'ورود',
+  submitting: 'در حال ورود…',
+  totpTitle: 'کد ورود دومرحله‌ای',
+  totpHint: 'برنامهٔ احراز هویت را باز کنید و کد ۶ رقمی کاروان را وارد کنید.',
+  totpCode: 'کد',
+  totpSubmit: 'تأیید و ورود',
+  totpBack: 'ورود با حساب دیگر',
+  errorRequired: 'نام کاربری و رمز عبور را وارد کنید.',
+  errorInvalid: 'نام کاربری یا رمز عبور درست نیست.',
+  errorTotpInvalid:
+    'این کد پذیرفته نشد. کدها هر ۳۰ ثانیه عوض می‌شوند؛ کدی را که الان می‌بینید وارد کنید.',
+  errorLocked: 'تلاش ناموفق زیاد بود. {time} دیگر دوباره امتحان کنید.',
+  lostAccess: 'دسترسی را از دست داده‌اید؟ روی سرور اجرا کنید:',
+  tagline: 'کاربران را به پنل تازه ببرید. کانفیگ‌هایشان همان‌طور کار می‌کند.',
+  taglineDetail: 'UUID و رمزها عوض نمی‌شوند، پس کسی لازم نیست برنامه‌اش را از نو تنظیم کند.',
+};
+
+export const loginMessages: Messages<Key> = { en, fa };

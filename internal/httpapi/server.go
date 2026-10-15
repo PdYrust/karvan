@@ -15,7 +15,7 @@ import (
 )
 
 // staticFiles are top-level files from web/public served without a session.
-var staticFiles = []string{"favicon.svg", "favicon.ico", "apple-touch-icon.png"}
+var staticFiles = []string{"favicon.svg", "boot.js"}
 
 // Deps is everything the handler needs.
 type Deps struct {

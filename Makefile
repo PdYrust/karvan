@@ -9,13 +9,21 @@ LDFLAGS  := -s -w \
 	-X $(PKG)/internal/buildinfo.Date=$(DATE)
 
 GOLANGCI ?= golangci-lint
+PNPM     ?= pnpm --dir web
 
-.PHONY: build build-go test lint fmt floor cover check check-full vuln clean
+.PHONY: build build-go web web-deps test lint lint-web fmt floor cover check check-web check-full vuln audit-web clean
 
-build: build-go
+build: web build-go
 
 build-go:
 	CGO_ENABLED=0 go build -trimpath -ldflags "$(LDFLAGS)" -o $(BIN) ./cmd/karvan
+
+web-deps:
+	$(PNPM) install --frozen-lockfile
+
+web: web-deps
+	$(PNPM) run build
+	$(PNPM) run size
 
 test:
 	go test -race ./...
@@ -25,6 +33,7 @@ lint:
 
 fmt:
 	$(GOLANGCI) fmt ./...
+	$(PNPM) run format
 
 floor:
 	./scripts/check-floor.sh
@@ -32,14 +41,20 @@ floor:
 cover:
 	./scripts/check-coverage.sh
 
+check-web:
+	$(PNPM) run check
+
 vuln:
 	govulncheck ./...
 
+audit-web:
+	$(PNPM) audit --audit-level high
+
 # Fast gate: run after every change. cover runs the tests once with coverage.
-check: floor lint cover
+check: floor lint cover check-web
 
 # Full gate: before a phase ends or a release.
-check-full: check test vuln
+check-full: check test vuln audit-web web
 
 clean:
-	rm -rf bin coverage.out
+	rm -rf bin coverage.out web/dist/assets web/dist/.vite web/dist/*.html web/dist/*.js web/dist/*.svg
