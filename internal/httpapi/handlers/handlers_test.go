@@ -1,0 +1,190 @@
+package handlers_test
+
+import (
+	"bytes"
+	"net/http"
+	"strings"
+	"testing"
+	"time"
+)
+
+func TestSignInOverviewSignOut(t *testing.T) {
+	e := newEnv(t)
+	if res := e.do(http.MethodGet, "/"+base+"/api/v1/overview", nil); res.status != http.StatusUnauthorized {
+		t.Fatalf("overview before sign-in: %d", res.status)
+	}
+	res := e.login("")
+	if res.status != http.StatusOK {
+		t.Fatalf("sign-in: %d %s", res.status, res.body)
+	}
+	if !strings.Contains(res.header.Get("Set-Cookie"), "HttpOnly") {
+		t.Fatalf("session cookie flags: %q", res.header.Values("Set-Cookie"))
+	}
+
+	var ov struct {
+		Version  string `json:"version"`
+		SafeMode bool   `json:"safeMode"`
+		Security struct {
+			TOTPEnabled    bool `json:"totpEnabled"`
+			PreviousSignIn *struct {
+				At time.Time `json:"at"`
+			} `json:"previousSignIn"`
+		} `json:"security"`
+		Panels   []any `json:"panels"`
+		Activity []struct {
+			Action  string `json:"action"`
+			Outcome string `json:"outcome"`
+		} `json:"activity"`
+	}
+	res = e.do(http.MethodGet, "/"+base+"/api/v1/overview", nil)
+	if res.status != http.StatusOK {
+		t.Fatalf("overview: %d %s", res.status, res.body)
+	}
+	res.json(t, &ov)
+	if ov.Version != "test" || !ov.SafeMode || ov.Panels == nil || len(ov.Activity) != 1 || ov.Activity[0].Action != "login" {
+		t.Fatalf("overview = %+v", ov)
+	}
+	if ov.Security.PreviousSignIn != nil {
+		t.Fatalf("first sign-in has a previous sign-in: %+v", ov.Security.PreviousSignIn)
+	}
+
+	if res := e.do(http.MethodDelete, "/"+base+"/api/v1/session", nil); res.status != http.StatusNoContent {
+		t.Fatalf("sign-out: %d %s", res.status, res.body)
+	}
+	if res := e.do(http.MethodGet, "/"+base+"/api/v1/overview", nil); res.status != http.StatusUnauthorized {
+		t.Fatalf("overview after sign-out: %d", res.status)
+	}
+
+	e.login("")
+	e.do(http.MethodGet, "/"+base+"/api/v1/overview", nil).json(t, &ov)
+	if ov.Security.PreviousSignIn == nil {
+		t.Fatal("second sign-in does not show the previous one")
+	}
+}
+
+func TestSignInErrors(t *testing.T) {
+	e := newEnv(t)
+	e.fetchCSRF()
+	bad := map[string]string{"username": username, "password": "wrong password!"}
+	res := e.do(http.MethodPost, "/"+base+"/api/v1/session", bad)
+	if res.status != http.StatusUnauthorized || res.errorCode(t) != "invalid_credentials" {
+		t.Fatalf("wrong password: %d %s", res.status, res.body)
+	}
+	if res := e.do(http.MethodPost, "/"+base+"/api/v1/session", map[string]string{"username": ""}); res.status != http.StatusBadRequest {
+		t.Fatalf("empty body: %d", res.status)
+	}
+	for range 4 {
+		e.do(http.MethodPost, "/"+base+"/api/v1/session", bad)
+	}
+	res = e.do(http.MethodPost, "/"+base+"/api/v1/session", map[string]string{"username": username, "password": password})
+	if res.status != http.StatusTooManyRequests || res.errorCode(t) != "locked" || res.header.Get("Retry-After") == "" {
+		t.Fatalf("locked: %d %s", res.status, res.body)
+	}
+}
+
+func TestSignInNeedsCSRFToken(t *testing.T) {
+	e := newEnv(t)
+	e.fetchCSRF()
+	e.csrf = "forged"
+	res := e.do(http.MethodPost, "/"+base+"/api/v1/session", map[string]string{"username": username, "password": password})
+	if res.status != http.StatusForbidden || res.errorCode(t) != "csrf" {
+		t.Fatalf("forged token: %d %s", res.status, res.body)
+	}
+}
+
+func TestTwoStepSignIn(t *testing.T) {
+	e := newEnv(t)
+	e.login("")
+	var setup struct {
+		Secret string `json:"secret"`
+		URI    string `json:"uri"`
+	}
+	res := e.do(http.MethodPost, "/"+base+"/api/v1/account/totp", nil)
+	res.json(t, &setup)
+	if res.status != http.StatusOK || setup.Secret == "" || !strings.HasPrefix(setup.URI, "otpauth://") || res.header.Get("Cache-Control") != "no-store" {
+		t.Fatalf("begin: %d %s", res.status, res.body)
+	}
+	if res := e.do(http.MethodPost, "/"+base+"/api/v1/account/totp/confirm", map[string]string{"code": "000000"}); res.status != http.StatusForbidden || res.errorCode(t) != "totp_invalid" {
+		t.Fatalf("wrong confirm: %d %s", res.status, res.body)
+	}
+	if res := e.do(http.MethodPost, "/"+base+"/api/v1/account/totp/confirm", map[string]string{"code": totpNow(setup.Secret)}); res.status != http.StatusNoContent {
+		t.Fatalf("confirm: %d %s", res.status, res.body)
+	}
+	if res := e.do(http.MethodPost, "/"+base+"/api/v1/account/totp/confirm", map[string]string{"code": "123456"}); res.status != http.StatusConflict {
+		t.Fatalf("confirm without setup: %d %s", res.status, res.body)
+	}
+
+	e.do(http.MethodDelete, "/"+base+"/api/v1/session", nil)
+	if res := e.login(""); res.status != http.StatusUnauthorized || res.errorCode(t) != "totp_required" {
+		t.Fatalf("sign-in without code: %d %s", res.status, res.body)
+	}
+
+	res = e.do(http.MethodDelete, "/"+base+"/api/v1/account/totp", map[string]string{"password": "wrong password!", "code": "000000"})
+	if res.status != http.StatusUnauthorized {
+		t.Fatalf("disable while signed out: %d", res.status)
+	}
+}
+
+func TestDisableTwoStepRefusesWrongPassword(t *testing.T) {
+	e := newEnv(t)
+	e.login("")
+	res := e.do(http.MethodDelete, "/"+base+"/api/v1/account/totp", map[string]string{"password": "wrong password!", "code": "000000"})
+	if res.status != http.StatusForbidden || res.errorCode(t) != "invalid_credentials" {
+		t.Fatalf("wrong password: %d %s", res.status, res.body)
+	}
+	if res := e.do(http.MethodDelete, "/"+base+"/api/v1/account/totp", map[string]string{"password": "x"}); res.status != http.StatusBadRequest {
+		t.Fatalf("bad body: %d", res.status)
+	}
+}
+
+func TestPagesAndAssets(t *testing.T) {
+	e := newEnv(t)
+	page := e.do(http.MethodGet, "/"+base+"/", nil)
+	if !bytes.Contains(page.body, []byte("login")) || !bytes.Contains(page.body, []byte(`<base href="/`+base+`/" />`)) {
+		t.Fatalf("signed-out page: %s", page.body)
+	}
+	if page.header.Get("Cache-Control") != "no-store" || page.header.Get("Content-Security-Policy") == "" {
+		t.Fatalf("page headers: %v", page.header)
+	}
+	for _, f := range []string{"login-1.js", "shared-1.js", "logo3d-1.js", "login-1.css", "font-1.woff2"} {
+		if res := e.do(http.MethodGet, "/"+base+"/assets/"+f, nil); res.status != http.StatusOK || !strings.HasPrefix(res.header.Get("Cache-Control"), "public") {
+			t.Errorf("public asset %s: %d %q", f, res.status, res.header.Get("Cache-Control"))
+		}
+	}
+	notFound := e.raw(http.MethodGet, "/nothing-here")
+	for _, f := range []string{"app-1.js", "overview-1.js", "not-in-manifest-1.js", "missing.js"} {
+		if got := e.raw(http.MethodGet, "/"+base+"/assets/"+f); !bytes.Equal(got, notFound) {
+			t.Errorf("private asset %s before sign-in:\n%s", f, got)
+		}
+	}
+	if res := e.do(http.MethodGet, "/"+base+"/favicon.svg", nil); res.status != http.StatusOK {
+		t.Errorf("favicon: %d", res.status)
+	}
+	if got := e.raw(http.MethodGet, "/"+base+"/favicon.ico"); !bytes.Equal(got, notFound) {
+		t.Errorf("missing static file: %s", got)
+	}
+
+	e.login("")
+	if page := e.do(http.MethodGet, "/"+base+"/", nil); !bytes.Contains(page.body, []byte("app")) {
+		t.Fatalf("signed-in page: %s", page.body)
+	}
+	if res := e.do(http.MethodGet, "/"+base+"/assets/app-1.js", nil); res.status != http.StatusOK || !strings.HasPrefix(res.header.Get("Cache-Control"), "private") {
+		t.Fatalf("private asset after sign-in: %d %q", res.status, res.header.Get("Cache-Control"))
+	}
+}
+
+func TestMissesLookIdentical(t *testing.T) {
+	e := newEnv(t)
+	want := e.raw(http.MethodGet, "/")
+	for _, m := range [][2]string{
+		{http.MethodGet, "/.env"},
+		{http.MethodPost, "/" + base + "/"},
+		{http.MethodPut, "/" + base + "/api/v1/session"},
+		{http.MethodGet, "/" + base + "/api/v1/users"},
+		{http.MethodGet, "/" + base + "/overview"},
+	} {
+		if got := e.raw(m[0], m[1]); !bytes.Equal(got, want) {
+			t.Errorf("%s %s:\n%s\nwant\n%s", m[0], m[1], got, want)
+		}
+	}
+}
