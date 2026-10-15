@@ -1,0 +1,118 @@
+// Package audit records sign-ins and sensitive actions: who, when, from
+// where, and whether it worked. Details never hold secrets.
+package audit
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"fmt"
+	"time"
+)
+
+// Outcome is the result of an audited action.
+type Outcome string
+
+// Outcomes.
+const (
+	Success Outcome = "success"
+	Failure Outcome = "failure"
+)
+
+// Actions.
+const (
+	ActionLogin       = "login"
+	ActionLogout      = "logout"
+	ActionLockout     = "lockout"
+	ActionTOTPEnable  = "totp.enable"
+	ActionTOTPDisable = "totp.disable"
+	ActionInit        = "cli.init"
+	ActionReset       = "cli.reset"
+)
+
+// ActorCLI is the actor for actions taken from the command line.
+const ActorCLI = "cli"
+
+// Event is one audited action.
+type Event struct {
+	ID      int64
+	At      time.Time
+	Actor   string
+	IP      string
+	Action  string
+	Outcome Outcome
+	Detail  map[string]string
+}
+
+// Log writes and reads audit events.
+type Log struct {
+	db  *sql.DB
+	now func() time.Time
+}
+
+// New returns a Log over db.
+func New(db *sql.DB) *Log { return &Log{db: db, now: time.Now} }
+
+// Record stores e. At is set to now when zero.
+func (l *Log) Record(ctx context.Context, e Event) error {
+	if e.At.IsZero() {
+		e.At = l.now()
+	}
+	detail := []byte("{}")
+	if len(e.Detail) > 0 {
+		var err error
+		if detail, err = json.Marshal(e.Detail); err != nil {
+			return fmt.Errorf("encode audit detail: %w", err)
+		}
+	}
+	_, err := l.db.ExecContext(ctx, `INSERT INTO audit_events (at, actor, ip, action, outcome, detail)
+		VALUES (?, ?, ?, ?, ?, ?)`, e.At.UnixMilli(), e.Actor, e.IP, e.Action, string(e.Outcome), string(detail))
+	if err != nil {
+		return fmt.Errorf("record audit event %s: %w", e.Action, err)
+	}
+	return nil
+}
+
+// Filter narrows List. Zero fields match everything.
+type Filter struct {
+	Actor   string
+	Action  string
+	Outcome Outcome
+	Limit   int
+	// SkipNewest drops the newest matches, for example the sign-in that
+	// started the current session.
+	SkipNewest int
+}
+
+// List returns matching events, newest first.
+func (l *Log) List(ctx context.Context, f Filter) ([]Event, error) {
+	if f.Limit <= 0 || f.Limit > 500 {
+		f.Limit = 50
+	}
+	rows, err := l.db.QueryContext(ctx, `SELECT id, at, actor, ip, action, outcome, detail FROM audit_events
+		WHERE (? = '' OR actor = ?) AND (? = '' OR action = ?) AND (? = '' OR outcome = ?)
+		ORDER BY at DESC, id DESC LIMIT ? OFFSET ?`,
+		f.Actor, f.Actor, f.Action, f.Action, string(f.Outcome), string(f.Outcome), f.Limit, max(f.SkipNewest, 0))
+	if err != nil {
+		return nil, fmt.Errorf("list audit events: %w", err)
+	}
+	defer rows.Close()
+	var out []Event
+	for rows.Next() {
+		var e Event
+		var at int64
+		var outcome, detail string
+		if err := rows.Scan(&e.ID, &at, &e.Actor, &e.IP, &e.Action, &outcome, &detail); err != nil {
+			return nil, fmt.Errorf("scan audit event: %w", err)
+		}
+		e.At, e.Outcome = time.UnixMilli(at), Outcome(outcome)
+		if err := json.Unmarshal([]byte(detail), &e.Detail); err != nil {
+			return nil, fmt.Errorf("decode audit detail %d: %w", e.ID, err)
+		}
+		out = append(out, e)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list audit events: %w", err)
+	}
+	return out, nil
+}
