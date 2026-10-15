@@ -35,11 +35,11 @@ cover:
 vuln:
 	govulncheck ./...
 
-# Fast gate: run after every change.
-check: floor lint test cover
+# Fast gate: run after every change. cover runs the tests once with coverage.
+check: floor lint cover
 
 # Full gate: before a phase ends or a release.
-check-full: check vuln
+check-full: check test vuln
 
 clean:
 	rm -rf bin coverage.out

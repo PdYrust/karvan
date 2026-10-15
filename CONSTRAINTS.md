@@ -26,10 +26,12 @@ Last reviewed: 2026-10-15.
 | Go file size | 500 lines or less per file (aim for 300) | revive `file-length-limit` | `make check` |
 | Go function size | 60 lines or less, 40 statements or less | `funlen` | `make check` |
 | Go complexity | cyclomatic 15 or less | `gocyclo` | `make check` |
-| Go tests | all pass with the race detector | `go test -race ./...` | `make check` |
+| Go tests | all pass | `go test -cover ./...` (inside `scripts/check-coverage.sh`) | `make check` |
+| Go races | none found | `go test -race ./...` | `make check-full` |
 | Go coverage | 80% or more statements in `config`, `secret`, `store`, `settings`, `auth`, `audit`, `httpapi` and its subpackages | `scripts/check-coverage.sh` | `make check` |
 | Go vulnerabilities | no findings | `govulncheck ./...` | `make check-full` |
 | TypeScript | zero errors, `strict` on | `tsc --noEmit` | `make check` |
+| Fast gate time | `make check` finishes in about 90 s or less on a 2-core machine | `time make check` | when checks are added |
 | Web lint and format | zero errors | `eslint`, `prettier --check` | `make check` |
 | Component size | 250 lines or less per `.tsx` (aim for 200) | ESLint `max-lines` | `make check` |
 | Web tests and coverage | all pass; 80% or more lines in `web/src/lib` and `web/src/i18n` | `vitest run --coverage` | `make check` |

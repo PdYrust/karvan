@@ -6,7 +6,11 @@ min=80
 core="config secret store auth audit settings httpapi httpapi/middleware httpapi/handlers httpapi/respond"
 
 cd "$(git rev-parse --show-toplevel)"
-out=$(go test -cover ./internal/... 2>&1) || { echo "$out"; exit 1; }
+# One run gives both the test result and the coverage numbers. The race
+# detector runs in `make test` (full gate), because argon2id under -race
+# doubles the time of the fast gate.
+out=$(go test -cover ./... 2>&1) || { echo "$out"; exit 1; }
+echo "$out" | grep -E '^(ok|FAIL|---)' || true
 
 status=0
 for p in $core; do
