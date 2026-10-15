@@ -1,0 +1,45 @@
+/* Type scale: DESIGN.md section 3. Persian runs one step looser. */
+@import '@fontsource-variable/vazirmatn/wght.css';
+@import '@fontsource-variable/jetbrains-mono/wght.css';
+
+@theme {
+  --font-sans: 'Vazirmatn Variable', system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+  --default-font-family: var(--font-sans);
+  --default-mono-font-family: var(--font-mono);
+
+  --text-tiny: 12px;
+  --text-tiny--line-height: 16px;
+  --text-sm: 13px;
+  --text-sm--line-height: 20px;
+  --text-base: 14px;
+  --text-base--line-height: 22px;
+  --text-heading: 16px;
+  --text-heading--line-height: 24px;
+  --text-title: 22px;
+  --text-title--line-height: 30px;
+  --text-display: 28px;
+  --text-display--line-height: 36px;
+}
+
+@layer base {
+  :root:lang(fa) {
+    --text-tiny--line-height: 18px;
+    --text-sm--line-height: 22px;
+    --text-base: 15px;
+    --text-base--line-height: 26px;
+    --text-heading--line-height: 26px;
+    --text-title--line-height: 34px;
+    --text-display--line-height: 40px;
+  }
+
+  body {
+    font-family: var(--font-sans);
+    font-size: var(--text-base);
+    line-height: var(--text-base--line-height);
+  }
+
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}
