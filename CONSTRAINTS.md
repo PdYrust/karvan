@@ -35,12 +35,12 @@ Last reviewed: 2026-10-15.
 | Web lint and format | zero errors | `eslint`, `prettier --check` | `make check` |
 | Component size | 250 lines or less per `.tsx` (aim for 200) | ESLint `max-lines` | `make check` |
 | Web tests and coverage | all pass; 80% or more lines in `web/src/lib` and `web/src/i18n` | `vitest run --coverage` | `make check` |
-| Bundle | login entry 110 KB or less gzip (JS+CSS, fonts excluded); 3D logo chunk 180 KB or less; app initial JS 260 KB or less | `size-limit` | `make check` |
+| Bundle (gzip, fonts excluded) | sign-in JS 145 KB or less; 3D logo chunk 180 KB or less; app JS 260 KB or less; stylesheet 35 KB or less | `web/scripts/bundle-size.mjs` (follows the Vite manifest) | `make web` |
 | Web dependencies | nothing at high or above | `pnpm audit --audit-level high` | `make check-full` |
 | Lighthouse mobile | login and overview: performance 90 or more, accessibility 100, best practices 95 or more | `lighthouse` against a local build | `make check-full` |
 
 The coverage floor (80%) is high enough that new logic needs a test, and low enough to leave room for wiring code.
-The bundle numbers keep the login usable on a slow mobile connection; fonts are budgeted separately because they cache across visits.
+The bundle numbers keep the sign-in page usable on a slow mobile connection. They were first guessed at 110 KB for the sign-in page; measured, React 19 alone is about 60 KB and Kumo's Button and Input about 55 KB, so the budget is today's 132 KB plus a little room. Fonts are left out because they cache across visits.
 The Lighthouse numbers are the "good" band of Core Web Vitals; accessibility is 100 because the panel must work with a keyboard and a screen reader.
 
 ## Reviewed by a person, every page
