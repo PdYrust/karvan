@@ -58,6 +58,20 @@ func TestEveryMissIsTheSameBytes(t *testing.T) {
 	}
 }
 
+func TestGuardAnswersBeforeInnerLayers(t *testing.T) {
+	rt := NewRouter()
+	rt.HandleFunc("GET /x", ok)
+	inner := http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusTeapot) })
+	h := rt.Guard(inner)
+	for method, want := range map[string]int{http.MethodGet: http.StatusTeapot, http.MethodPost: http.StatusNotFound} {
+		rec := httptest.NewRecorder()
+		h.ServeHTTP(rec, httptest.NewRequest(method, "/x", nil))
+		if rec.Code != want {
+			t.Errorf("%s /x = %d, want %d", method, rec.Code, want)
+		}
+	}
+}
+
 func TestNotFoundDropsEarlierHeaders(t *testing.T) {
 	rec := httptest.NewRecorder()
 	rec.Header().Set("Content-Security-Policy", "default-src 'none'")

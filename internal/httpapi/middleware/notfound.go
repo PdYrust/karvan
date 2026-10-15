@@ -33,9 +33,26 @@ type Router struct {
 func NewRouter() *Router { return &Router{ServeMux: http.NewServeMux()} }
 
 func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if _, pattern := rt.Handler(r); pattern == "" {
+	if !rt.matches(r) {
 		NotFound(w, r)
 		return
 	}
 	rt.ServeMux.ServeHTTP(w, r)
+}
+
+func (rt *Router) matches(r *http.Request) bool {
+	_, pattern := rt.Handler(r)
+	return pattern != ""
+}
+
+// Guard answers NotFound for requests the router has no route for, before
+// any layer in between (sessions, CSRF) gets a chance to answer differently.
+func (rt *Router) Guard(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if !rt.matches(r) {
+			NotFound(w, r)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
 }
