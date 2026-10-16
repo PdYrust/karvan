@@ -2,7 +2,6 @@ package panel
 
 import (
 	"fmt"
-	"regexp"
 	"unicode"
 )
 
@@ -62,10 +61,29 @@ const (
 	CodePasswordEmpty   = "password_empty"
 )
 
-var canonicalUUID = regexp.MustCompile(`^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
+// IsCanonicalUUID reports whether u is lowercase, hyphenated hex
+// (8-4-4-4-12). It runs per user per check, so no regexp.
+func IsCanonicalUUID(u UUID) bool {
+	if len(u) != 36 {
+		return false
+	}
+	for i := 0; i < len(u); i++ {
+		c := u[i]
+		switch i {
+		case 8, 13, 18, 23:
+			if c != '-' {
+				return false
+			}
+		default:
+			if !isLowerHex(c) {
+				return false
+			}
+		}
+	}
+	return true
+}
 
-// IsCanonicalUUID reports whether u is lowercase, hyphenated hex.
-func IsCanonicalUUID(u UUID) bool { return canonicalUUID.MatchString(string(u)) }
+func isLowerHex(c byte) bool { return c >= '0' && c <= '9' || c >= 'a' && c <= 'f' }
 
 // HasControl reports whether s holds a control character. Both panels
 // accept a trailing newline through Python's "$"; Karvan never does.

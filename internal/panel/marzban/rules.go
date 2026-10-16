@@ -50,6 +50,59 @@ func word(c byte) bool {
 
 func allowed(c byte) bool { return word(c) || c == '-' || c == '@' || c == '.' }
 
+// Sanitize turns name into one Marzban accepts, changing as little as
+// possible: other characters become "_", the leading word run is brought
+// to 3..32 characters, and the column limit is kept. It returns "" when
+// nothing sensible is left.
+func Sanitize(name string) string {
+	b := []byte(name)
+	for i, c := range b {
+		if c >= 0x80 || !allowed(c) {
+			b[i] = '_'
+		}
+	}
+	// Multi-byte characters left several "_"; one is enough.
+	s := collapse(string(b), '_')
+	for len(s) < 3 {
+		s += "_"
+	}
+	run := leadingRun(s)
+	for i := run; run < 3 && i < len(s); i++ {
+		s = s[:i] + "_" + s[i+1:]
+		run = leadingRun(s)
+	}
+	if run > 32 {
+		s = s[:32] + s[run:]
+	}
+	if len(s) > UsernameColumnLen {
+		s = s[:UsernameColumnLen]
+	}
+	if !Accepts(s) {
+		return ""
+	}
+	return s
+}
+
+func leadingRun(s string) int {
+	for i := 0; i < len(s); i++ {
+		if !word(s[i]) {
+			return i
+		}
+	}
+	return len(s)
+}
+
+func collapse(s string, c byte) string {
+	out := make([]byte, 0, len(s))
+	for i := 0; i < len(s); i++ {
+		if s[i] == c && len(out) > 0 && out[len(out)-1] == c {
+			continue
+		}
+		out = append(out, s[i])
+	}
+	return string(out)
+}
+
 // Rules are Marzban's rules for one destination database.
 type Rules struct {
 	foldUsers bool

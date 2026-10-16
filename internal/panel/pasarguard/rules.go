@@ -61,6 +61,35 @@ func consecutiveSpecials(s string) bool {
 	return false
 }
 
+// Sanitize turns name into one PasarGuard accepts, changing as little as
+// possible: other characters become "_", runs of -_@. keep their first
+// character, short names are padded and long ones cut. It returns "" when
+// nothing sensible is left.
+func Sanitize(name string) string {
+	out := make([]byte, 0, len(name))
+	for i := 0; i < len(name); i++ {
+		c := name[i]
+		if c >= 0x80 || !allowed(c) {
+			c = '_'
+		}
+		if special(c) && len(out) > 0 && special(out[len(out)-1]) {
+			continue
+		}
+		out = append(out, c)
+	}
+	for len(out) < UsernameMinLen {
+		out = append(out, '0')
+	}
+	if len(out) > UsernameMaxLen {
+		out = out[:UsernameMaxLen]
+	}
+	s := string(out)
+	if !Accepts(s) {
+		return ""
+	}
+	return s
+}
+
 // Rules are PasarGuard's rules. Usernames are case-sensitive on every
 // database (CaseSensitiveString in app/db/compiles_types.py).
 type Rules struct{}
