@@ -319,3 +319,35 @@ func checkLinks(t *testing.T, rep *Report, to panel.Kind) {
 		}
 	}
 }
+
+// Every method is listed; the API ones need a full admin to act as.
+func TestReloadOptions(t *testing.T) {
+	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/pasarguarddb/testdata/" + pasarguarddb.Revision + ".sqlite.sql"})
+	h := newHarness(t, panel.Marzban, panel.PasarGuard, tg, 2)
+	h.svc.Reloaders[ReloadTouch] = manualReload{}
+	j := h.job(nil)
+	opts, err := h.svc.ReloadOptions(context.Background(), j.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(opts) != 3 || !opts[0].Available || opts[0].Command != "pasarguard restart" ||
+		opts[1].Reason != "no_full_admin" || opts[2].Reason != "not_built_in" {
+		t.Fatalf("options: %+v", opts)
+	}
+	ctx := context.Background()
+	w, err := paneldb.OpenWriter(ctx, tg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = w.Batch(ctx, func(x paneldb.Execer) error {
+		_, err := pasarguarddb.Writer{Dialect: tg.Dialect}.InsertAdmin(ctx, x, panel.Admin{Username: "root"}, "$2b$12$x", 1, time.Now())
+		return err
+	})
+	_ = w.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if opts, _ = h.svc.ReloadOptions(ctx, j.ID); !opts[1].Available {
+		t.Fatalf("touch with a full admin: %+v", opts[1])
+	}
+}

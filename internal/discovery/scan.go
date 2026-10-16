@@ -70,6 +70,9 @@ type Settings struct {
 	UDS             string   `json:"uds,omitempty"`
 	CertFile        string   `json:"certFile,omitempty"`
 	KeyFile         string   `json:"keyFile,omitempty"`
+	// EnvSudoer is SUDO_USERNAME when SUDO_PASSWORD is set too: both
+	// panels then accept it as a full admin with no DB row.
+	EnvSudoer string `json:"-"`
 }
 
 // Ready reports whether Karvan can use the panel as a destination.
@@ -189,6 +192,9 @@ func settingsFrom(env map[string]string) Settings {
 		CertFile:        env["UVICORN_SSL_CERTFILE"],
 		KeyFile:         env["UVICORN_SSL_KEYFILE"],
 		Port:            8000,
+	}
+	if env["SUDO_USERNAME"] != "" && env["SUDO_PASSWORD"] != "" {
+		s.EnvSudoer = env["SUDO_USERNAME"]
 	}
 	if s.SubPath == "" {
 		s.SubPath = "sub"

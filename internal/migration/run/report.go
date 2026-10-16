@@ -136,3 +136,18 @@ func (r *Report) moved(key string, id int64) {
 		r.Counts.Moved++
 	}
 }
+
+// Report returns the report of a job that has run. It is nil before the
+// first run and ErrBusy while the job runs.
+func (s *Service) Report(jobID string) (*Report, error) {
+	j, err := s.job(jobID)
+	if err != nil {
+		return nil, err
+	}
+	if j.running.Load() {
+		return nil, ErrBusy
+	}
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	return j.report, nil
+}
