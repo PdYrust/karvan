@@ -61,7 +61,7 @@ check: floor lint cover check-web
 # Destination tests on every database server (needs Docker).
 test-db:
 	$(TESTDB) up -d --wait
-	$(TESTDB_ENV) go test -tags dbtest ./internal/panel/... ./internal/migration/... ./internal/discovery/...
+	$(TESTDB_ENV) go test -tags dbtest ./internal/panel/... ./internal/migration/... ./internal/discovery/... ./internal/safemode/...
 # Rebuild the schema fixtures with the panels' own migrations.
 testdb-seed:
 	./scripts/testdb/seed.sh
