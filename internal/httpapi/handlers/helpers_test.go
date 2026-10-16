@@ -69,6 +69,9 @@ var webBuild = fstest.MapFS{
 	}`)},
 }
 
+// testLog receives the access log; the secrets test reads it.
+var testLog io.Writer = io.Discard
+
 type env struct {
 	t      *testing.T
 	srv    *httptest.Server
@@ -78,6 +81,7 @@ type env struct {
 	runs   *run.Service
 	bridge *bridge.Bridge
 	db     *sql.DB
+	data   string // Karvan's data directory
 }
 
 func newEnv(t *testing.T) *env {
@@ -106,7 +110,7 @@ func newEnv(t *testing.T) *env {
 	br := bridge.New(bridge.Deps{DB: db, Key: key, Log: slog.New(slog.DiscardHandler)})
 	h, err := httpapi.New(httpapi.Deps{
 		BasePath: base, Auth: svc, Audit: log, Web: webBuild, Version: "test",
-		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Logger: slog.New(slog.NewTextHandler(testLog, &slog.HandlerOptions{Level: slog.LevelDebug})),
 		Runs:   runs, Bridge: br, Settings: settings.New(db),
 	})
 	if err != nil {
@@ -116,7 +120,7 @@ func newEnv(t *testing.T) *env {
 	t.Cleanup(srv.Close)
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{Jar: jar, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	return &env{t: t, srv: srv, client: client, auth: svc, runs: runs, bridge: br, db: db}
+	return &env{t: t, srv: srv, client: client, auth: svc, runs: runs, bridge: br, db: db, data: filepath.Join(dir, "data")}
 }
 
 type response struct {
