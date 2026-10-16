@@ -6,7 +6,7 @@ import { Mark } from './Mark';
 export function Wordmark({ size = 28 }: { size?: number }) {
   const t = useT(sharedMessages);
   return (
-    <span className="inline-flex items-center gap-2.5">
+    <span className="inline-flex items-center gap-3">
       <Mark size={size} />
       <span className="text-heading font-extrabold tracking-tight text-kumo-strong">
         {t('brand')}

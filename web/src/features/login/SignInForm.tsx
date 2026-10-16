@@ -47,7 +47,7 @@ export function SignInForm() {
   const totp = s.step === 'totp';
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-2">
         <h1 className="text-title font-bold text-kumo-strong">
           {totp ? t('totpTitle') : t('title')}
         </h1>

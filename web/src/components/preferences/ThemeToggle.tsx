@@ -4,10 +4,7 @@ import { useT } from '../../i18n/locale';
 import { sharedMessages } from '../../i18n/shared';
 import { useTheme } from '../../lib/preferences/theme';
 
-/**
- * Flips between light and dark. No tooltip here: the sign-in page stays
- * light, and the app wraps this in one (see ThemeToggleWithTooltip).
- */
+/** Flips between light and dark; the native title is its tooltip. "Match system" is in the palette. */
 export function ThemeToggle() {
   const { mode, setPref } = useTheme();
   const t = useT(sharedMessages);

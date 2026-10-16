@@ -46,7 +46,7 @@ function Row({ entry, now }: { entry: ActivityEntry; now: Date }) {
       >
         <Icon size={18} aria-hidden="true" />
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
+      <div className="flex min-w-0 flex-1 flex-col gap-1 sm:flex-row sm:items-baseline sm:justify-between sm:gap-4">
         <p className="text-kumo-default">
           {key ? t(key) : t('act.unknown', { action: entry.action })}
         </p>

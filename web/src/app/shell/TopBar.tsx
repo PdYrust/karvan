@@ -27,7 +27,7 @@ export function TopBar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () 
       <button
         type="button"
         onClick={onSearch}
-        className="ms-auto flex h-11 items-center gap-2 rounded-lg px-3 text-sm text-kumo-subtle ring ring-kumo-line transition-colors hover:bg-kumo-tint hover:text-kumo-default sm:h-9 sm:w-72 lg:ms-0"
+        className="ms-auto flex h-11 items-center gap-2 rounded-lg px-3 text-sm text-kumo-subtle ring ring-kumo-line transition-colors hover:bg-kumo-tint hover:text-kumo-default sm:h-9 pointer-coarse:h-11 sm:w-72 lg:ms-0"
       >
         <MagnifyingGlassIcon size={18} aria-hidden="true" />
         <span className="hidden sm:inline">{t('search')}</span>

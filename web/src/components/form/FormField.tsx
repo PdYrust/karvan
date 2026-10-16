@@ -15,7 +15,7 @@ interface FormFieldProps {
  */
 export function FormField({ id, label, hint, className, children }: FormFieldProps) {
   return (
-    <div className={cn('flex flex-col gap-1.5', className)}>
+    <div className={cn('flex flex-col gap-2', className)}>
       <label id={`${id}-label`} htmlFor={id} className="text-sm font-medium text-kumo-strong">
         {label}
       </label>

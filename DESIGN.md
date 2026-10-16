@@ -74,7 +74,7 @@ Body text is at least 4.5:1 on its surface in both themes, and large text and ic
 
 ## 4. Space, radius, elevation
 
-- **Spacing scale (px):** 4, 8, 12, 16, 20, 24, 32, 40, 56. Nothing off-scale.
+- **Spacing scale (px):** 4, 8, 12, 16, 20, 24, 32, 40, 56. Nothing off-scale, with two exceptions: 2 px optical nudges (aligning an icon with the first line of text), and 2 or 6 px padding inside small inline elements (badges, keyboard keys, chips).
 - **Layout:** sidebar 256 wide, top bar 56 high, content max 1120 with 24 gutters (16 under 640).
 - **Radius has hierarchy:** 6 for small controls (badges, chips); 8 for buttons and inputs; 12 for panels; 16 for dialogs and the login card. Pills only for status dots.
 - **Elevation:** surfaces are flat and separated by a 1px hairline plus a background step. Shadows only on things that float: menus, popovers, dialogs, toasts. No soft shadows under panels.

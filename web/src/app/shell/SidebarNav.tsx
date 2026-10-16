@@ -60,11 +60,11 @@ export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   return (
     <nav aria-label={t('mainNav')} className="flex flex-col gap-5">
       {nav.map((group, i) => (
-        <div key={group.label ?? i} className="flex flex-col gap-0.5">
+        <div key={group.label ?? i} className="flex flex-col gap-1">
           {group.label ? (
             <h2 className="px-3 pb-1 text-sm text-kumo-subtle">{t(group.label)}</h2>
           ) : null}
-          <ul className="flex flex-col gap-0.5">
+          <ul className="flex flex-col gap-1">
             {group.items.map((item) => (
               <li key={item.label}>
                 <NavRow item={item} onNavigate={onNavigate} />

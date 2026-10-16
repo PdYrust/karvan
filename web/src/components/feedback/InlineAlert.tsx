@@ -33,11 +33,7 @@ export function InlineAlert({
   return (
     <div
       role="alert"
-      className={cn(
-        'flex items-start gap-2.5 rounded-lg px-3 py-2.5 text-sm ring',
-        t.box,
-        className,
-      )}
+      className={cn('flex items-start gap-3 rounded-lg px-3 py-3 text-sm ring', t.box, className)}
     >
       <span className="mt-0.5 shrink-0">{t.icon}</span>
       <span className="text-kumo-default">{children}</span>
