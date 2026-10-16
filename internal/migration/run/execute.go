@@ -159,6 +159,9 @@ func (s *Service) execute(ctx context.Context, j *Job, hash string, o Options) {
 	rep.State, rep.EndedAt, rep.BackupID = j.state, s.now(), j.backupID
 	j.wipe()
 	_ = s.save(context.Background(), j)
+	// Not running any more before "done" goes out: a client that asks for
+	// the report on "done" then waits for mu instead of getting ErrBusy.
+	j.running.Store(false)
 	s.emit(j, "", EventDone, map[string]any{"state": j.state})
 }
 
