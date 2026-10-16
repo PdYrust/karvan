@@ -129,7 +129,7 @@ func (c *Config) validate() error {
 		return fmt.Errorf("keyFile %q must be an absolute path", c.KeyFile)
 	}
 	c.DataDir, c.KeyFile = filepath.Clean(c.DataDir), filepath.Clean(c.KeyFile)
-	if rel, err := filepath.Rel(c.DataDir, c.KeyFile); err == nil && !strings.HasPrefix(rel, "..") {
+	if rel, err := filepath.Rel(c.DataDir, c.KeyFile); err == nil && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
 		return fmt.Errorf("keyFile %q must be outside dataDir %q, so a copy of the data cannot decrypt itself", c.KeyFile, c.DataDir)
 	}
 	if err := c.level.UnmarshalText([]byte(c.LogLevel)); err != nil {

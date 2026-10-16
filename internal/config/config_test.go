@@ -106,6 +106,7 @@ func TestValidation(t *testing.T) {
 		"bad trusted proxy":    `{"trustedProxies":["not-an-ip"]}`,
 		"relative key file":    `{"keyFile":"secret.key"}`,
 		"key equals data dir":  `{"dataDir":"/srv/k","keyFile":"/srv/k"}`,
+		"key named ..x inside": `{"dataDir":"/srv/k","keyFile":"/srv/k/..key"}`,
 		"trailing json values": `{} {}`,
 	}
 	for name, body := range cases {
