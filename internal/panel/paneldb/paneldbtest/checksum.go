@@ -17,6 +17,12 @@ import (
 // test can prove a dry run changed nothing.
 func Checksum(t *testing.T, tg paneldb.Target) string {
 	t.Helper()
+	return ChecksumExcept(t, tg)
+}
+
+// ChecksumExcept is Checksum without the named tables.
+func ChecksumExcept(t *testing.T, tg paneldb.Target, skip ...string) string {
+	t.Helper()
 	ctx := context.Background()
 	r, err := paneldb.OpenReader(ctx, tg)
 	if err != nil {
@@ -30,6 +36,9 @@ func Checksum(t *testing.T, tg paneldb.Target) string {
 			return err
 		}
 		for _, name := range tables {
+			if slices.Contains(skip, name) {
+				continue
+			}
 			rows, err := dumpTable(ctx, q, tg.Dialect, name)
 			if err != nil {
 				return err

@@ -9,6 +9,7 @@ import (
 	"net/url"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/source"
@@ -148,3 +149,6 @@ func (s *Source) Users(ctx context.Context) ([]panel.User, error) {
 	}
 	return source.ReadAll(ctx, PageSize, page, func(u panel.User) string { return strconv.FormatInt(u.SourceID, 10) })
 }
+
+// Skew is the panel's clock minus Karvan's, from the last response.
+func (s *Source) Skew() time.Duration { return s.c.Skew() }

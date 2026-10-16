@@ -124,3 +124,10 @@ func serve(p *panelState, routes map[string]http.HandlerFunc) *httptest.Server {
 	}
 	return httptest.NewServer(mux)
 }
+
+// Mutate changes the users under the panel's lock.
+func (p *panelState) Mutate(fn func(users *[]map[string]any)) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	fn(&p.users)
+}

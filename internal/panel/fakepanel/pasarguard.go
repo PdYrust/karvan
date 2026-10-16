@@ -83,3 +83,6 @@ func PasarGuardUser(id int64, username string, set map[string]any) map[string]an
 	maps.Copy(u, set)
 	return u
 }
+
+// Mutate changes the fake's users between reads.
+func (g *PasarGuard) Mutate(fn func(users *[]map[string]any)) { g.state.Mutate(fn) }

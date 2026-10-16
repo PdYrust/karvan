@@ -79,3 +79,6 @@ func MarzbanUser(username string, n int, set map[string]any) map[string]any {
 	maps.Copy(u, set)
 	return u
 }
+
+// Mutate changes the fake's users between reads.
+func (m *Marzban) Mutate(fn func(users *[]map[string]any)) { m.state.Mutate(fn) }
