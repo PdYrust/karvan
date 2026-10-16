@@ -61,11 +61,13 @@ const (
 
 // Admin is a panel admin; in both panels a reseller is a non-owner admin.
 type Admin struct {
-	SourceID   int64 // id in the panel it was read from
-	Username   string
-	IsOwner    bool // Marzban is_sudo, PasarGuard owner/administrator role
-	TelegramID *int64
-	Note       string
+	SourceID       int64 // id in the panel it was read from; 0 when the API has none
+	Username       string
+	IsOwner        bool // Marzban is_sudo, PasarGuard owner/administrator role
+	TelegramID     *int64
+	DiscordWebhook string
+	Note           string
+	UsedTraffic    int64 // Marzban users_usage, PasarGuard used_traffic
 }
 
 // Credentials are the per-protocol secrets that live inside client configs.
@@ -140,7 +142,13 @@ type User struct {
 	NextPlan      *NextPlan
 	CreatedAt     time.Time
 	OnlineAt      *time.Time
-	SubRevokedAt  *time.Time
+	SubRevokedAt  *time.Time // PasarGuard only; Marzban's API does not return it
+	SubUpdatedAt  *time.Time
+	SubUserAgent  string
+	// Where the user sat on the source, for categories and the report:
+	// Marzban protocol to inbound tags, PasarGuard group ids.
+	SourceInbounds map[string][]string
+	SourceGroups   []int64
 	// SubscriptionURL is the link as the source panel shows it. It never
 	// survives a move, but its token maps old links to new users.
 	SubscriptionURL string

@@ -2,7 +2,6 @@ package panel
 
 import (
 	"context"
-	"iter"
 
 	"github.com/PdYrust/karvan/internal/secret"
 )
@@ -33,9 +32,12 @@ type Source interface {
 	Info(ctx context.Context) (Info, error)
 	// CurrentAdmin is the admin whose credentials were given.
 	CurrentAdmin(ctx context.Context) (Admin, error)
-	// Users yields every user the admin can see, paged with an explicit
-	// sort, because neither panel orders its lists by default.
-	Users(ctx context.Context) iter.Seq2[User, error]
+	// Users returns every user the admin can see, paged with an explicit
+	// sort (neither panel orders its lists by default), read until two
+	// passes agree.
+	Users(ctx context.Context) ([]User, error)
+	// Close drops the credentials the source holds.
+	Close()
 }
 
 // LookupQuery asks the destination which of these already exist.
