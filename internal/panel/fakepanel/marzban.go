@@ -22,7 +22,7 @@ type MarzbanAdmin struct {
 
 // NewMarzban serves admin and users (built with MarzbanUser) until Close.
 func NewMarzban(admin MarzbanAdmin, users []map[string]any, f Faults) *Marzban {
-	p := &panelState{username: admin.Username, password: admin.Password, tokens: map[string]bool{}, users: users, faults: f}
+	p := &panelState{username: admin.Username, password: admin.Password, tokens: map[string]bool{}, users: users, faults: f, subs: map[string]string{}}
 	m := &Marzban{state: p}
 	m.Server = serve(p, map[string]http.HandlerFunc{
 		"POST /api/admin/token": p.login,
@@ -37,6 +37,7 @@ func NewMarzban(admin MarzbanAdmin, users []map[string]any, f Faults) *Marzban {
 				writeJSON(w, http.StatusOK, p.page(r, func(u map[string]any) map[string]any { return m.response(u) }))
 			}
 		},
+		"GET /sub/{token}/info": p.subInfo(m.response),
 	})
 	return m
 }
@@ -82,3 +83,12 @@ func MarzbanUser(username string, n int, set map[string]any) map[string]any {
 
 // Mutate changes the fake's users between reads.
 func (m *Marzban) Mutate(fn func(users *[]map[string]any)) { m.state.Mutate(fn) }
+
+// Subscribe makes token valid for username at /sub/{token}/info.
+func (m *Marzban) Subscribe(token, username string) { m.state.Subscribe(token, username) }
+
+// SubCalls is how many /info requests the fake answered.
+func (m *Marzban) SubCalls() int { return m.state.SubCalls() }
+
+// FailSub makes /info answer status (0: normally).
+func (m *Marzban) FailSub(status int) { m.state.FailSub(status) }

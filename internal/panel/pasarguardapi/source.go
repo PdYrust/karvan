@@ -152,3 +152,18 @@ func (s *Source) Users(ctx context.Context) ([]panel.User, error) {
 
 // Skew is the panel's clock minus Karvan's, from the last response.
 func (s *Source) Skew() time.Duration { return s.c.Skew() }
+
+// SubscriptionUser reads the user a subscription token belongs to, from
+// GET /{path}/{token}/info: what the panel tells anyone holding the link.
+// It needs no login. The caller checks token's characters first.
+func SubscriptionUser(ctx context.Context, c *source.Client, path, token string) (panel.User, error) {
+	resp, err := c.Get(ctx, "/"+path+"/"+token+"/info", nil, nil)
+	if err != nil {
+		return panel.User{}, err
+	}
+	var j userJSON
+	if err := source.DecodeJSON(resp.Body, &j); err != nil {
+		return panel.User{}, err
+	}
+	return j.toUser()
+}

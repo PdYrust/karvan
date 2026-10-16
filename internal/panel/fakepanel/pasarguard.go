@@ -26,7 +26,7 @@ type PasarGuardAdmin struct {
 // NewPasarGuard serves admin and users (built with PasarGuardUser).
 func NewPasarGuard(admin PasarGuardAdmin, users []map[string]any, f Faults) *PasarGuard {
 	p := &panelState{username: admin.Username, password: admin.Password, apiKey: admin.APIKey,
-		tokens: map[string]bool{}, users: users, faults: f}
+		tokens: map[string]bool{}, users: users, faults: f, subs: map[string]string{}}
 	g := &PasarGuard{state: p}
 	g.Server = serve(p, map[string]http.HandlerFunc{
 		"POST /api/admin/token": p.login,
@@ -49,6 +49,7 @@ func NewPasarGuard(admin PasarGuardAdmin, users []map[string]any, f Faults) *Pas
 				writeJSON(w, http.StatusOK, p.page(r, func(u map[string]any) map[string]any { return g.response(u, loadSub) }))
 			}
 		},
+		"GET /sub/{token}/info": p.subInfo(func(u map[string]any) map[string]any { return g.response(u, false) }),
 	})
 	return g
 }
@@ -86,3 +87,12 @@ func PasarGuardUser(id int64, username string, set map[string]any) map[string]an
 
 // Mutate changes the fake's users between reads.
 func (g *PasarGuard) Mutate(fn func(users *[]map[string]any)) { g.state.Mutate(fn) }
+
+// Subscribe makes token valid for username at /sub/{token}/info.
+func (g *PasarGuard) Subscribe(token, username string) { g.state.Subscribe(token, username) }
+
+// SubCalls is how many /info requests the fake answered.
+func (g *PasarGuard) SubCalls() int { return g.state.SubCalls() }
+
+// FailSub makes /info answer status (0: normally).
+func (g *PasarGuard) FailSub(status int) { g.state.FailSub(status) }

@@ -120,6 +120,8 @@ type Source struct {
 	Close    func()
 	// Mutate changes the panel's users between reads.
 	Mutate func(fn func(users *[]map[string]any))
+	// Subscribe makes a subscription token valid for a user ("" revokes).
+	Subscribe func(token, username string)
 }
 
 // NewSource starts a fake old panel of kind with n users.
@@ -138,11 +140,11 @@ func NewSource(t *testing.T, kind panel.Kind, n int) Source {
 			})
 		}
 		f := fakepanel.NewMarzban(fakepanel.MarzbanAdmin{Username: "reseller", Password: "pw"}, users, fakepanel.Faults{})
-		return Source{URL: f.URL, Kind: kind, Username: "reseller", Password: "pw", Close: f.Close, Mutate: f.Mutate}
+		return Source{URL: f.URL, Kind: kind, Username: "reseller", Password: "pw", Close: f.Close, Mutate: f.Mutate, Subscribe: f.Subscribe}
 	}
 	for i := range users {
 		users[i] = fakepanel.PasarGuardUser(int64(i+1), fmt.Sprintf("user%03d", i), nil)
 	}
 	f := fakepanel.NewPasarGuard(fakepanel.PasarGuardAdmin{ID: 7, Username: "shop", Password: "pw"}, users, fakepanel.Faults{})
-	return Source{URL: f.URL, Kind: kind, Username: "shop", Password: "pw", Close: f.Close, Mutate: f.Mutate}
+	return Source{URL: f.URL, Kind: kind, Username: "shop", Password: "pw", Close: f.Close, Mutate: f.Mutate, Subscribe: f.Subscribe}
 }

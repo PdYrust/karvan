@@ -36,6 +36,56 @@ type panelState struct {
 	pages    int
 	users    []map[string]any
 	faults   Faults
+	subs     map[string]string // subscription token -> username
+	subCalls int
+	subFail  int // answer /info with this status when set
+}
+
+// subInfo serves GET /sub/{token}/info: the user the token names, or the
+// panels' own 404 for an unknown token. It needs no login.
+func (p *panelState) subInfo(shape func(map[string]any) map[string]any) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		p.subCalls++
+		if p.subFail != 0 {
+			http.Error(w, `{"detail":"busy"}`, p.subFail)
+			return
+		}
+		name, ok := p.subs[r.PathValue("token")]
+		i := slices.IndexFunc(p.users, func(u map[string]any) bool { return u["username"] == name })
+		if !ok || i < 0 {
+			writeJSON(w, http.StatusNotFound, map[string]string{"detail": "Not Found"})
+			return
+		}
+		out := shape(p.users[i])
+		delete(out, "admin")
+		writeJSON(w, http.StatusOK, out)
+	}
+}
+
+// Subscribe makes token a valid subscription token for username; an
+// empty username revokes it.
+func (p *panelState) Subscribe(token, username string) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	if username == "" {
+		delete(p.subs, token)
+		return
+	}
+	p.subs[token] = username
+}
+
+// SubCalls is how many /info requests the fake answered.
+func (p *panelState) SubCalls() int {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	return p.subCalls
+}
+
+// FailSub makes /info answer status (0: answer normally).
+func (p *panelState) FailSub(status int) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+	p.subFail = status
 }
 
 func (p *panelState) newToken() string {
