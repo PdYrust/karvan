@@ -33,6 +33,7 @@ func commands() []command {
 		{name: "init", summary: "Set up a new installation and print the sign-in details once", run: runInit},
 		{name: "serve", summary: "Run the web panel", run: runServe},
 		{name: "reset", summary: "Regenerate the path, username, password or port; or turn two-step off", run: runReset},
+		{name: "safe-mode", summary: "Restore a Safe Mode backup: safe-mode restore -panel-stopped <id>", run: runSafeMode},
 		{name: "version", summary: "Print version information", run: runVersion},
 	}
 }
@@ -70,7 +71,7 @@ func printUsage(w io.Writer) {
 	var b strings.Builder
 	b.WriteString("Usage: karvan <command> [flags]\n\nCommands:\n")
 	for _, c := range commands() {
-		fmt.Fprintf(&b, "  %-9s %s\n", c.name, c.summary)
+		fmt.Fprintf(&b, "  %-10s %s\n", c.name, c.summary)
 	}
 	b.WriteString("\nRun \"karvan <command> -h\" for the flags of a command.\n")
 	fmt.Fprint(w, b.String())

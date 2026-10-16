@@ -25,6 +25,14 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 	if err != nil {
 		return err
 	}
+	unlock, err := a.lockDataDir()
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	ctx, cancel := context.WithCancel(ctx)
+	svc := a.startServices(ctx)
+	defer func() { cancel(); svc.stop() }()
 	handler, err := httpapi.New(httpapi.Deps{
 		BasePath:       h.BasePath,
 		TrustedProxies: a.Config.Proxies(),
@@ -33,6 +41,10 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 		Web:            web,
 		Version:        buildinfo.Version,
 		Logger:         a.Logger,
+		Runs:           svc.runs,
+		Bridge:         svc.bridge,
+		Settings:       a.Settings,
+		ScanRoots:      scanRoots(),
 	})
 	if err != nil {
 		return err
