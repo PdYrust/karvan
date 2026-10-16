@@ -23,8 +23,12 @@ func loadConfig(name string, streams IO, args []string, extra func(*flagSetter))
 	return flags.Load()
 }
 
+// newLogger also becomes the default, so code that logs through slog's
+// package functions uses the configured level and output.
 func newLogger(w io.Writer, cfg config.Config) *slog.Logger {
-	return slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{Level: cfg.Level()}))
+	l := slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{Level: cfg.Level()}))
+	slog.SetDefault(l)
+	return l
 }
 
 func runInit(ctx context.Context, streams IO, args []string) error {
