@@ -2,6 +2,7 @@ package marzbandb
 
 import (
 	"context"
+	"slices"
 	"testing"
 	"time"
 
@@ -154,5 +155,49 @@ func TestRemoveLeavesChangedRows(t *testing.T) {
 			t.Errorf("a changed row must be left alone: removed %v", removed)
 		}
 		return err
+	})
+}
+
+// Like get_or_create_inbound: a new inbound row comes with its default
+// host, or Marzban would give that inbound no links; an existing row
+// gets nothing, and running twice adds nothing.
+func TestEnsureInboundsAddsTheDefaultHost(t *testing.T) {
+	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+		ctx := context.Background()
+		db, err := paneldb.OpenWriter(ctx, tg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer db.Close()
+		batch(t, db, func(x paneldb.Execer) error {
+			_, err := x.ExecContext(ctx, "INSERT INTO inbounds (tag) VALUES (?)", "VMess WS")
+			return err
+		})
+		w := NewWriter(db.Server().Dialect, targets)
+		for range 2 {
+			batch(t, db, func(x paneldb.Execer) error { return w.EnsureInbounds(ctx, x) })
+		}
+		batch(t, db, func(x paneldb.Execer) error {
+			rows, err := x.QueryContext(ctx, "SELECT inbound_tag, remark, address, alpn FROM hosts ORDER BY inbound_tag")
+			if err != nil {
+				return err
+			}
+			defer rows.Close()
+			var got []string
+			for rows.Next() {
+				var tag, remark, addr, alpn string
+				if err := rows.Scan(&tag, &remark, &addr, &alpn); err != nil {
+					return err
+				}
+				if remark != DefaultHostRemark || addr != "{SERVER_IP}" || alpn != "none" {
+					t.Errorf("host %s: %q %q %q", tag, remark, addr, alpn)
+				}
+				got = append(got, tag)
+			}
+			if want := []string{"VLESS TCP", "VLESS WS"}; !slices.Equal(got, want) {
+				t.Errorf("hosts for %v, want %v", got, want)
+			}
+			return rows.Err()
+		})
 	})
 }

@@ -24,9 +24,11 @@ var columns = map[string][]string{
 	"proxies":                      {"id", "user_id", "type", "settings"},
 	"exclude_inbounds_association": {"proxy_id", "inbound_tag"},
 	"inbounds":                     {"id", "tag"},
-	"next_plans":                   {"id", "user_id", "data_limit", "expire", "add_remaining_traffic", "fire_on_either"},
-	"user_usage_logs":              {"id", "user_id", "used_traffic_at_reset", "reset_at"},
-	"jwt":                          {"id", "secret_key"},
+	"hosts": {"id", "remark", "address", "inbound_tag", "security", "alpn", "fingerprint", "is_disabled", "mux_enable",
+		"random_user_agent", "use_sni_as_host"},
+	"next_plans":      {"id", "user_id", "data_limit", "expire", "add_remaining_traffic", "fire_on_either"},
+	"user_usage_logs": {"id", "user_id", "used_traffic_at_reset", "reset_at"},
+	"jwt":             {"id", "secret_key"},
 }
 
 // children are the rows that hang off a user or an admin, in delete order

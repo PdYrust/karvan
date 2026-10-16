@@ -180,7 +180,7 @@ func undoesEverything(t *testing.T, step string) {
 	each(t, func(t *testing.T, from, to panel.Kind, tg paneldb.Target) {
 		{
 			h := newHarness(t, from, to, tg, 12)
-			before := paneldbtest.ChecksumExcept(t, tg, "inbounds")
+			before := paneldbtest.ChecksumExcept(t, tg, "inbounds", "hosts")
 			h.fault = func(s string, n int) error {
 				if s == step && n == 2 {
 					return errors.New("injected")
@@ -191,7 +191,7 @@ func undoesEverything(t *testing.T, step string) {
 			if rep.State != StateRolledBack {
 				t.Fatalf("%s: state %s error %q left %v", step, rep.State, rep.Error, rep.Left)
 			}
-			if after := paneldbtest.ChecksumExcept(t, tg, "inbounds"); after != before {
+			if after := paneldbtest.ChecksumExcept(t, tg, "inbounds", "hosts"); after != before {
 				t.Fatalf("%s: the destination is not as it was", step)
 			}
 			rows, _ := h.svc.ledger.Job(context.Background(), rep.JobID, ledger.Done, ledger.Pending)

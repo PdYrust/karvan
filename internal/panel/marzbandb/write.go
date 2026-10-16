@@ -60,18 +60,32 @@ func (w Writer) InsertAdmin(ctx context.Context, x paneldb.Execer, a panel.Admin
 }
 
 // EnsureInbounds adds inbounds rows for tags that have none yet; Marzban's
-// exclusions reference them, and the panel creates them lazily the same
-// way (get_or_create_inbound, crud.py:62).
+// exclusions reference them. It adds each new row's default host with it,
+// as get_or_create_inbound does (crud.py:62): Marzban only adds a host
+// when it creates the inbound row itself, so an inbound row without one
+// would give that inbound no links in any subscription.
 func (w Writer) EnsureInbounds(ctx context.Context, x paneldb.Execer) error {
 	for _, proto := range marzban.Protocols {
 		for _, tag := range w.Inbounds[proto] {
-			if _, err := x.ExecContext(ctx, "INSERT INTO inbounds (tag) SELECT ? WHERE NOT EXISTS (SELECT 1 FROM inbounds WHERE tag = ?)", tag, tag); err != nil {
+			res, err := x.ExecContext(ctx, "INSERT INTO inbounds (tag) SELECT ? WHERE NOT EXISTS (SELECT 1 FROM inbounds WHERE tag = ?)", tag, tag)
+			if err != nil {
 				return fmt.Errorf("add inbound %q: %w", tag, err)
+			}
+			if n, _ := res.RowsAffected(); n == 0 {
+				continue
+			}
+			if _, err := x.ExecContext(ctx, "INSERT INTO hosts (remark, address, inbound_tag, security, alpn, fingerprint, "+
+				"is_disabled, mux_enable, random_user_agent, use_sni_as_host) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+				DefaultHostRemark, "{SERVER_IP}", tag, "inbound_default", "none", "none", false, false, false, false); err != nil {
+				return fmt.Errorf("add the default host of %q: %w", tag, err)
 			}
 		}
 	}
 	return nil
 }
+
+// DefaultHostRemark is the remark of the host Marzban adds to a new inbound.
+const DefaultHostRemark = "\U0001F680 Marz ({USERNAME}) [{PROTOCOL} - {TRANSPORT}]"
 
 // InsertUser writes one user with its proxies, exclusions, next plan and
 // usage log, and returns its id.

@@ -85,7 +85,7 @@ const (
 	UndoConnections   = "client_connections"
 	UndoAfterReload   = "after_reload"
 	UndoCoreLoaded    = "core_may_have_loaded"
-	UndoInboundRows   = "inbound_tag_rows"
+	UndoInboundRows   = "inbound_tag_rows" // Marzban inbound rows and their default hosts
 )
 
 func newReport(j *Job, start time.Time) *Report {
