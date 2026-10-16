@@ -90,7 +90,7 @@ func (s *Site) checkFields() error {
 		return invalid("a certificate file or a pasted certificate, not both")
 	}
 	if s.SourceIP != "" {
-		if _, err := netip.ParseAddr(s.SourceIP); err != nil {
+		if a, err := netip.ParseAddr(s.SourceIP); err != nil || !source.Allowed(a) {
 			return invalid("source address %q", s.SourceIP)
 		}
 	}

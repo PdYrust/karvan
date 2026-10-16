@@ -33,6 +33,7 @@ func TestSiteValidation(t *testing.T) {
 		"port":      func(s *Site) { s.Port = 0 },
 		"url":       func(s *Site) { s.SourceURL = "ftp://old" },
 		"ip":        func(s *Site) { s.SourceIP = "old.example.com" },
+		"metadata":  func(s *Site) { s.SourceIP = "169.254.169.254" },
 		"pin":       func(s *Site) { s.SourcePin = "abc" },
 		"domain":    func(s *Site) { s.Domains = []string{"*.*.example.com"} },
 		"key file":  func(s *Site) { s.CertFile = "/c.pem" },

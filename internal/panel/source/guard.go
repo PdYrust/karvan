@@ -18,6 +18,10 @@ var metadata = []netip.Addr{
 	netip.MustParseAddr("fd00:ec2::254"),
 }
 
+// Allowed reports whether Karvan may connect to a, for checks made before
+// any connection (a stored address, for example).
+func Allowed(a netip.Addr) bool { return allowed(a) }
+
 // allowed reports whether Karvan may connect to a. Loopback and private
 // ranges are allowed, because the old panel can sit on the same server or
 // LAN; link-local (cloud metadata), multicast and unspecified are not.

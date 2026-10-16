@@ -122,6 +122,14 @@ func TestRefusesMetadataAndLinkLocal(t *testing.T) {
 			t.Errorf("%s: err = %v, retries = %d", host, err, len(rec.waits))
 		}
 	}
+	// Literal addresses skip DNS and are checked the same way.
+	for _, base := range []string{"http://169.254.169.254", "http://[::ffff:169.254.169.254]:80", "http://0.0.0.0:8000",
+		"http://[fe80::1]:8000", "http://224.0.0.1"} {
+		c, _ := client(t, base, Options{Resolver: r})
+		if _, err := c.Get(context.Background(), "/api/admin", nil, nil); CodeOf(err) != CodeForbiddenAddress {
+			t.Errorf("%s: err = %v", base, err)
+		}
+	}
 	for _, a := range []string{"127.0.0.1", "10.0.0.5", "192.168.1.10", "::1"} {
 		if !allowed(netip.MustParseAddr(a)) {
 			t.Errorf("%s must be allowed: the old panel can be local", a)
