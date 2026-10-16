@@ -20,6 +20,26 @@ type Rules interface {
 	UserKey(name string) string
 }
 
+// VersionError means Karvan has no tested writer for this database.
+type VersionError struct {
+	Kind     Kind
+	Revision string
+}
+
+func (e *VersionError) Error() string {
+	return fmt.Sprintf("%s revision %q is not supported", e.Kind, e.Revision)
+}
+
+// SchemaError means the database is at a known revision but its shape is
+// not what that revision creates (a fork, a hand edit, an extra table that
+// references users).
+type SchemaError struct {
+	Kind   Kind
+	Detail string
+}
+
+func (e *SchemaError) Error() string { return fmt.Sprintf("%s schema: %s", e.Kind, e.Detail) }
+
 // RuleError is a value the destination would refuse. Code is stable and
 // machine-readable; the UI turns it into words.
 type RuleError struct {
