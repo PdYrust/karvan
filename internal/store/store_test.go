@@ -2,6 +2,7 @@ package store
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
@@ -53,6 +54,28 @@ func TestExists(t *testing.T) {
 	}
 }
 
+func embedded(t *testing.T) int {
+	t.Helper()
+	m, err := loadMigrations(migrationFiles)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return len(m)
+}
+
+// after is the embedded migrations (already applied, so their bodies do
+// not matter) plus one more step.
+func after(t *testing.T, name, body string) fstest.MapFS {
+	t.Helper()
+	n := embedded(t)
+	fsys := fstest.MapFS{}
+	for i := 1; i <= n; i++ {
+		fsys[fmt.Sprintf("migrations/%04d_applied.sql", i)] = &fstest.MapFile{Data: []byte("SELECT 1;")}
+	}
+	fsys[fmt.Sprintf("migrations/%04d_%s.sql", n+1, name)] = &fstest.MapFile{Data: []byte(body)}
+	return fsys
+}
+
 func TestOpenIsIdempotent(t *testing.T) {
 	dir := t.TempDir()
 	for range 2 {
@@ -61,7 +84,7 @@ func TestOpenIsIdempotent(t *testing.T) {
 			t.Fatalf("Open: %v", err)
 		}
 		var n int
-		if err := db.QueryRow(`SELECT count(*) FROM schema_migrations`).Scan(&n); err != nil || n != 1 {
+		if err := db.QueryRow(`SELECT count(*) FROM schema_migrations`).Scan(&n); err != nil || n != embedded(t) {
 			t.Fatalf("schema_migrations rows = %d, %v", n, err)
 		}
 		db.Close()
@@ -74,15 +97,12 @@ func TestMigrateAppliesOnlyPendingSteps(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	fsys := fstest.MapFS{
-		"migrations/0001_init.sql":  {Data: []byte(`SELECT 1;`)},
-		"migrations/0002_extra.sql": {Data: []byte(`CREATE TABLE extra (id INTEGER PRIMARY KEY) STRICT;`)},
-	}
+	fsys := after(t, "extra", `CREATE TABLE extra (id INTEGER PRIMARY KEY) STRICT;`)
 	if err := migrateFrom(context.Background(), db, fsys); err != nil {
 		t.Fatalf("migrate: %v", err)
 	}
 	var n int
-	if err := db.QueryRow(`SELECT count(*) FROM schema_migrations`).Scan(&n); err != nil || n != 2 {
+	if err := db.QueryRow(`SELECT count(*) FROM schema_migrations`).Scan(&n); err != nil || n != embedded(t)+1 {
 		t.Fatalf("rows = %d, %v", n, err)
 	}
 }
@@ -93,12 +113,10 @@ func TestMigrateRollsBackAFailedStep(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer db.Close()
-	fsys := fstest.MapFS{
-		"migrations/0001_init.sql": {Data: []byte(`SELECT 1;`)},
-		"migrations/0002_bad.sql":  {Data: []byte(`CREATE TABLE half (id INTEGER); NOT SQL;`)},
-	}
-	if err := migrateFrom(context.Background(), db, fsys); err == nil || !strings.Contains(err.Error(), "0002_bad.sql") {
-		t.Fatalf("err = %v, want failure naming 0002_bad.sql", err)
+	fsys := after(t, "bad", `CREATE TABLE half (id INTEGER); NOT SQL;`)
+	bad := fmt.Sprintf("%04d_bad.sql", embedded(t)+1)
+	if err := migrateFrom(context.Background(), db, fsys); err == nil || !strings.Contains(err.Error(), bad) {
+		t.Fatalf("err = %v, want failure naming %s", err, bad)
 	}
 	var n int
 	_ = db.QueryRow(`SELECT count(*) FROM sqlite_master WHERE name='half'`).Scan(&n)
