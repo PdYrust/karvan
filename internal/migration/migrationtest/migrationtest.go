@@ -50,7 +50,7 @@ func PanelEnv(t *testing.T, tg paneldb.Target, kind panel.Kind) string {
 		t.Fatal(err)
 	}
 	env := "SQLALCHEMY_DATABASE_URL = \"" + URL(tg, kind) + "\"\n"
-	exec(t, tg, "INSERT INTO jwt (id, secret_key) VALUES (?, ?)", 1, JWTSecret)
+	execSQL(t, tg, "INSERT INTO jwt (id, secret_key) VALUES (?, ?)", 1, JWTSecret)
 	if kind == panel.Marzban {
 		xray := filepath.Join(dir, "xray_config.json")
 		if err := os.WriteFile(xray, []byte(XrayInbounds), 0o600); err != nil {
@@ -70,7 +70,7 @@ func PanelEnv(t *testing.T, tg paneldb.Target, kind panel.Kind) string {
 // JWTSecret is the destination's jwt.secret_key in tests.
 const JWTSecret = "karvan-test-jwt-secret-not-used-anywhere-else-0123456789abcdef" //nolint:gosec // G101: a test value for test databases
 
-func exec(t *testing.T, tg paneldb.Target, q string, args ...any) {
+func execSQL(t *testing.T, tg paneldb.Target, q string, args ...any) {
 	t.Helper()
 	ctx := context.Background()
 	w, err := paneldb.OpenWriter(ctx, tg)
