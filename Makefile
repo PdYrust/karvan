@@ -71,7 +71,7 @@ testdb-down:
 # (needs Docker; starts fresh panels every time).
 test-panels:
 	./scripts/testpanels/up.sh
-	go test -tags paneltest -count=1 ./internal/migration/reload/
+	go test -tags paneltest -count=1 -p 1 ./internal/migration/reload/ ./internal/bridge/
 testpanels-down:
 	docker compose -p karvan-testpanels down
 # Full gate: before a phase ends or a release.

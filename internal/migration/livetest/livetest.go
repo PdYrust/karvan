@@ -1,10 +1,14 @@
 //go:build paneltest
 
-package reload_test
+// Package livetest drives the running panels from test/panels: it opens
+// them as destinations, acts as their full admin, and moves users into
+// them with Karvan. Only `make test-panels` builds it.
+package livetest
 
 import (
 	"bytes"
 	"context"
+	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -38,71 +42,76 @@ import (
 const (
 	marzbanContainer = "karvan-testpanels-marzban-1"
 	webhookAddr      = "127.0.0.1:18099"
-	adminPassword    = "Karvan-Test-Pass-2026"
-	fullAdminName    = "root"
+	// AdminPassword is every admin password the tests set.
+	AdminPassword = "Karvan-Test-Pass-2026" //nolint:gosec // G101: a test value for the test panels
+	// FullAdminName is the full admin the tests add when a panel has none.
+	FullAdminName = "root"
 )
 
-func panelsDir() string {
+// PanelsDir is where scripts/testpanels/up.sh put the panels.
+func PanelsDir() string {
 	if d := os.Getenv("KARVAN_TEST_PANELS"); d != "" {
 		return d
 	}
 	return "/tmp/karvan-panels"
 }
 
-// live is one running destination panel.
-type live struct {
-	t    *testing.T
-	kind panel.Kind
-	env  string
-	api  dest.API
-	tg   paneldb.Target
+// Live is one running destination panel.
+type Live struct {
+	t      *testing.T
+	Kind   panel.Kind
+	Env    string
+	API    dest.API
+	Target paneldb.Target
 }
 
-func openLive(t *testing.T, kind panel.Kind) *live {
+// OpenLive opens a running panel as a destination, adding a full admin
+// when it has none.
+func OpenLive(t *testing.T, kind panel.Kind) *Live {
 	t.Helper()
 	ctx := context.Background()
-	env := filepath.Join(panelsDir(), string(kind), ".env")
+	env := filepath.Join(PanelsDir(), string(kind), ".env")
 	d, err := dest.Open(ctx, env)
 	if err != nil {
 		t.Fatalf("open %s (run scripts/testpanels/up.sh): %v", kind, err)
 	}
-	l := &live{t: t, kind: kind, env: env, tg: d.Target}
-	l.api, err = d.API(ctx)
+	l := &Live{t: t, Kind: kind, Env: env, Target: d.Target}
+	l.API, err = d.API(ctx)
 	if errors.Is(err, dest.ErrNoFullAdmin) {
 		l.addFullAdmin()
-		l.api, err = d.API(ctx)
+		l.API, err = d.API(ctx)
 	}
 	if err != nil {
 		t.Fatal(err)
 	}
-	if l.api.Admin != fullAdminName {
-		t.Fatalf("full admin %q, want %q", l.api.Admin, fullAdminName)
+	if l.API.Admin != FullAdminName {
+		t.Fatalf("full admin %q, want %q", l.API.Admin, FullAdminName)
 	}
 	return l
 }
 
 // addFullAdmin writes a full admin the way Karvan writes the moved one,
 // with a Go bcrypt hash.
-func (l *live) addFullAdmin() {
+func (l *Live) addFullAdmin() {
 	l.t.Helper()
 	ctx := context.Background()
-	hash, err := bcrypt.GenerateFromPassword([]byte(adminPassword), 12)
+	hash, err := bcrypt.GenerateFromPassword([]byte(AdminPassword), 12)
 	if err != nil {
 		l.t.Fatal(err)
 	}
-	w, err := paneldb.OpenWriter(ctx, l.tg)
+	w, err := paneldb.OpenWriter(ctx, l.Target)
 	if err != nil {
 		l.t.Fatal(err)
 	}
 	defer w.Close()
 	err = w.Batch(ctx, func(x paneldb.Execer) error {
-		now := paneldb.TimeArg(l.tg.Dialect, time.Now().UTC())
-		if l.kind == panel.Marzban {
+		now := paneldb.TimeArg(l.Target.Dialect, time.Now().UTC())
+		if l.Kind == panel.Marzban {
 			_, err := x.ExecContext(ctx, "INSERT INTO admins (username, hashed_password, created_at, is_sudo) VALUES (?, ?, ?, ?)",
-				fullAdminName, string(hash), now, true)
+				FullAdminName, string(hash), now, true)
 			return err
 		}
-		_, err := pasarguarddb.Writer{Dialect: l.tg.Dialect}.InsertAdmin(ctx, x, panel.Admin{Username: fullAdminName}, string(hash), 1, time.Now().UTC())
+		_, err := pasarguarddb.Writer{Dialect: l.Target.Dialect}.InsertAdmin(ctx, x, panel.Admin{Username: FullAdminName}, string(hash), 1, time.Now().UTC())
 		return err
 	})
 	if err != nil {
@@ -110,16 +119,16 @@ func (l *live) addFullAdmin() {
 	}
 }
 
-// call sends an API request as the full admin and decodes the answer.
-func (l *live) call(method, path string, body, out any) int {
+// Call sends an API request as the full admin and decodes the answer.
+func (l *Live) Call(method, path string, body, out any) int {
 	l.t.Helper()
 	var rd io.Reader
 	if body != nil {
 		b, _ := json.Marshal(body)
 		rd = bytes.NewReader(b)
 	}
-	req, _ := http.NewRequest(method, l.api.BaseURL+path, rd)
-	req.Header.Set("Authorization", "Bearer "+l.api.Token(time.Now()))
+	req, _ := http.NewRequest(method, l.API.BaseURL+path, rd)
+	req.Header.Set("Authorization", "Bearer "+l.API.Token(time.Now()))
 	req.Header.Set("Content-Type", "application/json")
 	resp, err := http.DefaultClient.Do(req)
 	if err != nil {
@@ -138,11 +147,11 @@ func (l *live) call(method, path string, body, out any) int {
 	return resp.StatusCode
 }
 
-// login signs in through the panel's own login form.
-func (l *live) login(user, password string) int {
+// Login signs in through the panel's own login form.
+func (l *Live) Login(user, password string) int {
 	l.t.Helper()
 	form := url.Values{"username": {user}, "password": {password}, "grant_type": {"password"}}
-	resp, err := http.PostForm(l.api.BaseURL+"/api/admin/token", form)
+	resp, err := http.PostForm(l.API.BaseURL+"/api/admin/token", form)
 	if err != nil {
 		l.t.Fatal(err)
 	}
@@ -150,29 +159,32 @@ func (l *live) login(user, password string) int {
 	return resp.StatusCode
 }
 
-// user reads one user through the panel API.
-func (l *live) user(id int64, name string) map[string]any {
+// User reads one user through the panel API.
+func (l *Live) User(id int64, name string) map[string]any {
 	l.t.Helper()
 	path := "/api/user/" + url.PathEscape(name)
-	if l.kind == panel.PasarGuard {
+	if l.Kind == panel.PasarGuard {
 		path = fmt.Sprintf("/api/user/by-id/%d", id)
 	}
 	var u map[string]any
-	if code := l.call(http.MethodGet, path, nil, &u); code != http.StatusOK {
+	if code := l.Call(http.MethodGet, path, nil, &u); code != http.StatusOK {
 		l.t.Fatalf("GET %s: %d", path, code)
 	}
 	return u
 }
 
-// mover is a Karvan service pointed at one live panel.
-type mover struct {
+// Mover is a Karvan service pointed at one Live panel.
+type Mover struct {
 	t     *testing.T
-	svc   *run.Service
-	panel int64
-	l     *live
+	Svc   *run.Service
+	Panel int64
+	DB    *sql.DB // Karvan's own database, with the ledger
+	Key   *secret.Key
+	l     *Live
 }
 
-func newMover(t *testing.T, l *live) *mover {
+// NewMover starts a Karvan service with its own store, pointed at l.
+func NewMover(t *testing.T, l *Live) *Mover {
 	t.Helper()
 	ctx := context.Background()
 	dir := t.TempDir()
@@ -189,39 +201,39 @@ func newMover(t *testing.T, l *live) *mover {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := &mover{t: t, l: l, svc: run.New(run.Deps{DB: db, Key: key, DataDir: dir, Tools: migrationtest.Tools, Reloaders: reload.Methods()})}
-	if m.panel, err = m.svc.RegisterPanel(ctx, l.env, "live", string(l.kind)); err != nil {
+	m := &Mover{t: t, l: l, DB: db, Key: key, Svc: run.New(run.Deps{DB: db, Key: key, DataDir: dir, Tools: migrationtest.Tools, Reloaders: reload.Methods()})}
+	if m.Panel, err = m.Svc.RegisterPanel(ctx, l.Env, "Live", string(l.Kind)); err != nil {
 		t.Fatal(err)
 	}
 	return m
 }
 
-// move checks and runs a job from src and returns its report.
-func (m *mover) move(src migrationtest.Source, method string, edit func(p *plan.Plan)) *run.Report {
+// Move checks and runs a job from src and returns its report.
+func (m *Mover) Move(src migrationtest.Source, method string, edit func(p *plan.Plan)) *run.Report {
 	m.t.Helper()
 	ctx := context.Background()
-	j, err := m.svc.Create(ctx, run.Login{URL: src.URL, Username: src.Username, Password: secret.NewValue(src.Password)}, m.panel,
+	j, err := m.Svc.Create(ctx, run.Login{URL: src.URL, Username: src.Username, Password: secret.NewValue(src.Password)}, m.Panel,
 		source.Options{Sleep: func(context.Context, time.Duration) error { return nil }})
 	if err != nil {
 		m.t.Fatal(err)
 	}
-	if _, err := m.svc.Check(ctx, j.ID); err != nil {
+	if _, err := m.Svc.Check(ctx, j.ID); err != nil {
 		m.t.Fatal(err)
 	}
-	_, p, v, _ := m.svc.View(j.ID)
+	_, p, v, _ := m.Svc.View(j.ID)
 	edit(&p)
-	r, v, err := m.svc.SetPlan(ctx, j.ID, v, p)
+	r, v, err := m.Svc.SetPlan(ctx, j.ID, v, p)
 	if err != nil {
 		m.t.Fatal(err)
 	}
 	if r.Blockers > 0 {
 		m.t.Fatalf("blockers: %+v %+v", r.Conflicts, r.Groups)
 	}
-	if err := m.svc.Run(ctx, j.ID, run.Options{Version: v, Reload: method, AdminPassword: secret.NewValue(adminPassword)}); err != nil {
+	if err := m.Svc.Run(ctx, j.ID, run.Options{Version: v, Reload: method, AdminPassword: secret.NewValue(AdminPassword)}); err != nil {
 		m.t.Fatal(err)
 	}
-	m.svc.Wait()
-	rep, err := m.svc.Report(j.ID)
+	m.Svc.Wait()
+	rep, err := m.Svc.Report(j.ID)
 	if err != nil {
 		m.t.Fatal(err)
 	}
@@ -234,8 +246,8 @@ func (m *mover) move(src migrationtest.Source, method string, edit func(p *plan.
 	return rep
 }
 
-// targets lists the moved users the way the reload step does.
-func targets(rep *run.Report, wireguard bool) []run.ReloadTarget {
+// Targets lists the moved users the way the reload step does.
+func Targets(rep *run.Report, wireguard bool) []run.ReloadTarget {
 	var out []run.ReloadTarget
 	for _, u := range rep.Users {
 		if u.Moved {
@@ -245,9 +257,9 @@ func targets(rep *run.Report, wireguard bool) []run.ReloadTarget {
 	return out
 }
 
-// renamed gives a fake source's users a prefix, so every test moves
-// names the live panel has not seen.
-func renamed(src migrationtest.Source, prefix string, edit func(i int, u map[string]any)) {
+// Renamed gives a fake source's users a prefix, so every test moves
+// names the Live panel has not seen.
+func Renamed(src migrationtest.Source, prefix string, edit func(i int, u map[string]any)) {
 	src.Mutate(func(users *[]map[string]any) {
 		for i, u := range *users {
 			u["username"] = prefix + u["username"].(string)
@@ -258,9 +270,9 @@ func renamed(src migrationtest.Source, prefix string, edit func(i int, u map[str
 	})
 }
 
-// xrayEmails lists the users Marzban's running Xray holds in an inbound,
+// XrayEmails lists the users Marzban's running Xray holds in an inbound,
 // read through Xray's own API inside the container.
-func xrayEmails(t *testing.T, tag string) map[string]bool {
+func XrayEmails(t *testing.T, tag string) map[string]bool {
 	t.Helper()
 	port := strings.TrimSpace(docker(t, "python", "-c", xrayPortScript))
 	var out struct {
@@ -293,22 +305,23 @@ for line in open('/proc/net/tcp').readlines()[1:]:
 
 func docker(t *testing.T, args ...string) string {
 	t.Helper()
-	out, err := exec.Command("docker", append([]string{"exec", marzbanContainer}, args...)...).CombinedOutput()
+	out, err := exec.Command("docker", append([]string{"exec", marzbanContainer}, args...)...).CombinedOutput() //nolint:gosec // G204: fixed test commands
 	if err != nil {
 		t.Fatalf("docker exec %v: %v: %s", args, err, out)
 	}
 	return string(out)
 }
 
-// webhook collects Marzban's notifications.
-type webhook struct {
+// Webhook collects Marzban's notifications.
+type Webhook struct {
 	mu      sync.Mutex
 	actions map[string]int // "action username" -> count
 }
 
-func startWebhook(t *testing.T) *webhook {
+// StartWebhook listens where the test Marzban sends its webhooks.
+func StartWebhook(t *testing.T) *Webhook {
 	t.Helper()
-	w := &webhook{actions: map[string]int{}}
+	w := &Webhook{actions: map[string]int{}}
 	srv := &http.Server{Addr: webhookAddr, ReadHeaderTimeout: 5 * time.Second, Handler: http.HandlerFunc(func(rw http.ResponseWriter, r *http.Request) {
 		var events []struct {
 			Action string `json:"action"`
@@ -328,8 +341,8 @@ func startWebhook(t *testing.T) *webhook {
 	return w
 }
 
-// count waits up to 15 s for n notifications of action for names.
-func (w *webhook) count(action string, names []string, n int) int {
+// Count waits up to 15 s for n notifications of action for names.
+func (w *Webhook) Count(action string, names []string, n int) int {
 	deadline := time.Now().Add(15 * time.Second)
 	for {
 		w.mu.Lock()

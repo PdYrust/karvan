@@ -15,6 +15,7 @@ import (
 	"time"
 
 	"github.com/PdYrust/karvan/internal/migration/engine"
+	"github.com/PdYrust/karvan/internal/migration/livetest"
 	"github.com/PdYrust/karvan/internal/migration/migrationtest"
 	"github.com/PdYrust/karvan/internal/migration/plan"
 	"github.com/PdYrust/karvan/internal/migration/reload"
@@ -26,52 +27,52 @@ import (
 // reload; touch and core restart both load them, touch keeps next_plan
 // and sends one "user_updated" per user; the moved admin can log in.
 func TestLiveMarzban(t *testing.T) {
-	l := openLive(t, panel.Marzban)
-	hook := startWebhook(t)
+	l := livetest.OpenLive(t, panel.Marzban)
+	hook := livetest.StartWebhook(t)
 	t.Run("touch", func(t *testing.T) {
 		src := migrationtest.NewSource(t, panel.Marzban, 5)
 		t.Cleanup(src.Close)
-		renamed(src, "mt_", func(i int, u map[string]any) {
+		livetest.Renamed(src, "mt_", func(i int, u map[string]any) {
 			marzbanUser(1, i, u)
 			if i == 0 {
 				u["next_plan"] = map[string]any{"data_limit": 10 << 30, "expire": 2592000, "add_remaining_traffic": false, "fire_on_either": true}
 			}
 		})
-		m := newMover(t, l)
-		rep := m.move(src, run.ReloadTouch, marzbanPlan("mt_admin"))
+		m := livetest.NewMover(t, l)
+		rep := m.Move(src, run.ReloadTouch, marzbanPlan("mt_admin"))
 		checkReload(t, rep, 5)
 		waitXray(t, rep)
 		names := movedNames(rep)
-		if got := hook.count("user_updated", names, len(names)); got != len(names) {
+		if got := hook.Count("user_updated", names, len(names)); got != len(names) {
 			t.Errorf("user_updated notifications: %d, want %d", got, len(names))
 		}
-		if np := l.user(0, "mt_user000")["next_plan"]; np == nil {
+		if np := l.User(0, "mt_user000")["next_plan"]; np == nil {
 			t.Error("touch dropped next_plan")
 		}
 		checkMarzbanUsers(t, l, rep, 1)
-		if code := l.login("mt_admin", adminPassword); code != http.StatusOK {
+		if code := l.Login("mt_admin", livetest.AdminPassword); code != http.StatusOK {
 			t.Errorf("moved admin login: %d", code)
 		}
 	})
 	t.Run("manual-then-core-restart", func(t *testing.T) {
 		src := migrationtest.NewSource(t, panel.Marzban, 4)
 		t.Cleanup(src.Close)
-		renamed(src, "mc_", func(i int, u map[string]any) { marzbanUser(2, i, u) })
-		m := newMover(t, l)
+		livetest.Renamed(src, "mc_", func(i int, u map[string]any) { marzbanUser(2, i, u) })
+		m := livetest.NewMover(t, l)
 		busy := pollDuring(t, l)
-		rep := m.move(src, run.ReloadManual, marzbanPlan("mc_admin"))
+		rep := m.Move(src, run.ReloadManual, marzbanPlan("mc_admin"))
 		busy()
 		if rep.Reload.Command != "marzban restart" {
 			t.Errorf("manual command %q", rep.Reload.Command)
 		}
 		checkInXray(t, rep, false)
-		res := reload.CoreRestart{}.Reload(context.Background(), run.ReloadInput{Kind: panel.Marzban, API: l.api, Users: targets(rep, false)})
+		res := reload.CoreRestart{}.Reload(context.Background(), run.ReloadInput{Kind: panel.Marzban, API: l.API, Users: livetest.Targets(rep, false)})
 		if res.Error != "" || res.OK != 4 {
 			t.Fatalf("core restart: %+v", res)
 		}
 		waitXray(t, rep)
 		names := movedNames(rep)
-		if got := hook.count("user_updated", names, 1); got != 0 {
+		if got := hook.Count("user_updated", names, 1); got != 0 {
 			t.Errorf("core restart sent %d user notifications", got)
 		}
 	})
@@ -117,7 +118,7 @@ func movedNames(rep *run.Report) []string {
 // Xray's VLESS inbound. Marzban names Xray clients "<id>.<username>".
 func checkInXray(t *testing.T, rep *run.Report, want bool) {
 	t.Helper()
-	got := xrayEmails(t, "VLESS TCP")
+	got := livetest.XrayEmails(t, "VLESS TCP")
 	for _, u := range rep.Users {
 		if u.Moved && got[fmt.Sprintf("%d.%s", u.DestID, u.Username)] != want {
 			t.Errorf("%s in Xray = %v, want %v", u.Username, !want, want)
@@ -129,7 +130,7 @@ func checkInXray(t *testing.T, rep *run.Report, want bool) {
 func waitXray(t *testing.T, rep *run.Report) {
 	t.Helper()
 	for range 30 {
-		got := xrayEmails(t, "VLESS TCP")
+		got := livetest.XrayEmails(t, "VLESS TCP")
 		all := true
 		for _, u := range rep.Users {
 			all = all && (!u.Moved || got[fmt.Sprintf("%d.%s", u.DestID, u.Username)])
@@ -143,10 +144,10 @@ func waitXray(t *testing.T, rep *run.Report) {
 }
 
 // checkMarzbanUsers reads every moved user back through the panel API.
-func checkMarzbanUsers(t *testing.T, l *live, rep *run.Report, run int) {
+func checkMarzbanUsers(t *testing.T, l *livetest.Live, rep *run.Report, run int) {
 	t.Helper()
 	for i, u := range rep.Users {
-		got := l.user(u.DestID, u.Username)
+		got := l.User(u.DestID, u.Username)
 		proxies, _ := got["proxies"].(map[string]any)
 		vless, _ := proxies["vless"].(map[string]any)
 		if want := vlessID(run, i); vless["id"] != want {
@@ -158,7 +159,7 @@ func checkMarzbanUsers(t *testing.T, l *live, rep *run.Report, run int) {
 // pollDuring calls the panel every 50 ms until the returned func is
 // called, and fails on any error answer: the panel must keep working
 // while Karvan writes into its SQLite file.
-func pollDuring(t *testing.T, l *live) func() {
+func pollDuring(t *testing.T, l *livetest.Live) func() {
 	t.Helper()
 	var stop atomic.Bool
 	var worst atomic.Int64
@@ -167,7 +168,7 @@ func pollDuring(t *testing.T, l *live) func() {
 		bad := 0
 		for !stop.Load() {
 			start := time.Now()
-			if code := l.call(http.MethodGet, "/api/admins", nil, nil); code != http.StatusOK {
+			if code := l.Call(http.MethodGet, "/api/admins", nil, nil); code != http.StatusOK {
 				bad++
 			}
 			if d := int64(time.Since(start)); d > worst.Load() {
@@ -190,16 +191,16 @@ func pollDuring(t *testing.T, l *live) func() {
 // pool and keeps next_plan; core restart (node reconnect) succeeds; the
 // moved admin can log in.
 func TestLivePasarGuard(t *testing.T) {
-	l := openLive(t, panel.PasarGuard)
+	l := livetest.OpenLive(t, panel.PasarGuard)
 	group := wireguardGroup(t, l)
 	t.Run("touch", func(t *testing.T) {
 		rep := movePasarGuard(t, l, "pt_", group, run.ReloadTouch)
 		checkReload(t, rep, 3)
 		checkPeerIPs(t, l, rep, true)
-		if np := l.user(rep.Users[0].DestID, "")["next_plan"]; np == nil {
+		if np := l.User(rep.Users[0].DestID, "")["next_plan"]; np == nil {
 			t.Error("touch dropped next_plan")
 		}
-		if code := l.login("pt_admin", adminPassword); code != http.StatusOK {
+		if code := l.Login("pt_admin", livetest.AdminPassword); code != http.StatusOK {
 			t.Errorf("moved admin login: %d", code)
 		}
 	})
@@ -214,18 +215,18 @@ func TestLivePasarGuard(t *testing.T) {
 	})
 }
 
-func movePasarGuard(t *testing.T, l *live, prefix string, group int64, method string) *run.Report {
+func movePasarGuard(t *testing.T, l *livetest.Live, prefix string, group int64, method string) *run.Report {
 	t.Helper()
 	src := migrationtest.NewSource(t, panel.PasarGuard, 3)
 	t.Cleanup(src.Close)
-	renamed(src, prefix, func(i int, u map[string]any) {
+	livetest.Renamed(src, prefix, func(i int, u map[string]any) {
 		u["proxy_settings"] = map[string]any{"wireguard": wireguardKeys(t, i)}
 		if i == 0 {
 			u["next_plan"] = map[string]any{"user_template_id": nil, "data_limit": 5 << 30, "expire": 86400, "add_remaining_traffic": true}
 		}
 	})
-	m := newMover(t, l)
-	return m.move(src, method, func(p *plan.Plan) {
+	m := livetest.NewMover(t, l)
+	return m.Move(src, method, func(p *plan.Plan) {
 		p.Targets = []string{strconv.FormatInt(group, 10)}
 		p.Admin.Username = prefix + "admin"
 		p.Resolutions = map[string]plan.Resolution{engine.WireGuardIPs: {Option: engine.OptAccept}}
@@ -246,7 +247,7 @@ func wireguardKeys(t *testing.T, i int) map[string]any {
 }
 
 // wireguardGroup adds a WireGuard core and a group serving it, once.
-func wireguardGroup(t *testing.T, l *live) int64 {
+func wireguardGroup(t *testing.T, l *livetest.Live) int64 {
 	t.Helper()
 	var groups struct {
 		Groups []struct {
@@ -254,7 +255,7 @@ func wireguardGroup(t *testing.T, l *live) int64 {
 			Name string `json:"name"`
 		} `json:"groups"`
 	}
-	l.call(http.MethodGet, "/api/groups", nil, &groups)
+	l.Call(http.MethodGet, "/api/groups", nil, &groups)
 	for _, g := range groups.Groups {
 		if g.Name == "wireguard" {
 			return g.ID
@@ -267,13 +268,13 @@ func wireguardGroup(t *testing.T, l *live) int64 {
 	core := map[string]any{"name": "wg", "type": "wg", "exclude_inbound_tags": []string{}, "fallbacks_inbound_tags": []string{},
 		"config": map[string]any{"interface_name": "wg0", "private_key": base64.StdEncoding.EncodeToString(k.Bytes()),
 			"listen_port": 51820, "address": []string{"10.77.0.1/24"}}}
-	if code := l.call(http.MethodPost, "/api/core", core, nil); code/100 != 2 {
+	if code := l.Call(http.MethodPost, "/api/core", core, nil); code/100 != 2 {
 		t.Fatalf("add WireGuard core: %d", code)
 	}
 	var g struct {
 		ID int64 `json:"id"`
 	}
-	if code := l.call(http.MethodPost, "/api/group", map[string]any{"name": "wireguard", "inbound_tags": []string{"wg0"}}, &g); code/100 != 2 {
+	if code := l.Call(http.MethodPost, "/api/group", map[string]any{"name": "wireguard", "inbound_tags": []string{"wg0"}}, &g); code/100 != 2 {
 		t.Fatalf("add group: %d", code)
 	}
 	return g.ID
@@ -281,10 +282,10 @@ func wireguardGroup(t *testing.T, l *live) int64 {
 
 // checkPeerIPs checks every moved user has (or lacks) a peer IP from the
 // panel's 10.77.0.0/24 pool.
-func checkPeerIPs(t *testing.T, l *live, rep *run.Report, want bool) {
+func checkPeerIPs(t *testing.T, l *livetest.Live, rep *run.Report, want bool) {
 	t.Helper()
 	for _, u := range rep.Users {
-		got := l.user(u.DestID, "")
+		got := l.User(u.DestID, "")
 		ps, _ := got["proxy_settings"].(map[string]any)
 		wg, _ := ps["wireguard"].(map[string]any)
 		ips, _ := wg["peer_ips"].([]any)
