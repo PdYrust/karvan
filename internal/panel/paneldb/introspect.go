@@ -2,7 +2,6 @@ package paneldb
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -109,28 +108,34 @@ func sqliteForeignKeys(ctx context.Context, q Querier, refs []string) ([]Foreign
 	}
 	var out []ForeignKey
 	for _, t := range tables {
-		rows, err := q.QueryContext(ctx, `SELECT "from", "table", on_delete FROM pragma_foreign_key_list(?) ORDER BY "from"`, t)
+		fks, err := sqliteTableForeignKeys(ctx, q, t)
 		if err != nil {
-			return nil, fmt.Errorf("read foreign keys of %s: %w", t, err)
+			return nil, err
 		}
-		for rows.Next() {
-			fk := ForeignKey{Table: t}
-			if err := rows.Scan(&fk.Column, &fk.RefTable, &fk.OnDelete); err != nil {
-				return nil, errors.Join(err, rows.Close())
-			}
+		for _, fk := range fks {
 			if want[fk.RefTable] {
 				out = append(out, fk)
 			}
 		}
-		err = rows.Err()
-		if cerr := rows.Close(); err == nil {
-			err = cerr
-		}
-		if err != nil {
-			return nil, err
-		}
 	}
 	return out, nil
+}
+
+func sqliteTableForeignKeys(ctx context.Context, q Querier, table string) ([]ForeignKey, error) {
+	rows, err := q.QueryContext(ctx, `SELECT "from", "table", on_delete FROM pragma_foreign_key_list(?) ORDER BY "from"`, table)
+	if err != nil {
+		return nil, fmt.Errorf("read foreign keys of %s: %w", table, err)
+	}
+	defer rows.Close()
+	var out []ForeignKey
+	for rows.Next() {
+		fk := ForeignKey{Table: table}
+		if err := rows.Scan(&fk.Column, &fk.RefTable, &fk.OnDelete); err != nil {
+			return nil, err
+		}
+		out = append(out, fk)
+	}
+	return out, rows.Err()
 }
 
 func queryStrings(ctx context.Context, q Querier, query string, args ...any) ([]string, error) {
