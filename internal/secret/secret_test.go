@@ -176,3 +176,14 @@ func TestValueNeverPrintsItself(t *testing.T) {
 		t.Error("IsZero is wrong")
 	}
 }
+
+func TestDeriveIsStablePerLabelAndKey(t *testing.T) {
+	k := newKey(t)
+	a, b := k.Derive("bridge/token-mac"), k.Derive("bridge/token-mac")
+	if len(a) != 32 || !bytes.Equal(a, b) {
+		t.Fatal("same label gives a different key")
+	}
+	if bytes.Equal(a, k.Derive("other")) || bytes.Equal(a, newKey(t).Derive("bridge/token-mac")) {
+		t.Fatal("derived keys collide")
+	}
+}

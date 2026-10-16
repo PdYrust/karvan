@@ -6,7 +6,9 @@ package secret
 import (
 	"bytes"
 	"crypto/cipher"
+	"crypto/hkdf"
 	"crypto/rand"
+	"crypto/sha256"
 	"encoding/hex"
 	"errors"
 	"fmt"
@@ -21,6 +23,7 @@ const keyVersion byte = 1
 // Key seals and opens values with XChaCha20-Poly1305.
 type Key struct {
 	aead cipher.AEAD
+	raw  []byte
 }
 
 // CreateKeyFile writes a new random key to path. It never replaces an
@@ -69,7 +72,17 @@ func LoadKeyFile(path string) (*Key, error) {
 	if err != nil {
 		return nil, fmt.Errorf("init cipher: %w", err)
 	}
-	return &Key{aead: aead}, nil
+	return &Key{aead: aead, raw: raw}, nil
+}
+
+// Derive returns a 32-byte key for label (HKDF-SHA256 over the file key).
+// Derived keys are independent of the sealing key and of each other.
+func (k *Key) Derive(label string) []byte {
+	out, err := hkdf.Key(sha256.New, k.raw, nil, "karvan/"+label, 32)
+	if err != nil {
+		panic(err) // only for a length over 255*32
+	}
+	return out
 }
 
 // AAD names the place a value is stored, so a ciphertext copied into another
