@@ -79,7 +79,9 @@ func GeneratePassword(username string) (string, error) {
 		if err := shuffle(b); err != nil {
 			return "", err
 		}
-		if p := string(b); CheckPassword(p, username) == "" {
+		// A spreadsheet reads a cell starting with = + - @ as a formula, and
+		// the password goes out in a CSV file.
+		if p := string(b); !strings.ContainsRune("=+-@", rune(p[0])) && CheckPassword(p, username) == "" {
 			return p, nil
 		}
 	}

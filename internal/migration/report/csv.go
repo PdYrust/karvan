@@ -6,6 +6,7 @@ package report
 import (
 	"encoding/csv"
 	"io"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -74,4 +75,29 @@ func safe(s string) string {
 		return "'" + s
 	}
 	return s
+}
+
+// WritePasswords writes the generated admin passwords, sorted by admin.
+func WritePasswords(w io.Writer, passwords map[string]string) error {
+	if _, err := io.WriteString(w, bom); err != nil {
+		return err
+	}
+	c := csv.NewWriter(w)
+	if err := c.Write([]string{"admin", "password"}); err != nil {
+		return err
+	}
+	names := make([]string, 0, len(passwords))
+	for n := range passwords {
+		names = append(names, n)
+	}
+	slices.Sort(names)
+	for _, n := range names {
+		// Generated passwords never start with a formula character
+		// (pasarguard.GeneratePassword), so they go out exactly as set.
+		if err := c.Write([]string{safe(n), passwords[n]}); err != nil {
+			return err
+		}
+	}
+	c.Flush()
+	return c.Error()
 }
