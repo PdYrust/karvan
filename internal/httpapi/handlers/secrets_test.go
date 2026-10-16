@@ -72,7 +72,7 @@ func TestNoSecretLeavesTheRun(t *testing.T) {
 		if err != nil || d.IsDir() {
 			return err
 		}
-		b, err := os.ReadFile(p) //nolint:gosec // G304: test files
+		b, err := os.ReadFile(p)
 		if err != nil {
 			return err
 		}
