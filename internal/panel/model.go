@@ -151,5 +151,7 @@ type User struct {
 type Target struct {
 	ID       string // group id, or "<protocol>/<tag>"
 	Name     string
-	Protocol string // set for Marzban inbounds
+	Protocol string   // set for Marzban inbounds
+	Inbounds []string // a PasarGuard group's inbound tags
+	Disabled bool     // a disabled PasarGuard group
 }

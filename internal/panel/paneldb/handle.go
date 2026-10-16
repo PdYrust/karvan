@@ -158,6 +158,15 @@ func (r rebinder) ExecContext(ctx context.Context, s string, args ...any) (sql.R
 	return r.tx.ExecContext(ctx, r.q(s), args...)
 }
 
+// Ident quotes a table or column name for d. Needed for names that are
+// reserved words somewhere, like PasarGuard's "groups" on MySQL 8.
+func Ident(d Dialect, name string) string {
+	if d == MySQL {
+		return "`" + name + "`"
+	}
+	return `"` + name + `"`
+}
+
 // Rebind turns "?" placeholders into PostgreSQL's $1, $2... Queries in
 // Karvan never carry "?" inside string literals.
 func Rebind(s string) string {
