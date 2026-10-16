@@ -98,10 +98,14 @@ func TestLoginFailuresLookTheSame(t *testing.T) {
 
 func TestLoginLocksAfterRepeatedFailures(t *testing.T) {
 	s := newService(t)
-	for range DefaultLockout.IPMaxFailures {
+	for range DefaultLockout.IPMaxFailures - 1 {
 		if _, err := s.login("owner", "wrong password!", ""); !errors.Is(err, ErrInvalidCredentials) {
 			t.Fatalf("err = %v", err)
 		}
+	}
+	var started *LockedError
+	if _, err := s.login("owner", "wrong password!", ""); !errors.As(err, &started) {
+		t.Fatalf("failure that starts the lock: %v, want LockedError", err)
 	}
 	_, err := s.login("owner", goodPassword, "")
 	var locked *LockedError
@@ -121,6 +125,44 @@ func TestLoginLocksAfterRepeatedFailures(t *testing.T) {
 	s.clock.Advance(DefaultLockout.IPLock)
 	if _, err := s.login("owner", goodPassword, ""); err != nil {
 		t.Fatalf("login after lock ended: %v", err)
+	}
+}
+
+func TestParallelGuessesStayNearTheLimit(t *testing.T) {
+	s := newService(t)
+	var wg sync.WaitGroup
+	var mu sync.Mutex
+	checked := 0
+	for range 16 {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			_, err := s.login("owner", "wrong password!", "")
+			if errors.Is(err, ErrInvalidCredentials) {
+				mu.Lock()
+				checked++
+				mu.Unlock()
+			}
+		}()
+	}
+	wg.Wait()
+	// Guesses that got a real password check: the limit, plus at most the
+	// ones already holding a hash slot when the lock started.
+	if checked > DefaultLockout.IPMaxFailures-1+hashSlots {
+		t.Fatalf("%d guesses were checked, want at most %d", checked, DefaultLockout.IPMaxFailures-1+hashSlots)
+	}
+}
+
+func TestLoginIsBusyWhenAllHashSlotsAreTaken(t *testing.T) {
+	s := newService(t)
+	for range hashSlots {
+		s.svc.hashes <- struct{}{}
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 50*time.Millisecond)
+	defer cancel()
+	_, err := s.svc.Login(ctx, LoginRequest{Username: "owner", Password: secret.NewValue(goodPassword)})
+	if !errors.Is(err, ErrBusy) {
+		t.Fatalf("err = %v, want ErrBusy", err)
 	}
 }
 

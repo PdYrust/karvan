@@ -17,6 +17,7 @@ const (
 	codeTOTPAlreadyOn      = "totp_already_on"
 	codeTOTPNotOn          = "totp_not_on"
 	codeLocked             = "locked"
+	codeBusy               = "busy"
 )
 
 // API holds what the JSON endpoints need.

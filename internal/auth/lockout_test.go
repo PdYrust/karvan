@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"fmt"
 	"testing"
 	"time"
 )
@@ -103,6 +104,23 @@ func TestAccountLevelIsForgivenAfterAQuietDay(t *testing.T) {
 	f.clock.Advance(25 * time.Hour)
 	if d := failFromManyIPs("second-"); d != time.Minute {
 		t.Fatalf("lock after a quiet day = %v, want the first level", d)
+	}
+}
+
+func TestIPv6IsKeyedByItsSlash64(t *testing.T) {
+	f := newFixture(t)
+	l := newLimiter(f)
+	for i := range DefaultLockout.IPMaxFailures {
+		failN(t, l, 1, fmt.Sprintf("2001:db8:1:2::%x", i+1), fmt.Sprintf("user%d", i))
+	}
+	if d := wait(t, l, "2001:db8:1:2:ffff::9", "someone"); d == 0 {
+		t.Fatal("rotating inside one /64 escaped the IP lock")
+	}
+	if d := wait(t, l, "2001:db8:1:3::1", "someone"); d != 0 {
+		t.Fatalf("a neighbouring /64 is locked for %v", d)
+	}
+	if ipKey("203.0.113.9") != "203.0.113.9" || ipKey("not an ip") != "not an ip" {
+		t.Fatal("IPv4 or unparsable keys changed")
 	}
 }
 

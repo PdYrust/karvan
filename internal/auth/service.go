@@ -16,6 +16,13 @@ var (
 	ErrInvalidCredentials = errors.New("wrong username or password")
 	ErrTOTPRequired       = errors.New("two-step code required")
 	ErrTOTPInvalid        = errors.New("wrong two-step code")
+	ErrBusy               = errors.New("too many sign-ins at once; try again shortly")
+)
+
+const (
+	// Each argon2id run takes 64 MiB, so only a few may run at once.
+	hashSlots = 2
+	hashWait  = 10 * time.Second
 )
 
 // LockedError means sign-in is paused for RetryAfter.
@@ -32,11 +39,27 @@ type Service struct {
 	Limiter   *Limiter
 	Audit     *audit.Log
 	now       func() time.Time
+	hashes    chan struct{}
 }
 
 // NewService wires a Service.
 func NewService(ops *Operators, sessions *Sessions, limiter *Limiter, log *audit.Log) *Service {
-	return &Service{Operators: ops, Sessions: sessions, Limiter: limiter, Audit: log, now: time.Now}
+	return &Service{Operators: ops, Sessions: sessions, Limiter: limiter, Audit: log, now: time.Now,
+		hashes: make(chan struct{}, hashSlots)}
+}
+
+// hashSlot waits for one of the few password-hash slots. The lockout check
+// runs after it, so a burst of parallel guesses is checked one slot at a
+// time instead of all passing the check before any failure is counted.
+func (s *Service) hashSlot(ctx context.Context) (func(), error) {
+	ctx, cancel := context.WithTimeout(ctx, hashWait)
+	defer cancel()
+	select {
+	case s.hashes <- struct{}{}:
+		return func() { <-s.hashes }, nil
+	case <-ctx.Done():
+		return nil, ErrBusy
+	}
 }
 
 // LoginRequest is what the sign-in form sends, plus where it came from.
@@ -70,6 +93,11 @@ func (s *Service) Login(ctx context.Context, req LoginRequest) (LoginResult, err
 	if err != nil {
 		account = "" // still counted against the IP
 	}
+	release, err := s.hashSlot(ctx)
+	if err != nil {
+		return LoginResult{}, err
+	}
+	defer release()
 	if wait, err := s.Limiter.Check(ctx, req.IP, account); err != nil {
 		return LoginResult{}, err
 	} else if wait > 0 {
@@ -160,6 +188,7 @@ func (s *Service) fail(ctx context.Context, req LoginRequest, account string, op
 		if err := s.record(ctx, actor, req.IP, audit.ActionLockout, audit.Success, map[string]string{"seconds": fmt.Sprint(int(lock.Seconds()))}); err != nil {
 			return err
 		}
+		return &LockedError{RetryAfter: lock}
 	}
 	return cause
 }

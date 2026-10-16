@@ -120,6 +120,9 @@ func writeAuthError(w http.ResponseWriter, r *http.Request, err error, badStatus
 		secs := int(math.Ceil(locked.RetryAfter.Seconds()))
 		w.Header().Set("Retry-After", strconv.Itoa(secs))
 		respond.Error(w, respond.APIError{Status: http.StatusTooManyRequests, Code: codeLocked, Extra: map[string]any{"retryAfter": secs}})
+	case errors.Is(err, auth.ErrBusy):
+		w.Header().Set("Retry-After", "5")
+		respond.Error(w, respond.APIError{Status: http.StatusServiceUnavailable, Code: codeBusy})
 	case errors.Is(err, auth.ErrInvalidCredentials):
 		respond.Error(w, respond.APIError{Status: badStatus, Code: codeInvalidCredentials})
 	case errors.Is(err, auth.ErrTOTPRequired):

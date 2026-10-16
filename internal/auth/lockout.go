@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"net/netip"
 	"time"
 )
 
@@ -51,8 +52,20 @@ func NewLimiter(db *sql.DB, policy LockoutPolicy) *Limiter {
 	return &Limiter{db: db, now: time.Now, policy: policy}
 }
 
+// ipKey groups IPv6 clients by /64, the block one subscriber usually gets,
+// so rotating through addresses inside it does not reset the counter.
+func ipKey(ip string) string {
+	a, err := netip.ParseAddr(ip)
+	if err != nil || !a.Unmap().Is6() {
+		return ip
+	}
+	p, _ := a.Prefix(64)
+	return p.String()
+}
+
 // Check returns how long the IP or account must still wait; 0 means go ahead.
 func (l *Limiter) Check(ctx context.Context, ip, account string) (time.Duration, error) {
+	ip = ipKey(ip)
 	var until int64
 	err := l.db.QueryRowContext(ctx, `SELECT COALESCE(MAX(locked_until), 0) FROM login_failures
 		WHERE (scope = ? AND key = ?) OR (scope = ? AND key = ?)`, scopeIP, ip, scopeAccount, account).Scan(&until)
@@ -65,6 +78,7 @@ func (l *Limiter) Check(ctx context.Context, ip, account string) (time.Duration,
 // Fail records a failed sign-in. It returns the lock that started because of
 // this failure, or 0 when none did.
 func (l *Limiter) Fail(ctx context.Context, ip, account string) (time.Duration, error) {
+	ip = ipKey(ip)
 	tx, err := l.db.BeginTx(ctx, nil)
 	if err != nil {
 		return 0, fmt.Errorf("record failed sign-in: %w", err)
@@ -87,6 +101,7 @@ func (l *Limiter) Fail(ctx context.Context, ip, account string) (time.Duration, 
 
 // Succeed clears the counters after a correct sign-in.
 func (l *Limiter) Succeed(ctx context.Context, ip, account string) error {
+	ip = ipKey(ip)
 	_, err := l.db.ExecContext(ctx, `DELETE FROM login_failures WHERE (scope = ? AND key = ?) OR (scope = ? AND key = ?)`,
 		scopeIP, ip, scopeAccount, account)
 	if err != nil {

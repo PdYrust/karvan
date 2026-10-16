@@ -69,6 +69,11 @@ func (s *Service) DisableTOTP(ctx context.Context, operatorID int64, password se
 	if !op.TOTPEnabled {
 		return ErrTOTPNotEnabled
 	}
+	release, err := s.hashSlot(ctx)
+	if err != nil {
+		return err
+	}
+	defer release()
 	if wait, err := s.Limiter.Check(ctx, ip, op.Username); err != nil {
 		return err
 	} else if wait > 0 {
