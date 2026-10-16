@@ -3,13 +3,11 @@ package dest
 import (
 	"context"
 	"fmt"
-	"net/url"
-	"os"
-	"path/filepath"
 	"testing"
 	"time"
 
 	"github.com/PdYrust/karvan/internal/migration/engine"
+	"github.com/PdYrust/karvan/internal/migration/migrationtest"
 	"github.com/PdYrust/karvan/internal/migration/plan"
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/fakepanel"
@@ -22,67 +20,6 @@ import (
 	"github.com/PdYrust/karvan/internal/panel/source"
 	"github.com/PdYrust/karvan/internal/secret"
 )
-
-// sqlalchemyURL turns a test target back into the URL a panel ENV holds.
-func sqlalchemyURL(tg paneldb.Target, kind panel.Kind) string {
-	switch tg.Dialect {
-	case paneldb.SQLite:
-		return "sqlite:///" + tg.Path
-	case paneldb.MySQL:
-		drv := "mysql+pymysql"
-		if kind == panel.PasarGuard {
-			drv = "mysql+asyncmy"
-		}
-		return fmt.Sprintf("%s://%s:%s@%s:%d/%s", drv, tg.User, url.QueryEscape(tg.Password.Reveal()), tg.Host, tg.Port, tg.Database)
-	}
-	return fmt.Sprintf("postgresql+asyncpg://%s:%s@%s:%d/%s", tg.User, url.QueryEscape(tg.Password.Reveal()), tg.Host, tg.Port, tg.Database)
-}
-
-// panelDir writes an ENV (and for Marzban an Xray config) for tg.
-func panelDir(t *testing.T, tg paneldb.Target, kind panel.Kind) string {
-	t.Helper()
-	dir := filepath.Join(t.TempDir(), string(kind))
-	if err := os.MkdirAll(dir, 0o700); err != nil {
-		t.Fatal(err)
-	}
-	env := "SQLALCHEMY_DATABASE_URL = \"" + sqlalchemyURL(tg, kind) + "\"\n"
-	if kind == panel.Marzban {
-		xray := filepath.Join(dir, "xray_config.json")
-		cfg := `{"inbounds": [{"tag": "VLESS TCP", "protocol": "vless"}, {"tag": "VMess WS", "protocol": "vmess"}]}`
-		if err := os.WriteFile(xray, []byte(cfg), 0o600); err != nil {
-			t.Fatal(err)
-		}
-		env += "XRAY_JSON = \"" + xray + "\"\n"
-	}
-	path := filepath.Join(dir, ".env")
-	if err := os.WriteFile(path, []byte(env), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	return path
-}
-
-func seedPasarGuardGroup(t *testing.T, tg paneldb.Target) {
-	t.Helper()
-	ctx := context.Background()
-	w, err := paneldb.OpenWriter(ctx, tg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer w.Close()
-	err = w.Batch(ctx, func(x paneldb.Execer) error {
-		if _, err := x.ExecContext(ctx, "INSERT INTO inbounds (id, tag) VALUES (?, ?)", 1, "Shadowsocks TCP"); err != nil {
-			return err
-		}
-		if _, err := x.ExecContext(ctx, "INSERT INTO "+paneldb.Ident(tg.Dialect, "groups")+" (id, name, is_disabled) VALUES (?, ?, ?)", 1, "Main", false); err != nil {
-			return err
-		}
-		_, err := x.ExecContext(ctx, "INSERT INTO inbounds_groups_association (inbound_id, group_id) VALUES (?, ?)", 1, 1)
-		return err
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-}
 
 func sourceOf(t *testing.T, kind panel.Kind) (panel.Source, func()) {
 	t.Helper()
@@ -108,11 +45,9 @@ func sourceOf(t *testing.T, kind panel.Kind) (panel.Source, func()) {
 func dryRun(t *testing.T, from panel.Kind, tg paneldb.Target, to panel.Kind) {
 	t.Helper()
 	ctx := context.Background()
-	if to == panel.PasarGuard {
-		seedPasarGuardGroup(t, tg)
-	}
+	env := migrationtest.PanelEnv(t, tg, to)
 	before := paneldbtest.Checksum(t, tg)
-	d, err := Open(ctx, panelDir(t, tg, to))
+	d, err := Open(ctx, env)
 	if err != nil {
 		t.Fatal(err)
 	}
