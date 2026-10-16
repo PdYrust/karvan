@@ -14,11 +14,6 @@ export function OverviewSkeleton({ label }: { label: string }) {
           <Bone className="h-5 w-56" />
           <Bone className="h-3.5 w-80 max-w-[80%]" />
         </div>
-        <div className="flex flex-col gap-4 rounded-lg border border-kumo-hairline bg-kumo-base p-4">
-          {[0, 1, 2, 3].map((i) => (
-            <Bone key={i} className={cn('h-3.5', i % 2 ? 'w-3/5' : 'w-11/12')} />
-          ))}
-        </div>
       </div>
       <div className="flex flex-col gap-4 border-kumo-hairline p-4 sm:p-8 lg:border-s">
         {[0, 1, 2].map((i) => (

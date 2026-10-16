@@ -7,7 +7,6 @@ import { useLocale, useT } from '../../i18n/locale';
 import { sharedMessages } from '../../i18n/shared';
 import { ApiError, offline } from '../../lib/api/client';
 import { formatLongDate, formatTime } from '../../lib/format/date';
-import { ActivityTable } from './ActivityTable';
 import { overviewMessages } from './messages';
 import { OverviewAside } from './OverviewAside';
 import { OverviewSkeleton } from './OverviewSkeleton';
@@ -49,7 +48,6 @@ export function OverviewPage() {
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex min-w-0 flex-col gap-6 p-4 sm:p-8">
           <PanelsSection />
-          <ActivityTable entries={overview.data.activity} now={now} />
         </div>
         <aside className="border-t border-kumo-hairline p-4 sm:p-8 lg:border-t-0 lg:border-s">
           <OverviewAside data={overview.data} username={username} now={now} />
