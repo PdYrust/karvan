@@ -2,6 +2,7 @@ package paneldb
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -37,10 +38,15 @@ func CaseInsensitive(ctx context.Context, q Querier, d Dialect, table, column st
 		if err != nil {
 			return false, fmt.Errorf("read %s.%s collation: %w", table, column, err)
 		}
-		c = strings.ToLower(c)
-		return !(c == "" || c == "binary" || strings.HasSuffix(c, "_bin") || strings.HasSuffix(c, "_cs")), nil
+		return foldsCase(strings.ToLower(c)), nil
 	}
 	return false, nil
+}
+
+// foldsCase reports whether a MySQL or MariaDB collation ignores case.
+func foldsCase(c string) bool {
+	sensitive := c == "" || c == "binary" || strings.HasSuffix(c, "_bin") || strings.HasSuffix(c, "_cs")
+	return !sensitive
 }
 
 func sqliteColumnNoCase(ddl, column string) bool {
@@ -110,8 +116,7 @@ func sqliteForeignKeys(ctx context.Context, q Querier, refs []string) ([]Foreign
 		for rows.Next() {
 			fk := ForeignKey{Table: t}
 			if err := rows.Scan(&fk.Column, &fk.RefTable, &fk.OnDelete); err != nil {
-				rows.Close()
-				return nil, err
+				return nil, errors.Join(err, rows.Close())
 			}
 			if want[fk.RefTable] {
 				out = append(out, fk)
