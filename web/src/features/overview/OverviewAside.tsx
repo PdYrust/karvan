@@ -30,7 +30,7 @@ function Block({
 }: {
   title: string;
   badge?: ReactNode;
-  children: ReactNode;
+  children?: ReactNode;
 }) {
   return (
     <section className="flex flex-col gap-2 border-b border-kumo-hairline py-5 first:pt-0 last:border-b-0">
@@ -58,14 +58,8 @@ export function OverviewAside({
   const prev = data.security.previousSignIn;
   return (
     <div className="flex flex-col">
-      <Block title={t('safeModeTitle')} badge={<OnOff on={data.safeMode} />}>
-        <p className="text-sm text-kumo-subtle">{t('safeModeBody')}</p>
-      </Block>
-      <Block title={t('twoStep')} badge={<OnOff on={data.security.totpEnabled} />}>
-        <p className="text-sm text-kumo-subtle">
-          {data.security.totpEnabled ? t('twoStepOnHint') : t('twoStepOffHint')}
-        </p>
-      </Block>
+      <Block title={t('safeModeTitle')} badge={<OnOff on={data.safeMode} />} />
+      <Block title={t('twoStep')} badge={<OnOff on={data.security.totpEnabled} />} />
       <Block title={t('accountTitle')}>
         <dl className="flex flex-col text-sm">
           <div className="flex justify-between gap-4 border-b border-kumo-hairline py-2">
@@ -85,7 +79,7 @@ export function OverviewAside({
                     {formatRelative(new Date(prev.at), now, locale)}
                   </time>
                   <bdi dir="ltr" className="block font-mono text-tiny text-kumo-subtle">
-                    {prev.ip || '—'}
+                    {prev.ip || '-'}
                   </bdi>
                 </>
               ) : (

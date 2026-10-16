@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react';
 import { PanelLogo, panelNames, type PanelKind } from '../../components/panels/PanelLogo';
 import { drawLand, drawRoute, toScreen, type Frame } from './globe-draw';
 import { buildLand, deg, ramp, toView, type Land, type Vec } from './globe-math';
-import { sceneAt, sceneLength, scenes, type Scene } from './globe-scenes';
+import { sceneAt, sceneLength, type Scene } from './globe-scenes';
 
 const tilt = 22 * deg;
 // The globe turns east, about one turn a minute.
@@ -45,7 +45,7 @@ const packetStarts = (scene: Scene) =>
 const packetTime = 1400;
 
 /** The spinning dotted globe on the sign-in page, acting out moves and merges. */
-export default function LoginGlobe({ onScene }: { onScene: (index: number) => void }) {
+export default function LoginGlobe() {
   const wrap = useRef<HTMLDivElement>(null);
   const canvas = useRef<HTMLCanvasElement>(null);
   const stops = useRef<Partial<Record<PanelKind, HTMLDivElement | null>>>({});
@@ -84,7 +84,6 @@ export default function LoginGlobe({ onScene }: { onScene: (index: number) => vo
       if (index !== shown) {
         shown = index;
         places = pickPlaces(land, lon0, index);
-        onScene(index % scenes.length);
       }
       const t = elapsed - index * sceneLength;
       const frame: Frame = { ctx, size, color, lon0, tilt };
@@ -146,7 +145,7 @@ export default function LoginGlobe({ onScene }: { onScene: (index: number) => vo
       resize.disconnect();
       seen.disconnect();
     };
-  }, [onScene]);
+  }, []);
 
   return (
     <div

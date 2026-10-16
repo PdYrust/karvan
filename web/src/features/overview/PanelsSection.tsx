@@ -18,7 +18,6 @@ export function PanelsSection() {
         <h3 className="mt-1 text-[20px] leading-tight font-semibold text-kumo-strong">
           {t('panelsEmptyTitle')}
         </h3>
-        <p className="max-w-md text-balance text-kumo-subtle">{t('panelsEmptyBody')}</p>
         <div
           className="flex items-center gap-4 text-sm text-kumo-subtle"
           aria-label={t('panelsSupported')}

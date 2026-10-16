@@ -7,7 +7,7 @@ Read this before building or changing any page. If something here is wrong, fix 
 Karvan moves users from one panel to another, and their configs keep working. The panel should look like the tool it sits next to: a clean operator console in the style of the Cloudflare dashboard, built on Cloudflare's Kumo components.
 
 - **Mark ("Merge"):** two overlapping rounded squares in white on a Kumo-blue rounded tile, with the overlap filled. One panel, another panel, and what they share. Source of truth: `web/src/components/brand/Mark.tsx` (viewBox 64, tile radius 14, stroke 3.2). `web/public/favicon.svg` and `docs/brand/karvan-mark.svg` are static copies with the blue written as `#056dff`.
-- **Name:** "Karvan" in English, «کاروان» in Persian, set in Vazirmatn semibold next to the mark (`Wordmark.tsx`). Never stretched, outlined or given effects.
+- **Name:** "Karvan" in English, "کاروان" in Persian, set in Vazirmatn semibold next to the mark (`Wordmark.tsx`). Never stretched, outlined or given effects.
 - **Mood:** calm, flat and exact. White and grey surfaces, hairlines, one blue.
 
 ### Panel logos
@@ -81,7 +81,7 @@ Karvan uses Kumo's palette as it ships: neutral greys for surfaces and text, Kum
 - Use logical properties only: `ms-* me-* ps-* pe-* start-* end-* border-s border-e rounded-s rounded-e text-start`. Physical `left/right` classes are a bug. In an RTL flex column `self-start` is already the right edge; do not add `rtl:` overrides to "fix" it.
 - Icons that point a direction (arrows, chevrons, sign out) flip in RTL with `rtl:-scale-x-100`. The logo, the panel logos and the globe never flip.
 - Machine values (UUID, IP, port, path, username, commands) are wrapped in `<bdi dir="ltr">` or `dir="ltr"` and stay in Latin digits.
-- Persian text uses Persian digits (۰–۹); English uses Latin digits. `src/lib/format` does this; never format numbers by hand.
+- Persian text uses Persian digits (۰ to ۹); English uses Latin digits. `src/lib/format` does this; never format numbers by hand.
 - Dates: Jalali calendar and Asia/Tehran by default, Gregorian in English unless the operator chooses otherwise. Times say which zone they are in when it matters ("It is 18:40 in Tehran").
 - Kumo components that use physical classes get checked in RTL; any broken one gets a wrapper or a workaround in Karvan code instead of being used raw. Known cases: Kumo's Sidebar (not used), the DropdownMenu item `icon` slot (put the icon in the children with `gap-2` instead).
 
@@ -92,7 +92,7 @@ Karvan uses Kumo's palette as it ships: neutral greys for surfaces and text, Kum
 
 ### Shell
 Karvan's own components, with logical properties:
-- **Sidebar:** wordmark header with a bottom hairline; panel switcher row; "Quick search… Ctrl K" button that opens the command palette; grouped navigation with small group labels, 36 px rows, the current page on `bg-kumo-tint`.
+- **Sidebar:** wordmark header with a bottom hairline; panel switcher row; "Search... Ctrl K" button that opens the command palette; grouped navigation with small group labels, 36 px rows, the current page on `bg-kumo-tint`.
 - **Top bar:** on phones the menu button, wordmark and search; on all sizes the language switch (from 640 up), theme toggle and account menu at the end.
 - **Mobile:** the sidebar opens as a sheet from the start edge, with focus inside it and Escape to close.
 - **Command palette:** every page and preference is reachable from Ctrl K.
@@ -105,8 +105,8 @@ Karvan's own components, with logical properties:
 
 ### Sign-in
 - Two halves on large screens. Start side on `bg-kumo-base`: wordmark at the top, then a centered form (title, username, password, one blue button) and the recovery hint with the `karvan reset -password` command.
-- End side on `bg-kumo-brand`: language and theme buttons at the top, the "Marzban ⇄ PasarGuard" line, the tagline, one sentence of detail and a caption for the current scene, then a spinning dotted globe.
-- The globe acts out four scenes in turn (`globe-scenes.ts`): a move and a merge in each direction. Two panels appear on land, each as its logo on a white tile with its name under it; users travel as dots along a dashed arc. In a move the sending panel fades out once the last user arrives; in a merge both stay. The caption names the scene ("Move" / "Merge") in a sentence.
+- End side on `bg-kumo-brand`: language and theme buttons at the top, the "Marzban ⇄ PasarGuard" line, and one short line, then a spinning dotted globe.
+- The globe acts out four scenes in turn (`globe-scenes.ts`): a move and a merge in each direction. Two panels appear on land, each as its logo on a white tile with its name under it; users travel as dots along a dashed arc. In a move the sending panel fades out once the last user arrives; in a merge both stay.
 - The globe is drawn on a canvas from a land mask made by `scripts/brand/globe.mjs` (`globe-land.ts`, about 2 KB gzip), so no map code ships. It is a lazy chunk with its own budget, loaded after the form.
 - Under 1024 px only the form side shows; the language and theme buttons move into its top bar.
 
@@ -122,10 +122,19 @@ Karvan's own components, with logical properties:
 
 ## 9. Writing
 
-- Plain, calm and direct, like a careful colleague. Active voice. Name things the way the operator thinks about them ("users", "panels"), not the way the code does.
+The voice is a friend who built this in their spare time: casual and warm, not robotic, formal or salesy. Nobody reading it should think a machine wrote it.
+
+- **Short.** Say it once. No extra explanation, no "coming in the next version" notes, nothing that repeats what the screen already shows. If a line can go, it goes.
+- **No hype.** No big promises, no "seamless", no "without any hassle".
 - A button says what happens: "Sign in", not "Submit". The same action keeps the same name in the toast that confirms it.
-- Persian copy is written in Persian, not translated word for word. Use the half-space (ZWNJ) correctly («می‌شود»).
-- No exclamation marks, no filler ("Please", «لطفاً») unless leaving it out would sound rude.
+- Name things the way the operator does ("users", "panels"), not the way the code does.
+- **Persian** is casual spoken Persian, written in Persian, not translated word for word. Use "تو", not "شما": "رمزت یادت رفته؟", "دوباره امتحان کن". Everyday loan words are fine (بکاپ، تم، لود، رفرش).
+  - Never use the half-space (U+200C). "می" and "نمی" join the verb: "میرن", "میشه", "نمیشه". Plural "ها" joins after a letter that does not connect (کاربرها) and takes a space after one that does (پنل ها).
+  - A spaced "ها" can wrap onto the next line in a heading; reword it if it does.
+  - No hamza on he (U+0654): "نسخه بعدی". No guillemet quotes, no Persian semicolon, no ellipsis character (use three dots), no em or en dash.
+- **English:** plain, short, sentence case. Straight quotes and apostrophes only, no em or en dashes, three dots instead of the ellipsis character.
+- No exclamation marks, no filler ("Please") unless leaving it out would sound rude.
+- `scripts/check-floor.sh` fails on any of the banned characters in tracked files.
 
 ## 10. Do and don't
 
