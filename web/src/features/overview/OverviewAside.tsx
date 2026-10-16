@@ -9,9 +9,14 @@ import { overviewMessages } from './messages';
 function OnOff({ on }: { on: boolean }) {
   const t = useT(overviewMessages);
   return (
+    // Kumo's warning text on its own tint is under 4.5:1, so the word uses the
+    // default text color and the icon carries the warning color.
     <Badge
       variant={on ? 'success' : 'warning'}
-      icon={on ? <CheckCircleIcon size={14} /> : <WarningIcon size={14} />}
+      className={on ? undefined : 'text-kumo-default'}
+      icon={
+        on ? <CheckCircleIcon size={14} /> : <WarningIcon size={14} className="text-kumo-warning" />
+      }
     >
       {on ? t('on') : t('off')}
     </Badge>

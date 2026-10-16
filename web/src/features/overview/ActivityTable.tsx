@@ -82,7 +82,7 @@ export function ActivityTable({ entries, now }: { entries: ActivityEntry[]; now:
       ) : (
         <>
           <table className="mt-2 w-full border-collapse text-start">
-            <thead className="bg-kumo-elevated text-sm text-kumo-subtle">
+            <thead className="bg-kumo-elevated text-sm text-kumo-default">
               <tr className="border-t border-kumo-hairline">
                 <th scope="col" className={cn(cell, 'text-start font-medium')}>
                   {t('colEvent')}
