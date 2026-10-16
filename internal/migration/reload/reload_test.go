@@ -58,7 +58,7 @@ func serve(t *testing.T, user string) (*fake, dest.API) {
 	f := &fake{puts: map[string]map[string]json.RawMessage{}, user: user}
 	srv := httptest.NewServer(f)
 	t.Cleanup(srv.Close)
-	return f, dest.API{BaseURL: srv.URL, Admin: "root"}
+	return f, dest.API{Local: dest.Local{BaseURL: srv.URL}, Admin: "root"}
 }
 
 func TestTouchKeepsNextPlanAndGroups(t *testing.T) {
@@ -131,7 +131,7 @@ func TestHTTPSPinsTheCertificate(t *testing.T) {
 	dir := t.TempDir()
 	good := filepath.Join(dir, "good.pem")
 	writeCert(t, good, srv.TLS.Certificates[0])
-	api := dest.API{Kind: panel.Marzban, BaseURL: srv.URL, CertFile: good, Admin: "root"}
+	api := dest.API{Kind: panel.Marzban, Local: dest.Local{BaseURL: srv.URL, CertFile: good}, Admin: "root"}
 	if res := (CoreRestart{}).Reload(context.Background(), run.ReloadInput{Kind: panel.Marzban, API: api}); res.Error != "" {
 		t.Fatalf("pinned call: %+v", res)
 	}

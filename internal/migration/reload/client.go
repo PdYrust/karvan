@@ -6,15 +6,10 @@ package reload
 import (
 	"bytes"
 	"context"
-	"crypto/tls"
 	"encoding/json"
-	"encoding/pem"
-	"errors"
 	"fmt"
 	"io"
-	"net"
 	"net/http"
-	"os"
 	"strings"
 	"time"
 
@@ -33,51 +28,11 @@ type client struct {
 }
 
 func newClient(api dest.API) (*client, error) {
-	t := &http.Transport{MaxIdleConnsPerHost: workers, IdleConnTimeout: 30 * time.Second}
-	if api.Socket != "" {
-		var d net.Dialer
-		t.DialContext = func(ctx context.Context, _, _ string) (net.Conn, error) {
-			return d.DialContext(ctx, "unix", api.Socket)
-		}
-	}
-	if strings.HasPrefix(api.BaseURL, "https://") {
-		pin, err := leaf(api.CertFile)
-		if err != nil {
-			return nil, err
-		}
-		t.TLSClientConfig = &tls.Config{
-			MinVersion: tls.VersionTLS12,
-			// The panel's certificate is for its public name, not for
-			// 127.0.0.1, so Karvan pins the exact certificate the panel
-			// serves from its own ENV instead of checking the name.
-			InsecureSkipVerify: true, //nolint:gosec // G402: replaced by the pin in VerifyConnection
-			VerifyConnection: func(cs tls.ConnectionState) error {
-				if len(cs.PeerCertificates) == 0 || !bytes.Equal(cs.PeerCertificates[0].Raw, pin) {
-					return errors.New("the panel serves a different certificate than its ENV names")
-				}
-				return nil
-			},
-		}
+	t, err := api.Transport(workers)
+	if err != nil {
+		return nil, err
 	}
 	return &client{api: api, http: &http.Client{Transport: t, Timeout: callTimeout}, now: time.Now}, nil
-}
-
-// leaf reads the first certificate in a PEM file.
-func leaf(path string) ([]byte, error) {
-	b, err := os.ReadFile(path) //nolint:gosec // G304: the path comes from the panel's ENV
-	if err != nil {
-		return nil, fmt.Errorf("read the panel's certificate: %w", err)
-	}
-	for {
-		var blk *pem.Block
-		blk, b = pem.Decode(b)
-		if blk == nil {
-			return nil, errors.New("the panel's certificate file has no certificate")
-		}
-		if blk.Type == "CERTIFICATE" {
-			return blk.Bytes, nil
-		}
-	}
 }
 
 // do sends body as JSON and decodes a 2xx answer into out (when not nil).

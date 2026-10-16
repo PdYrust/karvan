@@ -5,11 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"net"
-	"strconv"
 	"time"
 
-	"github.com/PdYrust/karvan/internal/discovery"
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 	"github.com/PdYrust/karvan/internal/panel/subtoken"
@@ -25,13 +22,11 @@ var ErrNoFullAdmin = errors.New("the panel has no full admin: no Marzban sudo ad
 // jwt secret, so Karvan mints a short token for a full admin instead of
 // asking for a password (owner decision Q6).
 type API struct {
-	Kind     panel.Kind
-	BaseURL  string // http(s)://host:port
-	Socket   string // a Unix socket path, when the panel listens on one
-	CertFile string // the panel's certificate, pinned when BaseURL is https
-	Admin    string // the full admin the token is for
-	AdminID  int64  // 0 for the ENV sudoer
-	secret   secret.Value
+	Local
+	Kind    panel.Kind
+	Admin   string // the full admin the token is for
+	AdminID int64  // 0 for the ENV sudoer
+	secret  secret.Value
 }
 
 // tokenTTL is short: one reload never takes this long between tokens,
@@ -52,10 +47,7 @@ func (a API) Token(now time.Time) string {
 // when there is nobody to act as.
 func (p *Panel) API(ctx context.Context) (API, error) {
 	s := p.Found.Settings
-	a := API{Kind: p.Found.Kind, Socket: s.UDS, BaseURL: baseURL(p.Found.Kind, s)}
-	if s.CertFile != "" && s.KeyFile != "" {
-		a.CertFile = s.CertFile
-	}
+	a := API{Kind: p.Found.Kind, Local: p.Local()}
 	r, err := paneldb.OpenReader(ctx, p.Target)
 	if err != nil {
 		return a, err
@@ -92,27 +84,4 @@ func fullAdmin(ctx context.Context, q paneldb.Querier, kind panel.Kind) (string,
 	var id int64
 	err := q.QueryRowContext(ctx, query, args...).Scan(&name, &id)
 	return name, id, err
-}
-
-// baseURL is where the panel listens on this server, the way its main.py
-// binds: with no certificate Marzban binds 127.0.0.1 and PasarGuard a
-// private host or localhost; with one, the configured host.
-func baseURL(kind panel.Kind, s discovery.Settings) string {
-	scheme, host := "http", "127.0.0.1"
-	tls := s.CertFile != "" && s.KeyFile != ""
-	if tls {
-		scheme = "https"
-	}
-	ip := net.ParseIP(s.Host)
-	switch {
-	case s.UDS != "":
-		host = "localhost" // the socket carries it; the name is only the Host header
-	case tls:
-		if ip != nil && !ip.IsUnspecified() {
-			host = s.Host
-		}
-	case kind == panel.PasarGuard && ip != nil && (ip.IsPrivate() || ip.IsLoopback()):
-		host = s.Host
-	}
-	return scheme + "://" + net.JoinHostPort(host, strconv.Itoa(s.Port))
 }
