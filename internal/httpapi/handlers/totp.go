@@ -18,7 +18,7 @@ func (a *API) BeginTOTP(w http.ResponseWriter, r *http.Request) {
 	s, _ := middleware.Session(r.Context())
 	setup, err := a.Auth.BeginTOTP(r.Context(), s.Session.OperatorID)
 	if err != nil {
-		respond.Internal(w, r, err)
+		writeAuthError(w, r, err, http.StatusForbidden)
 		return
 	}
 	w.Header().Set("Cache-Control", "no-store")

@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"bytes"
 	"context"
 	"database/sql"
 	"errors"
@@ -9,8 +10,12 @@ import (
 	"github.com/PdYrust/karvan/internal/secret"
 )
 
-// ErrNoPendingTOTP means TOTP setup was not started, or already finished.
-var ErrNoPendingTOTP = errors.New("no two-step setup in progress")
+// Two-step state errors.
+var (
+	ErrNoPendingTOTP     = errors.New("no two-step setup in progress")
+	ErrTOTPNotEnabled    = errors.New("two-step sign-in is not on")
+	ErrTOTPAlreadyActive = errors.New("two-step sign-in is already on")
+)
 
 const (
 	colTOTPSecret  = "totp_secret"
@@ -31,17 +36,38 @@ func (s *Operators) PendingTOTP(ctx context.Context, id int64) ([]byte, error) {
 	return s.readSealed(ctx, id, colTOTPPending, ErrNoPendingTOTP)
 }
 
-// ActivateTOTP moves the pending secret into place and records step as used.
-func (s *Operators) ActivateTOTP(ctx context.Context, id int64, step int64) error {
-	pending, err := s.PendingTOTP(ctx, id)
-	if err != nil {
-		return err
+// ActivateTOTP makes verified the active secret. It only succeeds if
+// verified is still the pending secret, so a setup started in between
+// cannot slip in a secret that was never confirmed.
+func (s *Operators) ActivateTOTP(ctx context.Context, id int64, verified []byte, step int64) error {
+	var sealedPending []byte
+	err := s.db.QueryRowContext(ctx, `SELECT `+colTOTPPending+` FROM operators WHERE id = ?`, id).Scan(&sealedPending)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
 	}
-	sealed, err := s.key.Seal(pending, secret.AAD("operators", colTOTPSecret, id))
+	if err != nil {
+		return fmt.Errorf("read pending TOTP: %w", err)
+	}
+	if sealedPending == nil {
+		return ErrNoPendingTOTP
+	}
+	pending, err := s.key.Open(sealedPending, secret.AAD("operators", colTOTPPending, id))
+	if err != nil || !bytes.Equal(pending, verified) {
+		return ErrNoPendingTOTP
+	}
+	sealed, err := s.key.Seal(verified, secret.AAD("operators", colTOTPSecret, id))
 	if err != nil {
 		return fmt.Errorf("seal TOTP secret: %w", err)
 	}
-	return s.update(ctx, id, colTOTPSecret+` = ?, `+colTOTPPending+` = NULL, totp_last_step = ?`, sealed, step)
+	res, err := s.db.ExecContext(ctx, `UPDATE operators SET totp_secret = ?, totp_pending = NULL, totp_last_step = ?,
+		updated_at = ? WHERE id = ? AND totp_pending = ?`, sealed, step, s.now().Unix(), id, sealedPending)
+	if err != nil {
+		return fmt.Errorf("activate TOTP: %w", err)
+	}
+	if n, err := res.RowsAffected(); err != nil || n == 0 {
+		return ErrNoPendingTOTP
+	}
+	return nil
 }
 
 // DisableTOTP removes the active and any pending secret.
@@ -58,7 +84,7 @@ func (s *Operators) TOTP(ctx context.Context, id int64) ([]byte, int64, error) {
 		}
 		return nil, 0, fmt.Errorf("read TOTP step: %w", err)
 	}
-	sec, err := s.readSealed(ctx, id, colTOTPSecret, errors.New("two-step sign-in is not enabled"))
+	sec, err := s.readSealed(ctx, id, colTOTPSecret, ErrTOTPNotEnabled)
 	return sec, lastStep, err
 }
 

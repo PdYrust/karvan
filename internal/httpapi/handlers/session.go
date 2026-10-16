@@ -128,6 +128,10 @@ func writeAuthError(w http.ResponseWriter, r *http.Request, err error, badStatus
 		respond.Error(w, respond.APIError{Status: badStatus, Code: codeTOTPInvalid})
 	case errors.Is(err, auth.ErrNoPendingTOTP):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeTOTPNotStarted})
+	case errors.Is(err, auth.ErrTOTPAlreadyActive):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeTOTPAlreadyOn})
+	case errors.Is(err, auth.ErrTOTPNotEnabled):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeTOTPNotOn})
 	default:
 		respond.Internal(w, r, err)
 	}

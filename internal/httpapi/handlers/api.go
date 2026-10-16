@@ -14,6 +14,8 @@ const (
 	codeTOTPRequired       = "totp_required"
 	codeTOTPInvalid        = "totp_invalid"
 	codeTOTPNotStarted     = "totp_not_started"
+	codeTOTPAlreadyOn      = "totp_already_on"
+	codeTOTPNotOn          = "totp_not_on"
 	codeLocked             = "locked"
 )
 

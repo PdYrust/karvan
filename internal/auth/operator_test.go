@@ -72,7 +72,10 @@ func TestTOTPLifecycleKeepsSecretSealed(t *testing.T) {
 	if err := f.operators.SetPendingTOTP(ctx, o.ID, sec); err != nil {
 		t.Fatal(err)
 	}
-	if err := f.operators.ActivateTOTP(ctx, o.ID, 100); err != nil {
+	if err := f.operators.ActivateTOTP(ctx, o.ID, []byte("another secret 00000"), 100); !errors.Is(err, ErrNoPendingTOTP) {
+		t.Fatalf("activating an unconfirmed secret: %v", err)
+	}
+	if err := f.operators.ActivateTOTP(ctx, o.ID, sec, 100); err != nil {
 		t.Fatal(err)
 	}
 	got, last, err := f.operators.TOTP(ctx, o.ID)

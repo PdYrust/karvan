@@ -15,11 +15,16 @@ type TOTPSetup struct {
 }
 
 // BeginTOTP creates a pending secret. It is not used for sign-in until
-// ConfirmTOTP proves the operator's app produces matching codes.
+// ConfirmTOTP proves the operator's app produces matching codes. While
+// two-step is on it is refused: otherwise a stolen session could swap the
+// second factor for one the thief controls. Turn it off first.
 func (s *Service) BeginTOTP(ctx context.Context, operatorID int64) (TOTPSetup, error) {
 	op, err := s.Operators.ByID(ctx, operatorID)
 	if err != nil {
 		return TOTPSetup{}, err
+	}
+	if op.TOTPEnabled {
+		return TOTPSetup{}, ErrTOTPAlreadyActive
 	}
 	sec, err := NewTOTPSecret()
 	if err != nil {
@@ -37,6 +42,9 @@ func (s *Service) ConfirmTOTP(ctx context.Context, operatorID int64, code, ip st
 	if err != nil {
 		return err
 	}
+	if op.TOTPEnabled {
+		return ErrTOTPAlreadyActive
+	}
 	sec, err := s.Operators.PendingTOTP(ctx, operatorID)
 	if err != nil {
 		return err
@@ -45,7 +53,7 @@ func (s *Service) ConfirmTOTP(ctx context.Context, operatorID int64, code, ip st
 	if !ok {
 		return ErrTOTPInvalid
 	}
-	if err := s.Operators.ActivateTOTP(ctx, operatorID, step); err != nil {
+	if err := s.Operators.ActivateTOTP(ctx, operatorID, sec, step); err != nil {
 		return err
 	}
 	return s.record(ctx, op.Username, ip, audit.ActionTOTPEnable, audit.Success, nil)
@@ -57,6 +65,9 @@ func (s *Service) DisableTOTP(ctx context.Context, operatorID int64, password se
 	op, err := s.Operators.ByID(ctx, operatorID)
 	if err != nil {
 		return err
+	}
+	if !op.TOTPEnabled {
+		return ErrTOTPNotEnabled
 	}
 	if wait, err := s.Limiter.Check(ctx, ip, op.Username); err != nil {
 		return err

@@ -163,6 +163,26 @@ func TestLoginWithTOTP(t *testing.T) {
 	}
 }
 
+func TestTOTPCannotBeReplacedWhileOn(t *testing.T) {
+	s := newService(t)
+	enableTOTP(t, s)
+	ctx := context.Background()
+	if _, err := s.svc.BeginTOTP(ctx, s.op.ID); !errors.Is(err, ErrTOTPAlreadyActive) {
+		t.Fatalf("BeginTOTP while on: %v", err)
+	}
+	if err := s.svc.ConfirmTOTP(ctx, s.op.ID, "123456", ""); !errors.Is(err, ErrTOTPAlreadyActive) {
+		t.Fatalf("ConfirmTOTP while on: %v", err)
+	}
+}
+
+func TestDisableTOTPWhenOff(t *testing.T) {
+	s := newService(t)
+	err := s.svc.DisableTOTP(context.Background(), s.op.ID, secret.NewValue(goodPassword), "123456", "")
+	if !errors.Is(err, ErrTOTPNotEnabled) {
+		t.Fatalf("err = %v, want ErrTOTPNotEnabled", err)
+	}
+}
+
 func TestDisableTOTPNeedsPasswordAndCode(t *testing.T) {
 	s := newService(t)
 	sec := enableTOTP(t, s)

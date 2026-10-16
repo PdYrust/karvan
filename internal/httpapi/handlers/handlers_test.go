@@ -112,8 +112,11 @@ func TestTwoStepSignIn(t *testing.T) {
 	if res := e.do(http.MethodPost, "/"+base+"/api/v1/account/totp/confirm", map[string]string{"code": totpNow(setup.Secret)}); res.status != http.StatusNoContent {
 		t.Fatalf("confirm: %d %s", res.status, res.body)
 	}
-	if res := e.do(http.MethodPost, "/"+base+"/api/v1/account/totp/confirm", map[string]string{"code": "123456"}); res.status != http.StatusConflict {
-		t.Fatalf("confirm without setup: %d %s", res.status, res.body)
+	if res := e.do(http.MethodPost, "/"+base+"/api/v1/account/totp/confirm", map[string]string{"code": "123456"}); res.status != http.StatusConflict || res.errorCode(t) != "totp_already_on" {
+		t.Fatalf("confirm while on: %d %s", res.status, res.body)
+	}
+	if res := e.do(http.MethodPost, "/"+base+"/api/v1/account/totp", nil); res.status != http.StatusConflict || res.errorCode(t) != "totp_already_on" {
+		t.Fatalf("new setup while on: %d %s", res.status, res.body)
 	}
 
 	e.do(http.MethodDelete, "/"+base+"/api/v1/session", nil)
@@ -127,12 +130,12 @@ func TestTwoStepSignIn(t *testing.T) {
 	}
 }
 
-func TestDisableTwoStepRefusesWrongPassword(t *testing.T) {
+func TestDisableTwoStepWhenOff(t *testing.T) {
 	e := newEnv(t)
 	e.login("")
-	res := e.do(http.MethodDelete, "/"+base+"/api/v1/account/totp", map[string]string{"password": "wrong password!", "code": "000000"})
-	if res.status != http.StatusForbidden || res.errorCode(t) != "invalid_credentials" {
-		t.Fatalf("wrong password: %d %s", res.status, res.body)
+	res := e.do(http.MethodDelete, "/"+base+"/api/v1/account/totp", map[string]string{"password": password, "code": "000000"})
+	if res.status != http.StatusConflict || res.errorCode(t) != "totp_not_on" {
+		t.Fatalf("disable while off: %d %s", res.status, res.body)
 	}
 	if res := e.do(http.MethodDelete, "/"+base+"/api/v1/account/totp", map[string]string{"password": "x"}); res.status != http.StatusBadRequest {
 		t.Fatalf("bad body: %d", res.status)
