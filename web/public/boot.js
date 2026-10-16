@@ -16,5 +16,4 @@
   root.lang = lang;
   root.dir = lang === 'fa' ? 'rtl' : 'ltr';
   root.dataset.mode = theme;
-  root.dataset.theme = 'karvan';
 })();
