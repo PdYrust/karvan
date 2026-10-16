@@ -37,7 +37,6 @@ Last reviewed: 2026-10-15.
 | Web tests and coverage | all pass; 80% or more lines in `web/src/lib` and `web/src/i18n` | `vitest run --coverage` | `make check` |
 | Bundle (gzip, fonts excluded) | sign-in JS 145 KB or less; 3D logo chunk 180 KB or less; app JS 260 KB or less; stylesheet 35 KB or less | `web/scripts/bundle-size.mjs` (follows the Vite manifest) | `make web` |
 | Web dependencies | nothing at high or above | `pnpm audit --audit-level high` | `make check-full` |
-| Lighthouse mobile | login and overview: performance 90 or more, accessibility 100, best practices 95 or more | `lighthouse` against a local build | `make check-full` |
 
 The coverage floor (80%) is high enough that new logic needs a test, and low enough to leave room for wiring code.
 The bundle numbers keep the sign-in page usable on a slow mobile connection. They were first guessed at 110 KB for the sign-in page; measured, React 19 alone is about 60 KB and Kumo's Button and Input about 55 KB, so the budget is today's 132 KB plus a little room. Fonts are left out because they cache across visits.
@@ -46,6 +45,13 @@ The Lighthouse numbers are the "good" band of Core Web Vitals; accessibility is 
 ## Reviewed by a person, every page
 - Tested at 360 px and 1440 px, in fa and en, dark and light, keyboard only.
 - Follows `DESIGN.md`. If `DESIGN.md` is wrong, it is fixed first.
+- Lighthouse mobile on the sign-in page and the overview: performance 90 or more, accessibility 100, best practices 95 or more. It needs a running install and Chrome, so it runs by hand (`lighthouse <url> --form-factor=mobile`) until CI can start one. On a slow machine, set `--throttling.cpuSlowdownMultiplier` so the host plus the multiplier matches a mid-range phone.
+
+## Measured, not yet meeting the bar
+| Metric | Today | Target | Direction |
+|---|---|---|---|
+| Lighthouse mobile performance, sign-in | 70 to 83 (2026-10-16, host benchmark 340 to 550, CPU multiplier 1) | 90 | must not fall |
+| Lighthouse mobile performance, overview | 67 to 72 (same run) | 90 | must not fall |
 
 ## Exceptions
 | ID | Rule | Path | Reason | Owner | Expires |
