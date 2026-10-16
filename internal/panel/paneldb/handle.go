@@ -67,6 +67,50 @@ func (t readOnlyTx) QueryRowContext(ctx context.Context, s string, args ...any) 
 	return t.r.QueryRowContext(ctx, s, args...)
 }
 
+// ErrLocked means another Karvan (or another job) holds the destination.
+var ErrLocked = errors.New("another job is writing to this database")
+
+// Lock takes Karvan's exclusive lock on the destination itself (D30), so
+// two Karvan installs, or two ENV files naming one database, cannot write
+// at once. It never waits. SQLite uses flock on the database file, which
+// is separate from SQLite's own POSIX locks on Linux; MySQL and MariaDB use
+// GET_LOCK and PostgreSQL an advisory lock, each held by one connection.
+func (w *Writer) Lock(ctx context.Context, t Target) (release func(), err error) {
+	if t.Dialect == SQLite {
+		return flock(t.Path)
+	}
+	conn, err := w.db.Conn(ctx)
+	if err != nil {
+		return nil, err
+	}
+	name := "karvan:" + t.Database
+	var ok bool
+	if t.Dialect == MySQL {
+		var got sql.NullInt64
+		err = conn.QueryRowContext(ctx, "SELECT GET_LOCK(?, 0)", name).Scan(&got)
+		ok = got.Int64 == 1
+	} else {
+		err = conn.QueryRowContext(ctx, "SELECT pg_try_advisory_lock(hashtext($1))", name).Scan(&ok)
+	}
+	if err == nil && !ok {
+		err = ErrLocked
+	}
+	if err != nil {
+		_ = conn.Close()
+		return nil, err
+	}
+	return func() {
+		// Closing the connection drops the lock even if the unlock fails.
+		bg := context.Background()
+		if t.Dialect == MySQL {
+			_, _ = conn.ExecContext(bg, "SELECT RELEASE_LOCK(?)", name)
+		} else {
+			_, _ = conn.ExecContext(bg, "SELECT pg_advisory_unlock(hashtext($1))", name)
+		}
+		_ = conn.Close()
+	}, nil
+}
+
 // Writer is a read-write handle. Writes happen only inside Batch.
 type Writer struct {
 	db     *sql.DB
