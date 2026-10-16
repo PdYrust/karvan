@@ -16,7 +16,7 @@ TESTDB_ENV := KARVAN_TEST_MYSQL='root:test@tcp(127.0.0.1:33061)/' \
 	KARVAN_TEST_MARIADB='root:test@tcp(127.0.0.1:33062)/' \
 	KARVAN_TEST_POSTGRES='postgres://postgres:test@127.0.0.1:54321/postgres' \
 	KARVAN_TEST_TIMESCALE='postgres://postgres:test@127.0.0.1:54322/postgres'
-.PHONY: build build-go web web-deps test lint lint-web fmt floor cover check check-web check-full vuln audit-web clean test-db testdb-seed testdb-down test-panels testpanels-down
+.PHONY: build build-go web web-deps test lint lint-web fmt floor cover check check-web check-full vuln audit-web clean test-db testdb-seed testdb-down test-panels testpanels-down bench
 
 build: web build-go
 
@@ -72,10 +72,12 @@ testdb-down:
 test-panels:
 	./scripts/testpanels/up.sh
 	go test -tags paneltest -count=1 -p 1 ./internal/migration/reload/ ./internal/bridge/
+bench:
+	go test -run x -bench . -benchtime 3x ./internal/migration/...
 testpanels-down:
 	docker compose -p karvan-testpanels down
 # Full gate: before a phase ends or a release.
-check-full: check test test-db vuln audit-web web
+check-full: check test test-db test-panels vuln audit-web web
 
 clean:
 	rm -rf bin coverage.out web/dist/assets web/dist/.vite web/dist/*.html web/dist/*.js web/dist/*.svg
