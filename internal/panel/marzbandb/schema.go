@@ -4,9 +4,6 @@ package marzbandb
 
 import (
 	"context"
-	"fmt"
-	"slices"
-	"strings"
 
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
@@ -68,7 +65,10 @@ func Inspect(ctx context.Context, q paneldb.Querier, srv paneldb.Server) (Schema
 	if rev != Revision {
 		return s, &panel.VersionError{Kind: panel.Marzban, Revision: rev}
 	}
-	if err := checkColumns(ctx, q, srv.Dialect); err != nil {
+	if gap, err := paneldb.MissingColumns(ctx, q, srv.Dialect, columns); err != nil || gap != "" {
+		if err == nil {
+			err = &panel.SchemaError{Kind: panel.Marzban, Detail: gap}
+		}
 		return s, err
 	}
 	if s.UsersFoldCase, err = paneldb.CaseInsensitive(ctx, q, srv.Dialect, "users", "username"); err != nil {
@@ -81,43 +81,6 @@ func Inspect(ctx context.Context, q paneldb.Querier, srv paneldb.Server) (Schema
 	if err != nil {
 		return s, err
 	}
-	for _, fk := range fks {
-		if !known(fk) {
-			s.UnknownChildren = append(s.UnknownChildren, fk)
-		}
-	}
+	s.UnknownChildren = paneldb.UnknownKeys(fks, children)
 	return s, nil
-}
-
-func checkColumns(ctx context.Context, q paneldb.Querier, d paneldb.Dialect) error {
-	tables := make([]string, 0, len(columns))
-	for t := range columns {
-		tables = append(tables, t)
-	}
-	slices.Sort(tables)
-	for _, t := range tables {
-		have, err := paneldb.Columns(ctx, q, d, t)
-		if err != nil {
-			return fmt.Errorf("read columns of %s: %w", t, err)
-		}
-		var missing []string
-		for _, c := range columns[t] {
-			if !slices.Contains(have, c) {
-				missing = append(missing, c)
-			}
-		}
-		if len(missing) > 0 {
-			return &panel.SchemaError{Kind: panel.Marzban, Detail: t + " lacks " + strings.Join(missing, ", ")}
-		}
-	}
-	return nil
-}
-
-func known(fk paneldb.ForeignKey) bool {
-	for _, c := range children {
-		if c.Table == fk.Table && c.Column == fk.Column && c.RefTable == fk.RefTable {
-			return true
-		}
-	}
-	return false
 }

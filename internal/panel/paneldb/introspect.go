@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"regexp"
+	"slices"
 	"strings"
 )
 
@@ -15,6 +16,47 @@ func Columns(ctx context.Context, q Querier, d Dialect, table string) ([]string,
 		Postgres: "SELECT column_name FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = ? ORDER BY ordinal_position",
 	}[d]
 	return queryStrings(ctx, q, query, table)
+}
+
+// MissingColumns compares the live schema with want (table to columns)
+// and describes the first gap, or returns "" when every column is there.
+func MissingColumns(ctx context.Context, q Querier, d Dialect, want map[string][]string) (string, error) {
+	tables := make([]string, 0, len(want))
+	for t := range want {
+		tables = append(tables, t)
+	}
+	slices.Sort(tables)
+	for _, t := range tables {
+		have, err := Columns(ctx, q, d, t)
+		if err != nil {
+			return "", fmt.Errorf("read columns of %s: %w", t, err)
+		}
+		var missing []string
+		for _, c := range want[t] {
+			if !slices.Contains(have, c) {
+				missing = append(missing, c)
+			}
+		}
+		if len(missing) > 0 {
+			return t + " lacks " + strings.Join(missing, ", "), nil
+		}
+	}
+	return "", nil
+}
+
+// UnknownKeys returns the keys in fks that are not in known (matched on
+// table, column and referenced table).
+func UnknownKeys(fks, known []ForeignKey) []ForeignKey {
+	var out []ForeignKey
+	for _, fk := range fks {
+		found := slices.ContainsFunc(known, func(k ForeignKey) bool {
+			return k.Table == fk.Table && k.Column == fk.Column && k.RefTable == fk.RefTable
+		})
+		if !found {
+			out = append(out, fk)
+		}
+	}
+	return out
 }
 
 // CaseInsensitive reports whether table.column compares text without case,
