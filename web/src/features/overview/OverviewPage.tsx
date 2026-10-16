@@ -37,7 +37,7 @@ export function OverviewPage() {
         <InlineAlert>
           {t('loadFailed')} {isOffline ? ts('errorOffline') : ts('errorServer')}
         </InlineAlert>
-        <Button className="h-11 sm:h-9" onClick={() => void overview.refetch()}>
+        <Button className="h-11 sm:h-9 pointer-coarse:h-11" onClick={() => void overview.refetch()}>
           {ts('retry')}
         </Button>
       </div>
@@ -47,7 +47,7 @@ export function OverviewPage() {
     body = (
       <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <div className="lg:row-span-2">
-          <PanelsSection onScan={() => overview.refetch()} scanning={overview.isFetching} />
+          <PanelsSection />
         </div>
         <SafeModeSection on={data.safeMode} />
         <SecuritySection security={data.security} now={now} />

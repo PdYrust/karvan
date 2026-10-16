@@ -1,17 +1,16 @@
 import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
 import { ArrowsClockwiseIcon, CaretUpDownIcon, HardDrivesIcon } from '@phosphor-icons/react';
-import { useQueryClient } from '@tanstack/react-query';
 import { useT } from '../../i18n/locale';
-import { overviewKey } from '../../features/overview/use-overview';
+import { useScanPanels } from '../../features/panels/use-scan-panels';
 import { shellMessages } from './messages';
 
 /**
  * Chooses which panel the pages work on. Discovery comes in phase 3, so the
- * list is empty for now and "Scan again" simply asks the server again.
+ * list is empty for now.
  */
 export function PanelSwitcher() {
   const t = useT(shellMessages);
-  const queryClient = useQueryClient();
+  const { scan } = useScanPanels();
   return (
     <DropdownMenu>
       <DropdownMenu.Trigger
@@ -37,9 +36,7 @@ export function PanelSwitcher() {
           <DropdownMenu.Item disabled>{t('noPanelsFound')}</DropdownMenu.Item>
         </DropdownMenu.Group>
         <DropdownMenu.Separator />
-        <DropdownMenu.Item
-          onClick={() => void queryClient.invalidateQueries({ queryKey: overviewKey })}
-        >
+        <DropdownMenu.Item onClick={() => void scan()}>
           <span className="flex items-center gap-2">
             <ArrowsClockwiseIcon size={16} aria-hidden="true" />
             {t('scanAgain')}

@@ -6,13 +6,12 @@ import {
   SunIcon,
   TranslateIcon,
 } from '@phosphor-icons/react';
-import { useQueryClient } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { locales } from '../../i18n/core';
 import { useLocale, useT } from '../../i18n/locale';
 import { languageNames } from '../../i18n/shared';
-import { overviewKey } from '../../features/overview/use-overview';
+import { useScanPanels } from '../../features/panels/use-scan-panels';
 import { useTheme } from '../../lib/preferences/theme';
 import { shellMessages } from './messages';
 import { nav } from './nav';
@@ -37,7 +36,7 @@ export interface CommandGroup {
 export function useCommands(): CommandGroup[] {
   const t = useT(shellMessages);
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
+  const { scan } = useScanPanels();
   const { setPref } = useTheme();
   const { locale, setLocale } = useLocale();
   const signOut = useSignOut();
@@ -63,7 +62,7 @@ export function useCommands(): CommandGroup[] {
       id: 'scan',
       title: t('actionScan'),
       icon: <ArrowsClockwiseIcon size={18} />,
-      run: () => void queryClient.invalidateQueries({ queryKey: overviewKey }),
+      run: () => void scan(),
     },
     { id: 'signout', title: t('actionSignOut'), icon: <SignOutIcon size={18} />, run: signOut },
   ];

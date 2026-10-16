@@ -11,7 +11,6 @@ const en = {
   panelsEmptyBody:
     'Finding Marzban and PasarGuard on this server arrives in the next version. Karvan only reads a panel’s settings; it never changes them.',
   scanAgain: 'Scan again',
-  scanned: 'Checked again. No panels yet.',
   safeModeTitle: 'Safe Mode',
   on: 'On',
   off: 'Off',
@@ -53,7 +52,6 @@ const fa: Record<Key, string> = {
   panelsEmptyBody:
     'پیدا کردن مرزبان و پاسارگارد روی این سرور در نسخهٔ بعدی می‌آید. کاروان تنظیمات پنل را فقط می‌خواند و هرگز تغییرشان نمی‌دهد.',
   scanAgain: 'جست‌وجوی دوباره',
-  scanned: 'دوباره بررسی شد. هنوز پنلی نیست.',
   safeModeTitle: 'حالت امن',
   on: 'روشن',
   off: 'خاموش',
