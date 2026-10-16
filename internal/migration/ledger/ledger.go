@@ -5,9 +5,13 @@ package ledger
 
 import (
 	"context"
+	"crypto/sha256"
 	"database/sql"
+	"encoding/hex"
 	"errors"
 	"fmt"
+	"net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -46,9 +50,10 @@ type Entry struct {
 	SourceKey      string
 	SourceCreated  time.Time
 	SourceUsername string
-	CredPrint      string
+	CredPrint      string // Fingerprint of the source credentials
 	Dest           string
-	panel.Row      // destination id, username, created_at
+	panel.Row                // destination id, username, created_at
+	Written        time.Time // when the row was added
 }
 
 // Ledger reads and writes ledger rows.
@@ -63,19 +68,20 @@ func New(db *sql.DB) *Ledger { return &Ledger{db: db, now: time.Now} }
 func micro(t time.Time) int64 { return t.UTC().UnixMicro() }
 
 const columns = "id, kind, job_id, state, batch, source_origin, source_key, source_created, source_username, " +
-	"cred_fingerprint, dest, dest_id, dest_username, dest_created"
+	"cred_fingerprint, dest, dest_id, dest_username, dest_created, created_at"
 
 func scan(rows *sql.Rows) ([]Entry, error) {
 	defer rows.Close()
 	var out []Entry
 	for rows.Next() {
 		var e Entry
-		var src, dst int64
+		var src, dst, written int64
 		if err := rows.Scan(&e.ID, &e.Kind, &e.JobID, &e.State, &e.Batch, &e.SourceOrigin, &e.SourceKey, &src,
-			&e.SourceUsername, &e.CredPrint, &e.Dest, &e.Row.ID, &e.Username, &dst); err != nil {
+			&e.SourceUsername, &e.CredPrint, &e.Dest, &e.Row.ID, &e.Username, &dst, &written); err != nil {
 			return nil, fmt.Errorf("read ledger: %w", err)
 		}
 		e.SourceCreated, e.CreatedAt = time.UnixMicro(src).UTC(), time.UnixMicro(dst).UTC()
+		e.Written = time.UnixMicro(written).UTC()
 		out = append(out, e)
 	}
 	return out, rows.Err()
@@ -90,6 +96,86 @@ func (l *Ledger) Live(ctx context.Context, origin, dest string) ([]Entry, error)
 		return nil, fmt.Errorf("read ledger: %w", err)
 	}
 	return scan(rows)
+}
+
+// Origin is the ledger's name for a source panel: scheme, host, port and
+// base path, lowercased, without a default port (D31).
+func Origin(u *url.URL) string {
+	host := strings.ToLower(u.Hostname())
+	port := u.Port()
+	if port == "" || u.Scheme == "https" && port == "443" || u.Scheme == "http" && port == "80" {
+		return u.Scheme + "://" + host + strings.ToLower(u.Path)
+	}
+	return u.Scheme + "://" + host + ":" + port + strings.ToLower(u.Path)
+}
+
+// ErrNotFound means no row matched.
+var ErrNotFound = errors.New("not in the ledger")
+
+// Get returns one row.
+func (l *Ledger) Get(ctx context.Context, id int64) (Entry, error) {
+	rows, err := l.db.QueryContext(ctx, "SELECT "+columns+" FROM ledger WHERE id = ?", id)
+	if err != nil {
+		return Entry{}, fmt.Errorf("read ledger: %w", err)
+	}
+	return one(rows)
+}
+
+// User returns the user row a moved or adopted source user has on dest:
+// the only rows the subscription bridge serves.
+func (l *Ledger) User(ctx context.Context, origin, key, dest string) (Entry, error) {
+	rows, err := l.db.QueryContext(ctx, "SELECT "+columns+" FROM ledger WHERE kind = 'user' AND source_origin = ? "+
+		"AND source_key = ? AND dest = ? AND state IN ('done', 'adopted') ORDER BY id DESC LIMIT 1", origin, key, dest)
+	if err != nil {
+		return Entry{}, fmt.Errorf("read ledger: %w", err)
+	}
+	return one(rows)
+}
+
+// UserByName is User for a source username. Old PasarGuard links can
+// carry a username instead of an id (tokens from before its v2 format).
+func (l *Ledger) UserByName(ctx context.Context, origin, username, dest string) (Entry, error) {
+	rows, err := l.db.QueryContext(ctx, "SELECT "+columns+" FROM ledger WHERE kind = 'user' AND source_origin = ? "+
+		"AND source_username = ? AND dest = ? AND state IN ('done', 'adopted') ORDER BY id DESC LIMIT 1", origin, username, dest)
+	if err != nil {
+		return Entry{}, fmt.Errorf("read ledger: %w", err)
+	}
+	return one(rows)
+}
+
+// Served lists the rows the subscription bridge serves for one source
+// panel and destination.
+func (l *Ledger) Served(ctx context.Context, origin, dest string) ([]Entry, error) {
+	rows, err := l.db.QueryContext(ctx, "SELECT "+columns+" FROM ledger WHERE kind = 'user' AND source_origin = ? "+
+		"AND dest = ? AND state IN ('done', 'adopted') ORDER BY id", origin, dest)
+	if err != nil {
+		return nil, fmt.Errorf("read ledger: %w", err)
+	}
+	return scan(rows)
+}
+
+func one(rows *sql.Rows) (Entry, error) {
+	got, err := scan(rows)
+	if err != nil {
+		return Entry{}, err
+	}
+	if len(got) == 0 {
+		return Entry{}, ErrNotFound
+	}
+	return got[0], nil
+}
+
+// Fingerprint names a credential set without holding it: the first 12
+// bytes of SHA-256 over the sorted credential keys.
+func Fingerprint(c panel.Credentials) string {
+	keys := c.Keys()
+	slices.Sort(keys)
+	h := sha256.New()
+	for _, k := range keys {
+		h.Write([]byte(k))
+		h.Write([]byte{0})
+	}
+	return hex.EncodeToString(h.Sum(nil)[:12])
 }
 
 // Job returns a job's rows in the given states, newest batch first.

@@ -2,8 +2,6 @@ package run
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"slices"
@@ -92,11 +90,9 @@ func movable(r *engine.Result) []*engine.Item {
 }
 
 func (s *Service) entry(j *Job, p *prepared, it *engine.Item, state string, batch int) ledger.Entry {
-	keys := it.User.Credentials.Keys()
-	slices.Sort(keys)
 	return ledger.Entry{Kind: ledger.KindUser, JobID: j.ID, State: state, Batch: batch, SourceOrigin: j.origin,
 		SourceKey: it.Key, SourceCreated: it.Source.CreatedAt, SourceUsername: it.Source.Username,
-		CredPrint: fingerprint(keys), Dest: p.dest,
+		CredPrint: ledger.Fingerprint(it.Source.Credentials), Dest: p.dest,
 		Row: panel.Row{Username: it.User.Username, CreatedAt: paneldb.Stored(p.db.Server().Dialect, it.User.CreatedAt)}}
 }
 
@@ -238,15 +234,6 @@ var zeroTime = time.Unix(0, 0).UTC()
 
 // fingerprint is a short hash of sorted credential keys, kept in the
 // ledger so a later read can tell the same user from a stranger.
-func fingerprint(keys []panel.CredentialKey) string {
-	h := sha256.New()
-	for _, k := range keys {
-		h.Write([]byte(k))
-		h.Write([]byte{0})
-	}
-	return hex.EncodeToString(h.Sum(nil)[:12])
-}
-
 func eta(start, now time.Time, done, total int) int {
 	if done == 0 {
 		return 0

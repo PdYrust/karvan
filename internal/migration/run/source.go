@@ -6,24 +6,13 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strings"
 
+	"github.com/PdYrust/karvan/internal/migration/ledger"
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/marzbanapi"
 	"github.com/PdYrust/karvan/internal/panel/pasarguardapi"
 	"github.com/PdYrust/karvan/internal/panel/source"
 )
-
-// Origin is the ledger's name for a source panel: scheme, host, port and
-// base path, lowercased, without a default port (D31).
-func Origin(u *url.URL) string {
-	host := strings.ToLower(u.Hostname())
-	port := u.Port()
-	if port == "" || u.Scheme == "https" && port == "443" || u.Scheme == "http" && port == "80" {
-		return u.Scheme + "://" + host + strings.ToLower(u.Path)
-	}
-	return u.Scheme + "://" + host + ":" + port + strings.ToLower(u.Path)
-}
 
 // openSource builds the source reader, detecting the panel when the
 // operator did not say which one it is.
@@ -48,7 +37,7 @@ func openSource(ctx context.Context, l Login, opts source.Options) (panel.Source
 	default:
 		return nil, "", "", nil, fmt.Errorf("unknown panel %q", kind)
 	}
-	return src, kind, Origin(c.Base()), c, nil
+	return src, kind, ledger.Origin(c.Base()), c, nil
 }
 
 // detect tells the panels apart by /api/admin (D5): Marzban answers with
