@@ -1,0 +1,48 @@
+# Throwaway databases for `make test-db` and `scripts/testdb/seed.sh`.
+# Bound to loopback only; the passwords are test values.
+name: karvan-testdb
+
+services:
+  mysql:
+    image: mysql:8.4.11
+    environment:
+      MYSQL_ROOT_PASSWORD: test
+    ports: ["127.0.0.1:33061:3306"]
+    tmpfs: [/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-ptest"]
+      interval: 2s
+      retries: 60
+
+  mariadb:
+    image: mariadb:11.4.13
+    environment:
+      MARIADB_ROOT_PASSWORD: test
+    ports: ["127.0.0.1:33062:3306"]
+    tmpfs: [/var/lib/mysql]
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 2s
+      retries: 60
+
+  postgres:
+    image: postgres:17.11-alpine
+    environment:
+      POSTGRES_PASSWORD: test
+    ports: ["127.0.0.1:54321:5432"]
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      retries: 60
+
+  timescale:
+    image: timescale/timescaledb:2.30.2-pg17
+    environment:
+      POSTGRES_PASSWORD: test
+    ports: ["127.0.0.1:54322:5432"]
+    tmpfs: [/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD", "pg_isready", "-U", "postgres"]
+      interval: 2s
+      retries: 60

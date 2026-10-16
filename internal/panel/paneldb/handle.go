@@ -111,6 +111,28 @@ func (w *Writer) Batch(ctx context.Context, fn func(x Execer) error) error {
 	return nil
 }
 
+// Revision reads the alembic revision. Several heads (a database stuck
+// mid-merge) come back joined with "+", so they never match a known one.
+func Revision(ctx context.Context, q Querier) (string, error) {
+	rows, err := q.QueryContext(ctx, "SELECT version_num FROM alembic_version ORDER BY version_num")
+	if err != nil {
+		return "", fmt.Errorf("read alembic_version: %w", err)
+	}
+	defer rows.Close()
+	var revs []string
+	for rows.Next() {
+		var r string
+		if err := rows.Scan(&r); err != nil {
+			return "", err
+		}
+		revs = append(revs, r)
+	}
+	if err := rows.Err(); err != nil {
+		return "", err
+	}
+	return strings.Join(revs, "+"), nil
+}
+
 // rebinder lets every query use "?" placeholders; PostgreSQL gets $n.
 type rebinder struct {
 	tx *sql.Tx
