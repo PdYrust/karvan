@@ -1,8 +1,6 @@
 package handlers
 
 import (
-	"crypto/rand"
-	"encoding/base64"
 	"errors"
 	"math"
 	"net/http"
@@ -41,12 +39,11 @@ func (a *API) GetSession(w http.ResponseWriter, r *http.Request) {
 		})
 		return
 	}
-	raw := make([]byte, 32)
-	if _, err := rand.Read(raw); err != nil {
+	token, err := secret.NewToken()
+	if err != nil {
 		respond.Internal(w, r, err)
 		return
 	}
-	token := base64.RawURLEncoding.EncodeToString(raw)
 	a.Cookies.SetPreCSRF(w, r, token)
 	respond.JSON(w, http.StatusOK, sessionJSON{CSRFToken: token})
 }

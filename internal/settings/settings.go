@@ -13,6 +13,8 @@ import (
 	"net/netip"
 	"regexp"
 	"strconv"
+
+	"github.com/PdYrust/karvan/internal/secret"
 )
 
 const (
@@ -124,17 +126,7 @@ func (s *Store) SetHTTP(ctx context.Context, h HTTP) error {
 
 // NewBasePath returns a random hidden path (about 93 bits). Look-alike
 // characters are left out so it can be read from a terminal and typed.
-func NewBasePath() (string, error) {
-	b := make([]byte, basePathLen)
-	for i := range b {
-		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphabet))))
-		if err != nil {
-			return "", fmt.Errorf("generate path: %w", err)
-		}
-		b[i] = alphabet[n.Int64()]
-	}
-	return string(b), nil
-}
+func NewBasePath() (string, error) { return secret.RandomString(alphabet, basePathLen) }
 
 // RandomPort returns a port in [MinRandomPort, MaxRandomPort].
 func RandomPort() (int, error) {

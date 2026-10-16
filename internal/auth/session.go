@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"crypto/hmac"
-	"crypto/rand"
 	"crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
@@ -11,6 +10,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"github.com/PdYrust/karvan/internal/secret"
 )
 
 // Session lifetimes.
@@ -21,7 +22,6 @@ const (
 	// last_seen_at is only rewritten after this long, to keep reads cheap.
 	touchInterval = time.Minute
 	maxUserAgent  = 256
-	tokenBytes    = 32
 )
 
 // ErrNoSession means the token is unknown or the session has ended.
@@ -54,17 +54,16 @@ func hashToken(token string) []byte {
 
 // Create starts a session and returns its token.
 func (s *Sessions) Create(ctx context.Context, operatorID int64, ip, userAgent string) (string, Session, error) {
-	raw := make([]byte, tokenBytes)
-	if _, err := rand.Read(raw); err != nil {
-		return "", Session{}, fmt.Errorf("generate session token: %w", err)
+	token, err := secret.NewToken()
+	if err != nil {
+		return "", Session{}, err
 	}
-	token := base64.RawURLEncoding.EncodeToString(raw)
 	if len(userAgent) > maxUserAgent {
 		userAgent = userAgent[:maxUserAgent]
 	}
 	now := s.now()
 	sess := Session{OperatorID: operatorID, CreatedAt: now, LastSeenAt: now, ExpiresAt: now.Add(AbsoluteTimeout), IP: ip, UserAgent: userAgent}
-	_, err := s.db.ExecContext(ctx, `INSERT INTO sessions (token_hash, operator_id, created_at, last_seen_at, expires_at, ip, user_agent)
+	_, err = s.db.ExecContext(ctx, `INSERT INTO sessions (token_hash, operator_id, created_at, last_seen_at, expires_at, ip, user_agent)
 		VALUES (?, ?, ?, ?, ?, ?, ?)`, hashToken(token), operatorID, now.Unix(), now.Unix(), sess.ExpiresAt.Unix(), ip, userAgent)
 	if err != nil {
 		return "", Session{}, fmt.Errorf("create session: %w", err)

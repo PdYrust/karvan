@@ -8,11 +8,12 @@ import (
 	"encoding/base64"
 	"errors"
 	"fmt"
-	"math/big"
 	"regexp"
 	"strings"
 
 	"golang.org/x/crypto/argon2"
+
+	"github.com/PdYrust/karvan/internal/secret"
 )
 
 const (
@@ -102,19 +103,11 @@ func VerifyPassword(encoded, pw string) (bool, error) {
 
 // GeneratePassword returns a random password (about 117 bits) without
 // look-alike characters, so it can be copied from a terminal by hand.
-func GeneratePassword() (string, error) { return randomString(passwordAlphabet, generatedPasswordLen) }
+func GeneratePassword() (string, error) {
+	return secret.RandomString(passwordAlphabet, generatedPasswordLen)
+}
 
 // GenerateUsername returns a random, valid username.
-func GenerateUsername() (string, error) { return randomString(usernameAlphabet, generatedUserLen) }
-
-func randomString(alphabet string, n int) (string, error) {
-	b := make([]byte, n)
-	for i := range b {
-		idx, err := rand.Int(rand.Reader, big.NewInt(int64(len(alphabet))))
-		if err != nil {
-			return "", fmt.Errorf("generate random string: %w", err)
-		}
-		b[i] = alphabet[idx.Int64()]
-	}
-	return string(b), nil
+func GenerateUsername() (string, error) {
+	return secret.RandomString(usernameAlphabet, generatedUserLen)
 }
