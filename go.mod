@@ -2,6 +2,8 @@ module github.com/PdYrust/karvan
 
 go 1.27.1
 
+toolchain go1.27.2
+
 require (
 	golang.org/x/crypto v0.58.0
 	modernc.org/sqlite v1.60.1
