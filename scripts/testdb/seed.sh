@@ -32,14 +32,18 @@ migrate() {
     { cat "$work/migrate.log" >&2; exit 1; }
 }
 
-# Dump commands strip lines that change on every run (dates, versions).
-dump_sqlite() { sqlite3 "$work/$1" .dump | grep -v '^INSERT INTO sqlite_stat1'; }
+# Dump commands strip lines that change on every run (dates, versions) and
+# the key material the panels generate on first migration (the jwt secret,
+# Marzban's self-signed TLS key). Tests insert their own.
+no_keys() { grep -vE '^INSERT INTO (public\.)?`?(tls|jwt)`? '; }
+
+dump_sqlite() { sqlite3 "$work/$1" .dump | grep -v '^INSERT INTO sqlite_stat1' | no_keys; }
 
 dump_mysql() {
   local svc=$1 tool=$2 db=$3
   "${COMPOSE[@]}" exec -T "$svc" "$tool" -uroot -ptest --skip-dump-date --no-tablespaces \
     --skip-comments --skip-extended-insert "$db" 2>/dev/null |
-    sed -E 's/ AUTO_INCREMENT=[0-9]+//'
+    sed -E 's/ AUTO_INCREMENT=[0-9]+//' | no_keys
 }
 
 # The timescale image puts the extension in every new database; it is not
@@ -48,7 +52,7 @@ dump_pg() {
   local svc=$1 db=$2
   "${COMPOSE[@]}" exec -T "$svc" pg_dump -U postgres --no-owner --no-privileges --inserts \
     --exclude-extension=timescaledb "$db" 2>/dev/null |
-    grep -vE '^-- Dumped (from|by)|^\\(un)?restrict '
+    grep -vE '^-- Dumped (from|by)|^\\(un)?restrict ' | no_keys
 }
 
 fresh_mysql() { "${COMPOSE[@]}" exec -T "$1" "$2" -uroot -ptest -e "DROP DATABASE IF EXISTS seed; CREATE DATABASE seed" 2>/dev/null; }
