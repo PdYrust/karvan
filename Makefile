@@ -16,7 +16,7 @@ TESTDB_ENV := KARVAN_TEST_MYSQL='root:test@tcp(127.0.0.1:33061)/' \
 	KARVAN_TEST_MARIADB='root:test@tcp(127.0.0.1:33062)/' \
 	KARVAN_TEST_POSTGRES='postgres://postgres:test@127.0.0.1:54321/postgres' \
 	KARVAN_TEST_TIMESCALE='postgres://postgres:test@127.0.0.1:54322/postgres'
-.PHONY: build build-go web web-deps test lint lint-web fmt floor cover check check-web check-full vuln audit-web clean test-db testdb-seed testdb-down
+.PHONY: build build-go web web-deps test lint lint-web fmt floor cover check check-web check-full vuln audit-web clean test-db testdb-seed testdb-down test-panels testpanels-down
 
 build: web build-go
 
@@ -67,6 +67,13 @@ testdb-seed:
 	./scripts/testdb/seed.sh
 testdb-down:
 	$(TESTDB) down
+# Reload, login and API read-back against running Marzban and PasarGuard
+# (needs Docker; starts fresh panels every time).
+test-panels:
+	./scripts/testpanels/up.sh
+	go test -tags paneltest -count=1 ./internal/migration/reload/
+testpanels-down:
+	docker compose -p karvan-testpanels down
 # Full gate: before a phase ends or a release.
 check-full: check test test-db vuln audit-web web
 

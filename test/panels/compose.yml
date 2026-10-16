@@ -1,0 +1,23 @@
+# Running panels for `make test-panels` (scripts/testpanels/up.sh writes
+# their folders first). Both use host networking like a real install, so
+# each binds where its ENV says, and run as the calling user so the test
+# can write their SQLite files. The data folder has the same path inside
+# and outside, so ENV paths are true on both sides.
+name: karvan-testpanels
+services:
+  marzban:
+    image: gozargah/marzban:v0.8.4
+    network_mode: host
+    user: "${PANELS_UID}:${PANELS_GID}"
+    env_file: ${PANELS_DIR}/marzban/.env
+    environment:
+      HOME: ${PANELS_DIR}/marzban
+    volumes: ["${PANELS_DIR}/marzban:${PANELS_DIR}/marzban"]
+  pasarguard:
+    image: pasarguard/panel:v5.4.1
+    network_mode: host
+    user: "${PANELS_UID}:${PANELS_GID}"
+    env_file: ${PANELS_DIR}/pasarguard/.env
+    environment:
+      HOME: ${PANELS_DIR}/pasarguard
+    volumes: ["${PANELS_DIR}/pasarguard:${PANELS_DIR}/pasarguard"]
