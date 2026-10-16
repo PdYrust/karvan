@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useT } from '../../i18n/locale';
 import { ApiError } from '../../lib/api/client';
 import { getSession, signOut } from '../../lib/api/session';
-import { shellMessages } from './messages';
+import { sessionMessages } from './messages';
 
 export const sessionKey = ['session'] as const;
 
@@ -19,7 +19,7 @@ export function returnToSignIn() {
 
 /** Signs out; on a failure the page stays, so a shared machine is never left signed in by surprise. */
 export function useSignOut() {
-  const t = useT(shellMessages);
+  const t = useT(sessionMessages);
   const toasts = useKumoToastManager();
   return () => {
     signOut().then(returnToSignIn, (err: unknown) => {

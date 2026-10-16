@@ -5,7 +5,7 @@ import { locales } from '../../i18n/core';
 import { useLocale, useT } from '../../i18n/locale';
 import { languageNames, sharedMessages } from '../../i18n/shared';
 import { shellMessages } from './messages';
-import { useSession, useSignOut } from './use-session';
+import { useSession, useSignOut } from '../../features/session/use-session';
 
 export function AccountMenu() {
   const t = useT(shellMessages);
@@ -57,10 +57,9 @@ export function AccountMenu() {
           </DropdownMenu.RadioGroup>
         </DropdownMenu.Group>
         <DropdownMenu.Separator />
-        <DropdownMenu.Item
-          icon={<SignOutIcon size={16} className="rtl:-scale-x-100" />}
-          onClick={signOut}
-        >
+        {/* Icon as a child: Kumo's icon slot uses a physical margin that breaks in RTL. */}
+        <DropdownMenu.Item className="gap-2" onClick={signOut}>
+          <SignOutIcon size={16} aria-hidden="true" className="rtl:-scale-x-100" />
           {t('signOut')}
         </DropdownMenu.Item>
       </DropdownMenu.Content>

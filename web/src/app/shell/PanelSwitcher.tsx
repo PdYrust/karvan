@@ -1,7 +1,7 @@
 import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
 import { ArrowsClockwiseIcon, CaretUpDownIcon, HardDrivesIcon } from '@phosphor-icons/react';
-import { useT } from '../../i18n/locale';
 import { useScanPanels } from '../../features/panels/use-scan-panels';
+import { useT } from '../../i18n/locale';
 import { shellMessages } from './messages';
 
 /**
@@ -17,16 +17,14 @@ export function PanelSwitcher() {
         render={
           <button
             type="button"
-            className="flex min-h-12 w-full items-center gap-3 rounded-lg bg-kumo-base px-3 text-start ring ring-kumo-line transition-colors hover:bg-kumo-tint"
+            aria-label={t('panelSwitcherLabel')}
+            className="flex min-h-10 w-full items-center gap-3 rounded-md px-3 text-start transition-colors hover:bg-kumo-tint pointer-coarse:min-h-11"
           >
-            <span className="grid size-8 shrink-0 place-items-center rounded-md bg-kumo-recessed text-kumo-subtle">
-              <HardDrivesIcon size={18} aria-hidden="true" />
+            <HardDrivesIcon size={18} aria-hidden="true" className="text-kumo-subtle" />
+            <span className="min-w-0 flex-1 truncate text-base text-kumo-default">
+              {t('noPanel')}
             </span>
-            <span className="flex min-w-0 flex-1 flex-col leading-tight">
-              <span className="text-tiny text-kumo-subtle">{t('panelSwitcherLabel')}</span>
-              <span className="truncate text-sm font-medium text-kumo-default">{t('noPanel')}</span>
-            </span>
-            <CaretUpDownIcon size={16} aria-hidden="true" className="text-kumo-subtle" />
+            <CaretUpDownIcon size={14} aria-hidden="true" className="text-kumo-subtle" />
           </button>
         }
       />

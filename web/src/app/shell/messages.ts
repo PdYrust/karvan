@@ -23,6 +23,7 @@ const en = {
   noPanelsFound: 'None found yet',
   scanAgain: 'Scan again',
   search: 'Search',
+  quickSearch: 'Quick search…',
   searchPlaceholder: 'Search pages and actions',
   searchEmpty: 'Nothing matches that.',
   groupPages: 'Pages',
@@ -40,8 +41,6 @@ const en = {
   account: 'Account',
   signedInAs: 'Signed in as',
   signOut: 'Sign out',
-  signOutFailed: 'Sign-out didn’t go through. You are still signed in; try again.',
-  version: 'Version {version}',
 };
 
 type Key = keyof typeof en;
@@ -69,6 +68,7 @@ const fa: Record<Key, string> = {
   noPanelsFound: 'هنوز چیزی پیدا نشده',
   scanAgain: 'جست‌وجوی دوباره',
   search: 'جست‌وجو',
+  quickSearch: 'جست‌وجوی سریع…',
   searchPlaceholder: 'جست‌وجوی صفحه‌ها و کارها',
   searchEmpty: 'چیزی با این عبارت پیدا نشد.',
   groupPages: 'صفحه‌ها',
@@ -86,8 +86,6 @@ const fa: Record<Key, string> = {
   account: 'حساب',
   signedInAs: 'وارد شده با',
   signOut: 'خروج',
-  signOutFailed: 'خروج انجام نشد و هنوز وارد هستید. دوباره امتحان کنید.',
-  version: 'نسخهٔ {version}',
 };
 
 export const shellMessages: Messages<Key> = { en, fa };

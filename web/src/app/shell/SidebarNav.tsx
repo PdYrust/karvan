@@ -6,7 +6,7 @@ import { shellMessages } from './messages';
 import { nav, type NavItem } from './nav';
 
 const row =
-  'relative flex min-h-10 items-center gap-3 rounded-lg px-3 text-base pointer-coarse:min-h-11';
+  'flex min-h-9 items-center gap-3 rounded-md px-3 text-base transition-colors pointer-coarse:min-h-11';
 
 function NavRow({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }) {
   const t = useT(shellMessages);
@@ -14,10 +14,10 @@ function NavRow({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }
   const Icon = item.icon;
   if (!item.to) {
     return (
-      <span aria-disabled="true" className={cn(row, 'cursor-default text-kumo-inactive')}>
-        <Icon size={20} aria-hidden="true" />
+      <span aria-disabled="true" className={cn(row, 'cursor-default text-kumo-subtle')}>
+        <Icon size={18} aria-hidden="true" className="text-kumo-inactive" />
         <span className="flex-1">{t(item.label)}</span>
-        <span className="rounded-md bg-kumo-recessed px-1.5 text-tiny text-kumo-subtle">
+        <span className="rounded-md px-1.5 text-tiny text-kumo-subtle ring ring-kumo-line">
           {ts('soon')}
         </span>
       </span>
@@ -31,26 +31,14 @@ function NavRow({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }
       className={({ isActive }) =>
         cn(
           row,
-          'transition-colors',
           isActive
-            ? 'bg-kumo-tint font-semibold text-kumo-strong'
-            : 'text-kumo-default hover:bg-kumo-tint/60',
+            ? 'bg-kumo-tint font-medium text-kumo-strong'
+            : 'text-kumo-default hover:bg-kumo-tint',
         )
       }
     >
-      {({ isActive }) => (
-        <>
-          {/* The current page is marked with a short stretch of road. */}
-          {isActive ? (
-            <span
-              aria-hidden="true"
-              className="absolute inset-y-2 start-0 w-[3px] rounded-full bg-[repeating-linear-gradient(to_bottom,var(--color-karvan-saffron)_0_5px,transparent_5px_8px)]"
-            />
-          ) : null}
-          <Icon size={20} weight={isActive ? 'bold' : 'regular'} aria-hidden="true" />
-          <span>{t(item.label)}</span>
-        </>
-      )}
+      <Icon size={18} aria-hidden="true" className="text-kumo-subtle" />
+      <span>{t(item.label)}</span>
     </NavLink>
   );
 }
@@ -58,7 +46,7 @@ function NavRow({ item, onNavigate }: { item: NavItem; onNavigate?: () => void }
 export function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const t = useT(shellMessages);
   return (
-    <nav aria-label={t('mainNav')} className="flex flex-col gap-5">
+    <nav aria-label={t('mainNav')} className="flex flex-col gap-4">
       {nav.map((group, i) => (
         <div key={group.label ?? i} className="flex flex-col gap-1">
           {group.label ? (

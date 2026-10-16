@@ -7,7 +7,7 @@ import { LocaleProvider, useLocale } from '../i18n/locale';
 import { ApiError } from '../lib/api/client';
 import { ThemeProvider } from '../lib/preferences/theme';
 import { AppShell } from './shell/AppShell';
-import { returnToSignIn } from './shell/use-session';
+import { returnToSignIn } from '../features/session/use-session';
 
 const queryClient = new QueryClient({
   queryCache: new QueryCache({

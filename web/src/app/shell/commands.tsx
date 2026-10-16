@@ -15,7 +15,7 @@ import { useScanPanels } from '../../features/panels/use-scan-panels';
 import { useTheme } from '../../lib/preferences/theme';
 import { shellMessages } from './messages';
 import { nav } from './nav';
-import { useSignOut } from './use-session';
+import { useSignOut } from '../../features/session/use-session';
 
 export interface Command {
   id: string;

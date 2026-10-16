@@ -1,6 +1,6 @@
-import { Button } from '@cloudflare/kumo/components/button';
 import { XIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, type ReactNode } from 'react';
+import { Wordmark } from '../../components/brand/Wordmark';
 import { useT } from '../../i18n/locale';
 import { shellMessages } from './messages';
 
@@ -34,18 +34,19 @@ export function MobileNav({
       // Light dismiss: a click on the backdrop closes the sheet, like Escape.
       {...{ closedby: 'any' }}
       aria-label={t('mainNav')}
-      className="m-0 h-dvh max-h-none w-[min(20rem,86vw)] max-w-none bg-kumo-base p-0 text-kumo-default shadow-xl backdrop:bg-kumo-contrast/40 me-auto lg:hidden"
+      className="m-0 h-dvh max-h-none w-[min(20rem,86vw)] max-w-none bg-kumo-canvas p-0 text-kumo-default shadow-xl backdrop:bg-kumo-contrast/40 me-auto lg:hidden"
     >
-      <div className="flex h-full flex-col gap-4 overflow-y-auto p-4">
-        <div className="flex justify-end">
-          <Button
-            variant="ghost"
-            shape="square"
+      <div className="flex h-full flex-col overflow-y-auto">
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-kumo-hairline ps-5 pe-2">
+          <Wordmark />
+          <button
+            type="button"
             aria-label={t('closeMenu')}
-            className="size-11"
-            icon={<XIcon size={20} />}
+            className="grid size-11 place-items-center rounded-md text-kumo-default hover:bg-kumo-tint"
             onClick={onClose}
-          />
+          >
+            <XIcon size={20} aria-hidden="true" />
+          </button>
         </div>
         {children}
       </div>

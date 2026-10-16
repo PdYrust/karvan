@@ -1,14 +1,14 @@
 import { cn } from '@cloudflare/kumo/utils';
 import { useId, type ReactNode } from 'react';
 
-/** A titled region of a page: hairline border, no shadow (DESIGN.md section 4). */
+/** A titled white card with a hairline border and no shadow (DESIGN.md section 4). */
 export function Section({
   title,
   actions,
   className,
   children,
 }: {
-  title: string;
+  title?: string;
   actions?: ReactNode;
   className?: string;
   children: ReactNode;
@@ -16,15 +16,20 @@ export function Section({
   const id = useId();
   return (
     <section
-      aria-labelledby={id}
-      className={cn('rounded-xl border border-kumo-hairline bg-kumo-base', className)}
+      aria-labelledby={title ? id : undefined}
+      className={cn(
+        'overflow-hidden rounded-lg border border-kumo-hairline bg-kumo-base',
+        className,
+      )}
     >
-      <header className="flex min-h-12 items-center justify-between gap-3 border-b border-kumo-hairline px-4 sm:px-5">
-        <h2 id={id} className="text-heading font-semibold text-kumo-strong">
-          {title}
-        </h2>
-        {actions}
-      </header>
+      {title ? (
+        <header className="flex min-h-12 items-center justify-between gap-3 px-4 pt-2">
+          <h2 id={id} className="text-heading font-semibold text-kumo-strong">
+            {title}
+          </h2>
+          {actions}
+        </header>
+      ) : null}
       {children}
     </section>
   );
