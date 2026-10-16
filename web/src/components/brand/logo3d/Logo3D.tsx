@@ -10,7 +10,27 @@ function canRender3D(): boolean {
     connection?: { saveData?: boolean };
   };
   if ((nav.deviceMemory ?? 8) <= 2 || nav.connection?.saveData) return false;
-  return Boolean(document.createElement('canvas').getContext('webgl2'));
+  const gl = document.createElement('canvas').getContext('webgl2');
+  if (!gl) return false;
+  // A software rasterizer draws on the CPU and would slow the whole page.
+  const info = gl.getExtension('WEBGL_debug_renderer_info');
+  const renderer = info ? String(gl.getParameter(info.UNMASKED_RENDERER_WEBGL)) : '';
+  gl.getExtension('WEBGL_lose_context')?.loseContext();
+  return !/swiftshader|llvmpipe|softpipe|software/i.test(renderer);
+}
+
+/** Waits until the page has loaded and the browser has a quiet moment. */
+function whenIdle(): Promise<void> {
+  return new Promise((resolve) => {
+    // Safari has no requestIdleCallback.
+    const ric = window.requestIdleCallback as typeof window.requestIdleCallback | undefined;
+    const idle = () =>
+      ric
+        ? window.requestIdleCallback(() => resolve(), { timeout: 2000 })
+        : setTimeout(resolve, 200);
+    if (document.readyState === 'complete') idle();
+    else window.addEventListener('load', idle, { once: true });
+  });
 }
 
 /**
@@ -28,7 +48,8 @@ export function Logo3D({ className }: { className?: string }) {
     let cancelled = false;
     let cleanup: () => void = () => undefined;
 
-    void Promise.all([import('./scene'), import('./palette')])
+    void whenIdle()
+      .then(() => Promise.all([import('./scene'), import('./palette')]))
       .then(([{ createLogoScene }, { readPalette }]) => {
         if (cancelled) return;
         const scene = createLogoScene(canvas, readPalette());
