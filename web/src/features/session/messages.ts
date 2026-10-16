@@ -7,7 +7,7 @@ const en = {
 type Key = keyof typeof en;
 
 const fa: Record<Key, string> = {
-  signOutFailed: 'خروج نشد. دوباره امتحان کن.',
+  signOutFailed: 'خروج انجام نشد. دوباره امتحان کنید.',
 };
 
 export const sessionMessages: Messages<Key> = { en, fa };

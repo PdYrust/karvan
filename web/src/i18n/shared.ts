@@ -17,13 +17,13 @@ type Key = keyof typeof en;
 const fa: Record<Key, string> = {
   brand: 'کاروان',
   languageLabel: 'زبان',
-  switchToDark: 'تم تیره',
-  switchToLight: 'تم روشن',
+  switchToDark: 'پوسته تیره',
+  switchToLight: 'پوسته روشن',
   soon: 'به زودی',
-  errorOffline: 'به کاروان وصل نشد. اینترنت رو چک کن و دوباره امتحان کن.',
-  errorServer: 'یه مشکلی تو سرور پیش اومد. چند لحظه دیگه دوباره امتحان کن.',
-  errorStale: 'این صفحه قدیمی شده. یه بار رفرشش کن.',
-  retry: 'دوباره امتحان کن',
+  errorOffline: 'اتصال به کاروان برقرار نشد. اتصال را بررسی کنید و دوباره امتحان کنید.',
+  errorServer: 'مشکلی در سرور پیش آمد. چند لحظه دیگر دوباره امتحان کنید.',
+  errorStale: 'این صفحه قدیمی است. صفحه را دوباره بارگذاری کنید.',
+  retry: 'دوباره امتحان کنید',
 };
 
 export const sharedMessages: Messages<Key> = { en, fa };

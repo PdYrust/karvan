@@ -122,13 +122,13 @@ Karvan's own components, with logical properties:
 
 ## 9. Writing
 
-The voice is a friend who built this in their spare time: casual and warm, not robotic, formal or salesy. Nobody reading it should think a machine wrote it.
+The voice is plain and natural, like a well-made Iranian product site: not robotic, not stiff, not salesy, and not chatty. Nobody reading it should think a machine wrote it.
 
 - **Short.** Say it once. No extra explanation, no "coming in the next version" notes, nothing that repeats what the screen already shows. If a line can go, it goes.
 - **No hype.** No big promises, no "seamless", no "without any hassle".
 - A button says what happens: "Sign in", not "Submit". The same action keeps the same name in the toast that confirms it.
 - Name things the way the operator does ("users", "panels"), not the way the code does.
-- **Persian** is casual spoken Persian, written in Persian, not translated word for word. Use "تو", not "شما": "رمزت یادت رفته؟", "دوباره امتحان کن". Everyday loan words are fine (بکاپ، تم، لود، رفرش).
+- **Persian** is standard written Persian, kept simple, and written in Persian, not translated word for word. Polite plural verbs ("وارد کنید", "دوباره امتحان کنید"), written forms ("را", "نمیشود"), no slang. Common technical words stay (پنل، کانفیگ).
   - Never use the half-space (U+200C). "می" and "نمی" join the verb: "میرن", "میشه", "نمیشه". Plural "ها" joins after a letter that does not connect (کاربرها) and takes a space after one that does (پنل ها).
   - A spaced "ها" can wrap onto the next line in a heading; reword it if it does.
   - No hamza on he (U+0654): "نسخه بعدی". No guillemet quotes, no Persian semicolon, no ellipsis character (use three dots), no em or en dash.

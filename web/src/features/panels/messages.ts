@@ -8,8 +8,8 @@ const en = {
 type Key = keyof typeof en;
 
 const fa: Record<Key, string> = {
-  scanned: 'دوباره گشتم. هنوز پنلی نیست.',
-  scanFailed: 'گشتن تموم نشد. اتصال رو چک کن و دوباره امتحان کن.',
+  scanned: 'دوباره بررسی شد. پنلی پیدا نشد.',
+  scanFailed: 'جستجو کامل نشد. اتصال را بررسی کنید و دوباره امتحان کنید.',
 };
 
 export const panelsMessages: Messages<Key> = { en, fa };
