@@ -38,17 +38,6 @@ type Source interface {
 	Users(ctx context.Context) iter.Seq2[User, error]
 }
 
-// Rules are the destination's validation rules, which Karvan must enforce
-// itself because database writes skip the panel's own API checks.
-type Rules struct {
-	UsernamePattern       string // regular expression
-	UsernameMaxLen        int
-	UsernameCaseSensitive bool
-	MinShadowsocksLen     int
-	ShadowsocksMethods    []string
-	Protocols             []string // protocols the destination can serve
-}
-
 // LookupQuery asks the destination which of these already exist.
 type LookupQuery struct {
 	AdminUsernames []string
