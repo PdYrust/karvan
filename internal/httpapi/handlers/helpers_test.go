@@ -82,6 +82,8 @@ type env struct {
 	bridge *bridge.Bridge
 	db     *sql.DB
 	data   string // Karvan's data directory
+	// closing is the server's shutdown signal; close it to end streams.
+	closing chan struct{}
 }
 
 func newEnv(t *testing.T) *env {
@@ -108,10 +110,11 @@ func newEnv(t *testing.T) *env {
 	svc := auth.NewService(ops, auth.NewSessions(db), auth.NewLimiter(db, auth.DefaultLockout), log)
 	runs := run.New(run.Deps{DB: db, Key: key, DataDir: filepath.Join(dir, "data"), Tools: migrationtest.Tools})
 	br := bridge.New(bridge.Deps{DB: db, Key: key, Log: slog.New(slog.DiscardHandler)})
+	closing := make(chan struct{})
 	h, err := httpapi.New(httpapi.Deps{
 		BasePath: base, Auth: svc, Audit: log, Web: webBuild, Version: "test",
 		Logger: slog.New(slog.NewTextHandler(testLog, &slog.HandlerOptions{Level: slog.LevelDebug})),
-		Runs:   runs, Bridge: br, Settings: settings.New(db),
+		Runs:   runs, Bridge: br, Settings: settings.New(db), Closing: closing,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -120,7 +123,7 @@ func newEnv(t *testing.T) *env {
 	t.Cleanup(srv.Close)
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{Jar: jar, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	return &env{t: t, srv: srv, client: client, auth: svc, runs: runs, bridge: br, db: db, data: filepath.Join(dir, "data")}
+	return &env{t: t, srv: srv, client: client, auth: svc, runs: runs, bridge: br, db: db, data: filepath.Join(dir, "data"), closing: closing}
 }
 
 type response struct {

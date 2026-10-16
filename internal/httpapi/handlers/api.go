@@ -37,6 +37,7 @@ type API struct {
 	Bridge    *bridge.Bridge
 	Settings  *settings.Store
 	ScanRoots []string
+	Closing   <-chan struct{} // closed on shutdown; ends event streams
 }
 
 // record audits an operator action. A failed audit write is logged, not

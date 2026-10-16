@@ -52,6 +52,8 @@ func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeNotChecked})
 	case errors.Is(err, run.ErrNoLogin):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeLoginGone})
+	case errors.Is(err, run.ErrBadReload):
+		respond.BadRequest(w)
 	case errors.Is(err, run.ErrBadPassword):
 		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: codeWeakPassword})
 	case errors.Is(err, run.ErrTemplateName):

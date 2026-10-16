@@ -2,6 +2,7 @@ package handlers_test
 
 import (
 	"context"
+	"io"
 	"net/http"
 	"strconv"
 	"strings"
@@ -232,5 +233,36 @@ func TestEventsAfterQuery(t *testing.T) {
 	n, _ := resp.Body.Read(buf)
 	if !strings.Contains(string(buf[:n]), "event: done") || strings.Count(string(buf[:n]), "id: ") != 1 {
 		t.Fatalf("after: %q", buf[:n])
+	}
+}
+
+// An open event stream ends when the server shuts down, so the shutdown
+// does not wait for it.
+func TestEventStreamEndsOnShutdown(t *testing.T) {
+	m := newMigrationEnv(t, 1)
+	id := m.create()
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, m.srv.URL+api+"/migrations/"+id+"/events", nil)
+	resp, err := m.client.Do(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer resp.Body.Close()
+	close(m.closing)
+	if _, err := io.Copy(io.Discard, resp.Body); err != nil {
+		t.Fatalf("stream: %v", err)
+	}
+	if ctx.Err() != nil {
+		t.Fatal("the stream outlived the shutdown")
+	}
+}
+
+func TestUnknownReloadIsABadRequest(t *testing.T) {
+	m := newMigrationEnv(t, 1)
+	id := m.create()
+	v := m.plan(id)
+	if res := m.do(http.MethodPost, api+"/migrations/"+id+"/run", map[string]any{"planVersion": v, "reload": "fly"}); res.status != http.StatusBadRequest {
+		t.Fatalf("%d %s", res.status, res.body)
 	}
 }

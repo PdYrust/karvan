@@ -31,6 +31,7 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 	}
 	defer unlock()
 	ctx, cancel := context.WithCancel(ctx)
+	closing := make(chan struct{})
 	svc := a.startServices(ctx)
 	defer func() { cancel(); svc.stop() }()
 	handler, err := httpapi.New(httpapi.Deps{
@@ -45,6 +46,7 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 		Bridge:         svc.bridge,
 		Settings:       a.Settings,
 		ScanRoots:      scanRoots(),
+		Closing:        closing,
 	})
 	if err != nil {
 		return err
@@ -53,10 +55,12 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", h.Addr(), err)
 	}
-	return a.serveOn(ctx, ln, handler)
+	return a.serveOn(ctx, ln, handler, func() { close(closing) })
 }
 
-func (a *App) serveOn(ctx context.Context, ln net.Listener, handler http.Handler) error {
+// serveOn serves handler on ln until ctx ends. onShutdown, if set, runs
+// when the shutdown starts.
+func (a *App) serveOn(ctx context.Context, ln net.Listener, handler http.Handler, onShutdown func()) error {
 	srv := &http.Server{
 		Handler:           handler,
 		ReadHeaderTimeout: 10 * time.Second,
@@ -68,6 +72,9 @@ func (a *App) serveOn(ctx context.Context, ln net.Listener, handler http.Handler
 		// Otherwise net/http answers "OPTIONS *" with 200 itself, which tells a
 		// scanner something is here.
 		DisableGeneralOptionsHandler: true,
+	}
+	if onShutdown != nil {
+		srv.RegisterOnShutdown(onShutdown)
 	}
 	go a.janitor(ctx)
 
@@ -84,6 +91,7 @@ func (a *App) serveOn(ctx context.Context, ln net.Listener, handler http.Handler
 	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
 	defer cancel()
 	if err := srv.Shutdown(shutdownCtx); err != nil {
+		_ = srv.Close()
 		return fmt.Errorf("shut down: %w", err)
 	}
 	if err := <-errc; err != nil && !errors.Is(err, http.ErrServerClosed) {

@@ -90,6 +90,8 @@ func (a *API) follow(ctx context.Context, s *stream, id string) {
 		select {
 		case <-ctx.Done():
 			return
+		case <-a.Closing: // nil when not set: never ready
+			return
 		case e, ok := <-s.live:
 			if !ok || !a.catchUp(ctx, s, id, e) || !s.send(e) {
 				return

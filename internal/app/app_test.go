@@ -210,7 +210,7 @@ func TestServeStopsWhenContextEnds(t *testing.T) {
 	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan error, 1)
 	go func() {
-		done <- a.serveOn(ctx, ln, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusTeapot) }))
+		done <- a.serveOn(ctx, ln, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusTeapot) }), nil)
 	}()
 	res, err := http.Get("http://" + ln.Addr().String() + "/")
 	if err != nil {

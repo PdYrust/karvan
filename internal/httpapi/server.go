@@ -35,6 +35,9 @@ type Deps struct {
 	Bridge    *bridge.Bridge
 	Settings  *settings.Store
 	ScanRoots []string
+	// Closing is closed when the server shuts down, so long-lived event
+	// streams end and let the shutdown finish.
+	Closing <-chan struct{}
 }
 
 // New builds the root handler.
@@ -45,7 +48,7 @@ func New(d Deps) (http.Handler, error) {
 	}
 	cookies := middleware.Cookies{Path: "/" + d.BasePath + "/"}
 	api := &handlers.API{Auth: d.Auth, Audit: d.Audit, Cookies: cookies, Version: d.Version,
-		Runs: d.Runs, Bridge: d.Bridge, Settings: d.Settings, ScanRoots: d.ScanRoots}
+		Runs: d.Runs, Bridge: d.Bridge, Settings: d.Settings, ScanRoots: d.ScanRoots, Closing: d.Closing}
 	signedIn := func(h http.HandlerFunc) http.Handler { return middleware.RequireSession(h) }
 
 	rt := middleware.NewRouter()
