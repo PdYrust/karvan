@@ -19,7 +19,9 @@ const queryClient = new QueryClient({
   }),
   defaultOptions: {
     queries: {
-      retry: (count, err) => !(err instanceof ApiError && err.status < 500) && count < 2,
+      // Client errors will not fix themselves; server and network errors might.
+      retry: (count, err) =>
+        !(err instanceof ApiError && err.status >= 400 && err.status < 500) && count < 2,
       refetchOnWindowFocus: false,
     },
   },

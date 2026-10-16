@@ -40,7 +40,7 @@ const en = {
   account: 'Account',
   signedInAs: 'Signed in as',
   signOut: 'Sign out',
-  signedOut: 'Signed out.',
+  signOutFailed: 'Sign-out didn’t go through. You are still signed in; try again.',
   version: 'Version {version}',
 };
 
@@ -86,7 +86,7 @@ const fa: Record<Key, string> = {
   account: 'حساب',
   signedInAs: 'وارد شده با',
   signOut: 'خروج',
-  signedOut: 'از حساب خارج شدید.',
+  signOutFailed: 'خروج انجام نشد و هنوز وارد هستید. دوباره امتحان کنید.',
   version: 'نسخهٔ {version}',
 };
 

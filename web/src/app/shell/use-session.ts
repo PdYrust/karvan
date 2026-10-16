@@ -1,5 +1,9 @@
+import { useKumoToastManager } from '@cloudflare/kumo/components/toast';
 import { useQuery } from '@tanstack/react-query';
+import { useT } from '../../i18n/locale';
+import { ApiError } from '../../lib/api/client';
 import { getSession, signOut } from '../../lib/api/session';
+import { shellMessages } from './messages';
 
 export const sessionKey = ['session'] as const;
 
@@ -13,10 +17,14 @@ export function returnToSignIn() {
   window.location.replace(document.baseURI);
 }
 
+/** Signs out; on a failure the page stays, so a shared machine is never left signed in by surprise. */
 export function useSignOut() {
+  const t = useT(shellMessages);
+  const toasts = useKumoToastManager();
   return () => {
-    void signOut()
-      .catch(() => undefined)
-      .finally(returnToSignIn);
+    signOut().then(returnToSignIn, (err: unknown) => {
+      if (err instanceof ApiError && err.status === 401) returnToSignIn();
+      else toasts.add({ title: t('signOutFailed'), variant: 'error' });
+    });
   };
 }

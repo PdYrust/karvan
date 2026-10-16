@@ -9,6 +9,7 @@ import { PanelSwitcher } from './PanelSwitcher';
 import { SidebarNav } from './SidebarNav';
 import { TopBar } from './TopBar';
 import { useModHotkey } from './use-hotkey';
+import { useSession } from './use-session';
 
 function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
   return (
@@ -22,6 +23,8 @@ function SidebarBody({ onNavigate }: { onNavigate?: () => void }) {
 /** Sidebar (a sheet on small screens), top bar and the page. */
 export function AppShell() {
   const t = useT(shellMessages);
+  // Loads the CSRF token every state-changing request needs.
+  useSession();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const openSearch = useCallback(() => setSearchOpen(true), []);
