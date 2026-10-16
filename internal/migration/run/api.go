@@ -1,0 +1,329 @@
+package run
+
+import (
+	"context"
+	"database/sql"
+	"encoding/json"
+	"errors"
+	"fmt"
+	"os"
+	"strings"
+	"time"
+
+	"github.com/PdYrust/karvan/internal/migration/dest"
+	"github.com/PdYrust/karvan/internal/migration/engine"
+	"github.com/PdYrust/karvan/internal/migration/plan"
+	"github.com/PdYrust/karvan/internal/panel"
+	"github.com/PdYrust/karvan/internal/panel/paneldb"
+	"github.com/PdYrust/karvan/internal/safemode"
+)
+
+// Summary is step 1 of the owner's flow and the counts of step 2.
+type Summary struct {
+	State       string         `json:"state"`
+	PlanVersion int            `json:"planVersion"`
+	SourceKind  panel.Kind     `json:"sourceKind"`
+	Origin      string         `json:"origin"`
+	Admin       string         `json:"admin"`
+	Users       int            `json:"users"`
+	UsedTraffic int64          `json:"usedTraffic"`
+	Statuses    map[string]int `json:"statuses"`
+	DestKind    panel.Kind     `json:"destKind"`
+	Targets     []TargetInfo   `json:"targets"`
+	Ready       int            `json:"ready"`    // included, with no open conflict
+	Problems    int            `json:"problems"` // with an open conflict
+	Skipped     int            `json:"skipped"`
+	Moved       int            `json:"movedBefore"` // already in the ledger
+	Blockers    int            `json:"blockers"`
+	Stable      bool           `json:"stable"`
+}
+
+// TargetInfo is a destination group or inbound users can be put in.
+type TargetInfo struct {
+	ID        string   `json:"id"`
+	Name      string   `json:"name"`
+	Protocols []string `json:"protocols"`
+	Disabled  bool     `json:"disabled,omitempty"`
+}
+
+// Summary sums up a checked job.
+func (s *Service) Summary(jobID string) (Summary, error) {
+	j, err := s.job(jobID)
+	if err != nil {
+		return Summary{}, err
+	}
+	if j.running.Load() {
+		return Summary{State: StateRunning}, nil
+	}
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	if j.result == nil {
+		return Summary{}, ErrNotChecked
+	}
+	sum := Summary{State: j.state, PlanVersion: j.version, SourceKind: j.kind, Origin: j.origin, DestKind: j.facts.Kind,
+		Statuses: map[string]int{}, Blockers: j.result.Blockers, Stable: j.result.Stable}
+	if j.snapshot != nil {
+		sum.Admin = j.snapshot.Admin.Username
+	}
+	for _, t := range j.facts.Targets {
+		sum.Targets = append(sum.Targets, TargetInfo{ID: t.ID, Name: t.Name, Protocols: j.facts.TargetProtocols[t.ID], Disabled: t.Disabled})
+	}
+	for _, it := range j.result.Items {
+		sum.Users++
+		sum.UsedTraffic += it.Source.UsedTraffic
+		sum.Statuses[string(it.Source.Status)]++
+		_, moved := j.moved[it.Key]
+		switch {
+		case moved:
+			sum.Moved++
+		case !it.Include:
+			sum.Skipped++
+		case len(it.Conflicts) > 0:
+			sum.Problems++
+		default:
+			sum.Ready++
+		}
+	}
+	return sum, nil
+}
+
+// TakePasswords returns the generated admin passwords once, then forgets
+// them (D22).
+func (s *Service) TakePasswords(jobID string) (map[string]string, error) {
+	j, err := s.job(jobID)
+	if err != nil {
+		return nil, err
+	}
+	if j.running.Load() {
+		return nil, ErrBusy
+	}
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	out := j.passwords
+	j.passwords = map[string]string{}
+	return out, nil
+}
+
+// StoredTemplate is a saved template.
+type StoredTemplate struct {
+	ID       int64         `json:"id"`
+	Template plan.Template `json:"template"`
+	Updated  time.Time     `json:"updatedAt"`
+}
+
+// ErrTemplateName means a template name is empty, too long or taken.
+var ErrTemplateName = errors.New("template name is empty, too long or taken")
+
+// Templates lists saved templates by name.
+func (s *Service) Templates(ctx context.Context) ([]StoredTemplate, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT id, body, updated_at FROM templates ORDER BY name")
+	if err != nil {
+		return nil, fmt.Errorf("read templates: %w", err)
+	}
+	defer rows.Close()
+	var out []StoredTemplate
+	for rows.Next() {
+		var t StoredTemplate
+		var body string
+		var at int64
+		if err := rows.Scan(&t.ID, &body, &at); err != nil {
+			return nil, err
+		}
+		if err := json.Unmarshal([]byte(body), &t.Template); err != nil {
+			return nil, fmt.Errorf("template %d: %w", t.ID, err)
+		}
+		t.Updated = time.UnixMilli(at).UTC()
+		out = append(out, t)
+	}
+	return out, rows.Err()
+}
+
+// SaveTemplate stores the reusable part of a job's plan under name.
+func (s *Service) SaveTemplate(ctx context.Context, jobID, name string) (StoredTemplate, error) {
+	name = strings.TrimSpace(name)
+	if name == "" || len(name) > 64 {
+		return StoredTemplate{}, ErrTemplateName
+	}
+	_, p, _, err := s.View(jobID)
+	if err != nil {
+		return StoredTemplate{}, err
+	}
+	t := plan.TemplateOf(name, p)
+	body, err := json.Marshal(t)
+	if err != nil {
+		return StoredTemplate{}, err
+	}
+	now := s.now().UnixMilli()
+	res, err := s.db.ExecContext(ctx, "INSERT INTO templates (name, body, created_at, updated_at) VALUES (?, ?, ?, ?)", name, string(body), now, now)
+	if err != nil {
+		if strings.Contains(err.Error(), "UNIQUE") {
+			return StoredTemplate{}, ErrTemplateName
+		}
+		return StoredTemplate{}, fmt.Errorf("save template: %w", err)
+	}
+	id, err := res.LastInsertId()
+	return StoredTemplate{ID: id, Template: t, Updated: time.UnixMilli(now).UTC()}, err
+}
+
+// ErrNotFound means no such template or backup.
+var ErrNotFound = errors.New("not found")
+
+// DeleteTemplate removes a template.
+func (s *Service) DeleteTemplate(ctx context.Context, id int64) error {
+	res, err := s.db.ExecContext(ctx, "DELETE FROM templates WHERE id = ?", id)
+	if err != nil {
+		return fmt.Errorf("delete template: %w", err)
+	}
+	if n, _ := res.RowsAffected(); n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
+// BackupInfo is a Safe Mode backup on disk.
+type BackupInfo struct {
+	ID      string    `json:"id"`
+	JobID   string    `json:"jobId"`
+	Dest    string    `json:"dest"`
+	Size    int64     `json:"size"`
+	Method  string    `json:"method"`
+	Created time.Time `json:"createdAt"`
+}
+
+// Backups lists Safe Mode backups, newest first.
+func (s *Service) Backups(ctx context.Context) ([]BackupInfo, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT id, job_id, dest, size, method, created_at FROM safe_mode_backups ORDER BY created_at DESC")
+	if err != nil {
+		return nil, fmt.Errorf("read backups: %w", err)
+	}
+	defer rows.Close()
+	var out []BackupInfo
+	for rows.Next() {
+		var b BackupInfo
+		var at int64
+		if err := rows.Scan(&b.ID, &b.JobID, &b.Dest, &b.Size, &b.Method, &at); err != nil {
+			return nil, err
+		}
+		b.Created = time.UnixMilli(at).UTC()
+		out = append(out, b)
+	}
+	return out, rows.Err()
+}
+
+// DeleteBackup removes a backup file and its record. A running job's
+// backup stays.
+func (s *Service) DeleteBackup(ctx context.Context, id string) error {
+	if s.runningBackup(id) {
+		return ErrBusy
+	}
+	b, err := s.backupRecord(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(b.Path); err != nil && !os.IsNotExist(err) {
+		return fmt.Errorf("delete backup file: %w", err)
+	}
+	_, err = s.db.ExecContext(ctx, "DELETE FROM safe_mode_backups WHERE id = ?", id)
+	return err
+}
+
+func (s *Service) runningBackup(id string) bool {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	for _, j := range s.jobs {
+		if j.running.Load() && j.backupID == id {
+			return true
+		}
+	}
+	return false
+}
+
+// ErrPanelChanged means the panel a backup was taken from now points at
+// another database, so the backup must not be put there.
+var ErrPanelChanged = errors.New("the panel's database is not the one this backup was taken from")
+
+// RestoreBackup puts a Safe Mode backup back into the panel it came from.
+// The panel must be stopped first (D36); the command line asks for that.
+func (s *Service) RestoreBackup(ctx context.Context, id string) error {
+	b, err := s.backupRecord(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return ErrNotFound
+	}
+	if err != nil {
+		return err
+	}
+	var destName, env string
+	err = s.db.QueryRowContext(ctx, "SELECT b.dest, p.env_path FROM safe_mode_backups b JOIN jobs j ON j.id = b.job_id "+
+		"JOIN panels p ON p.id = j.panel_id WHERE b.id = ?", id).Scan(&destName, &env)
+	if err != nil {
+		return fmt.Errorf("find the backup's panel: %w", err)
+	}
+	d, err := dest.Open(ctx, env)
+	if err != nil {
+		return err
+	}
+	if d.Target.String() != destName {
+		return ErrPanelChanged
+	}
+	r, err := paneldb.OpenReader(ctx, d.Target)
+	if err != nil {
+		return err
+	}
+	srv := r.Server()
+	_ = r.Close()
+	return safemode.Restorer{Key: s.Key, Run: s.Tools}.Restore(ctx, d.Target, srv, b)
+}
+
+// PanelRow is a registered destination panel.
+type PanelRow struct {
+	ID      int64
+	EnvPath string
+	Name    string
+	Kind    string
+}
+
+// Panels lists the registered panels.
+func (s *Service) Panels(ctx context.Context) ([]PanelRow, error) {
+	rows, err := s.db.QueryContext(ctx, "SELECT id, env_path, name, kind FROM panels ORDER BY name, id")
+	if err != nil {
+		return nil, fmt.Errorf("read panels: %w", err)
+	}
+	defer rows.Close()
+	var out []PanelRow
+	for rows.Next() {
+		var p PanelRow
+		if err := rows.Scan(&p.ID, &p.EnvPath, &p.Name, &p.Kind); err != nil {
+			return nil, err
+		}
+		out = append(out, p)
+	}
+	return out, rows.Err()
+}
+
+// Items returns the job's users as the last build left them.
+func (s *Service) Items(jobID string) ([]*engine.Item, error) {
+	r, _, _, err := s.View(jobID)
+	if err != nil {
+		return nil, err
+	}
+	if r == nil {
+		return nil, ErrNotChecked
+	}
+	return r.Items, nil
+}
+
+// JobState reads a job's state, also for jobs from before a restart.
+func (s *Service) JobState(ctx context.Context, jobID string) (string, error) {
+	if j, err := s.job(jobID); err == nil {
+		return j.State(), nil
+	}
+	var state string
+	err := s.db.QueryRowContext(ctx, "SELECT state FROM jobs WHERE id = ?", jobID).Scan(&state)
+	if errors.Is(err, sql.ErrNoRows) {
+		return "", ErrNoJob
+	}
+	return state, err
+}

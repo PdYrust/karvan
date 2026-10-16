@@ -101,3 +101,19 @@ func TestRandomPortInRange(t *testing.T) {
 		}
 	}
 }
+
+func TestSafeModeIsOnUntilTurnedOff(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	if on, err := s.SafeMode(ctx); err != nil || !on {
+		t.Fatalf("default: %v %v", on, err)
+	}
+	for _, want := range []bool{false, true, false} {
+		if err := s.SetSafeMode(ctx, want); err != nil {
+			t.Fatal(err)
+		}
+		if on, err := s.SafeMode(ctx); err != nil || on != want {
+			t.Fatalf("after set %v: %v %v", want, on, err)
+		}
+	}
+}

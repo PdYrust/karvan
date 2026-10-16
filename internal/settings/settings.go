@@ -136,3 +136,33 @@ func RandomPort() (int, error) {
 	}
 	return MinRandomPort + int(n.Int64()), nil
 }
+
+const keySafeMode = "migration.safe_mode"
+
+// SafeMode reports whether migrations take a backup and undo everything
+// on failure. It is on until the operator turns it off.
+func (s *Store) SafeMode(ctx context.Context) (bool, error) {
+	var v string
+	err := s.db.QueryRowContext(ctx, `SELECT value FROM settings WHERE key = ?`, keySafeMode).Scan(&v)
+	if errors.Is(err, sql.ErrNoRows) {
+		return true, nil
+	}
+	if err != nil {
+		return true, fmt.Errorf("read settings: %w", err)
+	}
+	return v != "off", nil
+}
+
+// SetSafeMode stores the Safe Mode switch.
+func (s *Store) SetSafeMode(ctx context.Context, on bool) error {
+	v := "on"
+	if !on {
+		v = "off"
+	}
+	_, err := s.db.ExecContext(ctx, `INSERT INTO settings (key, value) VALUES (?, ?)
+		ON CONFLICT (key) DO UPDATE SET value = excluded.value`, keySafeMode, v)
+	if err != nil {
+		return fmt.Errorf("save setting %s: %w", keySafeMode, err)
+	}
+	return nil
+}

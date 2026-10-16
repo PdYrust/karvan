@@ -104,7 +104,7 @@ func (s *Service) save(ctx context.Context, j *Job) error {
 	}
 	var report []byte
 	if j.report != nil {
-		if report, err = json.Marshal(j.report); err != nil {
+		if report, err = json.Marshal(j.report.WithoutLinks()); err != nil {
 			return err
 		}
 	}

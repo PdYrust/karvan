@@ -28,6 +28,19 @@ const (
 	ActionTOTPDisable = "totp.disable"
 	ActionInit        = "cli.init"
 	ActionReset       = "cli.reset"
+
+	ActionPanelsScan     = "panels.scan"
+	ActionMigrationRun   = "migration.run"
+	ActionMigrationUndo  = "migration.rollback"
+	ActionMigrationStop  = "migration.cancel"
+	ActionSafeModeOn     = "safe_mode.on"
+	ActionSafeModeOff    = "safe_mode.off"
+	ActionBackupDelete   = "safe_mode.backup_delete"
+	ActionBackupRestore  = "cli.safe_mode_restore"
+	ActionSiteSave       = "legacy_site.save"
+	ActionSiteDelete     = "legacy_site.delete"
+	ActionSiteTokens     = "legacy_site.tokens"
+	ActionPasswordsTaken = "migration.passwords_download"
 )
 
 // ActorCLI is the actor for actions taken from the command line.

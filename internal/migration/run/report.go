@@ -1,9 +1,14 @@
 package run
 
 import (
+	"context"
+	"encoding/json"
+	"errors"
+	"fmt"
 	"slices"
 	"time"
 
+	"github.com/PdYrust/karvan/internal/migration/dest"
 	"github.com/PdYrust/karvan/internal/migration/engine"
 )
 
@@ -137,10 +142,14 @@ func (r *Report) moved(key string, id int64) {
 	}
 }
 
-// Report returns the report of a job that has run. It is nil before the
+// Report returns the report of a job that has run: from memory, or as
+// stored when the job is from before a restart. It is nil before the
 // first run and ErrBusy while the job runs.
 func (s *Service) Report(jobID string) (*Report, error) {
 	j, err := s.job(jobID)
+	if errors.Is(err, ErrNoJob) {
+		return s.storedReport(jobID)
+	}
 	if err != nil {
 		return nil, err
 	}
@@ -150,4 +159,66 @@ func (s *Service) Report(jobID string) (*Report, error) {
 	j.mu.Lock()
 	defer j.mu.Unlock()
 	return j.report, nil
+}
+
+// WithoutLinks is the report as Karvan keeps it: without the new links, which
+// work as passwords. They are minted again when asked for (WithLinks).
+func (r *Report) WithoutLinks() *Report {
+	c := *r
+	c.Users = slices.Clone(r.Users)
+	for i := range c.Users {
+		c.Users[i].NewLink = ""
+	}
+	return &c
+}
+
+// WithLinks returns the report with a fresh new link for every moved user
+// that has none (a report from before a restart).
+func (s *Service) WithLinks(ctx context.Context, jobID string) (*Report, error) {
+	rep, err := s.Report(jobID)
+	if err != nil || rep == nil {
+		return rep, err
+	}
+	if !slices.ContainsFunc(rep.Users, func(u UserLine) bool { return u.Moved && u.NewLink == "" }) {
+		return rep, nil
+	}
+	var panelID int64
+	if err := s.db.QueryRowContext(ctx, "SELECT panel_id FROM jobs WHERE id = ?", jobID).Scan(&panelID); err != nil {
+		return nil, err
+	}
+	env, err := s.envPath(ctx, panelID)
+	if err != nil {
+		return nil, err
+	}
+	d, err := dest.Open(ctx, env)
+	if err != nil {
+		return nil, err
+	}
+	l, err := d.Links(ctx, rep.Admin.ID)
+	if err != nil {
+		return nil, err
+	}
+	out := *rep
+	out.Users = slices.Clone(rep.Users)
+	for i := range out.Users {
+		if u := &out.Users[i]; u.Moved && u.NewLink == "" {
+			u.NewLink = l.Link(u.DestID, u.Username, s.now())
+		}
+	}
+	return &out, nil
+}
+
+func (s *Service) storedReport(jobID string) (*Report, error) {
+	var raw string
+	if err := s.db.QueryRow("SELECT report FROM jobs WHERE id = ?", jobID).Scan(&raw); err != nil {
+		return nil, ErrNoJob
+	}
+	if raw == "" {
+		return nil, nil
+	}
+	var r Report
+	if err := json.Unmarshal([]byte(raw), &r); err != nil {
+		return nil, fmt.Errorf("stored report of %s: %w", jobID, err)
+	}
+	return &r, nil
 }

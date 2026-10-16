@@ -100,7 +100,7 @@ func (s *Service) Rollback(ctx context.Context, jobID string) (*Report, error) {
 		return nil, fmt.Errorf("%w: %s", ErrNoJob, jobID)
 	}
 	if state != StateInterrupted && state != StateFailed {
-		return nil, fmt.Errorf("job %s is %s", jobID, state)
+		return nil, fmt.Errorf("%w: job %s is %s", ErrNoRollback, jobID, state)
 	}
 	p, err := s.openPrepared(ctx, panelID, true)
 	if err != nil {

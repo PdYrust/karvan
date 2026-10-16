@@ -30,6 +30,7 @@ var (
 	ErrNotChecked  = errors.New("check the job first")
 	ErrNoLogin     = errors.New("the old panel's login is gone; sign in again")
 	ErrBadPassword = errors.New("the admin password does not meet the policy")
+	ErrNoRollback  = errors.New("only a failed or interrupted job can be rolled back")
 )
 
 // PanelControl stops and starts a destination panel, for a full backup
@@ -101,6 +102,17 @@ func (s *Service) SafeModeDir() string { return filepath.Join(s.DataDir, "safe-m
 // Wait blocks until running jobs end (shutdown, tests).
 func (s *Service) Wait() { s.wg.Wait() }
 
+// Shutdown stops every running job between batches (Safe Mode undoes
+// them) and waits for them to end.
+func (s *Service) Shutdown() {
+	s.mu.Lock()
+	for _, c := range s.cancels {
+		c()
+	}
+	s.mu.Unlock()
+	s.wg.Wait()
+}
+
 func (s *Service) job(id string) (*Job, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -128,7 +140,7 @@ func (s *Service) envPath(ctx context.Context, panelID int64) (string, error) {
 	var p string
 	err := s.db.QueryRowContext(ctx, "SELECT env_path FROM panels WHERE id = ?", panelID).Scan(&p)
 	if errors.Is(err, sql.ErrNoRows) {
-		return "", fmt.Errorf("no panel %d", panelID)
+		return "", fmt.Errorf("%w: panel %d", ErrNotFound, panelID)
 	}
 	return p, err
 }
