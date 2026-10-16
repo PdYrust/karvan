@@ -12,7 +12,6 @@ import (
 
 // IO is the set of streams a command reads from and writes to.
 type IO struct {
-	Stdin  io.Reader
 	Stdout io.Writer
 	Stderr io.Writer
 	// StdoutIsTerminal is false when output goes to a pipe or a file, where

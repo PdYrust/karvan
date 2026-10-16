@@ -33,7 +33,7 @@ func doInit(t *testing.T, dir string) (int, string, string) {
 	t.Helper()
 	var out, errOut bytes.Buffer
 	code := Run(context.Background(), []string{"init", "-data-dir", filepath.Join(dir, "data"), "-key-file", filepath.Join(dir, "secret.key")},
-		IO{Stdin: strings.NewReader(""), Stdout: &out, Stderr: &errOut, StdoutIsTerminal: true})
+		IO{Stdout: &out, Stderr: &errOut, StdoutIsTerminal: true})
 	return code, out.String(), errOut.String()
 }
 
@@ -41,7 +41,7 @@ func doReset(t *testing.T, dir string, terminal bool, flags ...string) (int, str
 	t.Helper()
 	var out, errOut bytes.Buffer
 	args := append([]string{"reset", "-data-dir", filepath.Join(dir, "data"), "-key-file", filepath.Join(dir, "secret.key")}, flags...)
-	code := Run(context.Background(), args, IO{Stdin: strings.NewReader(""), Stdout: &out, Stderr: &errOut, StdoutIsTerminal: terminal})
+	code := Run(context.Background(), args, IO{Stdout: &out, Stderr: &errOut, StdoutIsTerminal: terminal})
 	return code, out.String(), errOut.String()
 }
 
