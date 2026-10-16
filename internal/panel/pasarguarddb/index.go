@@ -3,6 +3,7 @@ package pasarguarddb
 import (
 	"context"
 	"database/sql"
+	"encoding/json"
 	"errors"
 	"fmt"
 
@@ -87,6 +88,36 @@ func Roles(ctx context.Context, q paneldb.Querier) ([]Role, error) {
 			return nil, err
 		}
 		out = append(out, r)
+	}
+	return out, rows.Err()
+}
+
+// InboundProtocols maps every inbound tag in the panel's core configs to
+// its protocol, so Karvan knows which protocols a group serves.
+func InboundProtocols(ctx context.Context, q paneldb.Querier) (map[string]string, error) {
+	rows, err := q.QueryContext(ctx, "SELECT config FROM core_configs ORDER BY id")
+	if err != nil {
+		return nil, fmt.Errorf("read core configs: %w", err)
+	}
+	defer rows.Close()
+	out := map[string]string{}
+	for rows.Next() {
+		var raw []byte
+		if err := rows.Scan(&raw); err != nil {
+			return nil, err
+		}
+		var cfg struct {
+			Inbounds []struct {
+				Tag      string `json:"tag"`
+				Protocol string `json:"protocol"`
+			} `json:"inbounds"`
+		}
+		if json.Unmarshal(raw, &cfg) != nil {
+			continue // a core config Karvan cannot read serves no known protocol
+		}
+		for _, in := range cfg.Inbounds {
+			out[in.Tag] = in.Protocol
+		}
 	}
 	return out, rows.Err()
 }
