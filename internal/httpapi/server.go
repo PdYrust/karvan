@@ -10,8 +10,11 @@ import (
 
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/auth"
+	"github.com/PdYrust/karvan/internal/bridge"
 	"github.com/PdYrust/karvan/internal/httpapi/handlers"
 	"github.com/PdYrust/karvan/internal/httpapi/middleware"
+	"github.com/PdYrust/karvan/internal/migration/run"
+	"github.com/PdYrust/karvan/internal/settings"
 )
 
 // staticFiles are top-level files from web/public served without a session.
@@ -26,6 +29,12 @@ type Deps struct {
 	Web            fs.FS
 	Version        string
 	Logger         *slog.Logger
+
+	// Phase 3: migrations, Safe Mode and the subscription bridge.
+	Runs      *run.Service
+	Bridge    *bridge.Bridge
+	Settings  *settings.Store
+	ScanRoots []string
 }
 
 // New builds the root handler.
@@ -35,7 +44,8 @@ func New(d Deps) (http.Handler, error) {
 		return nil, err
 	}
 	cookies := middleware.Cookies{Path: "/" + d.BasePath + "/"}
-	api := &handlers.API{Auth: d.Auth, Audit: d.Audit, Cookies: cookies, Version: d.Version}
+	api := &handlers.API{Auth: d.Auth, Audit: d.Audit, Cookies: cookies, Version: d.Version,
+		Runs: d.Runs, Bridge: d.Bridge, Settings: d.Settings, ScanRoots: d.ScanRoots}
 	signedIn := func(h http.HandlerFunc) http.Handler { return middleware.RequireSession(h) }
 
 	rt := middleware.NewRouter()
@@ -52,6 +62,9 @@ func New(d Deps) (http.Handler, error) {
 	rt.Handle("POST /api/v1/account/totp", signedIn(api.BeginTOTP))
 	rt.Handle("POST /api/v1/account/totp/confirm", signedIn(api.ConfirmTOTP))
 	rt.Handle("DELETE /api/v1/account/totp", signedIn(api.DisableTOTP))
+	if d.Runs != nil {
+		migrationRoutes(rt, api, signedIn)
+	}
 
 	var h http.Handler = rt
 	h = middleware.CSRF(cookies, h)
@@ -61,4 +74,45 @@ func New(d Deps) (http.Handler, error) {
 	h = middleware.AccessLog(d.Logger, h)
 	h = middleware.ClientIP(d.TrustedProxies, h)
 	return middleware.BasePath(d.BasePath, h), nil
+}
+
+func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.HandlerFunc) http.Handler) {
+	const m = "/api/v1/migrations/{id}"
+	for pattern, h := range map[string]http.HandlerFunc{
+		"GET /api/v1/panels":                    api.Panels,
+		"POST /api/v1/panels/scan":              api.ScanPanels,
+		"POST /api/v1/migrations":               api.CreateMigration,
+		"GET " + m:                              api.GetMigration,
+		"POST " + m + "/compare":                api.Compare,
+		"GET " + m + "/summary":                 api.Summary,
+		"GET " + m + "/groups":                  api.Groups,
+		"GET " + m + "/users":                   api.Users,
+		"GET " + m + "/plan":                    api.GetPlan,
+		"PUT " + m + "/plan":                    api.PutPlan,
+		"GET " + m + "/preview":                 api.Preview,
+		"GET " + m + "/reload-options":          api.ReloadOptions,
+		"POST " + m + "/run":                    api.RunMigration,
+		"POST " + m + "/cancel":                 api.CancelMigration,
+		"POST " + m + "/rollback":               api.RollbackMigration,
+		"GET " + m + "/events":                  api.Events,
+		"GET " + m + "/report":                  api.Report,
+		"GET " + m + "/report.csv":              api.ReportCSV,
+		"GET " + m + "/links.csv":               api.LinksCSV,
+		"GET " + m + "/passwords.csv":           api.PasswordsCSV,
+		"GET /api/v1/operations":                api.Operations,
+		"GET /api/v1/templates":                 api.Templates,
+		"POST /api/v1/templates":                api.SaveTemplate,
+		"DELETE /api/v1/templates/{id}":         api.DeleteTemplate,
+		"GET /api/v1/settings/safe-mode":        api.GetSafeMode,
+		"PUT /api/v1/settings/safe-mode":        api.PutSafeMode,
+		"GET /api/v1/safe-mode/backups":         api.Backups,
+		"DELETE /api/v1/safe-mode/backups/{id}": api.DeleteBackup,
+		"GET /api/v1/legacy-sites":              api.Sites,
+		"POST /api/v1/legacy-sites":             api.SaveSite,
+		"PATCH /api/v1/legacy-sites/{id}":       api.SaveSite,
+		"DELETE /api/v1/legacy-sites/{id}":      api.DeleteSite,
+		"POST /api/v1/legacy-sites/{id}/tokens": api.UploadTokens,
+	} {
+		rt.Handle(pattern, signedIn(h))
+	}
 }

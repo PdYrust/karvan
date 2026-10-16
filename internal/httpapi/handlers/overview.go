@@ -37,8 +37,7 @@ type overviewJSON struct {
 }
 
 // Overview returns the data for the first page after sign-in. Panels stay
-// empty until discovery exists; Safe Mode is on because it cannot be turned
-// off yet.
+// empty here until the web panel lists them (phase 4; GET /panels has them).
 func (a *API) Overview(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	s, _ := middleware.Session(ctx)
@@ -58,7 +57,14 @@ func (a *API) Overview(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	out := overviewJSON{Version: a.Version, SafeMode: true, Panels: []struct{}{}, Activity: []activityJSON{}}
+	safe := true
+	if a.Settings != nil {
+		if safe, err = a.Settings.SafeMode(ctx); err != nil {
+			respond.Internal(w, r, err)
+			return
+		}
+	}
+	out := overviewJSON{Version: a.Version, SafeMode: safe, Panels: []struct{}{}, Activity: []activityJSON{}}
 	out.Security.TOTPEnabled = op.TOTPEnabled
 	if len(prev) == 1 {
 		out.Security.PreviousSignIn = &signInJSON{At: prev[0].At.UTC(), IP: prev[0].IP}

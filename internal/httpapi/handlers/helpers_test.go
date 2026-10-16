@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/hmac"
 	"crypto/sha1"
+	"database/sql"
 	"encoding/base32"
 	"encoding/binary"
 	"encoding/json"
@@ -22,8 +23,12 @@ import (
 
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/auth"
+	"github.com/PdYrust/karvan/internal/bridge"
 	"github.com/PdYrust/karvan/internal/httpapi"
+	"github.com/PdYrust/karvan/internal/migration/migrationtest"
+	"github.com/PdYrust/karvan/internal/migration/run"
 	"github.com/PdYrust/karvan/internal/secret"
+	"github.com/PdYrust/karvan/internal/settings"
 	"github.com/PdYrust/karvan/internal/store"
 )
 
@@ -70,6 +75,9 @@ type env struct {
 	client *http.Client
 	auth   *auth.Service
 	csrf   string
+	runs   *run.Service
+	bridge *bridge.Bridge
+	db     *sql.DB
 }
 
 func newEnv(t *testing.T) *env {
@@ -94,9 +102,12 @@ func newEnv(t *testing.T) *env {
 	}
 	log := audit.New(db)
 	svc := auth.NewService(ops, auth.NewSessions(db), auth.NewLimiter(db, auth.DefaultLockout), log)
+	runs := run.New(run.Deps{DB: db, Key: key, DataDir: filepath.Join(dir, "data"), Tools: migrationtest.Tools})
+	br := bridge.New(bridge.Deps{DB: db, Key: key, Log: slog.New(slog.DiscardHandler)})
 	h, err := httpapi.New(httpapi.Deps{
 		BasePath: base, Auth: svc, Audit: log, Web: webBuild, Version: "test",
 		Logger: slog.New(slog.NewTextHandler(io.Discard, nil)),
+		Runs:   runs, Bridge: br, Settings: settings.New(db),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -105,7 +116,7 @@ func newEnv(t *testing.T) *env {
 	t.Cleanup(srv.Close)
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{Jar: jar, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	return &env{t: t, srv: srv, client: client, auth: svc}
+	return &env{t: t, srv: srv, client: client, auth: svc, runs: runs, bridge: br, db: db}
 }
 
 type response struct {

@@ -1,0 +1,282 @@
+package handlers
+
+import (
+	"errors"
+	"net/http"
+	"slices"
+	"strconv"
+	"strings"
+	"time"
+
+	"github.com/PdYrust/karvan/internal/httpapi/respond"
+	"github.com/PdYrust/karvan/internal/migration/dest"
+	"github.com/PdYrust/karvan/internal/migration/engine"
+	"github.com/PdYrust/karvan/internal/migration/run"
+	"github.com/PdYrust/karvan/internal/panel"
+	"github.com/PdYrust/karvan/internal/panel/source"
+	"github.com/PdYrust/karvan/internal/secret"
+)
+
+// Error codes for migration endpoints.
+const (
+	codeNotFound      = "not_found"
+	codeStalePlan     = "stale_plan"
+	codeStaleSource   = "stale"
+	codeBlocked       = "blocked"
+	codeNotChecked    = "not_checked"
+	codeLoginGone     = "login_gone"
+	codeWeakPassword  = "weak_password"
+	codePlanInvalid   = "plan_invalid"
+	codePanelNotReady = "panel_not_ready"
+	codeTemplateName  = "template_name"
+	codeNameTaken     = "name_taken"
+	codeConfirm       = "confirm_required"
+	codeNothingLeft   = "gone"
+)
+
+// writeRunError maps migration errors to API errors. Old panel errors
+// keep their code ("source_unreachable", "source_unauthorized"...), so the
+// panel can say what went wrong there.
+func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
+	var stale *run.ErrStale
+	var planErr *engine.PlanError
+	var srcErr *source.Error
+	switch {
+	case errors.Is(err, run.ErrNoJob), errors.Is(err, run.ErrNotFound):
+		respond.Error(w, respond.APIError{Status: http.StatusNotFound, Code: codeNotFound})
+	case errors.Is(err, run.ErrBusy):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeBusy})
+	case errors.Is(err, run.ErrBlocked):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeBlocked})
+	case errors.Is(err, run.ErrNotChecked):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeNotChecked})
+	case errors.Is(err, run.ErrNoLogin):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeLoginGone})
+	case errors.Is(err, run.ErrBadPassword):
+		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: codeWeakPassword})
+	case errors.Is(err, run.ErrTemplateName):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeTemplateName})
+	case errors.Is(err, dest.ErrNotReady):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codePanelNotReady})
+	case errors.As(err, &stale):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeStaleSource, Extra: map[string]any{"changed": stale.Diff}})
+	case errors.As(err, &planErr):
+		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: codePlanInvalid,
+			Extra: map[string]any{"where": planErr.Where, "problem": planErr.Problem}})
+	case errors.As(err, &srcErr):
+		respond.Error(w, respond.APIError{Status: http.StatusBadGateway, Code: "source_" + srcErr.Code})
+	default:
+		respond.Internal(w, r, err)
+	}
+}
+
+type createBody struct {
+	SourceURL  string `json:"sourceUrl"`
+	SourceKind string `json:"sourceKind"`
+	Username   string `json:"username"`
+	Password   string `json:"password"`
+	APIKey     string `json:"apiKey"`
+	PinSHA256  string `json:"pinSha256"`
+	PanelID    int64  `json:"panelId"`
+}
+
+func (b createBody) valid() bool {
+	kinds := []string{"", string(panel.Marzban), string(panel.PasarGuard)}
+	login := b.Username != "" && b.Password != "" || b.APIKey != ""
+	return b.SourceURL != "" && len(b.SourceURL) <= 2048 && slices.Contains(kinds, b.SourceKind) && login &&
+		len(b.Username) <= 128 && len(b.Password) <= 1024 && len(b.APIKey) <= 1024 && len(b.PinSHA256) <= 128 && b.PanelID > 0
+}
+
+// CreateMigration starts a job: the old panel's login and the destination.
+// The login stays in memory only (D11).
+func (a *API) CreateMigration(w http.ResponseWriter, r *http.Request) {
+	var b createBody
+	if err := respond.Decode(w, r, &b); err != nil || !b.valid() {
+		respond.BadRequest(w)
+		return
+	}
+	j, err := a.Runs.Create(r.Context(), run.Login{URL: b.SourceURL, Kind: panel.Kind(b.SourceKind), Username: b.Username,
+		Password: secret.NewValue(b.Password), APIKey: secret.NewValue(b.APIKey), PinSHA256: b.PinSHA256}, b.PanelID, source.Options{})
+	if err != nil {
+		writeRunError(w, r, err)
+		return
+	}
+	respond.JSON(w, http.StatusCreated, map[string]any{"id": j.ID, "state": j.State()})
+}
+
+// GetMigration reports a job's state and, once checked, its summary.
+func (a *API) GetMigration(w http.ResponseWriter, r *http.Request) {
+	sum, err := a.Runs.Summary(r.PathValue("id"))
+	if errors.Is(err, run.ErrNotChecked) || errors.Is(err, run.ErrNoJob) {
+		state, err := a.Runs.JobState(r.Context(), r.PathValue("id"))
+		if err != nil {
+			writeRunError(w, r, err)
+			return
+		}
+		respond.JSON(w, http.StatusOK, map[string]any{"id": r.PathValue("id"), "state": state})
+		return
+	}
+	if err != nil {
+		writeRunError(w, r, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]any{"id": r.PathValue("id"), "state": sum.State, "summary": sum})
+}
+
+// Compare reads both panels again and rebuilds the plan (steps 1 and 2).
+func (a *API) Compare(w http.ResponseWriter, r *http.Request) {
+	if _, err := a.Runs.Check(r.Context(), r.PathValue("id")); err != nil {
+		writeRunError(w, r, err)
+		return
+	}
+	a.Summary(w, r)
+}
+
+// Summary is step 1: who the admin is, how many users, how much traffic.
+func (a *API) Summary(w http.ResponseWriter, r *http.Request) {
+	sum, err := a.Runs.Summary(r.PathValue("id"))
+	if err != nil {
+		writeRunError(w, r, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, sum)
+}
+
+// Groups lists the problem groups (made by Karvan from the conflicts),
+// the job-level conflicts, and how many users each category holds.
+func (a *API) Groups(w http.ResponseWriter, r *http.Request) {
+	res, _, version, err := a.Runs.View(r.PathValue("id"))
+	if err == nil && res == nil {
+		err = run.ErrNotChecked
+	}
+	if err != nil {
+		writeRunError(w, r, err)
+		return
+	}
+	categories := map[string]int{}
+	for _, it := range res.Items {
+		for _, n := range it.Nodes {
+			categories[n]++
+		}
+	}
+	groups := res.Groups
+	if groups == nil {
+		groups = []engine.Group{}
+	}
+	respond.JSON(w, http.StatusOK, map[string]any{"planVersion": version, "groups": groups, "conflicts": orEmpty(res.Conflicts),
+		"categories": categories, "blockers": res.Blockers, "stable": res.Stable})
+}
+
+func orEmpty[T any](s []T) []T {
+	if s == nil {
+		return []T{}
+	}
+	return s
+}
+
+// userJSON is one user in step 2 (as read) or step 4 (as it will land).
+type userJSON struct {
+	Key            string         `json:"key"`
+	SourceUsername string         `json:"sourceUsername"`
+	Username       string         `json:"username"`
+	Include        bool           `json:"include"`
+	Status         string         `json:"status"`
+	UsedTraffic    int64          `json:"usedTraffic"`
+	DataLimit      int64          `json:"dataLimit"`
+	Expire         *time.Time     `json:"expire"`
+	Note           string         `json:"note,omitempty"`
+	Categories     []string       `json:"categories"`
+	Targets        []string       `json:"targets,omitempty"`
+	Conflicts      []conflictJSON `json:"conflicts"`
+	Applied        []string       `json:"applied"`
+	ChangesConfig  bool           `json:"changesConfig"`
+	ChangesLink    bool           `json:"changesLink"`
+	MovedBefore    bool           `json:"movedBefore,omitempty"`
+}
+
+type conflictJSON struct {
+	Type     string `json:"type"`
+	Severity string `json:"severity"`
+	Fix      string `json:"fix,omitempty"`
+}
+
+func toUserJSON(it *engine.Item, final bool) userJSON {
+	u := it.Source
+	if final {
+		u = it.User
+	}
+	out := userJSON{Key: it.Key, SourceUsername: it.Source.Username, Username: it.User.Username, Include: it.Include,
+		Status: string(u.Status), UsedTraffic: u.UsedTraffic, DataLimit: u.DataLimit, Expire: u.Expire, Note: u.Note, Categories: orEmpty(it.Nodes),
+		Applied: orEmpty(it.Applied), ChangesConfig: it.ChangesConfig, ChangesLink: it.ChangesLink, Conflicts: []conflictJSON{},
+		MovedBefore: it.Adopt != nil}
+	if final {
+		out.Targets = it.Targets
+	}
+	for _, c := range it.Conflicts {
+		out.Conflicts = append(out.Conflicts, conflictJSON{Type: c.Type, Severity: c.Severity, Fix: c.Fix})
+	}
+	return out
+}
+
+// pageLimit caps one page of users; lists of 100k users are read page by
+// page.
+const pageLimit = 200
+
+// Users is step 2's list of users as read: filtered by group or category
+// and a name search, in pages.
+func (a *API) Users(w http.ResponseWriter, r *http.Request) { a.userPage(w, r, false) }
+
+// Preview is step 4: the same list, each user as it will land.
+func (a *API) Preview(w http.ResponseWriter, r *http.Request) { a.userPage(w, r, true) }
+
+func (a *API) userPage(w http.ResponseWriter, r *http.Request, final bool) {
+	items, err := a.Runs.Items(r.PathValue("id"))
+	if err != nil {
+		writeRunError(w, r, err)
+		return
+	}
+	q := r.URL.Query()
+	cursor, _ := strconv.Atoi(q.Get("cursor"))
+	limit, err := strconv.Atoi(q.Get("limit"))
+	if err != nil || limit <= 0 || limit > pageLimit {
+		limit = pageLimit
+	}
+	match := itemFilter(q.Get("group"), strings.ToLower(q.Get("q")))
+	out, total := []userJSON{}, 0
+	for _, it := range items {
+		if !match(it) {
+			continue
+		}
+		if total >= cursor && len(out) < limit {
+			out = append(out, toUserJSON(it, final))
+		}
+		total++
+	}
+	page := map[string]any{"users": out, "total": total}
+	if next := cursor + len(out); next < total {
+		page["next"] = strconv.Itoa(next)
+	}
+	respond.JSON(w, http.StatusOK, page)
+}
+
+// itemFilter matches a group ("ready", "skipped", a conflict type such
+// as "C02", or "category:<id>") and a name search.
+func itemFilter(group, search string) func(*engine.Item) bool {
+	return func(it *engine.Item) bool {
+		if search != "" && !strings.Contains(strings.ToLower(it.Source.Username), search) &&
+			!strings.Contains(strings.ToLower(it.User.Username), search) {
+			return false
+		}
+		switch {
+		case group == "":
+			return true
+		case group == "ready":
+			return it.Include && len(it.Conflicts) == 0
+		case group == "skipped":
+			return !it.Include
+		case strings.HasPrefix(group, "category:"):
+			return slices.Contains(it.Nodes, strings.TrimPrefix(group, "category:"))
+		}
+		return slices.ContainsFunc(it.Conflicts, func(c engine.Conflict) bool { return c.Type == group })
+	}
+}

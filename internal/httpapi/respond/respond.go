@@ -64,10 +64,16 @@ func Internal(w http.ResponseWriter, r *http.Request, err error) {
 // Decode reads a JSON body into dst. It refuses unknown fields, trailing
 // data, a wrong content type and bodies over MaxBodyBytes.
 func Decode(w http.ResponseWriter, r *http.Request, dst any) error {
+	return DecodeLimit(w, r, dst, MaxBodyBytes)
+}
+
+// DecodeLimit is Decode with another size cap, for the few bodies that
+// are large by nature (a migration plan with per-user choices).
+func DecodeLimit(w http.ResponseWriter, r *http.Request, dst any, limit int64) error {
 	if ct := r.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
 		return errors.New("content type must be application/json")
 	}
-	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, MaxBodyBytes))
+	dec := json.NewDecoder(http.MaxBytesReader(w, r.Body, limit))
 	dec.DisallowUnknownFields()
 	if err := dec.Decode(dst); err != nil {
 		return fmt.Errorf("decode body: %w", err)
