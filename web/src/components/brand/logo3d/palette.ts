@@ -21,5 +21,6 @@ export function readPalette(): Palette {
     firouzeh: toHex('--karvan-firouzeh'),
     saffron: toHex('--karvan-saffron'),
     roadBed: toHex('--karvan-road'),
+    light: toHex('--karvan-light'),
   };
 }

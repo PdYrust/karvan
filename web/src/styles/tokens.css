@@ -20,6 +20,7 @@
   --karvan-saffron: oklch(68% 0.15 62);
   --karvan-ink: oklch(25.5% 0.012 60);
   --karvan-road: oklch(34% 0.05 202);
+  --karvan-light: oklch(100% 0 0);
 
   --text-color-kumo-default: oklch(25.5% 0.012 60);
   --text-color-kumo-strong: oklch(19% 0.012 60);
@@ -83,6 +84,7 @@
   --karvan-saffron: oklch(80% 0.14 75);
   --karvan-ink: oklch(93% 0.008 85);
   --karvan-road: oklch(28% 0.04 206);
+  --karvan-light: oklch(100% 0 0);
 
   --text-color-kumo-default: oklch(93% 0.008 85);
   --text-color-kumo-strong: oklch(97% 0.006 85);

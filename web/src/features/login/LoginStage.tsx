@@ -8,7 +8,7 @@ export function LoginStage() {
   const t = useT(loginMessages);
   return (
     <section className="relative flex h-full flex-col items-center justify-center overflow-hidden bg-kumo-recessed px-6 py-8 lg:py-12">
-      <GirihPattern className="pointer-events-none absolute inset-0 text-kumo-hairline [mask-image:radial-gradient(closest-side,black,transparent)]" />
+      <GirihPattern className="pointer-events-none absolute inset-0 text-kumo-hairline [mask-image:radial-gradient(closest-side,currentColor,transparent)]" />
       <Logo3D className="size-44 sm:size-56 lg:size-[min(400px,52vh)]" />
       <div className="relative mt-2 hidden max-w-sm text-center text-balance lg:block">
         <p className="text-heading font-semibold text-kumo-strong">{t('tagline')}</p>

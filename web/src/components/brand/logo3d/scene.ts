@@ -23,6 +23,7 @@ export interface Palette {
   firouzeh: string;
   saffron: string;
   roadBed: string;
+  light: string;
 }
 
 export interface LogoScene {
@@ -107,12 +108,11 @@ export function createLogoScene(canvas: HTMLCanvasElement, palette: Palette): Lo
   group.rotation.x = -0.12;
   scene.add(group);
 
-  // Lights are white; only the ground bounce takes the road-bed color.
-  const white = new Color('white');
-  const sky = new HemisphereLight(white, white, 0.6);
-  const key = new DirectionalLight(white, 1.6);
+  // Lights take the neutral light token; the ground bounce takes the road bed.
+  const sky = new HemisphereLight(undefined, undefined, 0.6);
+  const key = new DirectionalLight(undefined, 1.6);
   key.position.set(-180, 260, 300);
-  const rim = new DirectionalLight(white, 0.7);
+  const rim = new DirectionalLight(undefined, 0.7);
   rim.position.set(220, -120, -200);
   scene.add(sky, key, rim);
 
@@ -126,6 +126,7 @@ export function createLogoScene(canvas: HTMLCanvasElement, palette: Palette): Lo
     gold.emissive = new Color(p.saffron);
     bed.color = new Color(p.roadBed);
     sky.groundColor = new Color(p.roadBed);
+    for (const l of [sky, key, rim]) l.color = new Color(p.light);
   }
   setPalette(palette);
 

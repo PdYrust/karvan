@@ -69,7 +69,10 @@ export function Logo3D({ className }: { className?: string }) {
         document.addEventListener('pointerleave', onLeave);
         scene.start(
           () => setShown(true),
-          () => setFailed(true),
+          () => {
+            cleanup();
+            setFailed(true);
+          },
         );
         cleanup = () => {
           window.removeEventListener('pointermove', onMove);
