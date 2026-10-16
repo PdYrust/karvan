@@ -35,7 +35,7 @@ Lost access? `karvan reset -password` (also `-user`, `-path`, `-port`, `-totp`).
 
 ## Contributing
 
-Read [CONSTRAINTS.md](CONSTRAINTS.md) before changing code and [DESIGN.md](DESIGN.md) before changing the web panel.
+Read [CONSTRAINTS.md](CONSTRAINTS.md) before changing code and [DESIGN.md](DESIGN.md) before changing the web panel. Design decisions are recorded in [docs/adr](docs/adr).
 
 ## License
 
