@@ -31,6 +31,7 @@ var (
 	ErrNoLogin     = errors.New("the old panel's login is gone; sign in again")
 	ErrBadPassword = errors.New("the admin password does not meet the policy")
 	ErrNoRollback  = errors.New("only a failed or interrupted job can be rolled back")
+	ErrBadReload   = errors.New("unknown reload method")
 )
 
 // PanelControl stops and starts a destination panel, for a full backup
@@ -145,16 +146,21 @@ func (s *Service) envPath(ctx context.Context, panelID int64) (string, error) {
 	return p, err
 }
 
-// Sweep drops the credentials of jobs idle longer than IdleTimeout.
+// Sweep drops the credentials of jobs idle longer than IdleTimeout. It
+// never holds s.mu while it takes a job's lock (Run takes them the other
+// way round), and skips a job that is busy now.
 func (s *Service) Sweep() {
 	s.mu.Lock()
-	defer s.mu.Unlock()
+	jobs := make([]*Job, 0, len(s.jobs))
 	for _, j := range s.jobs {
-		if j.running.Load() {
+		jobs = append(jobs, j)
+	}
+	s.mu.Unlock()
+	for _, j := range jobs {
+		if j.running.Load() || !j.mu.TryLock() {
 			continue
 		}
-		j.mu.Lock()
-		if s.now().Sub(j.lastUse) > IdleTimeout {
+		if !j.running.Load() && s.now().Sub(j.lastUse) > IdleTimeout {
 			j.wipe()
 		}
 		j.mu.Unlock()

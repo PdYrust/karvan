@@ -76,12 +76,30 @@ type frozenView struct {
 	version int
 }
 
+// lockIdle locks j unless it runs, and never waits for a run, which holds
+// mu from start to end. A caller that loses the race to a starting run
+// would otherwise wait for the whole migration.
+func (j *Job) lockIdle() bool {
+	for {
+		if j.running.Load() {
+			return false
+		}
+		if j.mu.TryLock() {
+			if j.running.Load() {
+				j.mu.Unlock()
+				return false
+			}
+			return true
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 // State reports the job state.
 func (j *Job) State() string {
-	if j.running.Load() {
+	if !j.lockIdle() {
 		return StateRunning
 	}
-	j.mu.Lock()
 	defer j.mu.Unlock()
 	return j.state
 }

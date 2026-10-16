@@ -52,10 +52,9 @@ func (s *Service) Summary(jobID string) (Summary, error) {
 	if err != nil {
 		return Summary{}, err
 	}
-	if j.running.Load() {
+	if !j.lockIdle() {
 		return Summary{State: StateRunning}, nil
 	}
-	j.mu.Lock()
 	defer j.mu.Unlock()
 	if j.result == nil {
 		return Summary{}, ErrNotChecked
@@ -94,10 +93,9 @@ func (s *Service) TakePasswords(jobID string) (map[string]string, error) {
 	if err != nil {
 		return nil, err
 	}
-	if j.running.Load() {
+	if !j.lockIdle() {
 		return nil, ErrBusy
 	}
-	j.mu.Lock()
 	defer j.mu.Unlock()
 	out := j.passwords
 	j.passwords = map[string]string{}
@@ -230,15 +228,12 @@ func (s *Service) DeleteBackup(ctx context.Context, id string) error {
 	return err
 }
 
+// runningBackup reports whether the job that took backup id runs now. It
+// asks the jobs table: the job's own fields belong to its run goroutine.
 func (s *Service) runningBackup(id string) bool {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	for _, j := range s.jobs {
-		if j.running.Load() && j.backupID == id {
-			return true
-		}
-	}
-	return false
+	var state string
+	err := s.db.QueryRow("SELECT j.state FROM safe_mode_backups b JOIN jobs j ON j.id = b.job_id WHERE b.id = ?", id).Scan(&state)
+	return err == nil && state == StateRunning
 }
 
 // ErrPanelChanged means the panel a backup was taken from now points at

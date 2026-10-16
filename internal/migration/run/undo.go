@@ -2,8 +2,8 @@ package run
 
 import (
 	"context"
-	"database/sql"
 	"slices"
+	"time"
 
 	"github.com/PdYrust/karvan/internal/migration/ledger"
 	"github.com/PdYrust/karvan/internal/panel"
@@ -148,8 +148,6 @@ func (s *Service) backupRecord(ctx context.Context, id string) (safemode.Backup,
 	var created int64
 	err := s.db.QueryRowContext(ctx, "SELECT path, size, method, created_at FROM safe_mode_backups WHERE id = ?", id).
 		Scan(&b.Path, &b.Size, &b.Method, &created)
-	if err == sql.ErrNoRows {
-		return b, err
-	}
+	b.CreatedAt = time.UnixMilli(created).UTC()
 	return b, err
 }

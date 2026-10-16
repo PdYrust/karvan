@@ -351,3 +351,73 @@ func TestReloadOptions(t *testing.T) {
 		t.Fatalf("touch with a full admin: %+v", opts[1])
 	}
 }
+
+// Two quick submits start one run; the other is busy.
+func TestDoubleRunStartsOnce(t *testing.T) {
+	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/pasarguarddb/testdata/" + pasarguarddb.Revision + ".sqlite.sql"})
+	h := newHarness(t, panel.Marzban, panel.PasarGuard, tg, 3)
+	j := h.job(nil)
+	_, _, v, _ := h.svc.View(j.ID)
+	errs := make(chan error, 2)
+	for range 2 {
+		go func() { errs <- h.svc.Run(context.Background(), j.ID, Options{Version: v, Reload: ReloadManual}) }()
+	}
+	a, b := <-errs, <-errs
+	h.svc.Wait()
+	if (a == nil) == (b == nil) || !errors.Is(a, ErrBusy) && !errors.Is(b, ErrBusy) {
+		t.Fatalf("errors %v and %v", a, b)
+	}
+	if n := h.count("users"); n != 3 {
+		t.Fatalf("%d users written", n)
+	}
+}
+
+// Sweep never waits for a busy job, so it cannot deadlock against Run.
+func TestSweepSkipsABusyJob(t *testing.T) {
+	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/pasarguarddb/testdata/" + pasarguarddb.Revision + ".sqlite.sql"})
+	h := newHarness(t, panel.Marzban, panel.PasarGuard, tg, 1)
+	j := h.job(nil)
+	j.mu.Lock()
+	done := make(chan struct{})
+	go func() { h.svc.Sweep(); close(done) }()
+	select {
+	case <-done:
+	case <-time.After(5 * time.Second):
+		t.Fatal("Sweep waited for the job")
+	}
+	j.mu.Unlock()
+}
+
+// A reader that falls this far behind is dropped, so its stream ends and
+// the client reconnects instead of waiting for an event it lost.
+func TestLaggingEventReaderIsDropped(t *testing.T) {
+	db, err := store.Open(context.Background(), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if _, err := db.Exec("INSERT INTO panels (id, env_path, name, scanned_at) VALUES (1, '/x/.env', 'x', 0)"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec("INSERT INTO jobs (id, state, source_kind, source_origin, panel_id, safe_mode, created_at, updated_at) VALUES ('j', 'running', 'marzban', 'o', 1, 1, 0, 0)"); err != nil {
+		t.Fatal(err)
+	}
+	b := newBus(db, time.Now)
+	_, ch, cancel, err := b.subscribe(context.Background(), "j", 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer cancel()
+	for i := range 300 {
+		if err := b.emit(context.Background(), "j", StageExecute, EventProgress, map[string]any{"done": i}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	n := 0
+	for range ch {
+		n++
+	}
+	if n == 0 || n >= 300 {
+		t.Fatalf("read %d events before the stream ended", n)
+	}
+}

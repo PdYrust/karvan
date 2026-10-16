@@ -75,7 +75,11 @@ func (b *bus) emit(ctx context.Context, job, stage, typ string, data map[string]
 		select {
 		case ch <- e:
 		default:
-			// A slow reader catches up from the table with Last-Event-ID.
+			// A reader this far behind is dropped: its stream ends and the
+			// client reconnects with Last-Event-ID, reading the gap from the
+			// table. Skipping only this event could lose the last one.
+			delete(b.subs[job], ch)
+			close(ch)
 		}
 	}
 	return nil

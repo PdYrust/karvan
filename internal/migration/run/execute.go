@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"maps"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -40,29 +41,42 @@ func (s *Service) Run(ctx context.Context, jobID string, o Options) error {
 	if err != nil {
 		return err
 	}
-	if j.running.Load() {
+	if !j.lockIdle() {
 		return ErrBusy
 	}
-	j.mu.Lock()
 	defer j.mu.Unlock()
+	if j.state == StateRunning {
+		return ErrBusy
+	}
 	if err := s.canRun(j, o); err != nil {
 		return err
 	}
 	if _, ok := s.Reloaders[o.Reload]; !ok {
-		return fmt.Errorf("unknown reload method %q", o.Reload)
+		return fmt.Errorf("%w %q", ErrBadReload, o.Reload)
 	}
+	before := maps.Clone(j.passwords)
 	password, err := s.adminPassword(j, o.AdminPassword)
 	if err != nil {
 		return err
 	}
 	hash, err := bcrypt.GenerateFromPassword([]byte(password.Reveal()), bcryptCost)
 	if err != nil {
+		j.passwords = before
 		return err
 	}
+	state, safe := j.state, j.safeMode
 	j.state, j.safeMode, j.lastUse = StateRunning, o.SafeMode, s.now()
 	if err := s.save(ctx, j); err != nil {
+		j.state, j.safeMode, j.passwords = state, safe, before
 		return err
 	}
+	s.start(j, string(hash), o)
+	return nil
+}
+
+// start launches the run goroutine. The caller holds j.mu; the goroutine
+// takes it once the caller lets go and keeps it to the end.
+func (s *Service) start(j *Job, hash string, o Options) {
 	runCtx, cancel := context.WithCancel(context.Background())
 	s.mu.Lock()
 	s.cancels[j.ID] = cancel
@@ -78,9 +92,8 @@ func (s *Service) Run(ctx context.Context, jobID string, o Options) error {
 			delete(s.cancels, j.ID)
 			s.mu.Unlock()
 		}()
-		s.execute(runCtx, j, string(hash), o)
+		s.execute(runCtx, j, hash, o)
 	}()
-	return nil
 }
 
 func (s *Service) canRun(j *Job, o Options) error {

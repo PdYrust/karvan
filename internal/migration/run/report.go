@@ -153,10 +153,9 @@ func (s *Service) Report(jobID string) (*Report, error) {
 	if err != nil {
 		return nil, err
 	}
-	if j.running.Load() {
+	if !j.lockIdle() {
 		return nil, ErrBusy
 	}
-	j.mu.Lock()
 	defer j.mu.Unlock()
 	return j.report, nil
 }

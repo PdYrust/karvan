@@ -46,10 +46,9 @@ func (s *Service) Check(ctx context.Context, jobID string) (*engine.Result, erro
 	if err != nil {
 		return nil, err
 	}
-	if j.running.Load() {
+	if !j.lockIdle() {
 		return nil, ErrBusy
 	}
-	j.mu.Lock()
 	defer j.mu.Unlock()
 	if j.source == nil {
 		return nil, ErrNoLogin
@@ -147,10 +146,9 @@ func (s *Service) SetPlan(ctx context.Context, jobID string, version int, p plan
 	if err != nil {
 		return nil, 0, err
 	}
-	if j.running.Load() {
+	if !j.lockIdle() {
 		return nil, 0, ErrBusy
 	}
-	j.mu.Lock()
 	defer j.mu.Unlock()
 	switch {
 	case version != j.version:
@@ -176,11 +174,10 @@ func (s *Service) View(jobID string) (*engine.Result, plan.Plan, int, error) {
 	if err != nil {
 		return nil, plan.Plan{}, 0, err
 	}
-	if j.running.Load() {
+	if !j.lockIdle() {
 		f := j.frozen.Load()
 		return f.result, f.plan, f.version, nil
 	}
-	j.mu.Lock()
 	defer j.mu.Unlock()
 	j.lastUse = s.now()
 	return j.result, j.plan, j.version, nil

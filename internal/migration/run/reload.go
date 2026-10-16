@@ -118,10 +118,9 @@ func (s *Service) ReloadOptions(ctx context.Context, jobID string) ([]ReloadOpti
 	if err != nil {
 		return nil, err
 	}
-	if j.running.Load() {
+	if !j.lockIdle() {
 		return nil, ErrBusy
 	}
-	j.mu.Lock()
 	kind, env, wg := j.facts.Kind, j.envPath, false
 	if j.result != nil {
 		for _, it := range j.result.Items {
