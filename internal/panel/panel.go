@@ -3,6 +3,8 @@ package panel
 import (
 	"context"
 	"iter"
+
+	"github.com/PdYrust/karvan/internal/secret"
 )
 
 // Capabilities are the features a panel version has. Adapters report them
@@ -52,16 +54,17 @@ type LookupQuery struct {
 	AdminUsernames []string
 	UserUsernames  []string
 	UUIDs          []UUID
-	Passwords      []string // trojan, shadowsocks and hysteria secrets
+	Passwords      []secret.Value // trojan, shadowsocks and hysteria secrets
 }
 
 // LookupResult lists the values from LookupQuery that already exist, with
-// the username that holds each credential.
+// the username that holds each credential. Secrets are reported by their
+// index in LookupQuery.Passwords, so the result never repeats them.
 type LookupResult struct {
-	Admins      []string
-	Users       []string
-	UUIDOwners  map[UUID]string
-	SecretOwner map[string]string
+	Admins        []string
+	Users         []string
+	UUIDOwners    map[UUID]string
+	PasswordOwner map[int]string
 }
 
 // Destination is a panel Karvan writes into through its database.

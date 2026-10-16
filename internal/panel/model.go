@@ -7,8 +7,11 @@
 package panel
 
 import (
+	"log/slog"
 	"strings"
 	"time"
+
+	"github.com/PdYrust/karvan/internal/secret"
 )
 
 // Kind names a panel product.
@@ -22,10 +25,14 @@ const (
 
 // UUID is a canonical (lowercase, hyphenated) UUID string. Both panels
 // canonicalize UUIDs, so comparing canonical forms finds real duplicates.
+// For VMess and VLESS the UUID is the credential, so it is redacted in logs.
 type UUID string
 
 // CanonicalUUID lowercases and trims s. It does not validate.
 func CanonicalUUID(s string) UUID { return UUID(strings.ToLower(strings.TrimSpace(s))) }
+
+// LogValue implements slog.LogValuer.
+func (UUID) LogValue() slog.Value { return slog.StringValue("[redacted]") }
 
 // Status is a user's state. Limited and Expired are derived by the panels
 // from traffic and expiry; they are carried so reports can show them.
@@ -84,26 +91,26 @@ type VLESS struct {
 
 // Trojan credentials. Flow exists only in Marzban.
 type Trojan struct {
-	Password string
+	Password secret.Value
 	Flow     string
 }
 
 // Shadowsocks credentials. PasarGuard requires at least 22 characters.
 type Shadowsocks struct {
-	Password string
+	Password secret.Value
 	Method   string
 }
 
 // WireGuard credentials (PasarGuard only). Peer IPs are assigned by the
 // destination and are informational here.
 type WireGuard struct {
-	PrivateKey string
+	PrivateKey secret.Value
 	PublicKey  string
 	PeerIPs    []string
 }
 
 // Hysteria credentials (PasarGuard only).
-type Hysteria struct{ Auth string }
+type Hysteria struct{ Auth secret.Value }
 
 // NextPlan is what a user switches to when the current plan runs out.
 type NextPlan struct {
