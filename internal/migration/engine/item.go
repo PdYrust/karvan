@@ -47,6 +47,9 @@ type Inputs struct {
 	Dest   Dest
 	// Moved are ledger entries for this source and destination, by Key.
 	Moved map[string]Moved
+	// MovedAdmin is the destination admin an earlier run created or merged
+	// into for this source admin; a re-run merges into it by default.
+	MovedAdmin string
 	// Generate makes new credentials when a resolution asks for them.
 	// Values it returns are kept in Generated, so a rebuild reuses them.
 	Generate func(protocol string) panel.Credentials

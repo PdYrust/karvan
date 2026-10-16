@@ -151,6 +151,12 @@ func admin(p plan.Plan, in Inputs) (AdminOutcome, []Conflict) {
 		name = p.Admin.Username
 	}
 	out := AdminOutcome{Username: name, RoleID: p.Admin.RoleID}
+	if p.Admin.Mode == "" && p.Admin.Username == "" && in.MovedAdmin != "" {
+		if a, ok := in.Dest.Admins[in.MovedAdmin]; ok {
+			out.Username, out.Merge = a.Username, &a
+			return out, nil
+		}
+	}
 	existing, taken := in.Dest.Admins[name]
 	switch {
 	case len(name) == 0 || len(name) > 34 || panel.HasControl(name) || strings.TrimSpace(name) != name:
