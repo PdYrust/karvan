@@ -1,0 +1,47 @@
+{
+ "secret": "karvan-test-secret-0123456789abcdef0123456789abcdef0123456789ab",
+ "marzban": [
+  {
+   "username": "ali",
+   "ts": 1785654065,
+   "token": "YWxpLDE3ODU2NTQwNjUg8GpBXBLKe"
+  },
+  {
+   "username": "reza.k@shop",
+   "ts": 1700000001,
+   "token": "cmV6YS5rQHNob3AsMTcwMDAwMDAwMQbq9mWcOPGh"
+  },
+  {
+   "username": "a_b-c",
+   "ts": 1,
+   "token": "YV9iLWMsMQ-pYdoSPApl"
+  }
+ ],
+ "pasarguard": [
+  {
+   "id": 97318,
+   "ts": 1785654065,
+   "token": "djMsOTczMTgsMTc4NTY1NDA2NQ.Ze1nK5z2Eb1GlTZEZwgXDNs0uikC9t352uyFdeazKR8"
+  },
+  {
+   "id": 1,
+   "ts": 1700000000,
+   "token": "djMsMSwxNzAwMDAwMDAw.F5Nlg9i4Fjbo3JlUYb6d_lZdF2_vbxZCrxRWrg4GVKY"
+  },
+  {
+   "id": 123456789,
+   "ts": 2000000000,
+   "token": "djMsMTIzNDU2Nzg5LDIwMDAwMDAwMDA.Xv3ckTTLuHi4o-WXRD3g700Wg6q4xppdfhSNRyjhcNQ"
+  }
+ ],
+ "legacyHex": [
+  {
+   "payload": "v3,97318,1785654065",
+   "token": "djMsOTczMTgsMTc4NTY1NDA2NQe8318b6dd4"
+  },
+  {
+   "payload": "ali,1785654065",
+   "token": "YWxpLDE3ODU2NTQwNjU83c1a90570"
+  }
+ ]
+}
