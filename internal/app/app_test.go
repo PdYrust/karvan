@@ -1,15 +1,18 @@
 package app
 
 import (
+	"bufio"
 	"bytes"
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -191,6 +194,18 @@ func TestServeStopsWhenContextEnds(t *testing.T) {
 	res.Body.Close()
 	if res.StatusCode != http.StatusTeapot {
 		t.Fatalf("status %d", res.StatusCode)
+	}
+
+	// "OPTIONS *" must reach the handler, not net/http's built-in answer.
+	conn, err := net.Dial("tcp", ln.Addr().String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	fmt.Fprint(conn, "OPTIONS * HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
+	line, _ := bufio.NewReader(conn).ReadString('\n')
+	conn.Close()
+	if !strings.Contains(line, "418") {
+		t.Fatalf("OPTIONS * got %q, want the handler's 418", line)
 	}
 	cancel()
 	select {

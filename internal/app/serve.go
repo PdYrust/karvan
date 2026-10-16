@@ -53,6 +53,9 @@ func (a *App) serveOn(ctx context.Context, ln net.Listener, handler http.Handler
 		IdleTimeout:       120 * time.Second,
 		MaxHeaderBytes:    16 << 10,
 		ErrorLog:          slog.NewLogLogger(a.Logger.Handler(), slog.LevelDebug),
+		// Otherwise net/http answers "OPTIONS *" with 200 itself, which tells a
+		// scanner something is here.
+		DisableGeneralOptionsHandler: true,
 	}
 	go a.janitor(ctx)
 
