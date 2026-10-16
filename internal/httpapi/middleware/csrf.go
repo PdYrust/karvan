@@ -39,7 +39,7 @@ func sameOrigin(r *http.Request) bool {
 		return false
 	}
 	scheme := "http://"
-	if r.TLS != nil {
+	if IsHTTPS(r) {
 		scheme = "https://"
 	}
 	return origin == scheme+r.Host

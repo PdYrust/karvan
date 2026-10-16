@@ -21,7 +21,7 @@ type Cookies struct {
 }
 
 func (c Cookies) name(r *http.Request, base string) string {
-	if r.TLS != nil {
+	if IsHTTPS(r) {
 		return hostPrefix + base
 	}
 	return base
@@ -35,7 +35,7 @@ func (c Cookies) cookie(r *http.Request, base, value string, maxAge int) *http.C
 		MaxAge:   maxAge,
 		HttpOnly: true,
 		SameSite: http.SameSiteStrictMode,
-		Secure:   r.TLS != nil,
+		Secure:   IsHTTPS(r),
 	}
 	if ck.Secure {
 		ck.Path = "/"

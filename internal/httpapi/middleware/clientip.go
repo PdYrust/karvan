@@ -12,27 +12,41 @@ type ctxKey int
 
 const (
 	ipKey ctxKey = iota
+	httpsKey
 	sessionKey
 )
 
-// ClientIP records the caller's address. X-Forwarded-For is only believed
-// when the direct peer is a trusted proxy, and then the rightmost address
-// that is not itself a trusted proxy wins, since entries left of it can be
-// forged by the client.
+// ClientIP records the caller's address and whether the browser reached us
+// over HTTPS. X-Forwarded-For and X-Forwarded-Proto are only believed when
+// the direct peer is a trusted proxy. Of the forwarded addresses, the
+// rightmost one that is not itself a trusted proxy wins, since entries left
+// of it can be forged by the client.
 func ClientIP(trusted []netip.Prefix, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		ip := peerIP(r.RemoteAddr)
+		https := r.TLS != nil
 		if ip.IsValid() && isTrusted(ip, trusted) {
 			if fwd, ok := forwardedIP(r.Header.Values("X-Forwarded-For"), trusted); ok {
 				ip = fwd
 			}
+			https = https || strings.EqualFold(r.Header.Get("X-Forwarded-Proto"), "https")
 		}
 		s := ""
 		if ip.IsValid() {
 			s = ip.Unmap().String()
 		}
-		next.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ipKey, s)))
+		ctx := context.WithValue(context.WithValue(r.Context(), ipKey, s), httpsKey, https)
+		next.ServeHTTP(w, r.WithContext(ctx))
 	})
+}
+
+// IsHTTPS reports whether the browser's connection is HTTPS, directly or
+// through a trusted proxy.
+func IsHTTPS(r *http.Request) bool {
+	if v, ok := r.Context().Value(httpsKey).(bool); ok {
+		return v
+	}
+	return r.TLS != nil
 }
 
 // IP returns the address recorded by ClientIP.

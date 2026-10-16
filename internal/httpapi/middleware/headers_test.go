@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
+	"strings"
 	"testing"
 )
 
@@ -32,6 +33,36 @@ func TestSecurityHeaders(t *testing.T) {
 	h.ServeHTTP(rec, req)
 	if rec.Header().Get("Strict-Transport-Security") == "" {
 		t.Error("HSTS missing over HTTPS")
+	}
+}
+
+func TestHTTPSBehindATrustedProxy(t *testing.T) {
+	trusted := []netip.Prefix{netip.MustParsePrefix("10.0.0.0/8")}
+	h := ClientIP(trusted, SecurityHeaders(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		cookies.SetSession(w, r, "tok")
+	})))
+	for name, tc := range map[string]struct {
+		remote string
+		want   bool
+	}{
+		"trusted proxy says https":    {"10.0.0.2:4000", true},
+		"untrusted peer cannot claim": {"203.0.113.5:4000", false},
+	} {
+		t.Run(name, func(t *testing.T) {
+			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req.RemoteAddr = tc.remote
+			req.Header.Set("X-Forwarded-Proto", "https")
+			rec := httptest.NewRecorder()
+			h.ServeHTTP(rec, req)
+			gotHSTS := rec.Header().Get("Strict-Transport-Security") != ""
+			gotHost := strings.HasPrefix(rec.Header().Get("Set-Cookie"), "__Host-s=")
+			if gotHSTS != tc.want || gotHost != tc.want {
+				t.Fatalf("HSTS %v, __Host- cookie %v; want %v", gotHSTS, gotHost, tc.want)
+			}
+		})
+	}
+	if IsHTTPS(httptest.NewRequest(http.MethodGet, "/", nil)) {
+		t.Fatal("plain request without ClientIP reported as HTTPS")
 	}
 }
 
