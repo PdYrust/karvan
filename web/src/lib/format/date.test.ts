@@ -13,8 +13,7 @@ const moment = new Date(Date.UTC(2026, 9, 15, 15, 10));
 
 describe('dates in Tehran time', () => {
   it('uses the Jalali calendar and Persian digits for Persian', () => {
-    expect(formatLongDate(moment, 'fa')).toContain('مهر');
-    expect(formatLongDate(moment, 'fa')).toContain('۱۴۰۵');
+    expect(formatLongDate(moment, 'fa')).toBe('پنجشنبه ۲۳ مهر ۱۴۰۵');
     expect(formatTime(moment, 'fa')).toBe('۱۸:۴۰');
   });
 

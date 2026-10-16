@@ -30,7 +30,7 @@ function formatter(
   });
 }
 
-/** "۲۴ مهر ۱۴۰۵، ۱۸:۴۰" / "Oct 15, 2026, 18:40" */
+/** "۲۳ مهر ۱۴۰۵، ۱۸:۴۰" / "Oct 15, 2026, 18:40" */
 export function formatDateTime(date: Date, locale: Locale, opts: DateOptions = {}): string {
   return formatter(locale, opts, {
     year: 'numeric',
@@ -42,14 +42,20 @@ export function formatDateTime(date: Date, locale: Locale, opts: DateOptions = {
   }).format(date);
 }
 
-/** "پنجشنبه ۲۴ مهر ۱۴۰۵" / "Thursday, October 15, 2026" */
+/** "پنجشنبه ۲۳ مهر ۱۴۰۵" / "Thursday, October 15, 2026" */
 export function formatLongDate(date: Date, locale: Locale, opts: DateOptions = {}): string {
-  return formatter(locale, opts, {
+  const f = formatter(locale, opts, {
     weekday: 'long',
     year: 'numeric',
     month: 'long',
     day: 'numeric',
-  }).format(date);
+  });
+  if (locale !== 'fa') return f.format(date);
+  // ICU's Persian pattern puts the year first and uses a Latin comma
+  // ("۱۴۰۵ مهر ۲۴, جمعه"); Persian readers expect weekday, day, month, year.
+  const part = (type: Intl.DateTimeFormatPartTypes) =>
+    f.formatToParts(date).find((p) => p.type === type)?.value ?? '';
+  return `${part('weekday')} ${part('day')} ${part('month')} ${part('year')}`;
 }
 
 /** "۱۸:۴۰" / "18:40" */
