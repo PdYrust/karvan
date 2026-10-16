@@ -21,6 +21,15 @@ type ExistingUser struct {
 	SubRevokedAt *time.Time
 }
 
+// Row names one written row by what cannot change behind Karvan's back:
+// its id, username and created_at (D33). A row only counts as Karvan's if
+// all three still match.
+type Row struct {
+	ID        int64
+	Username  string
+	CreatedAt time.Time
+}
+
 // Index is what the destination already holds, read once per check. User
 // keys follow Rules.UserKey, so lookups use the destination's collation.
 type Index struct {

@@ -158,6 +158,50 @@ func (r rebinder) ExecContext(ctx context.Context, s string, args ...any) (sql.R
 	return r.tx.ExecContext(ctx, r.q(s), args...)
 }
 
+// InsertID runs an INSERT and returns the new row's id. Each row is its
+// own statement: MySQL hands out ids for a multi-row insert that need not
+// be contiguous when the panel inserts at the same time.
+func InsertID(ctx context.Context, x Execer, d Dialect, query string, args ...any) (int64, error) {
+	if d == Postgres {
+		var id int64
+		err := x.QueryRowContext(ctx, query+" RETURNING id", args...).Scan(&id)
+		return id, err
+	}
+	res, err := x.ExecContext(ctx, query, args...)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
+}
+
+// In returns "?, ?, ..." for n values and the values as arguments.
+func In[T any](vals []T) (string, []any) {
+	args := make([]any, len(vals))
+	for i, v := range vals {
+		args[i] = v
+	}
+	return strings.TrimSuffix(strings.Repeat("?, ", len(vals)), ", "), args
+}
+
+// LockRows takes row locks on table's ids for the rest of the transaction
+// on servers that have them; SQLite has one writer, so it needs none.
+func LockRows(ctx context.Context, x Execer, d Dialect, table string, ids []int64) error {
+	if d == SQLite || len(ids) == 0 {
+		return nil
+	}
+	in, args := In(ids)
+	rows, err := x.QueryContext(ctx, "SELECT id FROM "+Ident(d, table)+" WHERE id IN ("+in+") FOR UPDATE", args...)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	locked := 0
+	for rows.Next() {
+		locked++
+	}
+	return rows.Err()
+}
+
 // Ident quotes a table or column name for d. Needed for names that are
 // reserved words somewhere, like PasarGuard's "groups" on MySQL 8.
 func Ident(d Dialect, name string) string {
