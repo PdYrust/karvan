@@ -99,6 +99,31 @@ func TestInitializeRefusesExistingInstallations(t *testing.T) {
 	}
 }
 
+func TestFailedInitializeLeavesNothingBehind(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+	// A regular file where the data directory should be makes store.Open fail
+	// after the key file was already written.
+	if err := os.MkdirAll(filepath.Dir(cfg.DataDir), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(cfg.DataDir, nil, 0o600); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Initialize(ctx, cfg, quiet()); err == nil {
+		t.Fatal("Initialize succeeded with a file as data dir")
+	}
+	if _, err := os.Stat(cfg.KeyFile); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("key file left behind: %v", err)
+	}
+	if err := os.Remove(cfg.DataDir); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Initialize(ctx, cfg, quiet()); err != nil {
+		t.Fatalf("second try after fixing the cause: %v", err)
+	}
+}
+
 func TestOpenBeforeInit(t *testing.T) {
 	if _, err := Open(context.Background(), testConfig(t), quiet()); !errors.Is(err, settings.ErrNotInitialized) {
 		t.Fatalf("err = %v, want ErrNotInitialized", err)

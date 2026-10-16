@@ -42,6 +42,9 @@ func runReset(ctx context.Context, streams IO, args []string) error {
 	defer func() { _ = a.Close() }()
 	creds, err := a.Reset(ctx, o)
 	if err != nil {
+		if creds != (app.Credentials{}) {
+			printCredentials(streams, "Reset stopped part way; these values were already changed.", creds)
+		}
 		return err
 	}
 	printCredentials(streams, "Reset done.", creds)

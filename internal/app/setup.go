@@ -26,8 +26,9 @@ type Credentials struct {
 }
 
 // Initialize creates the key, the database and the operator account of a
-// new installation. It refuses to touch an existing one.
-func Initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (Credentials, error) {
+// new installation. It refuses to touch an existing one, and removes what it
+// created if a later step fails, so init can simply be run again.
+func Initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (creds Credentials, err error) {
 	exists, err := store.Exists(cfg.DataDir)
 	if err != nil {
 		return Credentials{}, err
@@ -41,6 +42,11 @@ func Initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (Cr
 	if err := secret.CreateKeyFile(cfg.KeyFile); err != nil {
 		return Credentials{}, err
 	}
+	defer func() {
+		if err != nil {
+			removeInstallation(cfg)
+		}
+	}()
 	key, err := secret.LoadKeyFile(cfg.KeyFile)
 	if err != nil {
 		return Credentials{}, err
@@ -52,7 +58,7 @@ func Initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (Cr
 	a := assemble(cfg, db, key, logger)
 	defer func() { _ = a.Close() }()
 
-	creds, err := newCredentials()
+	creds, err = newCredentials()
 	if err != nil {
 		return Credentials{}, err
 	}
@@ -66,8 +72,19 @@ func Initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (Cr
 	if err := a.Settings.SetHTTP(ctx, settings.HTTP{Port: creds.Port, BasePath: creds.BasePath}); err != nil {
 		return Credentials{}, err
 	}
-	err = a.Audit.Record(ctx, audit.Event{Actor: audit.ActorCLI, Action: audit.ActionInit, Outcome: audit.Success})
-	return creds, err
+	if err = a.Audit.Record(ctx, audit.Event{Actor: audit.ActorCLI, Action: audit.ActionInit, Outcome: audit.Success}); err != nil {
+		return Credentials{}, err
+	}
+	return creds, nil
+}
+
+// removeInstallation deletes the files a failed Initialize created. Only
+// these exact paths are touched, never the directories around them.
+func removeInstallation(cfg config.Config) {
+	db := store.Path(cfg.DataDir)
+	for _, p := range []string{db, db + "-wal", db + "-shm", cfg.KeyFile} {
+		_ = os.Remove(p)
+	}
 }
 
 func newCredentials() (Credentials, error) {
@@ -102,6 +119,8 @@ func (o ResetOptions) Any() bool { return o.Path || o.Username || o.Password || 
 
 // Reset regenerates the chosen values for an operator who lost access.
 // A new username or password, or turning two-step off, ends every session.
+// If a step fails, the values already changed are still returned with the
+// error, so they can be shown and are never lost.
 func (a *App) Reset(ctx context.Context, o ResetOptions) (Credentials, error) {
 	op, err := a.operator(ctx)
 	if err != nil {
@@ -115,32 +134,32 @@ func (a *App) Reset(ctx context.Context, o ResetOptions) (Credentials, error) {
 	var changed []string
 	if o.Username {
 		if err := a.Auth.Operators.SetUsername(ctx, op.ID, gen.Username); err != nil {
-			return Credentials{}, err
+			return out, err
 		}
 		out.Username, changed = gen.Username, append(changed, "username")
 	}
 	if o.Password {
 		hash, err := auth.HashPassword(gen.Password.Reveal())
 		if err != nil {
-			return Credentials{}, err
+			return out, err
 		}
 		if err := a.Auth.Operators.SetPasswordHash(ctx, op.ID, hash); err != nil {
-			return Credentials{}, err
+			return out, err
 		}
 		out.Password, changed = gen.Password, append(changed, "password")
 	}
 	if o.TOTP {
 		if err := a.Auth.Operators.DisableTOTP(ctx, op.ID); err != nil {
-			return Credentials{}, err
+			return out, err
 		}
 		changed = append(changed, "totp")
 	}
 	if err := a.resetHTTP(ctx, o, gen, &out, &changed); err != nil {
-		return Credentials{}, err
+		return out, err
 	}
 	if o.Username || o.Password || o.TOTP {
 		if err := a.Auth.Sessions.DeleteForOperator(ctx, op.ID); err != nil {
-			return Credentials{}, err
+			return out, err
 		}
 	}
 	err = a.Audit.Record(ctx, audit.Event{Actor: audit.ActorCLI, Action: audit.ActionReset, Outcome: audit.Success,
