@@ -16,7 +16,10 @@ const SweepEvery = time.Hour
 // verified more than a day ago. A revoke there drops the token; an old
 // panel that does not answer keeps it (D60, D62).
 func (b *Bridge) recheck(q request, e ledger.Entry) {
-	done, ok := b.lim.acquire(q.site.ID, "")
+	if plainHTTPRefused(q.site) {
+		return
+	}
+	done, ok := b.lim.acquireRecheck(q.site.ID)
 	if !ok {
 		return // the next request tries again
 	}

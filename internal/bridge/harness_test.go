@@ -41,11 +41,12 @@ func (c *clock) add(d time.Duration) {
 // fakeDest is a destination panel: rows in memory and an HTTP server
 // that answers its own minted tokens and one native token.
 type fakeDest struct {
-	mu   sync.Mutex
-	rows map[int64]Row
-	srv  *httptest.Server
-	last *http.Request
-	hits int
+	mu    sync.Mutex
+	rows  map[int64]Row
+	srv   *httptest.Server
+	last  *http.Request
+	hits  int
+	reads int // Rows calls
 }
 
 func newFakeDest(t *testing.T) *fakeDest {
@@ -80,6 +81,7 @@ func (f *fakeDest) Token(id int64, username string, _ time.Time) string {
 func (f *fakeDest) Rows(_ context.Context, ids []int64) (map[int64]Row, error) {
 	f.mu.Lock()
 	defer f.mu.Unlock()
+	f.reads++
 	out := map[int64]Row{}
 	for _, id := range ids {
 		if r, ok := f.rows[id]; ok {

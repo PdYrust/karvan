@@ -41,13 +41,16 @@ type Bridge struct {
 	lim    *limits
 	neg    *negative
 
-	mu      sync.Mutex
-	sites   []Site
-	dests   map[int64]*openDest // by panel id
-	olds    map[int64]OldPanel  // by site id
-	servers map[int]*listener   // by port
-	errs    map[int]string      // ports that could not listen
-	wg      sync.WaitGroup
+	// reloadMu serializes Reload and stopAll, so two reloads cannot leave
+	// a port in the wrong mode.
+	reloadMu sync.Mutex
+	mu       sync.Mutex
+	sites    []Site
+	dests    map[int64]*openDest // by panel id
+	olds     map[int64]OldPanel  // by site id
+	servers  map[int]*listener   // by port
+	errs     map[int]string      // ports that could not listen
+	wg       sync.WaitGroup
 }
 
 type openDest struct {

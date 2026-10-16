@@ -13,6 +13,10 @@ import (
 	"github.com/PdYrust/karvan/internal/panel/subtoken"
 )
 
+// ErrPlainHTTP means the site reads a plain-http old panel and the
+// operator has not accepted that anyone on the path could answer for it.
+var ErrPlainHTTP = errors.New("the old panel is plain http; turn on the plain http option for this site first")
+
 // maxUpload caps a token list; a list of 100k old links is about 10 MB.
 const maxUpload = 16 << 20
 
@@ -39,6 +43,9 @@ func (b *Bridge) Upload(ctx context.Context, siteID int64, r io.Reader) (UploadR
 	s, ok := b.site(siteID)
 	if !ok {
 		return res, ErrNotFound
+	}
+	if plainHTTPRefused(s) {
+		return res, ErrPlainHTTP
 	}
 	d, err := b.dest(ctx, s.PanelID)
 	if err != nil {
@@ -107,29 +114,21 @@ func count(res *UploadResult, o uploadOutcome) {
 // uploadOne runs the lazy check's steps for one uploaded token, without
 // the lazy switch and limits: the operator asked for these checks.
 func (b *Bridge) uploadOne(ctx context.Context, q request) uploadOutcome {
-	if v, ok, err := b.st.token(ctx, q.mac); err == nil && ok && v.SiteID == q.site.ID {
+	if v, ok, err := b.st.token(ctx, q.mac); err == nil && ok && b.sameSource(v.SiteID, q.site) {
 		return outKnown
 	}
 	p, ok := subtoken.Parse(q.token)
 	if !ok {
 		return outNoUser
 	}
-	e, err := b.claimed(ctx, q, p)
-	switch {
-	case errors.Is(err, ledger.ErrNotFound):
+	if _, err := b.claimed(ctx, q, p); errors.Is(err, ledger.ErrNotFound) {
 		return outNoUser
-	case err != nil:
-		return outFailed
 	}
-	verd, err := b.check(ctx, q.dest, e, p.Issued)
-	if err != nil {
-		return outFailed
+	e, status := b.candidate(ctx, q, p)
+	if status == 0 {
+		status = b.verify(ctx, q, e)
 	}
-	b.apply(ctx, e, verd)
-	if !verd.ok {
-		return outRefused
-	}
-	switch b.verify(ctx, q, e) {
+	switch status {
 	case 0:
 		return outStored
 	case http.StatusNotFound:

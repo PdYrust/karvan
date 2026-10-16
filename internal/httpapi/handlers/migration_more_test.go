@@ -145,7 +145,13 @@ func TestSiteChangesAndTokenUpload(t *testing.T) {
 	if res := m.do(http.MethodPatch, path, site); res.status != http.StatusOK || !strings.Contains(string(res.body), "renamed") {
 		t.Fatalf("patch: %d %s", res.status, res.body)
 	}
-	up := m.withHeader("Content-Type", "text/plain")(http.MethodPost, path+"/tokens", nil)
+	upload := m.withHeader("Content-Type", "text/plain")
+	if up := upload(http.MethodPost, path+"/tokens", nil); up.status != http.StatusConflict || up.errorCode(t) != "plain_http_off" {
+		t.Fatalf("plain http without the opt-in: %d %s", up.status, up.body)
+	}
+	site["plainHttpOk"] = true
+	m.do(http.MethodPatch, path, site)
+	up := upload(http.MethodPost, path+"/tokens", nil)
 	if up.status != http.StatusOK || !strings.Contains(string(up.body), `"found":0`) {
 		t.Fatalf("empty upload: %d %s", up.status, up.body)
 	}

@@ -45,6 +45,8 @@ func (b *Bridge) Run(ctx context.Context) error {
 
 // Reload reads the sites again and listens on exactly their ports.
 func (b *Bridge) Reload(ctx context.Context) error {
+	b.reloadMu.Lock()
+	defer b.reloadMu.Unlock()
 	sites, err := b.st.Sites(ctx)
 	if err != nil {
 		return err
@@ -116,6 +118,8 @@ func (b *Bridge) listen(port int, tlsOn bool) {
 }
 
 func (b *Bridge) stopAll() {
+	b.reloadMu.Lock()
+	defer b.reloadMu.Unlock()
 	b.mu.Lock()
 	all := b.servers
 	b.servers = map[int]*listener{}
@@ -156,28 +160,36 @@ func (b *Bridge) certificate(port int) func(*tls.ClientHelloInfo) (*tls.Certific
 	}
 }
 
-// siteForName is the site on port whose domains cover name, else the
-// first site on port (a client without SNI, or an IP address).
+// siteForName is the site on port whose domains cover name; else the
+// port's catch-all site (no domains), else its first site (a client
+// without SNI, or an IP address).
 func (b *Bridge) siteForName(port int, name string) (Site, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	var first *Site
+	var first, catchAll *Site
 	for i := range b.sites {
 		s := &b.sites[i]
 		if s.Port != port {
 			continue
 		}
-		if name != "" && len(s.Domains) > 0 && s.covers(name) {
+		switch {
+		case len(s.Domains) == 0:
+			if catchAll == nil {
+				catchAll = s
+			}
+		case name != "" && s.covers(name):
 			return *s, true
 		}
 		if first == nil {
 			first = s
 		}
 	}
-	if first == nil {
-		return Site{}, false
+	for _, s := range []*Site{catchAll, first} {
+		if s != nil {
+			return *s, true
+		}
 	}
-	return *first, true
+	return Site{}, false
 }
 
 func (b *Bridge) loadCert(ctx context.Context, cache *certCache, s Site) (*tls.Certificate, error) {

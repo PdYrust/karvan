@@ -26,7 +26,17 @@ type limits struct {
 	inFlight map[int64]int
 	ips      map[string]*window
 	swept    time.Time
+	// rechecks have their own per-site budget, so a busy site still
+	// rechecks and rechecks never take budget from first-time checks.
+	rechecks         map[int64]*bucket
+	rechecksInFlight map[int64]int
 }
+
+// recheckRate and recheckInFlight bound the daily rechecks per site.
+const (
+	recheckRate     = 5
+	recheckInFlight = 2
+)
 
 type bucket struct {
 	tokens float64
@@ -39,7 +49,8 @@ type window struct {
 }
 
 func newLimits(now func() time.Time) *limits {
-	return &limits{now: now, sites: map[int64]*bucket{}, inFlight: map[int64]int{}, ips: map[string]*window{}}
+	return &limits{now: now, sites: map[int64]*bucket{}, inFlight: map[int64]int{}, ips: map[string]*window{},
+		rechecks: map[int64]*bucket{}, rechecksInFlight: map[int64]int{}}
 }
 
 // acquire takes one check for site from ip. done must be called when the
@@ -55,22 +66,41 @@ func (l *limits) acquire(site int64, ip string) (done func(), ok bool) {
 		w = &window{start: now}
 		l.ips[key] = w
 	}
-	b := l.sites[site]
-	if b == nil {
-		b = &bucket{tokens: siteRate, at: now}
-		l.sites[site] = b
-	}
-	b.tokens = min(siteRate, b.tokens+now.Sub(b.at).Seconds()*siteRate)
-	b.at = now
-	if w.n >= ipChecks || b.tokens < 1 || l.inFlight[site] >= siteInFlight {
+	if w.n >= ipChecks {
 		return nil, false
 	}
-	w.n++
+	done, ok = l.take(l.sites, l.inFlight, site, siteRate, siteInFlight, now)
+	if ok {
+		w.n++
+	}
+	return done, ok
+}
+
+// acquireRecheck takes one background recheck for site.
+func (l *limits) acquireRecheck(site int64) (done func(), ok bool) {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	return l.take(l.rechecks, l.rechecksInFlight, site, recheckRate, recheckInFlight, l.now())
+}
+
+// take draws from a token bucket of rate per second and an in-flight cap.
+// The caller holds mu.
+func (l *limits) take(buckets map[int64]*bucket, inFlight map[int64]int, site int64, rate float64, most int, now time.Time) (func(), bool) {
+	b := buckets[site]
+	if b == nil {
+		b = &bucket{tokens: rate, at: now}
+		buckets[site] = b
+	}
+	b.tokens = min(rate, b.tokens+now.Sub(b.at).Seconds()*rate)
+	b.at = now
+	if b.tokens < 1 || inFlight[site] >= most {
+		return nil, false
+	}
 	b.tokens--
-	l.inFlight[site]++
+	inFlight[site]++
 	return func() {
 		l.mu.Lock()
-		l.inFlight[site]--
+		inFlight[site]--
 		l.mu.Unlock()
 	}, true
 }

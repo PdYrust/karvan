@@ -69,6 +69,11 @@ func (s *Site) normalize() error {
 		return invalid("%v", err)
 	}
 	s.SourceURL = u.String()
+	// Once the old domain points at this server, a lookup would reach the
+	// bridge itself, so lazy checks need the address the migration used.
+	if _, err := netip.ParseAddr(u.Hostname()); err != nil && s.Lazy && s.SourceIP == "" {
+		return invalid("lazy checks need the old panel's address")
+	}
 	return s.normalizeDomains()
 }
 
@@ -98,6 +103,7 @@ func (s *Site) checkFields() error {
 }
 
 func (s *Site) normalizeDomains() error {
+	s.Domains = slices.Clone(s.Domains) // never rewrite the caller's slice
 	for i, d := range s.Domains {
 		d = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(d), "."))
 		if !validPattern(d) {

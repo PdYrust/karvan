@@ -17,6 +17,8 @@ func writeSiteError(w http.ResponseWriter, r *http.Request, err error) {
 	switch {
 	case errors.Is(err, bridge.ErrNotFound):
 		respond.Error(w, respond.APIError{Status: http.StatusNotFound, Code: codeNotFound})
+	case errors.Is(err, bridge.ErrPlainHTTP):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "plain_http_off"})
 	case errors.Is(err, bridge.ErrOverlap):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "site_overlap"})
 	case errors.Is(err, bridge.ErrInvalidSite):

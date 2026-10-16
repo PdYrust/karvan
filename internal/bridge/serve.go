@@ -86,16 +86,23 @@ func (b *Bridge) route(port int, r *http.Request) (request, bool) {
 }
 
 // fromVerified serves a token proven earlier, if the user still passes.
+// A token proven on one site counts on every site of the same old panel
+// and destination (an old panel often serves its links on 80 and 443).
 func (b *Bridge) fromVerified(w http.ResponseWriter, r *http.Request, q request) bool {
 	ctx := r.Context()
 	v, ok, err := b.st.token(ctx, q.mac)
-	if err != nil || !ok || v.SiteID != q.site.ID {
+	if err != nil || !ok || !b.sameSource(v.SiteID, q.site) {
 		return false
 	}
 	e, err := b.Ledger.Get(ctx, v.LedgerID)
-	if err != nil || e.Dest != q.dest.Key() || (e.State != ledger.Done && e.State != ledger.Adopted) {
+	switch {
+	case errors.Is(err, ledger.ErrNotFound), err == nil && (e.Dest != q.dest.Key() || (e.State != ledger.Done && e.State != ledger.Adopted)):
 		_ = b.st.dropToken(ctx, q.mac) // the user was moved again or rolled back
 		return false
+	case err != nil:
+		// A passing fault must not cost a proof that may never be made again.
+		answer(w, http.StatusServiceUnavailable)
+		return true
 	}
 	verd, err := b.check(ctx, q.dest, e, v.Issued)
 	if err != nil {
@@ -111,6 +118,16 @@ func (b *Bridge) fromVerified(w http.ResponseWriter, r *http.Request, q request)
 	}
 	b.serveAs(w, r, q, e)
 	return true
+}
+
+// sameSource reports whether site id reads the same old panel into the
+// same destination as s.
+func (b *Bridge) sameSource(id int64, s Site) bool {
+	if id == s.ID {
+		return true
+	}
+	o, ok := b.site(id)
+	return ok && o.origin == s.origin && o.PanelID == s.PanelID
 }
 
 // passThrough lets the panel judge the token itself. It reports false
@@ -142,11 +159,13 @@ func (b *Bridge) serveAs(w http.ResponseWriter, r *http.Request, q request, e le
 }
 
 // lazy verifies an unknown token once against the old panel (D59 step 3).
+// The limits come before any database work, so tokens forged to name a
+// real user cannot make the bridge query both databases without bound.
 func (b *Bridge) lazy(w http.ResponseWriter, r *http.Request, q request) {
 	ctx := r.Context()
-	e, status := b.candidate(ctx, q)
-	if status != 0 {
-		answer(w, status)
+	p, ok := subtoken.Parse(q.token)
+	if !ok || b.neg.has(q.mac) || !q.site.Lazy || plainHTTPRefused(q.site) {
+		answer(w, http.StatusNotFound)
 		return
 	}
 	ip, _, _ := net.SplitHostPort(r.RemoteAddr)
@@ -156,20 +175,26 @@ func (b *Bridge) lazy(w http.ResponseWriter, r *http.Request, q request) {
 		return
 	}
 	defer done()
-	if status := b.verify(ctx, q, e); status != 0 {
+	e, status := b.candidate(ctx, q, p)
+	if status == 0 {
+		status = b.verify(ctx, q, e)
+	}
+	if status != 0 {
 		answer(w, status)
 		return
 	}
 	b.serveAs(w, r, q, e)
 }
 
+// plainHTTPRefused reports whether s reads a plain-http old panel without
+// the operator's opt-in: anyone on the path could answer for it.
+func plainHTTPRefused(s Site) bool {
+	return strings.HasPrefix(s.SourceURL, "http://") && !s.PlainHTTPOK
+}
+
 // candidate finds the ledger row a token claims and checks everything
 // that needs no call to the old panel. status is 0 when a check may run.
-func (b *Bridge) candidate(ctx context.Context, q request) (ledger.Entry, int) {
-	p, ok := subtoken.Parse(q.token)
-	if !ok || b.neg.has(q.mac) || !q.site.Lazy || (strings.HasPrefix(q.site.SourceURL, "http://") && !q.site.PlainHTTPOK) {
-		return ledger.Entry{}, http.StatusNotFound
-	}
+func (b *Bridge) candidate(ctx context.Context, q request, p subtoken.Payload) (ledger.Entry, int) {
 	e, err := b.claimed(ctx, q, p)
 	switch {
 	case errors.Is(err, ledger.ErrNotFound):
