@@ -65,8 +65,9 @@ Karvan uses Kumo's palette as it ships: neutral greys for surfaces and text, Kum
 ## 5. Motion
 
 - State changes: 150 ms, ease-out. Drawers and dialogs: 220 ms. Nothing bounces.
-- Motion answers an action (open, expand, confirm) or shows real progress. No entrance animations on page load, the sign-in page included.
-- `prefers-reduced-motion: reduce`: no transforms or autoplay; transitions shorten to 1 ms.
+- Motion answers an action (open, expand, confirm) or shows real progress. No entrance animations on page load.
+- The one exception is the globe on the sign-in page: it turns slowly (about one turn a minute) and acts out what Karvan does (section 8, Sign-in). It draws at about 30 frames a second and stops when it is off screen.
+- `prefers-reduced-motion: reduce`: no transforms or autoplay; transitions shorten to 1 ms. The globe shows one still frame.
 
 ## 6. Icons
 
@@ -99,13 +100,14 @@ Karvan's own components, with logical properties:
 ### Page
 - **Page header:** title, one line of context under it, actions at the end, bottom hairline across the full width.
 - **Cards:** `bg-kumo-base`, hairline border, radius 8, title row at the top, no shadow, no divider under the title unless the card holds a table.
-- **Tables:** header row on a hairline, rows about 48 px high, a footer that says how much is shown ("Showing the latest 5 events"). On phones, secondary columns fold under the first cell instead of scrolling sideways.
+- **Tables:** header row on a hairline, rows about 48 px high, a footer that says how much is shown ("Showing the latest 5 events"). Long lists live on their own page, never on the overview. On phones, secondary columns fold under the first cell instead of scrolling sideways.
 - **Aside:** short status blocks (Safe Mode, two-step sign-in, account), each a heading, a status badge and one sentence, divided by hairlines.
 
 ### Sign-in
 - Two halves on large screens. Start side on `bg-kumo-base`: wordmark at the top, then a centered form (title, username, password, one blue button) and the recovery hint with the `karvan reset -password` command.
-- End side on `bg-kumo-brand`: language and theme buttons at the top, the "Marzban ⇄ PasarGuard" line, the tagline and one sentence of detail, then the dotted globe centered on Iran with a dashed route from the Marzban stop (Europe) to the PasarGuard stop (Tehran). Each stop is the panel logo on a white tile with its name under it.
-- The globe is a static SVG made by `scripts/brand/globe.mjs` (which also writes the stop positions to `globe-points.ts`), so no map code or data ships in the bundle. It loads lazily.
+- End side on `bg-kumo-brand`: language and theme buttons at the top, the "Marzban ⇄ PasarGuard" line, the tagline, one sentence of detail and a caption for the current scene, then a spinning dotted globe.
+- The globe acts out four scenes in turn (`globe-scenes.ts`): a move and a merge in each direction. Two panels appear on land, each as its logo on a white tile with its name under it; users travel as dots along a dashed arc. In a move the sending panel fades out once the last user arrives; in a merge both stay. The caption names the scene ("Move" / "Merge") in a sentence.
+- The globe is drawn on a canvas from a land mask made by `scripts/brand/globe.mjs` (`globe-land.ts`, about 2 KB gzip), so no map code ships. It is a lazy chunk with its own budget, loaded after the form.
 - Under 1024 px only the form side shows; the language and theme buttons move into its top bar.
 
 ### Behavior

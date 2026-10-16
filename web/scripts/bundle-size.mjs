@@ -6,6 +6,7 @@ import { gzipSync } from 'node:zlib';
 
 const budgetsKB = {
   'login (JS)': 145,
+  'login globe (JS, lazy)': 15,
   'app (JS)': 260,
   'stylesheet (CSS)': 35,
 };
@@ -28,10 +29,17 @@ const files = (keys) => new Set([...keys].map((k) => manifest[k].file));
 const sum = (set) => [...set].reduce((n, f) => n + gz(f), 0);
 
 const loginStatic = files(closure('login.html'));
+// What the sign-in page loads later, after the form (the globe).
+const loginLazy = new Set(
+  (manifest['login.html'].dynamicImports ?? [])
+    .flatMap((k) => [...files(closure(k))])
+    .filter((f) => !loginStatic.has(f)),
+);
 const css = new Set(Object.values(manifest).flatMap((c) => c.css ?? []));
 
 const measured = {
   'login (JS)': sum(loginStatic),
+  'login globe (JS, lazy)': sum(loginLazy),
   'app (JS)': sum(files(closure('index.html'))),
   'stylesheet (CSS)': sum(css),
 };

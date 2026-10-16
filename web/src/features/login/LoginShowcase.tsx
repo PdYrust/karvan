@@ -1,43 +1,41 @@
+import { lazy, Suspense, useState } from 'react';
 import { LanguageSwitch } from '../../components/preferences/LanguageSwitch';
 import { ThemeToggle } from '../../components/preferences/ThemeToggle';
-import { PanelLogo, panelNames, type PanelKind } from '../../components/panels/PanelLogo';
 import { useT } from '../../i18n/locale';
-import globeUrl from './globe.svg';
-import { routeFrom, routeTo } from './globe-points';
+import { sceneAt, type Scene } from './globe-scenes';
 import { loginMessages } from './messages';
+
+// Loaded after the form, so the globe never slows down signing in.
+const LoginGlobe = lazy(() => import('./LoginGlobe'));
 
 const onBrandButton = 'text-on-brand hover:bg-on-brand/15';
 
-function Stop({ kind, at }: { kind: PanelKind; at: readonly [number, number] }) {
+const captions = {
+  move: { marzban: 'moveFromMarzban', pasarguard: 'moveFromPasarguard' },
+  merge: { marzban: 'mergeFromMarzban', pasarguard: 'mergeFromPasarguard' },
+} as const;
+
+function Caption({ scene }: { scene: Scene }) {
+  const t = useT(loginMessages);
   return (
-    <div
-      className="absolute flex -translate-x-1/2 -translate-y-1/2 flex-col items-center gap-2"
-      // The globe image is not mirrored in RTL, so its points are physical.
-      style={{ left: `${at[0]}%`, top: `${at[1]}%` }}
-    >
-      <span className="grid size-14 place-items-center rounded-xl bg-on-brand text-(--color-kumo-brand) ring-4 ring-on-brand/25">
-        <PanelLogo kind={kind} size={36} />
+    <p className="mt-6 flex min-h-12 items-start gap-2 text-sm text-on-brand/90">
+      <span className="shrink-0 rounded bg-on-brand/15 px-1.5 font-medium text-on-brand">
+        {t(scene.kind === 'move' ? 'sceneMove' : 'sceneMerge')}
       </span>
-      <span className="rounded-md bg-kumo-brand px-2 text-sm font-medium text-on-brand">
-        {panelNames[kind]}
-      </span>
-    </div>
+      <span>{t(captions[scene.kind][scene.from])}</span>
+    </p>
   );
 }
 
-/** The brand side of the sign-in page: the two panels Karvan moves users between. */
+/** The brand side of the sign-in page: a spinning globe moving users between panels. */
 export function LoginShowcase() {
   const t = useT(loginMessages);
+  const [scene, setScene] = useState(0);
   return (
     <section className="relative hidden min-h-dvh flex-col overflow-hidden bg-kumo-brand text-on-brand lg:flex">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute start-[-5%] top-[40%] aspect-square w-[110%]"
-      >
-        <img src={globeUrl} alt="" loading="lazy" decoding="async" className="size-full" />
-        <Stop kind="marzban" at={routeFrom} />
-        <Stop kind="pasarguard" at={routeTo} />
-      </div>
+      <Suspense fallback={null}>
+        <LoginGlobe onScene={setScene} />
+      </Suspense>
 
       <div className="relative flex justify-end gap-1 p-6">
         <LanguageSwitch className={onBrandButton} />
@@ -50,6 +48,7 @@ export function LoginShowcase() {
         </p>
         <h2 className="mt-3 text-[28px] leading-tight font-bold text-balance">{t('tagline')}</h2>
         <p className="mt-3 text-on-brand/85">{t('taglineDetail')}</p>
+        <Caption scene={sceneAt(scene)} />
       </div>
     </section>
   );
