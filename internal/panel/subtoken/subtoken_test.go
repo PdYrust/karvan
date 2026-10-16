@@ -38,7 +38,7 @@ func load(t *testing.T) vectors {
 	return v
 }
 
-func TestMintMatchesThePanels(t *testing.T) {
+func TestMintMatchesMarzban(t *testing.T) {
 	v := load(t)
 	for _, m := range v.Marzban {
 		if got := Marzban(m.Username, v.Secret, time.Unix(m.TS, 0)); got != m.Token {
@@ -49,6 +49,10 @@ func TestMintMatchesThePanels(t *testing.T) {
 			t.Errorf("Parse(%s) = %+v %v", m.Token, p, ok)
 		}
 	}
+}
+
+func TestMintMatchesPasarGuard(t *testing.T) {
+	v := load(t)
 	for _, g := range v.PasarGuard {
 		if got := PasarGuard(g.ID, v.Secret, time.Unix(g.TS, 0)); got != g.Token {
 			t.Errorf("PasarGuard(%d) = %s, want %s", g.ID, got, g.Token)
@@ -58,6 +62,10 @@ func TestMintMatchesThePanels(t *testing.T) {
 			t.Errorf("Parse(%s) = %+v %v", g.Token, p, ok)
 		}
 	}
+}
+
+func TestLegacyHexSignatures(t *testing.T) {
+	v := load(t)
 	for _, l := range v.LegacyHex {
 		if !LegacyValid(l.Token, v.Secret) || LegacyValid(l.Token, "other") {
 			t.Errorf("hex legacy %s", l.Payload)
