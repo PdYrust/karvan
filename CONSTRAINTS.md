@@ -50,8 +50,8 @@ The Lighthouse numbers are the "good" band of Core Web Vitals; accessibility is 
 ## Measured, not yet meeting the bar
 | Metric | Today | Target | Direction |
 |---|---|---|---|
-| Lighthouse mobile performance, sign-in | 70 to 83 (2026-10-16, host benchmark 340 to 550, CPU multiplier 1) | 90 | must not fall |
-| Lighthouse mobile performance, overview | 67 to 72 (same run) | 90 | must not fall |
+| Lighthouse mobile performance, sign-in | 89 (2026-10-16, after the restyle; load average about 4.5, CPU multiplier 1) | 90 | must not fall |
+| Lighthouse mobile performance, overview | 74 (same run) | 90 | must not fall |
 
 ## Exceptions
 | ID | Rule | Path | Reason | Owner | Expires |
