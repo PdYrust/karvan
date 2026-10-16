@@ -1,16 +1,17 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { useEffect } from 'react';
+import { useSession } from '../session/use-session';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { useLocale, useT } from '../../i18n/locale';
 import { sharedMessages } from '../../i18n/shared';
 import { ApiError, offline } from '../../lib/api/client';
 import { formatLongDate, formatTime } from '../../lib/format/date';
-import { ActivitySection } from './ActivitySection';
+import { ActivityTable } from './ActivityTable';
 import { overviewMessages } from './messages';
+import { OverviewAside } from './OverviewAside';
 import { OverviewSkeleton } from './OverviewSkeleton';
 import { PanelsSection } from './PanelsSection';
-import { SafeModeSection, SecuritySection } from './StatusSections';
 import { useNow } from './use-now';
 import { useOverview } from './use-overview';
 
@@ -20,6 +21,7 @@ export function OverviewPage() {
   const { locale } = useLocale();
   const now = useNow();
   const overview = useOverview();
+  const username = useSession().data?.operator?.username ?? '';
 
   useEffect(() => {
     document.title = t('pageTitle');
@@ -33,31 +35,31 @@ export function OverviewPage() {
   } else if (overview.isError) {
     const isOffline = overview.error instanceof ApiError && overview.error.code === offline;
     body = (
-      <div className="flex flex-col items-start gap-3">
+      <div className="flex flex-col items-start gap-3 p-4 sm:p-8">
         <InlineAlert>
           {t('loadFailed')} {isOffline ? ts('errorOffline') : ts('errorServer')}
         </InlineAlert>
-        <Button className="h-11 sm:h-9 pointer-coarse:h-11" onClick={() => void overview.refetch()}>
+        <Button className="h-9 pointer-coarse:h-11" onClick={() => void overview.refetch()}>
           {ts('retry')}
         </Button>
       </div>
     );
   } else {
-    const data = overview.data;
     body = (
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-        <div className="lg:row-span-2">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className="flex min-w-0 flex-col gap-6 p-4 sm:p-8">
           <PanelsSection />
+          <ActivityTable entries={overview.data.activity} now={now} />
         </div>
-        <SafeModeSection on={data.safeMode} />
-        <SecuritySection security={data.security} now={now} />
-        <ActivitySection entries={data.activity} now={now} className="lg:col-span-2" />
+        <aside className="border-t border-kumo-hairline p-4 sm:p-8 lg:border-t-0 lg:border-s">
+          <OverviewAside data={overview.data} username={username} now={now} />
+        </aside>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[70rem] flex-col gap-6 px-4 py-6 sm:px-6 sm:py-8">
+    <div className="flex flex-col">
       <PageHeader title={t('title')} description={today} />
       {body}
     </div>

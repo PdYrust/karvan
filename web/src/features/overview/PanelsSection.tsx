@@ -1,8 +1,7 @@
 import { Button } from '@cloudflare/kumo/components/button';
-import { ArrowsClockwiseIcon } from '@phosphor-icons/react';
-import { GirihPattern } from '../../components/brand/GirihPattern';
-import { Mark } from '../../components/brand/Mark';
+import { ArrowsClockwiseIcon, HardDrivesIcon } from '@phosphor-icons/react';
 import { Section } from '../../components/layout/Section';
+import { PanelLogo } from '../../components/panels/PanelLogo';
 import { useT } from '../../i18n/locale';
 import { useScanPanels } from '../panels/use-scan-panels';
 import { overviewMessages } from './messages';
@@ -14,23 +13,35 @@ export function PanelsSection() {
 
   return (
     <Section title={t('panelsTitle')}>
-      <div className="relative overflow-hidden px-5 py-12 sm:py-16">
-        <GirihPattern className="pointer-events-none absolute inset-0 text-kumo-hairline [mask-image:radial-gradient(closest-side,currentColor,transparent)]" />
-        <div className="relative mx-auto flex max-w-md flex-col items-center gap-3 text-center">
-          <Mark size={56} className="opacity-90" />
-          <h3 className="mt-2 text-heading font-semibold text-kumo-strong">
-            {t('panelsEmptyTitle')}
-          </h3>
-          <p className="text-balance text-kumo-subtle">{t('panelsEmptyBody')}</p>
-          <Button
-            className="mt-3 h-11 sm:h-9 pointer-coarse:h-11"
-            icon={<ArrowsClockwiseIcon size={16} />}
-            loading={scanning}
-            onClick={() => void scan()}
-          >
-            {t('scanAgain')}
-          </Button>
+      <div className="flex flex-col items-center gap-3 px-6 pt-8 pb-10 text-center">
+        <HardDrivesIcon size={44} weight="light" aria-hidden="true" className="text-kumo-default" />
+        <h3 className="mt-1 text-[20px] leading-tight font-semibold text-kumo-strong">
+          {t('panelsEmptyTitle')}
+        </h3>
+        <p className="max-w-md text-balance text-kumo-subtle">{t('panelsEmptyBody')}</p>
+        <div
+          className="flex items-center gap-4 text-sm text-kumo-subtle"
+          aria-label={t('panelsSupported')}
+        >
+          <span className="flex items-center gap-2 text-kumo-default">
+            <PanelLogo kind="marzban" size={18} />
+            Marzban
+          </span>
+          <span className="flex items-center gap-2 text-kumo-default">
+            <span className="rounded-sm bg-on-brand">
+              <PanelLogo kind="pasarguard" size={18} />
+            </span>
+            PasarGuard
+          </span>
         </div>
+        <Button
+          className="mt-2 h-9 pointer-coarse:h-11"
+          icon={<ArrowsClockwiseIcon size={16} />}
+          loading={scanning}
+          onClick={() => void scan()}
+        >
+          {t('scanAgain')}
+        </Button>
       </div>
     </Section>
   );

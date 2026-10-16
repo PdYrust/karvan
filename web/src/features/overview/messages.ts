@@ -1,3 +1,4 @@
+import type { Message } from '../../i18n/core';
 import type { Messages } from '../../i18n/locale';
 
 const en = {
@@ -16,16 +17,21 @@ const en = {
   off: 'Off',
   safeModeBody:
     'Every migration starts with a backup of the destination, and a failed run is rolled back.',
-  securityTitle: 'Account security',
   twoStep: 'Two-step sign-in',
   twoStepOffHint:
     'Ask for a code from your phone at every sign-in. You can turn it on from Security, coming next.',
   twoStepOnHint: 'Every sign-in asks for a code from your phone.',
   previousSignIn: 'Previous sign-in',
-  previousSignInValue: '{when} from',
   firstSignIn: 'This is the first sign-in.',
   activityTitle: 'Recent activity',
   activityEmpty: 'Nothing has happened yet.',
+  activityShowing: { one: 'Showing the latest event', other: 'Showing the latest {count} events' },
+  colEvent: 'Event',
+  colFrom: 'From',
+  colWhen: 'When',
+  accountTitle: 'Account',
+  signedInAs: 'Signed in as',
+  panelsSupported: 'Supported panels',
   'act.login.success': 'Signed in',
   'act.login.failure': 'A sign-in failed',
   'act.logout.success': 'Signed out',
@@ -41,7 +47,7 @@ const en = {
 
 type Key = keyof typeof en;
 
-const fa: Record<Key, string> = {
+const fa: Record<Key, Message> = {
   pageTitle: 'نمای کلی · کاروان',
   title: 'نمای کلی',
   today: '{date}؛ ساعت {time} به وقت تهران.',
@@ -57,15 +63,20 @@ const fa: Record<Key, string> = {
   off: 'خاموش',
   safeModeBody:
     'هر انتقال با گرفتن پشتیبان از مقصد شروع می‌شود و اگر کار نیمه‌کاره بماند، همه‌چیز برمی‌گردد.',
-  securityTitle: 'امنیت حساب',
   twoStep: 'ورود دومرحله‌ای',
   twoStepOffHint: 'در هر ورود، کدی از گوشی‌تان خواسته می‌شود. روشن کردنش از بخش امنیت، به‌زودی.',
   twoStepOnHint: 'هر ورود به کدی از گوشی‌تان نیاز دارد.',
   previousSignIn: 'ورود قبلی',
-  previousSignInValue: '{when} از',
   firstSignIn: 'این اولین ورود است.',
   activityTitle: 'رویدادهای اخیر',
   activityEmpty: 'هنوز رویدادی ثبت نشده.',
+  activityShowing: { one: 'آخرین رویداد', other: '{count} رویداد آخر' },
+  colEvent: 'رویداد',
+  colFrom: 'از',
+  colWhen: 'زمان',
+  accountTitle: 'حساب',
+  signedInAs: 'وارد شده با',
+  panelsSupported: 'پنل‌های پشتیبانی‌شده',
   'act.login.success': 'ورود انجام شد',
   'act.login.failure': 'یک ورود ناموفق بود',
   'act.logout.success': 'خروج انجام شد',
