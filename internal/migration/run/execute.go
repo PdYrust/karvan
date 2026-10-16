@@ -144,6 +144,7 @@ func (s *Service) execute(ctx context.Context, j *Job, hash string, o Options) {
 	}
 	switch {
 	case err == nil:
+		s.links(ctx, j, w, rep)
 		s.reload(ctx, j, rep, o.Reload)
 		j.state = StateDone
 	case rep.State == StateRolledBack:
@@ -161,8 +162,24 @@ func (s *Service) execute(ctx context.Context, j *Job, hash string, o Options) {
 	s.emit(j, "", EventDone, map[string]any{"state": j.state})
 }
 
+// links adds each moved user's new subscription link to the report. A
+// failure here only leaves the links out; the move itself is done.
+func (s *Service) links(ctx context.Context, j *Job, p *prepared, rep *Report) {
+	l, err := p.panel.Links(ctx, p.adminID)
+	if err != nil {
+		s.emit(j, StageVerify, EventLog, map[string]any{"code": "links_unavailable"})
+		return
+	}
+	for i := range rep.Users {
+		if u := &rep.Users[i]; u.Moved {
+			u.NewLink = l.Link(u.DestID, u.Username, s.now())
+		}
+	}
+}
+
 // prepared holds what the write stages share.
 type prepared struct {
+	panel   *dest.Panel
 	db      *paneldb.Writer
 	target  paneldb.Target
 	writer  dest.Writer
@@ -198,7 +215,7 @@ func (s *Service) prepare(ctx context.Context, j *Job, rep *Report) (*prepared, 
 		_ = db.Close()
 		return nil, err
 	}
-	p := &prepared{db: db, target: d.Target, dest: d.Target.String(), unlock: unlock,
+	p := &prepared{db: db, target: d.Target, dest: d.Target.String(), unlock: unlock, panel: d,
 		writer: dest.NewWriter(j.facts.Kind, db.Server().Dialect, j.facts)}
 	if err := s.settle(ctx, j, p); err != nil {
 		p.release()

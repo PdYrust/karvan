@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"strings"
 	"testing"
 	"time"
 
@@ -16,6 +17,7 @@ import (
 	"github.com/PdYrust/karvan/internal/panel/paneldb/paneldbtest"
 	"github.com/PdYrust/karvan/internal/panel/pasarguarddb"
 	"github.com/PdYrust/karvan/internal/panel/source"
+	"github.com/PdYrust/karvan/internal/panel/subtoken"
 	"github.com/PdYrust/karvan/internal/secret"
 	"github.com/PdYrust/karvan/internal/store"
 )
@@ -154,6 +156,7 @@ func TestMoveAndMoveAgain(t *testing.T) {
 		if n := h.count("users"); n != 12 {
 			t.Fatalf("%d users on the destination", n)
 		}
+		checkLinks(t, rep, to)
 		// The same migration again creates nothing and merges into the admin.
 		again := h.run(h.job(nil), true)
 		if again.State != StateDone || again.Counts.Moved != 0 || !again.Admin.Merged {
@@ -294,5 +297,25 @@ func TestRecoverSettlesAnInterruptedJob(t *testing.T) {
 	done, _ := h.svc.ledger.Job(ctx, rep.JobID, ledger.Done)
 	if state != StateInterrupted || len(done) != 6 {
 		t.Fatalf("state %s, %d rows settled as done", state, len(done))
+	}
+}
+
+// checkLinks makes sure each new link carries a token the destination
+// itself would accept for that user.
+func checkLinks(t *testing.T, rep *Report, to panel.Kind) {
+	t.Helper()
+	for _, u := range rep.Users {
+		i := strings.LastIndex(u.NewLink, "/sub/")
+		if !u.Moved || i < 0 {
+			t.Fatalf("no link for %s: %q", u.Key, u.NewLink)
+		}
+		token := u.NewLink[i+len("/sub/"):]
+		p, ok := subtoken.Parse(token)
+		if to == panel.PasarGuard && (!ok || p.UserID != u.DestID || subtoken.PasarGuard(u.DestID, migrationtest.JWTSecret, p.Issued) != token) {
+			t.Fatalf("bad PasarGuard link %q", u.NewLink)
+		}
+		if to == panel.Marzban && (!ok || p.Username != u.Username || !subtoken.LegacyValid(token, migrationtest.JWTSecret)) {
+			t.Fatalf("bad Marzban link %q", u.NewLink)
+		}
 	}
 }
