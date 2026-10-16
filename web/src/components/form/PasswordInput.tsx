@@ -14,11 +14,12 @@ type PasswordInputProps = Omit<ComponentProps<typeof Input>, 'type'> & {
 export function PasswordInput({ showLabel, hideLabel, className, ...props }: PasswordInputProps) {
   const [visible, setVisible] = useState(false);
   return (
-    <div className="relative">
+    // Passwords are typed left to right, so the wrapper sets the direction:
+    // the padding and the button then sit on the same side in RTL too.
+    <div dir="ltr" className="relative">
       <Input
         {...props}
         type={visible ? 'text' : 'password'}
-        dir="ltr"
         spellCheck={false}
         autoCapitalize="off"
         className={`w-full pe-11 ${className ?? ''}`}
