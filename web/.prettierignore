@@ -1,5 +1,5 @@
 dist
 coverage
 pnpm-lock.yaml
-src/components/brand/logo-geometry.ts
+src/features/login/globe.svg
 public/favicon.svg

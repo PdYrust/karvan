@@ -12,7 +12,7 @@ import { loginMessages } from './messages';
 import { useCountdown } from './use-countdown';
 import { useSignIn, type SignInError } from './use-sign-in';
 
-const inputClass = 'h-11 text-base';
+const inputClass = 'h-10 pointer-coarse:h-11';
 
 export function SignInForm() {
   const t = useT(loginMessages);
@@ -47,11 +47,11 @@ export function SignInForm() {
   const totp = s.step === 'totp';
   return (
     <form onSubmit={onSubmit} noValidate className="flex flex-col gap-5">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-title font-bold text-kumo-strong">
+      <div className="flex flex-col gap-2 text-center">
+        <h1 className="text-[24px] leading-tight font-semibold text-kumo-strong">
           {totp ? t('totpTitle') : t('title')}
         </h1>
-        <p className="text-kumo-subtle">{totp ? t('totpHint') : t('subtitle')}</p>
+        {totp ? <p className="text-kumo-subtle">{t('totpHint')}</p> : null}
       </div>
 
       {totp ? (
@@ -119,7 +119,7 @@ export function SignInForm() {
           size="lg"
           loading={s.pending}
           disabled={locked || (totp && s.fields.code.length !== 6)}
-          className="h-11 w-full justify-center"
+          className="h-10 w-full justify-center pointer-coarse:h-11"
         >
           {s.pending ? t('submitting') : totp ? t('totpSubmit') : t('submit')}
         </Button>
@@ -129,7 +129,7 @@ export function SignInForm() {
             variant="ghost"
             onClick={s.back}
             icon={<ArrowLeftIcon size={16} className="rtl:-scale-x-100" />}
-            className="h-11 w-full justify-center"
+            className="h-10 w-full justify-center pointer-coarse:h-11"
           >
             {t('totpBack')}
           </Button>

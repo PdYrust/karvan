@@ -4,7 +4,7 @@
 Accepted, 2026-10-16
 
 ## Context
-The panel is reachable from the internet. Scanners probe every address; a leaked URL can reach the sign-in page. The owner wants a branded sign-in page with the logo, the name and a 3D mark.
+The panel is reachable from the internet. Scanners probe every address; a leaked URL can reach the sign-in page. The owner wants a branded sign-in page with the logo and the name. (A 3D mark was planned at first and later dropped; the page now shows a dotted globe with the Marzban and PasarGuard logos. The decision below does not change.)
 
 ## Decision
 - **Hidden base path.** Everything lives under `/<16 random characters>/`. Anything else, a wrong method on a real route, an unclean or encoded path, `OPTIONS *`, or a missing asset gets the same `404 Not Found` bytes, with every earlier header removed. Go's default 404 body is not used because it identifies the server.

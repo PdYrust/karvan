@@ -6,7 +6,6 @@ import { gzipSync } from 'node:zlib';
 
 const budgetsKB = {
   'login (JS)': 145,
-  'login 3D logo (JS, lazy)': 180,
   'app (JS)': 260,
   'stylesheet (CSS)': 35,
 };
@@ -15,12 +14,12 @@ const dist = new URL('../dist/', import.meta.url);
 const manifest = JSON.parse(readFileSync(new URL('.vite/manifest.json', dist), 'utf8'));
 const gz = (file) => gzipSync(readFileSync(new URL(file, dist))).length;
 
-function closure(key, { dynamic = false } = {}, seen = new Set()) {
+function closure(key, seen = new Set()) {
   if (seen.has(key)) return seen;
   seen.add(key);
   const c = manifest[key];
-  for (const k of [...(c.imports ?? []), ...(dynamic ? (c.dynamicImports ?? []) : [])]) {
-    closure(k, { dynamic }, seen);
+  for (const k of c.imports ?? []) {
+    closure(k, seen);
   }
   return seen;
 }
@@ -29,13 +28,10 @@ const files = (keys) => new Set([...keys].map((k) => manifest[k].file));
 const sum = (set) => [...set].reduce((n, f) => n + gz(f), 0);
 
 const loginStatic = files(closure('login.html'));
-const loginAll = files(closure('login.html', { dynamic: true }));
-const lazy = new Set([...loginAll].filter((f) => !loginStatic.has(f)));
 const css = new Set(Object.values(manifest).flatMap((c) => c.css ?? []));
 
 const measured = {
   'login (JS)': sum(loginStatic),
-  'login 3D logo (JS, lazy)': sum(lazy),
   'app (JS)': sum(files(closure('index.html'))),
   'stylesheet (CSS)': sum(css),
 };

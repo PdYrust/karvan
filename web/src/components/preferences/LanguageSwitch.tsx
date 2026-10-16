@@ -1,35 +1,29 @@
 import { cn } from '@cloudflare/kumo/utils';
-import { locales } from '../../i18n/core';
+import { GlobeIcon } from '@phosphor-icons/react';
 import { useLocale, useT } from '../../i18n/locale';
 import { languageNames, sharedMessages } from '../../i18n/shared';
 
-/** Two-option switch; each name is written in its own language. */
+/**
+ * One button that switches to the other language. Its text is the other
+ * language's own name, so a reader of either can find it.
+ */
 export function LanguageSwitch({ className }: { className?: string }) {
   const { locale, setLocale } = useLocale();
   const t = useT(sharedMessages);
+  const other = locale === 'fa' ? 'en' : 'fa';
   return (
-    <div
-      role="group"
-      aria-label={t('languageLabel')}
-      className={cn('inline-flex rounded-lg bg-kumo-recessed p-0.5 ring ring-kumo-line', className)}
+    <button
+      type="button"
+      lang={other}
+      onClick={() => setLocale(other)}
+      aria-label={`${t('languageLabel')}: ${languageNames[other]}`}
+      className={cn(
+        'inline-flex min-h-9 items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors pointer-coarse:min-h-11',
+        className ?? 'text-kumo-default hover:bg-kumo-tint',
+      )}
     >
-      {locales.map((l) => (
-        <button
-          key={l}
-          type="button"
-          lang={l}
-          aria-pressed={locale === l}
-          onClick={() => setLocale(l)}
-          className={cn(
-            'min-h-9 rounded-md px-3 text-sm transition-colors pointer-coarse:min-h-11',
-            locale === l
-              ? 'bg-kumo-base font-semibold text-kumo-strong shadow-[0_1px_0_var(--color-kumo-shadow-edge)]'
-              : 'text-kumo-subtle hover:text-kumo-default',
-          )}
-        >
-          {languageNames[l]}
-        </button>
-      ))}
-    </div>
+      <GlobeIcon size={16} aria-hidden="true" />
+      {languageNames[other]}
+    </button>
   );
 }

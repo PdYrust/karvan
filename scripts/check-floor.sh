@@ -34,8 +34,8 @@ report ai-reference '\b(Claude|Anthropic|ChatGPT|OpenAI|Copilot|Gemini|Kiro|LLM)
 mapfile -t web_src < <(printf '%s\n' "${files[@]}" | grep -E '^web/src/.*\.(ts|tsx|css)$' | grep -v '^web/src/styles/tokens\.css$' || true)
 if [ ${#web_src[@]} -gt 0 ]; then
   report raw-color '#[0-9a-fA-F]{3,8}\b|\b(rgba?|hsla?|oklch|oklab|lab|lch|hwb|color-mix)\(' "${web_src[@]}"
-  # Named colors in class strings, CSS values and three.js colors.
-  report raw-color "\b(bg|text|fill|stroke|border|ring|from|to|via)-(black|white)\b|:\s*(black|white)\b|new Color\(['\"][a-z]" "${web_src[@]}"
+  # Named colors in class strings and CSS values.
+  report raw-color "\b(bg|text|fill|stroke|border|ring|from|to|via)-(black|white)\b|:\s*(black|white)\b" "${web_src[@]}"
 fi
 
 if git rev-parse --verify -q HEAD >/dev/null; then

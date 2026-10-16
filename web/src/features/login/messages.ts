@@ -2,8 +2,7 @@ import type { Messages } from '../../i18n/locale';
 
 const en = {
   pageTitle: 'Sign in · Karvan',
-  title: 'Sign in',
-  subtitle: 'Use the username and password Karvan showed when it was installed.',
+  title: 'Sign in to Karvan',
   username: 'Username',
   password: 'Password',
   showPassword: 'Show password',
@@ -20,17 +19,17 @@ const en = {
   errorTotpInvalid:
     'That code didn’t work. Codes change every 30 seconds, so enter the one on screen now.',
   errorLocked: 'Too many failed tries. You can try again in {time}.',
-  lostAccess: 'Lost access? On the server, run:',
+  lostAccess: 'Lost your password? On the server, run',
   tagline: 'Move your users to a new panel. Their configs keep working.',
-  taglineDetail: 'UUIDs and passwords stay the same, so nobody has to set up their app again.',
+  taglineDetail:
+    'Marzban or PasarGuard, in either direction. UUIDs and passwords stay the same, so nobody sets up their app again.',
 };
 
 type Key = keyof typeof en;
 
 const fa: Record<Key, string> = {
   pageTitle: 'ورود · کاروان',
-  title: 'ورود',
-  subtitle: 'با نام کاربری و رمزی وارد شوید که کاروان هنگام نصب نشان داد.',
+  title: 'ورود به کاروان',
   username: 'نام کاربری',
   password: 'رمز عبور',
   showPassword: 'نمایش رمز',
@@ -47,9 +46,10 @@ const fa: Record<Key, string> = {
   errorTotpInvalid:
     'این کد پذیرفته نشد. کدها هر ۳۰ ثانیه عوض می‌شوند؛ کدی را که الان می‌بینید وارد کنید.',
   errorLocked: 'تلاش ناموفق زیاد بود. {time} دیگر دوباره امتحان کنید.',
-  lostAccess: 'دسترسی را از دست داده‌اید؟ روی سرور اجرا کنید:',
+  lostAccess: 'رمز را فراموش کرده‌اید؟ روی سرور اجرا کنید',
   tagline: 'کاربران را به پنل تازه ببرید. کانفیگ‌هایشان همان‌طور کار می‌کند.',
-  taglineDetail: 'UUID و رمزها عوض نمی‌شوند، پس کسی لازم نیست برنامه‌اش را از نو تنظیم کند.',
+  taglineDetail:
+    'از مرزبان یا پاسارگارد، به هر سمت. UUID و رمزها عوض نمی‌شوند، پس کسی لازم نیست برنامه‌اش را از نو تنظیم کند.',
 };
 
 export const loginMessages: Messages<Key> = { en, fa };
