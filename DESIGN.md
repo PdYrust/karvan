@@ -4,54 +4,37 @@ Read this before building or changing any page. If something here is wrong, fix 
 
 ## 1. Identity
 
-Karvan moves people's users from one panel to another. A caravan (کاروان) crosses the desert from one caravanserai to the next and arrives with everything it set out with. The panel should feel the same: calm, careful, and sure of the road.
+Karvan moves users from one panel to another, and their configs keep working. The panel should look like the tool it sits next to: a clean operator console in the style of the Cloudflare dashboard, built on Cloudflare's Kumo components.
 
-- **Mark:** an eight-pointed Persian star (khatam, from girih tilework) in firouzeh turquoise, cut by a road, with saffron dashes along the road. Source of truth: `scripts/brand/logo.py`. Every logo, favicon and the 3D logo is generated from its polygons.
-- **3D mark (sign-in only):** the same polygons extruded as a glazed tile, with the road as a darker bed and the dashes as a gold inlay.
-- **Name:** "Karvan" in English, «کاروان» in Persian. Set in Vazirmatn ExtraBold. Never stretched, outlined or given effects.
-- **Mood:** glazed tile and night travel. Light theme: kahgel plaster walls in daylight. Dark theme: the desert at night, lamp-warm text on cool dark.
-- **Calmer than a cloud console.** Karvan does fewer things. Fewer colors on screen, more space, one clear action per area.
+- **Mark ("Merge"):** two overlapping rounded squares in white on a Kumo-blue rounded tile, with the overlap filled. One panel, another panel, and what they share. Source of truth: `web/src/components/brand/Mark.tsx` (viewBox 64, tile radius 14, stroke 3.2). `web/public/favicon.svg` and `docs/brand/karvan-mark.svg` are static copies with the blue written as `#056dff`.
+- **Name:** "Karvan" in English, «کاروان» in Persian, set in Vazirmatn semibold next to the mark (`Wordmark.tsx`). Never stretched, outlined or given effects.
+- **Mood:** calm, flat and exact. White and grey surfaces, hairlines, one blue.
+
+### Panel logos
+The sign-in page and the overview show the Marzban and PasarGuard logos to say which panels Karvan works with. Both projects are AGPL-3.0, like Karvan; the logos are used only to name them, never to suggest they endorse Karvan.
+- Marzban: its logo path, inline in `components/panels/PanelLogo.tsx`, drawn in `currentColor`.
+- PasarGuard: its `logo-dark.png`, resized to 128 px (`components/panels/pasarguard.png`). Always shown on a white tile so it reads in both themes.
 
 ### Where boldness goes
 Only one place per screen gets the memorable treatment:
-- Login: the 3D star.
+- Sign-in: the blue side with the dotted globe.
 - Every other page: the content itself. Chrome stays quiet.
 
 ## 2. Color
 
-Colors exist only as tokens in `web/src/styles/tokens.css`. Components use Kumo semantic classes (`bg-kumo-base`, `text-kumo-subtle`, ...) or the Karvan brand classes (`text-karvan-firouzeh`, `fill-karvan-saffron`). **No color literal anywhere else** (the floor check fails the build).
+Karvan uses Kumo's palette as it ships: neutral greys for surfaces and text, Kumo blue as the brand, Kumo's status colors. Components use Kumo semantic classes (`bg-kumo-base`, `bg-kumo-tint`, `text-kumo-subtle`, `border-kumo-hairline`, `bg-kumo-brand`, ...).
 
-### Brand
-| Token | Light | Dark | Use |
-|---|---|---|---|
-| firouzeh | `oklch(46% 0.085 196)` | `oklch(76% 0.1 188)` | the mark, links, focus rings, selected state |
-| brand (button fill) | `oklch(46% 0.085 196)` | `oklch(49% 0.088 194)` | primary buttons only; white text on both |
-| saffron | `oklch(68% 0.15 62)` | `oklch(80% 0.14 75)` | the road: dashes, active-route marks, progress. Never body text |
+`web/src/styles/tokens.css` holds the only color Karvan adds:
 
-### Neutrals
-Light neutrals carry a trace of sand (hue 75 to 80, chroma 0.002 to 0.012). They stay close to white, so the page never turns cream. Dark neutrals lean cool (hue 220, chroma about 0.013), like night sky over sand. Dark text stays warm (hue 85).
-
-| Role | Light | Dark |
+| Token | Value | Use |
 |---|---|---|
-| canvas (page) | 97.6% | 15.5% |
-| base (panels, inputs) | 99.4% | 19% |
-| recessed | 95.4% | 14% |
-| hairline | 91.5% | 26% |
-| text default | 25.5% | 93% |
-| text subtle | 50% | 72% |
+| `on-brand` | white | text, icons and marks drawn on `bg-kumo-brand` |
 
-### Status
-| Meaning | Name | Solid light / dark |
-|---|---|---|
-| success | pistachio | `oklch(58% 0.12 150)` / `oklch(72% 0.13 150)` |
-| warning | saffron | `oklch(74% 0.15 70)` / `oklch(72% 0.15 68)` |
-| danger | pomegranate (anar) | `oklch(57% 0.19 25)` / `oklch(64% 0.19 25)` |
-| info | lapis (lajvard) | `oklch(55% 0.12 250)` / `oklch(70% 0.11 245)` |
+**No color literal anywhere else** in `web/src` (the floor check fails the build). If a new color is truly needed, add a token there and a row here.
 
-Status is never shown by color alone. It always comes with an icon and a word.
-
-### Contrast
-Body text is at least 4.5:1 on its surface in both themes, and large text and icons at least 3:1. Check new pairs with a contrast tool before adding a token.
+- `text-kumo-brand` is Cloudflare orange in Kumo. For blue text use `text-(--color-kumo-brand)`.
+- Status is never shown by color alone. It always comes with an icon and a word.
+- **Contrast:** body text at least 4.5:1 on its surface in both themes; large text and icons at least 3:1. Check new pairs before adding a token.
 
 ## 3. Type
 
@@ -60,77 +43,96 @@ Body text is at least 4.5:1 on its surface in both themes, and large text and ic
 
 | Step | Size / line-height (en) | fa | Weight | Use |
 |---|---|---|---|---|
-| display | 28 / 36 | 28 / 40 | 800 | login wordmark only |
-| title | 22 / 30 | 22 / 34 | 700 | page title (one `h1` per page) |
-| heading | 16 / 24 | 16 / 26 | 650 | section titles (`h2`) |
+| display | 28 / 36 | 28 / 40 | 700 | sign-in tagline only |
+| title | 22 / 30 | 22 / 34 | 600 | page title (one `h1` per page) |
+| heading | 16 / 24 | 16 / 26 | 600 | card and section titles (`h2`) |
 | body | 14 / 22 | 15 / 26 | 400 | default |
-| small | 13 / 20 | 13 / 22 | 400 | helper text, meta |
+| small | 13 / 20 | 13 / 22 | 400 | helper text, meta, table cells |
 | tiny | 12 / 16 | 12 / 18 | 500 | badges, counters |
 
-- Persian runs one step looser in line-height; Vazirmatn's tall forms need it.
+- Sizes live in `web/src/styles/type.css`. Persian runs one step looser in line-height; Vazirmatn's tall forms need it.
 - Sentence case everywhere. **No all-caps labels**, no letter-spaced eyebrows.
 - Numbers in tables and counters use tabular figures.
 - Line length stays under 75 characters for paragraphs.
 
 ## 4. Space, radius, elevation
 
-- **Spacing scale (px):** 4, 8, 12, 16, 20, 24, 32, 40, 56. Nothing off-scale, with two exceptions: 2 px optical nudges (aligning an icon with the first line of text), and 2 or 6 px padding inside small inline elements (badges, keyboard keys, chips).
-- **Layout:** sidebar 256 wide, top bar 56 high, content max 1120 with 24 gutters (16 under 640).
-- **Radius has hierarchy:** 6 for small controls (badges, chips); 8 for buttons and inputs; 12 for panels; 16 for dialogs and the login card. Pills only for status dots.
-- **Elevation:** surfaces are flat and separated by a 1px hairline plus a background step. Shadows only on things that float: menus, popovers, dialogs, toasts. No soft shadows under panels.
+- **Spacing scale (px):** 4, 8, 12, 16, 20, 24, 32, 40, 56. Nothing off-scale, except 2 px optical nudges and 2 or 6 px padding inside small inline elements (badges, keyboard keys).
+- **Layout:** sidebar 256 wide, top bar and sidebar header 56 high, content gutters 32 (16 under 640). Pages with side information use a main column plus a 352 aside, split by a hairline.
+- **Radius:** 6 for badges and nav rows; 8 for buttons, inputs and cards; 12 for dialogs and the command palette. Pills only for "Soon" tags and status dots.
+- **Elevation:** surfaces are flat, separated by a 1 px hairline. Shadows only on things that float: menus, popovers, dialogs, the mobile sheet, toasts. Cards have no shadow.
 
 ## 5. Motion
 
 - State changes: 150 ms, ease-out. Drawers and dialogs: 220 ms. Nothing bounces.
-- Motion answers an action (open, expand, confirm), or shows real progress. No entrance animations on page load. The login 3D star is the single exception: a slow sway (14 s per swing) that leans a little toward the pointer, and a 700 ms fade from the flat mark.
-- `prefers-reduced-motion: reduce`: no transforms or autoplay. Fades shorten to 1 ms. The 3D star is replaced by the flat mark.
-- Weak devices (2 GB memory or less, no WebGL, slow first frames) get the flat mark too.
+- Motion answers an action (open, expand, confirm) or shows real progress. No entrance animations on page load, the sign-in page included.
+- `prefers-reduced-motion: reduce`: no transforms or autoplay; transitions shorten to 1 ms.
 
 ## 6. Icons
 
-- Phosphor, `regular` weight, 20 px in navigation and buttons, 16 px inline. `bold` marks the current nav item.
-- Icons never stand in for words in primary actions. Icon-only buttons have an `aria-label` and a tooltip.
+- Phosphor, `regular` weight: 18 px in navigation, 20 px in buttons, 16 px inline.
+- Icons never stand in for words in primary actions. Icon-only buttons have an `aria-label` and a title or tooltip.
 - No emoji in the UI.
 
 ## 7. RTL and languages
 
 - `<html lang dir>` is set before first paint (`public/boot.js`). Persian is the default.
-- Use logical properties only: `ms-* me-* ps-* pe-* start-* end-* border-s border-e rounded-s rounded-e text-start`. Physical `left/right` classes are a bug.
-- Icons that point a direction (arrows, chevrons, "back") flip in RTL with `rtl:-scale-x-100`. The logo never flips.
-- Machine values (UUID, IP, port, path, username) are wrapped in `<bdi dir="ltr">` and stay in Latin digits.
+- Use logical properties only: `ms-* me-* ps-* pe-* start-* end-* border-s border-e rounded-s rounded-e text-start`. Physical `left/right` classes are a bug. In an RTL flex column `self-start` is already the right edge; do not add `rtl:` overrides to "fix" it.
+- Icons that point a direction (arrows, chevrons, sign out) flip in RTL with `rtl:-scale-x-100`. The logo, the panel logos and the globe never flip.
+- Machine values (UUID, IP, port, path, username, commands) are wrapped in `<bdi dir="ltr">` or `dir="ltr"` and stay in Latin digits.
 - Persian text uses Persian digits (۰–۹); English uses Latin digits. `src/lib/format` does this; never format numbers by hand.
-- Dates: Jalali calendar and Asia/Tehran by default, Gregorian in English unless the operator chooses otherwise. Times say which zone they are in when it matters ("at 18:40 Tehran time").
-- Kumo components that use physical classes (Sidebar, InputGroup, Combobox, Dropdown, Toast) get checked in RTL; any broken one gets a wrapper in `src/components/` instead of being used raw.
+- Dates: Jalali calendar and Asia/Tehran by default, Gregorian in English unless the operator chooses otherwise. Times say which zone they are in when it matters ("It is 18:40 in Tehran").
+- Kumo components that use physical classes get checked in RTL; any broken one gets a wrapper or a workaround in Karvan code instead of being used raw. Known cases: Kumo's Sidebar (not used), the DropdownMenu item `icon` slot (put the icon in the children with `gap-2` instead).
 
 ## 8. Components and patterns
 
 - **Kumo first** for leaf components: Button, Input, Field, Select, Switch, Dialog, DropdownMenu, Tooltip, Badge, Toast, CommandPalette, Table. Import each from `@cloudflare/kumo/components/<name>`, and add its chunk name to the `@source` line in `src/styles/app.css`, or its styles are missing.
-- Kumo's Button already pulls in its tooltip code; Tooltip itself stays out of the sign-in page to keep it light.
-- **Own shell:** sidebar, top bar, page header and panel switcher are Karvan components with logical properties.
+- The sign-in page stays light: no Tooltip, Dropdown or CommandPalette there. `LanguageSwitch` (one button naming the other language) and `ThemeToggle` (one button) exist for this reason.
+
+### Shell
+Karvan's own components, with logical properties:
+- **Sidebar:** wordmark header with a bottom hairline; panel switcher row; "Quick search… Ctrl K" button that opens the command palette; grouped navigation with small group labels, 36 px rows, the current page on `bg-kumo-tint`.
+- **Top bar:** on phones the menu button, wordmark and search; on all sizes the language switch (from 640 up), theme toggle and account menu at the end.
+- **Mobile:** the sidebar opens as a sheet from the start edge, with focus inside it and Escape to close.
+- **Command palette:** every page and preference is reachable from Ctrl K.
+
+### Page
+- **Page header:** title, one line of context under it, actions at the end, bottom hairline across the full width.
+- **Cards:** `bg-kumo-base`, hairline border, radius 8, title row at the top, no shadow, no divider under the title unless the card holds a table.
+- **Tables:** header row on a hairline, rows about 48 px high, a footer that says how much is shown ("Showing the latest 5 events"). On phones, secondary columns fold under the first cell instead of scrolling sideways.
+- **Aside:** short status blocks (Safe Mode, two-step sign-in, account), each a heading, a status badge and one sentence, divided by hairlines.
+
+### Sign-in
+- Two halves on large screens. Start side on `bg-kumo-base`: wordmark at the top, then a centered form (title, username, password, one blue button) and the recovery hint with the `karvan reset -password` command.
+- End side on `bg-kumo-brand`: language and theme buttons at the top, the "Marzban ⇄ PasarGuard" line, the tagline and one sentence of detail, then the dotted globe centered on Iran with a dashed route from the Marzban stop (Europe) to the PasarGuard stop (Tehran). Each stop is the panel logo on a white tile with its name under it.
+- The globe is a static SVG made by `scripts/brand/globe.mjs` (which also writes the stop positions to `globe-points.ts`), so no map code or data ships in the bundle. It loads lazily.
+- Under 1024 px only the form side shows; the language and theme buttons move into its top bar.
+
+### Behavior
 - **Primary action:** one per area, `variant="primary"`. Everything else is secondary or ghost.
 - **Loading:** skeletons shaped like the content, never spinners for content. Spinners only inside a button that is working.
-- **Empty states:** say what is missing, why, and what to do. Always one action.
+- **Empty states:** an icon, what is missing, why, and one action.
 - **Errors:** say what happened and how to fix it, in plain words. Never show raw server errors. Errors do not apologize.
 - **Dangerous actions:** need the name typed to confirm (delete, restore, turning Safe Mode off).
-- **Status badges:** icon + word + color, from the status table above.
+- **Status badges:** icon + word + Kumo status color.
 - **Touch:** every target is at least 44 × 44 px on touch screens.
-- **Not yet built:** navigation items for later pages stay visible but inert with a "soon" tag, so the structure can be judged early.
+- **Not yet built:** navigation items for later pages stay visible but inert with a "Soon" tag, so the structure can be judged early.
 
 ## 9. Writing
 
 - Plain, calm and direct, like a careful colleague. Active voice. Name things the way the operator thinks about them ("users", "panels"), not the way the code does.
 - A button says what happens: "Sign in", not "Submit". The same action keeps the same name in the toast that confirms it.
-- Persian copy is written in Persian, not translated word for word. Use the half-space (ZWNJ) correctly («می‌شود», «کاربران‌ها» is wrong, «کاربران» is right).
+- Persian copy is written in Persian, not translated word for word. Use the half-space (ZWNJ) correctly («می‌شود»).
 - No exclamation marks, no filler ("Please", «لطفاً») unless leaving it out would sound rude.
 
 ## 10. Do and don't
 
 | Do | Don't |
 |---|---|
-| Hairline borders and background steps for structure | Identical soft-shadow cards in a grid |
-| One bold thing per screen | Gradients, glows and glass as decoration |
-| Firouzeh and saffron, used sparingly | Default purple/blue, or Cloudflare orange as the primary |
+| Hairline borders for structure, flat cards | Soft shadows under cards, gradients, glows and glass as decoration |
+| One bold thing per screen | Decoration competing with content |
+| Kumo blue for the brand and primary actions | Cloudflare orange anywhere, or extra brand colors |
 | Real content and real data in every state | Lorem ipsum, fake numbers, emoji |
-| Sentence case, quiet labels | All-caps eyebrows, "01 / 02 / 03" markers on things that are not steps, "→" stuck on links |
+| Sentence case, quiet labels | All-caps eyebrows, "01 / 02 / 03" markers on things that are not steps |
 | Logical CSS properties | `left`, `right`, `ml-*`, `pr-*` |
 | Test at 360 and 1440 px, fa and en, dark and light, keyboard only | Shipping a page seen in one language and one theme |
