@@ -47,6 +47,20 @@ func TestSetAndReadHTTP(t *testing.T) {
 	}
 }
 
+func TestHTTPRefusesADamagedStoredPath(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	if err := s.SetHTTP(ctx, HTTP{Port: 34567, BasePath: "abcDEF2345ghijkm"}); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.db.Exec(`UPDATE settings SET value = '' WHERE key = ?`, keyBasePath); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := s.HTTP(ctx); err == nil {
+		t.Fatal("an empty stored path was accepted")
+	}
+}
+
 func TestSetHTTPRejectsInvalidValues(t *testing.T) {
 	s := newStore(t)
 	for name, h := range map[string]HTTP{

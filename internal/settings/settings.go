@@ -92,7 +92,12 @@ func (s *Store) HTTP(ctx context.Context) (HTTP, error) {
 	if err != nil {
 		return HTTP{}, fmt.Errorf("stored port %q is not a number", vals[keyPort])
 	}
-	return HTTP{Bind: vals[keyBind], Port: port, BasePath: vals[keyBasePath]}, nil
+	h := HTTP{Bind: vals[keyBind], Port: port, BasePath: vals[keyBasePath]}
+	// Fail closed: an empty or damaged path would put the panel at "/".
+	if err := h.Validate(); err != nil {
+		return HTTP{}, fmt.Errorf("stored settings are invalid (%w); fix them with: karvan reset -path -port", err)
+	}
+	return h, nil
 }
 
 // SetHTTP validates and stores h.
