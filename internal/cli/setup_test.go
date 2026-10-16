@@ -18,7 +18,7 @@ func TestInitPrintsCredentialsOnlyToStdout(t *testing.T) {
 		t.Fatalf("init exit %d: %s", code, errOut)
 	}
 	m := passwordLine.FindStringSubmatch(out)
-	if m == nil || !strings.Contains(out, "Username  ") || !strings.Contains(out, "Address   http://") {
+	if m == nil || !strings.Contains(out, "Username  ") || !strings.Contains(out, "Address   http://") || !strings.Contains(out, "plain HTTP") {
 		t.Fatalf("stdout = %q", out)
 	}
 	if strings.Contains(errOut, m[1]) {

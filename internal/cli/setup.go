@@ -62,6 +62,7 @@ func printCredentials(streams IO, title string, c app.Credentials) {
 			path = c.BasePath
 		}
 		fmt.Fprintf(&b, "  Address   http://<server address>:%s/%s/\n", port, path)
+		defer fmt.Fprintln(streams.Stdout, "This address is plain HTTP. Until HTTPS is set up, sign in only over a network you trust.")
 	}
 	if c.Username != "" {
 		fmt.Fprintf(&b, "  Username  %s\n", c.Username)
