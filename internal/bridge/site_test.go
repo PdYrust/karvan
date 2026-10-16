@@ -41,7 +41,7 @@ func TestSiteValidation(t *testing.T) {
 		s := ok
 		s.Domains = append([]string(nil), ok.Domains...)
 		edit(&s)
-		if err := s.normalize(); !errors.Is(err, errSite) {
+		if err := s.normalize(); !errors.Is(err, ErrInvalidSite) {
 			t.Errorf("%s: %v", name, err)
 		}
 	}

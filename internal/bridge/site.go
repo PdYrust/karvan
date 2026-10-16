@@ -44,14 +44,17 @@ type Site struct {
 func (s Site) TLS() bool { return s.CertFile != "" || s.CertPEM != "" }
 
 var (
-	pathRe   = regexp.MustCompile(`^[A-Za-z0-9_\-]{1,64}$`)
-	labelRe  = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
-	pinRe    = regexp.MustCompile(`^[0-9a-f]{64}$`)
-	errSite  = errors.New("invalid site")
-	siteKind = []panel.Kind{panel.Marzban, panel.PasarGuard}
+	pathRe  = regexp.MustCompile(`^[A-Za-z0-9_\-]{1,64}$`)
+	labelRe = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
+	pinRe   = regexp.MustCompile(`^[0-9a-f]{64}$`)
+	// ErrInvalidSite means a site field is wrong; the message says which.
+	ErrInvalidSite = errors.New("invalid site")
+	siteKind       = []panel.Kind{panel.Marzban, panel.PasarGuard}
 )
 
-func invalid(f string, a ...any) error { return fmt.Errorf("%w: %s", errSite, fmt.Sprintf(f, a...)) }
+func invalid(f string, a ...any) error {
+	return fmt.Errorf("%w: %s", ErrInvalidSite, fmt.Sprintf(f, a...))
+}
 
 // normalize checks s and puts it in the stored form.
 func (s *Site) normalize() error {
