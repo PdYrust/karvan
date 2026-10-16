@@ -29,9 +29,9 @@ type API struct {
 	secret  secret.Value
 }
 
-// tokenTTL is short: one reload never takes this long between tokens,
-// and Token mints a fresh one per call.
-const tokenTTL = 10 * time.Minute
+// tokenTTL is short (D47): one call never takes this long, and Token
+// mints a fresh one per call.
+const tokenTTL = 5 * time.Minute
 
 // Token mints an admin token valid from now.
 func (a API) Token(now time.Time) string {
