@@ -133,6 +133,23 @@ func TestTargets(t *testing.T) {
 	})
 }
 
+// The default Xray core lists its inbounds; a WireGuard core is one
+// inbound named by interface_name. Found on the running panel.
+func TestInboundProtocols(t *testing.T) {
+	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+		now := paneldb.TimeArg(tg.Dialect, time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC))
+		exec(t, tg, []any{"INSERT INTO core_configs (id, created_at, name, config, type) VALUES (?, ?, ?, ?, ?)",
+			2, now, "wg", `{"interface_name": " wg0 ", "listen_port": 51820, "address": ["10.77.0.1/24"]}`, "wg"})
+		view(t, tg, func(q paneldb.Querier, _ paneldb.Server) error {
+			got, err := InboundProtocols(context.Background(), q)
+			if err == nil && (len(got) != 2 || got["Shadowsocks TCP"] != "shadowsocks" || got["wg0"] != "wireguard") {
+				t.Errorf("protocols: %v", got)
+			}
+			return err
+		})
+	})
+}
+
 func TestRolesAndAdmins(t *testing.T) {
 	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
 		seedShop(t, tg)

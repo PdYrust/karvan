@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strings"
 
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
@@ -93,27 +94,37 @@ func Roles(ctx context.Context, q paneldb.Querier) ([]Role, error) {
 }
 
 // InboundProtocols maps every inbound tag in the panel's core configs to
-// its protocol, so Karvan knows which protocols a group serves.
+// its protocol, so Karvan knows which protocols a group serves. An Xray
+// core lists its inbounds; a WireGuard core is one inbound named by its
+// interface_name (app/core/wireguard.py).
 func InboundProtocols(ctx context.Context, q paneldb.Querier) (map[string]string, error) {
-	rows, err := q.QueryContext(ctx, "SELECT config FROM core_configs ORDER BY id")
+	rows, err := q.QueryContext(ctx, "SELECT type, config FROM core_configs ORDER BY id")
 	if err != nil {
 		return nil, fmt.Errorf("read core configs: %w", err)
 	}
 	defer rows.Close()
 	out := map[string]string{}
 	for rows.Next() {
+		var kind string
 		var raw []byte
-		if err := rows.Scan(&raw); err != nil {
+		if err := rows.Scan(&kind, &raw); err != nil {
 			return nil, err
 		}
 		var cfg struct {
-			Inbounds []struct {
+			Interface string `json:"interface_name"`
+			Inbounds  []struct {
 				Tag      string `json:"tag"`
 				Protocol string `json:"protocol"`
 			} `json:"inbounds"`
 		}
 		if json.Unmarshal(raw, &cfg) != nil {
 			continue // a core config Karvan cannot read serves no known protocol
+		}
+		if kind == "wg" {
+			if tag := strings.TrimSpace(cfg.Interface); tag != "" {
+				out[tag] = "wireguard"
+			}
+			continue
 		}
 		for _, in := range cfg.Inbounds {
 			out[in.Tag] = in.Protocol

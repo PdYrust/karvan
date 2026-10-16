@@ -31,6 +31,7 @@ var columns = map[string][]string{
 	"jwt":                         {"id", "secret_key"},
 	"settings":                    {"id", "subscription"},
 	"wireguard_subnets":           {"id", "network", "next_offset", "free_offsets"},
+	"core_configs":                {"id", "config", "type"},
 }
 
 // children are the rows that hang off a user or an admin, in delete order
