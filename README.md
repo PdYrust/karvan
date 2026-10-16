@@ -1,8 +1,5 @@
 <p align="center">
-  <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="docs/brand/karvan-mark-dark.svg">
-    <img src="docs/brand/karvan-mark.svg" width="112" height="112" alt="Karvan">
-  </picture>
+  <img src="docs/brand/karvan-mark.svg" width="112" height="112" alt="Karvan">
 </p>
 
 <h1 align="center">Karvan</h1>

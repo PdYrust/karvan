@@ -1,11 +1,4 @@
-import { dashRings, starRings, viewBox, type Ring } from './logo-geometry';
-
-function pathOf(rings: readonly Ring[]): string {
-  return rings.map((r) => 'M' + r.map(([x, y]) => `${x} ${y}`).join('L') + 'Z').join(' ');
-}
-
-const starPath = pathOf(starRings);
-const dashPath = pathOf(dashRings);
+import { cn } from '@cloudflare/kumo/utils';
 
 interface MarkProps {
   size?: number | string;
@@ -14,20 +7,27 @@ interface MarkProps {
   title?: string;
 }
 
-/** The Karvan star. Never mirrored in RTL. */
-export function Mark({ size = 32, className, title }: MarkProps) {
+/**
+ * The Karvan mark: two panels overlapping into one. Same drawing as
+ * web/public/favicon.svg and docs/brand/karvan-mark.svg. Never mirrored in RTL.
+ */
+export function Mark({ size = 28, className, title }: MarkProps) {
   return (
     <svg
-      viewBox={`0 0 ${viewBox} ${viewBox}`}
+      viewBox="0 0 64 64"
       width={size}
       height={size}
-      className={className}
+      className={cn('shrink-0', className)}
       role={title ? 'img' : undefined}
       aria-hidden={title ? undefined : true}
       aria-label={title}
     >
-      <path className="fill-karvan-firouzeh" d={starPath} />
-      <path className="fill-karvan-saffron" d={dashPath} />
+      <rect width="64" height="64" rx="14" className="fill-kumo-brand" />
+      <g className="stroke-on-brand" strokeWidth="3.2" fill="none">
+        <rect x="12" y="22" width="24" height="24" rx="5" />
+        <rect x="28" y="18" width="24" height="24" rx="5" />
+      </g>
+      <rect x="28" y="22" width="8" height="20" className="fill-on-brand" />
     </svg>
   );
 }
