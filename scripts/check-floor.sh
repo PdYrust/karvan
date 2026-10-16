@@ -38,6 +38,16 @@ if [ ${#web_src[@]} -gt 0 ]; then
   report raw-color "\b(bg|text|fill|stroke|border|ring|from|to|via)-(black|white)\b|:\s*(black|white)\b" "${web_src[@]}"
 fi
 
+# Writing rules (DESIGN.md section 9): punctuation that makes text read as machine-written.
+# Half-space, hamza on he, guillemets, Persian semicolon, ellipsis, en/em dash, curly quotes.
+writing=$(printf '\u200c|\u0654|\u06c0|\u00ab|\u00bb|\u061b|\u2026|\u2013|\u2014|\u2018|\u2019|\u201c|\u201d')
+hits=$(grep -nIP "$writing" "${files[@]}" 2>/dev/null | cut -c1-160 || true)
+if [ -n "$hits" ]; then
+  echo "[writing]"
+  echo "$hits" | sed 's/^/  /'
+  status=1
+fi
+
 if git rev-parse --verify -q HEAD >/dev/null; then
   msgs=$(git log --format='%h %an <%ae> %s%n%b' | grep -nE '\b(Claude|Anthropic|ChatGPT|OpenAI|Copilot|Gemini|Kiro|LLM)\b|Co-authored-by' || true)
   if [ -n "$msgs" ]; then echo "[ai-reference-in-history]"; echo "$msgs" | sed 's/^/  /'; status=1; fi
