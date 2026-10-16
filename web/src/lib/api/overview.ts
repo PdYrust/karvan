@@ -3,6 +3,7 @@ import { api } from './client';
 export type Outcome = 'success' | 'failure';
 
 export interface ActivityEntry {
+  id: number;
   at: string;
   actor: string;
   action: string;

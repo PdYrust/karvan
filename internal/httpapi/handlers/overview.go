@@ -17,6 +17,7 @@ type signInJSON struct {
 }
 
 type activityJSON struct {
+	ID      int64         `json:"id"`
 	At      time.Time     `json:"at"`
 	Actor   string        `json:"actor"`
 	Action  string        `json:"action"`
@@ -63,7 +64,7 @@ func (a *API) Overview(w http.ResponseWriter, r *http.Request) {
 		out.Security.PreviousSignIn = &signInJSON{At: prev[0].At.UTC(), IP: prev[0].IP}
 	}
 	for _, e := range recent {
-		out.Activity = append(out.Activity, activityJSON{At: e.At.UTC(), Actor: e.Actor, Action: e.Action, Outcome: e.Outcome, IP: e.IP})
+		out.Activity = append(out.Activity, activityJSON{ID: e.ID, At: e.At.UTC(), Actor: e.Actor, Action: e.Action, Outcome: e.Outcome, IP: e.IP})
 	}
 	respond.JSON(w, http.StatusOK, out)
 }
