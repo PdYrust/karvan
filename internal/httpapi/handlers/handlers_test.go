@@ -2,6 +2,8 @@ package handlers_test
 
 import (
 	"bytes"
+	"compress/gzip"
+	"io"
 	"net/http"
 	"strings"
 	"testing"
@@ -170,6 +172,46 @@ func TestPagesAndAssets(t *testing.T) {
 	}
 	if res := e.do(http.MethodGet, "/"+base+"/assets/app-1.js", nil); res.status != http.StatusOK || !strings.HasPrefix(res.header.Get("Cache-Control"), "private") {
 		t.Fatalf("private asset after sign-in: %d %q", res.status, res.header.Get("Cache-Control"))
+	}
+}
+
+func TestBuildFilesAreGzippedWhenAccepted(t *testing.T) {
+	e := newEnv(t)
+	get := func(path, accept string) (http.Header, []byte) {
+		req, _ := http.NewRequest(http.MethodGet, e.srv.URL+"/"+base+path, nil)
+		if accept != "" {
+			req.Header.Set("Accept-Encoding", accept)
+		}
+		res, err := http.DefaultTransport.RoundTrip(req)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer res.Body.Close()
+		body, _ := io.ReadAll(res.Body)
+		return res.Header, body
+	}
+
+	h, body := get("/assets/login-1.js", "gzip, br")
+	if h.Get("Content-Encoding") != "gzip" || h.Get("Vary") != "Accept-Encoding" {
+		t.Fatalf("headers %v", h)
+	}
+	zr, err := gzip.NewReader(bytes.NewReader(body))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if plain, _ := io.ReadAll(zr); string(plain) != "login()" {
+		t.Fatalf("body %q", plain)
+	}
+	for _, tc := range []struct{ path, accept, want string }{
+		{"/assets/login-1.js", "", ""},
+		{"/assets/login-1.js", "gzip;q=0", ""},
+		{"/assets/font-1.woff2", "gzip", ""},
+		{"/", "gzip", "gzip"},
+		{"/api/v1/session", "gzip", ""},
+	} {
+		if h, _ := get(tc.path, tc.accept); h.Get("Content-Encoding") != tc.want {
+			t.Errorf("%s with %q: Content-Encoding %q, want %q", tc.path, tc.accept, h.Get("Content-Encoding"), tc.want)
+		}
 	}
 }
 

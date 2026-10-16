@@ -30,6 +30,7 @@ type SPA struct {
 	loginHTML []byte
 	appHTML   []byte
 	public    map[string]bool
+	gz        gzipCache
 }
 
 type manifestChunk struct {
@@ -99,13 +100,13 @@ func publicFiles(dist fs.FS) (map[string]bool, error) {
 
 // Page serves the sign-in page or the app, depending on the session.
 func (s *SPA) Page(w http.ResponseWriter, r *http.Request) {
-	html := s.loginHTML
+	name, html := loginEntry, s.loginHTML
 	if _, ok := middleware.Session(r.Context()); ok {
-		html = s.appHTML
+		name, html = appEntry, s.appHTML
 	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	w.Header().Set("Cache-Control", "no-store")
-	_, _ = w.Write(html)
+	s.gz.write(w, r, name, html)
 }
 
 // Asset serves a hashed file from assets/.
@@ -130,7 +131,7 @@ func (s *SPA) Asset(w http.ResponseWriter, r *http.Request) {
 		visibility = "public"
 	}
 	w.Header().Set("Cache-Control", visibility+", max-age=31536000, immutable")
-	_, _ = w.Write(data) //nolint:gosec // G705: bytes come from the embedded build, not from the request.
+	s.gz.write(w, r, name, data)
 }
 
 // Static serves a top-level file from the build's public folder, such as
@@ -146,6 +147,6 @@ func (s *SPA) Static(name string) http.HandlerFunc {
 			w.Header().Set("Content-Type", ct)
 		}
 		w.Header().Set("Cache-Control", "public, max-age=86400")
-		_, _ = w.Write(data)
+		s.gz.write(w, r, name, data)
 	}
 }
