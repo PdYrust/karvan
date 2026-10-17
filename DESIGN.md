@@ -34,6 +34,7 @@ Karvan uses Kumo's palette as it ships: neutral greys for surfaces and text, Kum
 
 **No color literal anywhere else** in `web/src` (the floor check fails the build). If a new color is truly needed, add a token there and a row here.
 Kumo's sixth chart color is an orange; Karvan never uses it (no Cloudflare orange). A chart never needs more than five series; more become "Other".
+The chart tokens sit in a `@theme static` block: charts pick a color by number at run time (`var(--color-chart-3)`), which Tailwind's class scan cannot see, so the variables are always emitted.
 
 - `text-kumo-brand` is Cloudflare orange in Kumo. For blue text use `text-(--color-kumo-brand)`.
 - Status is never shown by color alone. It always comes with an icon and a word.
@@ -118,11 +119,14 @@ The Cloudflare dashboard's frame, built from Karvan's own components with logica
 - **Panel names:** always with their logo (`PanelLabel`). A move between panels is shown as the source logo, an arrow and the destination logo (`MoveLabel`), in lists, the wizard, the live view, reports, old links and backups.
 
 ### Analytics
-- Laid out like the dashboard's analytics: header with refresh and a range button (Live, 1 hour, 24 hours, 7 days, 30 days), a row of stat tiles, then layer cards.
-- **Stat tile:** label, the value in heading size with its unit smaller, a sparkline along the bottom edge. Tiles in one row share a height.
-- **Time series:** thin 1.5 px lines, a faint area under the first series, dashed grid lines in `chart-grid`, four or five round ticks, axis labels in `small` and `text-kumo-subtle`. Hovering or moving with the arrow keys shows a crosshair and a tooltip with the time and every series. Missing samples leave a gap, never a line to zero.
-- **Bar list** (users by status, top admins, largest tables): label, a thin meter, the number; the longest bar fills the column.
-- **Numbers:** every chart shows its current or total value in text next to it; screen readers get a table of the values. A chart is never the only place a number lives.
+- Laid out like the dashboard's analytics: header with refresh and a range button (Live, 1 hour, 24 hours, 7 days, 30 days) joined in one group, underline tabs (Server, then one per panel with its logo), a row of stat tiles, then layer cards in two columns (one on phones).
+- The range lives in the address (`?range=24h`) and carries across tabs, so two tabs compare the same time. Polls run only while the tab is visible and do not count as activity; pressing refresh does.
+- **Stat tile:** label, the value in title size with its unit smaller, one quiet line under it (wraps to two lines on phones, never cut), a sparkline along the bottom edge (a meter for a disk). Tiles in one row share a height. A sparkline without a fixed scale spans its own lowest to highest value, so a slow climb (users, size) still shows its shape.
+- **Time series:** thin 1.5 px lines, a faint area under the first series, dashed grid lines in `chart-grid`, four or five round ticks, axis labels in `small` and `text-kumo-subtle`. Labels are HTML over the SVG, so Persian digits and words read in the page direction while time runs left to right. Hovering, touching or moving with the arrow keys (the chart is a slider) shows a crosshair and a tooltip with the time and every series. Missing samples leave a gap, never a line to zero; a lone sample is a dot.
+- **Bars** (traffic and new users): per hour up to a day, per day beyond, the series stacked; a quiet hour is a real zero.
+- **Legend:** above the chart, each series with its color and number: the latest value when live; over a range the average, the peak, and for network, disk and traffic the total moved.
+- **Bar list** (users by status, top admins, largest tables): label, a thin meter, the number; the longest bar fills the column. On phones the meter moves under the label so the words keep the row.
+- **Numbers:** every chart shows its current or total value in text next to it; screen readers get a table of the values (at most 12 rows spread over the range). A chart is never the only place a number lives.
 - **States:** a skeleton shaped like the chart while loading; "No data in this range" with the range named when a series is empty; a database Karvan cannot reach shows the panel's finding instead of an empty chart.
 
 ### Sign-in
