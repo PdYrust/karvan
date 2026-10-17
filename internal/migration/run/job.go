@@ -63,6 +63,7 @@ type Job struct {
 	result     *engine.Result
 	print      string
 	safeMode   bool
+	rollback   string // RollbackUndo or RollbackBackup
 	backupID   string
 	lastUse    time.Time
 	report     *Report
@@ -74,6 +75,13 @@ type frozenView struct {
 	result  *engine.Result
 	plan    plan.Plan
 	version int
+}
+
+func (j *Job) rollbackOrUndo() string {
+	if j.rollback == RollbackBackup {
+		return RollbackBackup
+	}
+	return RollbackUndo
 }
 
 // lockIdle locks j unless it runs, and never waits for a run, which holds
@@ -131,12 +139,12 @@ func (s *Service) save(ctx context.Context, j *Job) error {
 		admin = j.snapshot.Admin.Username
 	}
 	_, err = s.db.ExecContext(ctx, `INSERT INTO jobs (id, state, source_kind, source_origin, source_admin, panel_id, plan,
-		plan_version, safe_mode, backup_id, report, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		plan_version, safe_mode, rollback, backup_id, report, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (id) DO UPDATE SET state = excluded.state, source_kind = excluded.source_kind,
 		source_admin = CASE WHEN excluded.source_admin = '' THEN jobs.source_admin ELSE excluded.source_admin END,
-		plan = excluded.plan, plan_version = excluded.plan_version, safe_mode = excluded.safe_mode,
+		plan = excluded.plan, plan_version = excluded.plan_version, safe_mode = excluded.safe_mode, rollback = excluded.rollback,
 		backup_id = excluded.backup_id, report = excluded.report, updated_at = excluded.updated_at`,
-		j.ID, j.state, string(j.kind), j.origin, admin, j.PanelID, string(raw), j.version, j.safeMode, j.backupID,
+		j.ID, j.state, string(j.kind), j.origin, admin, j.PanelID, string(raw), j.version, j.safeMode, j.rollbackOrUndo(), j.backupID,
 		string(report), s.now().UnixMilli(), s.now().UnixMilli())
 	if err != nil {
 		return fmt.Errorf("save job %s: %w", j.ID, err)

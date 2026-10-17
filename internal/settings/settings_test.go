@@ -117,3 +117,20 @@ func TestSafeModeIsOnUntilTurnedOff(t *testing.T) {
 		}
 	}
 }
+
+func TestRollbackIsUndoUntilChanged(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	if v, err := s.Rollback(ctx); err != nil || v != RollbackUndo {
+		t.Fatalf("default: %q %v", v, err)
+	}
+	if err := s.SetRollback(ctx, RollbackBackup); err != nil {
+		t.Fatal(err)
+	}
+	if v, _ := s.Rollback(ctx); v != RollbackBackup {
+		t.Fatalf("after set: %q", v)
+	}
+	if err := s.SetRollback(ctx, "both"); !errors.Is(err, ErrRollback) {
+		t.Fatalf("bad value: %v", err)
+	}
+}

@@ -32,10 +32,13 @@ var (
 	ErrBadPassword = errors.New("the admin password does not meet the policy")
 	ErrNoRollback  = errors.New("only a failed or interrupted job can be rolled back")
 	ErrBadReload   = errors.New("unknown reload method")
+	// ErrNoPanelControl means Karvan cannot stop and start the panel, so
+	// it cannot put a whole backup back.
+	ErrNoPanelControl = errors.New("cannot stop and start this panel")
 )
 
 // PanelControl stops and starts a destination panel, for a full backup
-// restore (D36). The installer grants it per panel; nil means not granted.
+// restore (D36).
 type PanelControl interface {
 	Stop(ctx context.Context) error
 	Start(ctx context.Context) error
@@ -48,8 +51,9 @@ type Deps struct {
 	DataDir string
 	Now     func() time.Time
 	Tools   safemode.Runner // runs dump tools
-	// Control returns the panel control for a panel ENV, or nil.
-	Control func(envPath string) PanelControl
+	// Control returns the control for the panel whose ENV is at envPath,
+	// or why Karvan cannot stop and start it. Nil: never.
+	Control func(ctx context.Context, envPath string) (PanelControl, error)
 	// Reloaders are the ways to make a panel pick up written users (D46).
 	Reloaders map[string]Reloader
 	// BatchSize is users per destination transaction (D15).
@@ -95,6 +99,18 @@ func New(d Deps) *Service {
 		d.Reloaders[ReloadManual] = manualReload{}
 	}
 	return &Service{Deps: d, db: d.DB, now: d.Now, ledger: ledger.New(d.DB), events: newBus(d.DB, d.Now), jobs: map[string]*Job{}, cancels: map[string]context.CancelFunc{}}
+}
+
+// control opens the panel control for envPath.
+func (s *Service) control(ctx context.Context, envPath string) (PanelControl, error) {
+	if s.Control == nil {
+		return nil, ErrNoPanelControl
+	}
+	c, err := s.Control(ctx, envPath)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %w", ErrNoPanelControl, err)
+	}
+	return c, nil
 }
 
 // SafeModeDir is where Safe Mode backups live, outside any rotation.

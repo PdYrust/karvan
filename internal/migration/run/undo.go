@@ -11,13 +11,29 @@ import (
 	"github.com/PdYrust/karvan/internal/safemode"
 )
 
-// undo is the Safe Mode rollback (D35, D36): remove exactly this job's
-// rows, newest batch first, each batch in its own short transaction; check
-// that nothing of the job is left; if the undo failed or something is
-// left, restore the backup with the panel stopped.
-func (s *Service) undo(ctx context.Context, j *Job, p *prepared, rep *Report) {
-	// The run's own context may be cancelled; the undo must still finish.
+// rollBack takes a failed job back the way the Safe Mode setting says
+// (owner, 2026-10-16): undo the job's own rows (D35, D36), or put the
+// whole backup back. A backup that cannot be put back falls back to the
+// undo, so the job's rows still go.
+func (s *Service) rollBack(ctx context.Context, j *Job, p *prepared, rep *Report) {
+	// The run's own context may be cancelled; the rollback must still finish.
 	ctx = context.WithoutCancel(ctx)
+	if j.rollbackOrUndo() == RollbackBackup {
+		if s.restore(ctx, j, p, rep) {
+			return
+		}
+		s.emit(j, StageRestore, EventLog, map[string]any{"code": "restore_failed_undoing"})
+		s.undo(ctx, j, p, rep, false)
+		return
+	}
+	s.undo(ctx, j, p, rep, true)
+}
+
+// undo removes exactly this job's rows, newest batch first, each batch in
+// its own short transaction, and checks nothing of the job is left. If
+// the undo failed or something is left, it puts the backup back when
+// orRestore is set.
+func (s *Service) undo(ctx context.Context, j *Job, p *prepared, rep *Report, orRestore bool) {
 	undoErr := s.stage(j, rep, StageUndo, func() error { return s.compensate(ctx, j, p, rep) })
 	left, err := s.leftovers(ctx, j)
 	if undoErr == nil && err == nil && len(left) == 0 {
@@ -26,7 +42,9 @@ func (s *Service) undo(ctx context.Context, j *Job, p *prepared, rep *Report) {
 	}
 	rep.Left = left
 	s.emit(j, StageUndo, EventLog, map[string]any{"code": "undo_incomplete", "left": len(left)})
-	s.restore(ctx, j, p, rep)
+	if orRestore {
+		s.restore(ctx, j, p, rep)
+	}
 }
 
 func (s *Service) compensate(ctx context.Context, j *Job, p *prepared, rep *Report) error {
@@ -112,35 +130,63 @@ func (s *Service) leftovers(ctx context.Context, j *Job) ([]int64, error) {
 	return out, nil
 }
 
-// restore puts the Safe Mode backup back with the panel stopped. Without
-// the stop and start permission it only tells the operator how (D36).
-func (s *Service) restore(ctx context.Context, j *Job, p *prepared, rep *Report) {
-	var ctl PanelControl
-	if s.Control != nil {
-		ctl = s.Control(j.envPath)
+// restore puts the Safe Mode backup back with the panel stopped, then
+// starts the panel again (D36). It reports whether the backup is back.
+func (s *Service) restore(ctx context.Context, j *Job, p *prepared, rep *Report) bool {
+	if j.backupID == "" {
+		s.emit(j, StageRestore, EventLog, map[string]any{"code": "restore_no_backup"})
+		return false
 	}
-	if ctl == nil || j.backupID == "" {
-		s.emit(j, StageRestore, EventLog, map[string]any{"code": "restore_manual", "backup": j.backupID})
-		return
+	ctl, err := s.control(ctx, j.envPath)
+	if err != nil {
+		s.emit(j, StageRestore, EventLog, map[string]any{"code": "restore_unavailable", "backup": j.backupID})
+		return false
 	}
-	err := s.stage(j, rep, StageRestore, func() error {
+	err = s.stage(j, rep, StageRestore, func() error {
 		b, err := s.backupRecord(ctx, j.backupID)
 		if err != nil {
 			return err
 		}
-		if err := ctl.Stop(ctx); err != nil {
-			return err
-		}
-		restoreErr := safemode.Restorer{Key: s.Key, Run: s.Tools}.Restore(ctx, p.target, p.db.Server(), b)
-		if err := ctl.Start(ctx); err != nil && restoreErr == nil {
-			return err
-		}
-		return restoreErr
+		return restoreStopped(ctx, ctl, func() error {
+			return safemode.Restorer{Key: s.Key, Run: s.Tools}.Restore(ctx, p.target, p.db.Server(), b)
+		})
 	})
-	if err == nil {
-		rep.State = StateRolledBack
-		rep.NotUndoable = append(rep.NotUndoable, "restore_lost_panel_writes")
+	if err != nil {
+		return false
 	}
+	// The backup holds none of the job's rows, so its ledger rows are done with.
+	if err := s.markRestored(ctx, j.ID); err != nil {
+		s.emit(j, StageRestore, EventLog, map[string]any{"code": "ledger_not_updated"})
+	}
+	rep.State, rep.Left = StateRolledBack, nil
+	rep.NotUndoable = append(rep.NotUndoable, UndoLostPanelWrites)
+	return true
+}
+
+// restoreStopped runs put with the panel stopped, and always starts the
+// panel again once it was stopped.
+func restoreStopped(ctx context.Context, ctl PanelControl, put func() error) error {
+	if err := ctl.Stop(ctx); err != nil {
+		return err
+	}
+	putErr := put()
+	if err := ctl.Start(ctx); err != nil && putErr == nil {
+		return err
+	}
+	return putErr
+}
+
+// markRestored retires a job's written rows after its backup went back.
+func (s *Service) markRestored(ctx context.Context, jobID string) error {
+	rows, err := s.ledger.Job(ctx, jobID, ledger.Done, ledger.Pending, ledger.Unknown)
+	if err != nil {
+		return err
+	}
+	ids := make([]int64, 0, len(rows))
+	for _, e := range rows {
+		ids = append(ids, e.ID)
+	}
+	return s.ledger.Set(ctx, ledger.Compensated, ids)
 }
 
 func (s *Service) backupRecord(ctx context.Context, id string) (safemode.Backup, error) {

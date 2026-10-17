@@ -23,7 +23,16 @@ type Options struct {
 	AdminPassword secret.Value // empty: generate one (owner decision 1)
 	Reload        string
 	SafeMode      bool
+	// Rollback is what Safe Mode does on failure: RollbackUndo (the
+	// default) or RollbackBackup.
+	Rollback string
 }
+
+// What Safe Mode does on failure (owner, 2026-10-16).
+const (
+	RollbackUndo   = "undo"   // remove the job's rows; the backup only if some are left
+	RollbackBackup = "backup" // put the whole backup back
+)
 
 // ErrStale means the source or the destination changed since the plan
 // was approved (D29). Diff names what changed.
@@ -54,6 +63,13 @@ func (s *Service) Run(ctx context.Context, jobID string, o Options) error {
 	if _, ok := s.Reloaders[o.Reload]; !ok {
 		return fmt.Errorf("%w %q", ErrBadReload, o.Reload)
 	}
+	if o.SafeMode && o.Rollback == RollbackBackup {
+		// Checked now, not on failure: a run that could not put its backup
+		// back must not start.
+		if _, err := s.control(ctx, j.envPath); err != nil {
+			return err
+		}
+	}
 	before := maps.Clone(j.passwords)
 	password, err := s.adminPassword(j, o.AdminPassword)
 	if err != nil {
@@ -64,10 +80,10 @@ func (s *Service) Run(ctx context.Context, jobID string, o Options) error {
 		j.passwords = before
 		return err
 	}
-	state, safe := j.state, j.safeMode
-	j.state, j.safeMode, j.lastUse = StateRunning, o.SafeMode, s.now()
+	state, safe, rollback := j.state, j.safeMode, j.rollback
+	j.state, j.safeMode, j.rollback, j.lastUse = StateRunning, o.SafeMode, o.Rollback, s.now()
 	if err := s.save(ctx, j); err != nil {
-		j.state, j.safeMode, j.passwords = state, safe, before
+		j.state, j.safeMode, j.rollback, j.passwords = state, safe, rollback, before
 		return err
 	}
 	s.start(j, string(hash), o)
@@ -152,7 +168,7 @@ func (s *Service) execute(ctx context.Context, j *Job, hash string, o Options) {
 			err = s.verify(ctx, j, w, rep)
 		}
 		if err != nil && w.wrote && j.safeMode {
-			s.undo(ctx, j, w, rep)
+			s.rollBack(ctx, j, w, rep)
 		}
 	}
 	switch {

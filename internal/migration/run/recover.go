@@ -92,10 +92,10 @@ func (s *Service) openPrepared(ctx context.Context, panelID int64, lock bool) (*
 // needed.
 func (s *Service) Rollback(ctx context.Context, jobID string) (*Report, error) {
 	var panelID int64
-	var state, origin, backup string
+	var state, origin, backup, rollback string
 	var safe bool
-	err := s.db.QueryRowContext(ctx, "SELECT panel_id, state, source_origin, backup_id, safe_mode FROM jobs WHERE id = ?", jobID).
-		Scan(&panelID, &state, &origin, &backup, &safe)
+	err := s.db.QueryRowContext(ctx, "SELECT panel_id, state, source_origin, backup_id, safe_mode, rollback FROM jobs WHERE id = ?", jobID).
+		Scan(&panelID, &state, &origin, &backup, &safe, &rollback)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrNoJob, jobID)
 	}
@@ -107,15 +107,19 @@ func (s *Service) Rollback(ctx context.Context, jobID string) (*Report, error) {
 		return nil, err
 	}
 	defer p.release()
-	j := &Job{ID: jobID, PanelID: panelID, origin: origin, backupID: backup, safeMode: safe}
+	j := &Job{ID: jobID, PanelID: panelID, origin: origin, backupID: backup, safeMode: safe, rollback: rollback}
 	if j.envPath, err = s.envPath(ctx, panelID); err != nil {
 		return nil, err
 	}
 	if err := s.settle(ctx, j, p); err != nil {
 		return nil, err
 	}
-	rep := &Report{Schema: ReportSchema, JobID: jobID, SafeMode: safe, BackupID: backup, StartedAt: s.now()}
-	s.undo(ctx, j, p, rep)
+	rep := &Report{Schema: ReportSchema, JobID: jobID, SafeMode: safe, Rollback: j.rollbackOrUndo(), BackupID: backup, StartedAt: s.now()}
+	if safe {
+		s.rollBack(ctx, j, p, rep)
+	} else {
+		s.undo(ctx, j, p, rep, false)
+	}
 	if rep.State == "" {
 		rep.State = StateFailed
 	}

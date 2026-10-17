@@ -137,7 +137,51 @@ func RandomPort() (int, error) {
 	return MinRandomPort + int(n.Int64()), nil
 }
 
-const keySafeMode = "migration.safe_mode"
+const (
+	keySafeMode = "migration.safe_mode"
+	keyRollback = "migration.rollback"
+)
+
+// What Safe Mode does when a migration fails.
+const (
+	// RollbackUndo removes exactly what the job wrote, checks nothing is
+	// left, and puts the backup back only if something is.
+	RollbackUndo = "undo"
+	// RollbackBackup puts the whole backup back. It also takes back what
+	// other admins and the panel wrote during the job.
+	RollbackBackup = "backup"
+)
+
+// ErrRollback means a rollback choice other than undo or backup.
+var ErrRollback = errors.New("rollback must be undo or backup")
+
+// Rollback reads what Safe Mode does on failure; undo until changed.
+func (s *Store) Rollback(ctx context.Context) (string, error) {
+	var v string
+	err := s.db.QueryRowContext(ctx, `SELECT value FROM settings WHERE key = ?`, keyRollback).Scan(&v)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return RollbackUndo, nil
+	case err != nil:
+		return RollbackUndo, fmt.Errorf("read settings: %w", err)
+	case v != RollbackBackup:
+		return RollbackUndo, nil
+	}
+	return v, nil
+}
+
+// SetRollback stores what Safe Mode does on failure.
+func (s *Store) SetRollback(ctx context.Context, v string) error {
+	if v != RollbackUndo && v != RollbackBackup {
+		return ErrRollback
+	}
+	_, err := s.db.ExecContext(ctx, `INSERT INTO settings (key, value) VALUES (?, ?)
+		ON CONFLICT (key) DO UPDATE SET value = excluded.value`, keyRollback, v)
+	if err != nil {
+		return fmt.Errorf("save setting %s: %w", keyRollback, err)
+	}
+	return nil
+}
 
 // SafeMode reports whether migrations take a backup and undo everything
 // on failure. It is on until the operator turns it off.

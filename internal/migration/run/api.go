@@ -240,36 +240,86 @@ func (s *Service) runningBackup(id string) bool {
 // another database, so the backup must not be put there.
 var ErrPanelChanged = errors.New("the panel's database is not the one this backup was taken from")
 
-// RestoreBackup puts a Safe Mode backup back into the panel it came from.
-// The panel must be stopped first (D36); the command line asks for that.
-func (s *Service) RestoreBackup(ctx context.Context, id string) error {
-	b, err := s.backupRecord(ctx, id)
-	if errors.Is(err, sql.ErrNoRows) {
-		return ErrNotFound
+// RestoreBackup puts a Safe Mode backup back into the panel it came from
+// and retires the job's ledger rows. With stopped false, Karvan stops the
+// panel, restores and starts it again (the web panel); with stopped true
+// the caller has stopped it (the command line). The destination's lock is
+// held throughout, so no job writes meanwhile.
+func (s *Service) RestoreBackup(ctx context.Context, id string, stopped bool) error {
+	b, jobID, env, d, err := s.backupTarget(ctx, id)
+	if err != nil {
+		return err
+	}
+	var ctl PanelControl
+	if !stopped {
+		if ctl, err = s.control(ctx, env); err != nil {
+			return err
+		}
+	}
+	w, err := paneldb.OpenWriter(ctx, d.Target)
+	if err != nil {
+		return err
+	}
+	defer w.Close()
+	unlock, err := w.Lock(ctx, d.Target)
+	if err != nil {
+		return err
+	}
+	defer unlock()
+	put := func() error { return safemode.Restorer{Key: s.Key, Run: s.Tools}.Restore(ctx, d.Target, w.Server(), b) }
+	if ctl != nil {
+		err = restoreStopped(ctx, ctl, put)
+	} else {
+		err = put()
 	}
 	if err != nil {
 		return err
 	}
-	var destName, env string
-	err = s.db.QueryRowContext(ctx, "SELECT b.dest, p.env_path FROM safe_mode_backups b JOIN jobs j ON j.id = b.job_id "+
-		"JOIN panels p ON p.id = j.panel_id WHERE b.id = ?", id).Scan(&destName, &env)
+	if err := s.markRestored(ctx, jobID); err != nil {
+		return err
+	}
+	_, err = s.db.ExecContext(ctx, "UPDATE jobs SET state = ?, updated_at = ? WHERE id = ?", StateRolledBack, s.now().UnixMilli(), jobID)
+	if j, jerr := s.job(jobID); jerr == nil && j.lockIdle() {
+		j.state = StateRolledBack
+		j.mu.Unlock()
+	}
+	return err
+}
+
+// backupTarget finds a backup, its job and the panel it goes back into,
+// and refuses one whose panel now points at another database.
+func (s *Service) backupTarget(ctx context.Context, id string) (safemode.Backup, string, string, *dest.Panel, error) {
+	b, err := s.backupRecord(ctx, id)
+	if errors.Is(err, sql.ErrNoRows) {
+		return b, "", "", nil, ErrNotFound
+	}
 	if err != nil {
-		return fmt.Errorf("find the backup's panel: %w", err)
+		return b, "", "", nil, err
+	}
+	var jobID, destName, env string
+	err = s.db.QueryRowContext(ctx, "SELECT b.job_id, b.dest, p.env_path FROM safe_mode_backups b JOIN jobs j ON j.id = b.job_id "+
+		"JOIN panels p ON p.id = j.panel_id WHERE b.id = ?", id).Scan(&jobID, &destName, &env)
+	if err != nil {
+		return b, "", "", nil, fmt.Errorf("find the backup's panel: %w", err)
+	}
+	if s.runningBackup(id) {
+		return b, "", "", nil, ErrBusy
 	}
 	d, err := dest.Open(ctx, env)
 	if err != nil {
-		return err
+		return b, "", "", nil, err
 	}
 	if d.Target.String() != destName {
-		return ErrPanelChanged
+		return b, "", "", nil, ErrPanelChanged
 	}
-	r, err := paneldb.OpenReader(ctx, d.Target)
-	if err != nil {
-		return err
-	}
-	srv := r.Server()
-	_ = r.Close()
-	return safemode.Restorer{Key: s.Key, Run: s.Tools}.Restore(ctx, d.Target, srv, b)
+	return b, jobID, env, d, nil
+}
+
+// PanelControlStatus says whether Karvan can stop and start a panel, and
+// why not.
+func (s *Service) PanelControlStatus(ctx context.Context, envPath string) error {
+	_, err := s.control(ctx, envPath)
+	return err
 }
 
 // PanelRow is a registered destination panel.

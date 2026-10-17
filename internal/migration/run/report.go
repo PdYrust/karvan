@@ -22,6 +22,7 @@ type Report struct {
 	JobID     string    `json:"jobId"`
 	State     string    `json:"state"`
 	SafeMode  bool      `json:"safeMode"`
+	Rollback  string    `json:"rollback,omitempty"` // what Safe Mode does on failure
 	BackupID  string    `json:"backupId,omitempty"`
 	StartedAt time.Time `json:"startedAt"`
 	EndedAt   time.Time `json:"endedAt"`
@@ -90,11 +91,14 @@ const (
 	UndoConnections   = "client_connections"
 	UndoAfterReload   = "after_reload"
 	UndoCoreLoaded    = "core_may_have_loaded"
-	UndoInboundRows   = "inbound_tag_rows" // Marzban inbound rows and their default hosts
+	UndoInboundRows   = "inbound_tag_rows"
+	// UndoLostPanelWrites: putting the backup back also took back what
+	// other admins and the panel wrote during the job.
+	UndoLostPanelWrites = "restore_lost_panel_writes" // Marzban inbound rows and their default hosts
 )
 
 func newReport(j *Job, start time.Time) *Report {
-	r := &Report{Schema: ReportSchema, JobID: j.ID, SafeMode: j.safeMode, StartedAt: start,
+	r := &Report{Schema: ReportSchema, JobID: j.ID, SafeMode: j.safeMode, Rollback: j.rollbackOrUndo(), StartedAt: start,
 		NotUndoable: []string{UndoNotifications, UndoConnections, UndoCoreLoaded}}
 	r.Source.Kind, r.Source.Origin = string(j.kind), j.origin
 	if j.snapshot != nil {
