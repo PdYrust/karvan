@@ -1,22 +1,42 @@
 #!/usr/bin/env bash
 # Starts Marzban 0.8.4 and PasarGuard 5.4.1 on SQLite for `make test-panels`
-# and waits until both answer. Each gets a fresh folder under PANELS_DIR
-# with its ENV, Xray config and database. Needs Docker.
+# and waits until both answer. Each panel is laid out like the official
+# install scripts do it: its own folder with .env and docker-compose.yml,
+# started as the compose project named after the folder, so Karvan stops
+# and starts it the way it would on a real server. Needs Docker.
 #   Marzban:    http://127.0.0.1:18000, webhook to 127.0.0.1:18099
 #   PasarGuard: http://127.0.0.1:18001
 set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
-export PANELS_DIR=${PANELS_DIR:-/tmp/karvan-panels}
-PANELS_UID=$(id -u)
-PANELS_GID=$(id -g)
-export PANELS_UID PANELS_GID
-COMPOSE=(docker compose -f test/panels/compose.yml)
+PANELS_DIR=${PANELS_DIR:-/tmp/karvan-panels}
+m=$PANELS_DIR/karvan-test-marzban
+p=$PANELS_DIR/karvan-test-pasarguard
 
-docker compose -p karvan-testpanels down --remove-orphans >/dev/null 2>&1 || true
+down() { [ -f "$1/docker-compose.yml" ] && docker compose -f "$1/docker-compose.yml" -p "$(basename "$1")" down --remove-orphans >/dev/null 2>&1 || true; }
+down "$m"
+down "$p"
 rm -rf "$PANELS_DIR"
-mkdir -p "$PANELS_DIR/marzban" "$PANELS_DIR/pasarguard"
-m=$PANELS_DIR/marzban
-p=$PANELS_DIR/pasarguard
+mkdir -p "$m" "$p"
+
+# compose <dir> <service> <image>: the panel's compose file. Host network
+# like a real install; it runs as the calling user so the test can write
+# its SQLite file; the folder has the same path inside and outside.
+compose() {
+  cat >"$1/docker-compose.yml" <<EOF
+services:
+  $2:
+    image: $3
+    restart: "no"
+    network_mode: host
+    user: "$(id -u):$(id -g)"
+    env_file: $1/.env
+    environment:
+      HOME: $1
+    volumes: ["$1:$1"]
+EOF
+}
+compose "$m" marzban gozargah/marzban:v0.8.4
+compose "$p" pasarguard pasarguard/panel:v5.4.1
 
 # The inbound tags match migrationtest.XrayInbounds; all listen on loopback.
 cat >"$m/xray_config.json" <<'EOF'
@@ -51,14 +71,16 @@ UVICORN_PORT = 18001
 SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///$p/db.sqlite3"
 EOF
 
-"${COMPOSE[@]}" up -d >/dev/null
+for d in "$m" "$p"; do
+  docker compose -f "$d/docker-compose.yml" -p "$(basename "$d")" up -d >/dev/null
+done
 for url in http://127.0.0.1:18000/openapi.json http://127.0.0.1:18001/health; do
   for _ in $(seq 1 90); do
     curl -fsS -o /dev/null "$url" 2>/dev/null && continue 2
     sleep 1
   done
   echo "panel at $url did not start" >&2
-  "${COMPOSE[@]}" logs --tail 40 >&2
+  for d in "$m" "$p"; do docker compose -f "$d/docker-compose.yml" -p "$(basename "$d")" logs --tail 40 >&2; done
   exit 1
 done
 echo "panels up in $PANELS_DIR"

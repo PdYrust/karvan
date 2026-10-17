@@ -34,13 +34,14 @@ import (
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 	"github.com/PdYrust/karvan/internal/panel/pasarguarddb"
 	"github.com/PdYrust/karvan/internal/panel/source"
+	"github.com/PdYrust/karvan/internal/panelctl"
 	"github.com/PdYrust/karvan/internal/secret"
 	"github.com/PdYrust/karvan/internal/store"
 )
 
 // The panels come from scripts/testpanels/up.sh.
 const (
-	marzbanContainer = "karvan-testpanels-marzban-1"
+	marzbanContainer = "karvan-test-marzban-marzban-1"
 	webhookAddr      = "127.0.0.1:18099"
 	// AdminPassword is every admin password the tests set.
 	AdminPassword = "Karvan-Test-Pass-2026" //nolint:gosec // G101: a test value for the test panels
@@ -70,7 +71,7 @@ type Live struct {
 func OpenLive(t *testing.T, kind panel.Kind) *Live {
 	t.Helper()
 	ctx := context.Background()
-	env := filepath.Join(PanelsDir(), string(kind), ".env")
+	env := filepath.Join(PanelsDir(), "karvan-test-"+string(kind), ".env")
 	d, err := dest.Open(ctx, env)
 	if err != nil {
 		t.Fatalf("open %s (run scripts/testpanels/up.sh): %v", kind, err)
@@ -201,15 +202,38 @@ func NewMover(t *testing.T, l *Live) *Mover {
 	if err != nil {
 		t.Fatal(err)
 	}
-	m := &Mover{t: t, l: l, DB: db, Key: key, Svc: run.New(run.Deps{DB: db, Key: key, DataDir: dir, Tools: migrationtest.Tools, Reloaders: reload.Methods()})}
+	ctl := panelctl.Opener{Mode: panelctl.ModeDocker}
+	m := &Mover{t: t, l: l, DB: db, Key: key, Svc: run.New(run.Deps{DB: db, Key: key, DataDir: dir, Tools: migrationtest.Tools,
+		Reloaders: reload.Methods(), Control: func(ctx context.Context, env string) (run.PanelControl, error) {
+			c, err := ctl.Open(ctx, filepath.Dir(env))
+			if err != nil {
+				return nil, err
+			}
+			return c, nil
+		}})}
 	if m.Panel, err = m.Svc.RegisterPanel(ctx, l.Env, "Live", string(l.Kind)); err != nil {
 		t.Fatal(err)
 	}
 	return m
 }
 
-// Move checks and runs a job from src and returns its report.
+// Move checks and runs a job from src, expects every user moved, and
+// returns its report.
 func (m *Mover) Move(src migrationtest.Source, method string, edit func(p *plan.Plan)) *run.Report {
+	m.t.Helper()
+	rep := m.Run(src, run.Options{Reload: method}, edit)
+	if rep.State != run.StateDone {
+		m.t.Fatalf("job %s: %s", rep.State, rep.Error)
+	}
+	if rep.Counts.Moved != rep.Counts.Read {
+		m.t.Fatalf("moved %d of %d", rep.Counts.Moved, rep.Counts.Read)
+	}
+	return rep
+}
+
+// Run checks and runs a job from src with o (its version and password
+// are filled in) and returns the report, however the job ended.
+func (m *Mover) Run(src migrationtest.Source, o run.Options, edit func(p *plan.Plan)) *run.Report {
 	m.t.Helper()
 	ctx := context.Background()
 	j, err := m.Svc.Create(ctx, run.Login{URL: src.URL, Username: src.Username, Password: secret.NewValue(src.Password)}, m.Panel,
@@ -229,19 +253,14 @@ func (m *Mover) Move(src migrationtest.Source, method string, edit func(p *plan.
 	if r.Blockers > 0 {
 		m.t.Fatalf("blockers: %+v %+v", r.Conflicts, r.Groups)
 	}
-	if err := m.Svc.Run(ctx, j.ID, run.Options{Version: v, Reload: method, AdminPassword: secret.NewValue(AdminPassword)}); err != nil {
+	o.Version, o.AdminPassword = v, secret.NewValue(AdminPassword)
+	if err := m.Svc.Run(ctx, j.ID, o); err != nil {
 		m.t.Fatal(err)
 	}
 	m.Svc.Wait()
 	rep, err := m.Svc.Report(j.ID)
 	if err != nil {
 		m.t.Fatal(err)
-	}
-	if rep.State != run.StateDone {
-		m.t.Fatalf("job %s: %s", rep.State, rep.Error)
-	}
-	if rep.Counts.Moved != rep.Counts.Read {
-		m.t.Fatalf("moved %d of %d; groups %+v", rep.Counts.Moved, rep.Counts.Read, r.Groups)
 	}
 	return rep
 }

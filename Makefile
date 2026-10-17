@@ -71,11 +71,11 @@ testdb-down:
 # (needs Docker; starts fresh panels every time).
 test-panels:
 	./scripts/testpanels/up.sh
-	go test -tags paneltest -count=1 -p 1 ./internal/migration/reload/ ./internal/bridge/
+	go test -tags paneltest -count=1 -p 1 ./internal/migration/reload/ ./internal/bridge/ ./internal/panelctl/
 bench:
 	go test -run x -bench . -benchtime 3x ./internal/migration/...
 testpanels-down:
-	docker compose -p karvan-testpanels down
+	for d in /tmp/karvan-panels/karvan-test-*; do [ -f $$d/docker-compose.yml ] && docker compose -f $$d/docker-compose.yml -p $$(basename $$d) down; done; true
 # Full gate: before a phase ends or a release.
 check-full: check test test-db test-panels vuln audit-web web
 
