@@ -7,6 +7,7 @@ import (
 
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
+	"github.com/PdYrust/karvan/internal/panel/panelstats"
 )
 
 // Revision is the alembic head of PasarGuard 5.4.1. Newer revisions are
@@ -89,3 +90,7 @@ func Inspect(ctx context.Context, q paneldb.Querier, srv paneldb.Server) (Schema
 	s.UnknownChildren = paneldb.UnknownKeys(fks, children)
 	return s, nil
 }
+
+// Stats tells panelstats how PasarGuard differs: subscription apps come
+// from its subscription updates table.
+var Stats = panelstats.Schema{Updates: true}

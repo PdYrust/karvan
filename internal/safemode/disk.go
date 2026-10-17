@@ -14,23 +14,7 @@ const headroom = 100 << 20
 
 // Size estimates how big the database is.
 func Size(ctx context.Context, q paneldb.Querier, t paneldb.Target) (int64, error) {
-	switch t.Dialect {
-	case paneldb.SQLite:
-		var total int64
-		for _, p := range []string{t.Path, t.Path + "-wal"} {
-			if info, err := os.Stat(p); err == nil {
-				total += info.Size()
-			}
-		}
-		return total, nil
-	case paneldb.MySQL:
-		var n int64
-		err := q.QueryRowContext(ctx, "SELECT COALESCE(SUM(data_length + index_length), 0) FROM information_schema.TABLES WHERE table_schema = DATABASE()").Scan(&n)
-		return n, err
-	}
-	var n int64
-	err := q.QueryRowContext(ctx, "SELECT pg_database_size(current_database())").Scan(&n)
-	return n, err
+	return paneldb.Size(ctx, q, t)
 }
 
 // Free is the space available to Karvan's user in dir.

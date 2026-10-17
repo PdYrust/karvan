@@ -7,6 +7,7 @@ import (
 
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
+	"github.com/PdYrust/karvan/internal/panel/panelstats"
 )
 
 // Revision is the alembic head of Marzban 0.8.4, the only version Karvan
@@ -86,3 +87,7 @@ func Inspect(ctx context.Context, q paneldb.Querier, srv paneldb.Server) (Schema
 	s.UnknownChildren = paneldb.UnknownKeys(fks, children)
 	return s, nil
 }
+
+// Stats tells panelstats how Marzban differs: expire is unix seconds, and
+// subscription apps are each user's last user agent.
+var Stats = panelstats.Schema{ExpireUnix: true}
