@@ -117,6 +117,7 @@ type Source struct {
 	Kind     panel.Kind
 	Username string
 	Password string
+	APIKey   string // PasarGuard only
 	Close    func()
 	// Mutate changes the panel's users between reads.
 	Mutate func(fn func(users *[]map[string]any))
@@ -145,6 +146,9 @@ func NewSource(t *testing.T, kind panel.Kind, n int) Source {
 	for i := range users {
 		users[i] = fakepanel.PasarGuardUser(int64(i+1), fmt.Sprintf("user%03d", i), nil)
 	}
-	f := fakepanel.NewPasarGuard(fakepanel.PasarGuardAdmin{ID: 7, Username: "shop", Password: "pw"}, users, fakepanel.Faults{})
-	return Source{URL: f.URL, Kind: kind, Username: "shop", Password: "pw", Close: f.Close, Mutate: f.Mutate, Subscribe: f.Subscribe}
+	f := fakepanel.NewPasarGuard(fakepanel.PasarGuardAdmin{ID: 7, Username: "shop", Password: "pw", APIKey: testAPIKey}, users, fakepanel.Faults{})
+	return Source{URL: f.URL, Kind: kind, Username: "shop", Password: "pw", APIKey: testAPIKey, Close: f.Close, Mutate: f.Mutate, Subscribe: f.Subscribe}
 }
+
+// testAPIKey is the fake PasarGuard admin's API key.
+const testAPIKey = "shop-api-key-for-tests" //nolint:gosec // G101: a test value for the fake panel

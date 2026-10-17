@@ -68,6 +68,8 @@ type Job struct {
 	lastUse    time.Time
 	report     *Report
 	passwords  map[string]string // generated admin passwords, shown once
+	// passwordFrom says where the moved admin's password came from.
+	passwordFrom string
 }
 
 // frozenView is what readers see while the job runs.

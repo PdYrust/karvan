@@ -8,6 +8,8 @@ import (
 	"testing"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/PdYrust/karvan/internal/migration/ledger"
 	"github.com/PdYrust/karvan/internal/migration/migrationtest"
 	"github.com/PdYrust/karvan/internal/migration/plan"
@@ -243,8 +245,32 @@ func TestCredentialsAreDroppedAtTheEnd(t *testing.T) {
 	if j.source != nil || !j.login.Password.IsZero() || j.snapshot != nil || len(j.generated) != 0 {
 		t.Fatal("the job kept the old panel's login or its users")
 	}
-	if len(j.passwords) != 1 {
-		t.Fatal("the generated admin password must wait for its one download")
+}
+
+// The moved reseller keeps the password it signed in to the old panel
+// with (owner, 2026-10-16); nothing is generated or handed out.
+func TestAdminKeepsTheResellersPassword(t *testing.T) {
+	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/marzbandb/testdata/" + marzbandb.Revision + ".sqlite.sql"})
+	h := newHarness(t, panel.PasarGuard, panel.Marzban, tg, 2)
+	j := h.job(nil)
+	rep := h.run(j, false)
+	if rep.Admin.Password != PasswordKept || len(j.passwords) != 0 {
+		t.Fatalf("password %q, generated %d", rep.Admin.Password, len(j.passwords))
+	}
+	ctx := context.Background()
+	r, err := paneldb.OpenReader(ctx, tg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer r.Close()
+	var hash string
+	if err := r.View(ctx, func(q paneldb.Querier) error {
+		return q.QueryRowContext(ctx, "SELECT hashed_password FROM admins WHERE username = ?", rep.Admin.Username).Scan(&hash)
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(h.src.Password)) != nil {
+		t.Fatal("the moved admin cannot sign in with its old password")
 	}
 }
 
@@ -419,5 +445,30 @@ func TestLaggingEventReaderIsDropped(t *testing.T) {
 	}
 	if n == 0 || n >= 300 {
 		t.Fatalf("read %d events before the stream ended", n)
+	}
+}
+
+// With an API key there is no password to keep: one is generated and
+// waits for its one download.
+func TestGeneratedPasswordWaitsForItsDownload(t *testing.T) {
+	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/marzbandb/testdata/" + marzbandb.Revision + ".sqlite.sql"})
+	h := newHarness(t, panel.PasarGuard, panel.Marzban, tg, 2)
+	ctx := context.Background()
+	j, err := h.svc.Create(ctx, Login{URL: h.src.URL, Kind: panel.PasarGuard, APIKey: secret.NewValue(h.src.APIKey)}, h.panel,
+		source.Options{Sleep: func(context.Context, time.Duration) error { return nil }})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := h.svc.Check(ctx, j.ID); err != nil {
+		t.Fatal(err)
+	}
+	rep := h.run(j, false)
+	if rep.State != StateDone || rep.Admin.Password != PasswordGenerated {
+		t.Fatalf("state %s password %q", rep.State, rep.Admin.Password)
+	}
+	first, _ := h.svc.TakePasswords(j.ID)
+	again, _ := h.svc.TakePasswords(j.ID)
+	if len(first) != 1 || len(again) != 0 {
+		t.Fatalf("passwords %d then %d", len(first), len(again))
 	}
 }

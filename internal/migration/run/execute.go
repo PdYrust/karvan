@@ -126,11 +126,20 @@ func (s *Service) canRun(j *Job, o Options) error {
 	return nil
 }
 
-// adminPassword checks a typed password or generates one. A generated one
-// is kept until the operator downloads it once (D22).
+// Where the moved admin's password comes from.
+const (
+	PasswordKept      = "kept"      // the reseller's own, from the old panel's login
+	PasswordTyped     = "typed"     // the operator typed one
+	PasswordGenerated = "generated" // in passwords.csv, once
+)
+
+// adminPassword uses a typed password, else the reseller's own one from
+// the old panel's login, else generates one. A generated one is kept
+// until the operator downloads it once (D22).
 func (s *Service) adminPassword(j *Job, typed secret.Value) (secret.Value, error) {
 	name := j.result.Admin.Username
 	if j.result.Admin.Merge != nil {
+		j.passwordFrom = ""
 		return secret.NewValue("unused-for-a-merged-admin"), nil
 	}
 	if !typed.IsZero() {
@@ -141,8 +150,16 @@ func (s *Service) adminPassword(j *Job, typed secret.Value) (secret.Value, error
 		if code != "" {
 			return secret.Value{}, fmt.Errorf("%w: %s", ErrBadPassword, code)
 		}
+		j.passwordFrom = PasswordTyped
 		return typed, nil
 	}
+	// The reseller signed in to the old panel with this password, so the
+	// moved admin keeps it (owner, 2026-10-16). bcrypt reads 72 bytes.
+	if l := j.login; l.APIKey.IsZero() && !l.Password.IsZero() && len(l.Password.Reveal()) <= 72 && l.Username == j.snapshot.Admin.Username {
+		j.passwordFrom = PasswordKept
+		return l.Password, nil
+	}
+	j.passwordFrom = PasswordGenerated
 	p, err := pasarguard.GeneratePassword(name)
 	if err != nil {
 		return secret.Value{}, err

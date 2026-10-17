@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 	"time"
 
 	"github.com/PdYrust/karvan/internal/migration/dest"
@@ -40,6 +41,8 @@ type Report struct {
 		Username string `json:"username"`
 		ID       int64  `json:"id,omitempty"`
 		Merged   bool   `json:"merged"`
+		RoleID   int64  `json:"roleId,omitempty"`
+		Password string `json:"password,omitempty"` // kept, typed or generated
 	} `json:"admin"`
 	Counts      Counts            `json:"counts"`
 	Users       []UserLine        `json:"users"`
@@ -53,14 +56,16 @@ type Report struct {
 
 // Counts sum up the users.
 type Counts struct {
-	Read     int `json:"read"`
-	Moved    int `json:"moved"`
-	Skipped  int `json:"skipped"`
-	Adopted  int `json:"adopted"`
-	Undone   int `json:"undone"`
-	Changed  int `json:"configChanged"`
-	Renamed  int `json:"renamed"`
-	Verified int `json:"verified"`
+	Read    int `json:"read"`
+	Moved   int `json:"moved"`
+	Skipped int `json:"skipped"`
+	Adopted int `json:"adopted"`
+	Undone  int `json:"undone"`
+	Changed int `json:"configChanged"`
+	Renamed int `json:"renamed"`
+	// ProtocolsAdded counts users who got protocols they lacked (D67).
+	ProtocolsAdded int `json:"protocolsAdded"`
+	Verified       int `json:"verified"`
 }
 
 // UserLine is one user's outcome.
@@ -109,7 +114,7 @@ func newReport(j *Job, start time.Time) *Report {
 		r.NotUndoable = append(r.NotUndoable, UndoInboundRows)
 	}
 	r.Conflicts = j.result.Conflicts
-	r.Admin.Username = j.result.Admin.Username
+	r.Admin.Username, r.Admin.RoleID, r.Admin.Password = j.result.Admin.Username, j.result.Admin.RoleID, j.passwordFrom
 	for _, it := range j.result.Items {
 		line := UserLine{Key: it.Key, SourceUsername: it.Source.Username, Username: it.User.Username, Applied: it.Applied,
 			ChangesConfig: it.ChangesConfig, ChangesLink: it.ChangesLink}
@@ -129,6 +134,9 @@ func newReport(j *Job, start time.Time) *Report {
 		}
 		if it.User.Username != it.Source.Username && it.Include {
 			r.Counts.Renamed++
+		}
+		if it.Include && slices.ContainsFunc(it.Applied, func(a string) bool { return strings.HasPrefix(a, "added:") }) {
+			r.Counts.ProtocolsAdded++
 		}
 	}
 	return r
