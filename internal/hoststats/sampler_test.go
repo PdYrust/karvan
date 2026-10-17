@@ -146,7 +146,7 @@ func TestSamplerSavesMinutesAndTrims(t *testing.T) {
 		t.Fatalf("minutes %+v", mins)
 	}
 	buckets, err := st.Range(ctx, start.Unix(), start.Add(time.Hour).Unix(), 300)
-	if err != nil || len(buckets) != 1 || buckets[0].CPUMax != 0.5 {
+	if err != nil || len(buckets) != 1 || buckets[0].CPUMax != 0.5 || buckets[0].Minutes != 2 {
 		t.Fatalf("5-minute buckets %+v %v", buckets, err)
 	}
 	n, err := st.Trim(ctx, start.Add(90*time.Second).Unix())

@@ -25,6 +25,9 @@ type Minute struct {
 	DiskWrite float64 `json:"diskWrite"`
 	TCP       int64   `json:"tcp"`
 	Procs     int64   `json:"procs"`
+	// Minutes is how many saved minutes a bucket holds; a bucket the
+	// server was down for part of holds fewer than its width.
+	Minutes int64 `json:"minutes"`
 }
 
 // Store keeps minutes in Karvan's own database.
@@ -52,7 +55,7 @@ func (s *Store) Range(ctx context.Context, from, to, bucket int64) ([]Minute, er
 	rows, err := s.db.QueryContext(ctx, `SELECT (ts / ?1) * ?1 AS b,
 		AVG(cpu), MAX(cpu_max), AVG(load1), CAST(AVG(mem_used) AS INTEGER), CAST(AVG(mem_cache) AS INTEGER),
 		MAX(mem_total), CAST(AVG(swap_used) AS INTEGER), AVG(net_rx), AVG(net_tx), MAX(net_rx_max), MAX(net_tx_max),
-		AVG(disk_read), AVG(disk_write), CAST(AVG(tcp) AS INTEGER), CAST(AVG(procs) AS INTEGER)
+		AVG(disk_read), AVG(disk_write), CAST(AVG(tcp) AS INTEGER), CAST(AVG(procs) AS INTEGER), COUNT(*)
 		FROM metrics_host WHERE ts >= ?2 AND ts < ?3 GROUP BY b ORDER BY b`, bucket, from, to)
 	if err != nil {
 		return nil, fmt.Errorf("read server minutes: %w", err)
@@ -62,7 +65,7 @@ func (s *Store) Range(ctx context.Context, from, to, bucket int64) ([]Minute, er
 	for rows.Next() {
 		var m Minute
 		if err := rows.Scan(&m.TS, &m.CPU, &m.CPUMax, &m.Load1, &m.MemUsed, &m.MemCache, &m.MemTotal, &m.SwapUsed,
-			&m.NetRx, &m.NetTx, &m.NetRxMax, &m.NetTxMax, &m.DiskRead, &m.DiskWrite, &m.TCP, &m.Procs); err != nil {
+			&m.NetRx, &m.NetTx, &m.NetRxMax, &m.NetTxMax, &m.DiskRead, &m.DiskWrite, &m.TCP, &m.Procs, &m.Minutes); err != nil {
 			return nil, fmt.Errorf("read server minutes: %w", err)
 		}
 		out = append(out, m)
