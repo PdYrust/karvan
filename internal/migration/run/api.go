@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"slices"
 	"strings"
 	"time"
 
@@ -36,6 +37,10 @@ type Summary struct {
 	Moved       int            `json:"movedBefore"` // already in the ledger
 	Blockers    int            `json:"blockers"`
 	Stable      bool           `json:"stable"`
+	// RoleID is the moved admin's role on a PasarGuard destination, and
+	// UserTargets where its users go unless an operation says otherwise.
+	RoleID      int64    `json:"roleId,omitempty"`
+	UserTargets []string `json:"userTargets"`
 }
 
 // TargetInfo is a destination group or inbound users can be put in.
@@ -43,7 +48,52 @@ type TargetInfo struct {
 	ID        string   `json:"id"`
 	Name      string   `json:"name"`
 	Protocols []string `json:"protocols"`
+	Hosts     int      `json:"hosts"` // enabled hosts: one link each per user
 	Disabled  bool     `json:"disabled,omitempty"`
+}
+
+func targetInfo(d engine.Dest, t panel.Target) TargetInfo {
+	return TargetInfo{ID: t.ID, Name: t.Name, Protocols: d.TargetProtocols[t.ID], Hosts: d.TargetHosts[t.ID], Disabled: t.Disabled}
+}
+
+// RoleInfo is a destination admin role as the final admin step shows it.
+type RoleInfo struct {
+	ID              int64              `json:"id"`
+	Name            string             `json:"name"`
+	IsOwner         bool               `json:"isOwner"`
+	AllGroups       bool               `json:"allGroups"` // the role allows every group
+	Groups          []TargetInfo       `json:"groups"`
+	Limits          panel.RoleLimits   `json:"limits"`
+	Features        panel.RoleFeatures `json:"features"`
+	RequireTemplate bool               `json:"requireTemplate"`
+}
+
+// Roles lists the destination's admin roles and the one the moved admin
+// gets now (D65). A Marzban destination has none.
+func (s *Service) Roles(jobID string) (int64, []RoleInfo, error) {
+	j, err := s.job(jobID)
+	if err != nil {
+		return 0, nil, err
+	}
+	if !j.lockIdle() {
+		return 0, nil, ErrBusy
+	}
+	defer j.mu.Unlock()
+	if j.result == nil {
+		return 0, nil, ErrNotChecked
+	}
+	out := []RoleInfo{}
+	for _, r := range j.facts.Roles {
+		ri := RoleInfo{ID: r.ID, Name: r.Name, IsOwner: r.IsOwner, AllGroups: r.Groups == nil || r.IsOwner, Groups: []TargetInfo{},
+			Limits: r.Limits, Features: r.Features, RequireTemplate: r.RequireTemplate}
+		for _, t := range j.facts.Targets {
+			if ri.AllGroups || slices.Contains(r.Groups, t.ID) {
+				ri.Groups = append(ri.Groups, targetInfo(j.facts, t))
+			}
+		}
+		out = append(out, ri)
+	}
+	return j.result.Admin.RoleID, out, nil
 }
 
 // Summary sums up a checked job.
@@ -65,8 +115,9 @@ func (s *Service) Summary(jobID string) (Summary, error) {
 		sum.Admin = j.snapshot.Admin.Username
 	}
 	for _, t := range j.facts.Targets {
-		sum.Targets = append(sum.Targets, TargetInfo{ID: t.ID, Name: t.Name, Protocols: j.facts.TargetProtocols[t.ID], Disabled: t.Disabled})
+		sum.Targets = append(sum.Targets, targetInfo(j.facts, t))
 	}
+	sum.RoleID, sum.UserTargets = j.result.Admin.RoleID, j.result.Targets
 	for _, it := range j.result.Items {
 		sum.Users++
 		sum.UsedTraffic += it.Source.UsedTraffic

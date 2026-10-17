@@ -212,3 +212,15 @@ func (a *API) DeleteTemplate(w http.ResponseWriter, r *http.Request) {
 	}
 	respond.NoContent(w)
 }
+
+// Roles lists the destination's admin roles for the final admin step:
+// each with its groups, host counts, limits and features, and the role
+// the moved admin gets now (D65). Empty on a Marzban destination.
+func (a *API) Roles(w http.ResponseWriter, r *http.Request) {
+	chosen, roles, err := a.Runs.Roles(r.PathValue("id"))
+	if err != nil {
+		writeRunError(w, r, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, map[string]any{"roleId": chosen, "roles": roles})
+}

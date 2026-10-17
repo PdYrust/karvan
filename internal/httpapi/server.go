@@ -94,6 +94,7 @@ func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(htt
 		"PUT " + m + "/plan":                          api.PutPlan,
 		"GET " + m + "/preview":                       api.Preview,
 		"GET " + m + "/reload-options":                api.ReloadOptions,
+		"GET " + m + "/roles":                         api.Roles,
 		"POST " + m + "/run":                          api.RunMigration,
 		"POST " + m + "/cancel":                       api.CancelMigration,
 		"POST " + m + "/rollback":                     api.RollbackMigration,

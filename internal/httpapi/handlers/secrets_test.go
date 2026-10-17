@@ -57,7 +57,6 @@ func TestNoSecretLeavesTheRun(t *testing.T) {
 		t.Fatalf("run: %d %s", res.status, res.body)
 	}
 	m.runs.Wait()
-	secrets = append(secrets, csvColumn(t, m.do(http.MethodGet, api+"/migrations/"+id+"/passwords.csv", nil).body, 1, false)...)
 	secrets = append(secrets, csvColumn(t, m.do(http.MethodGet, api+"/migrations/"+id+"/links.csv", nil).body, 2, true)...)
 	secrets = append(secrets, uploadOldToken(t, m))
 	if len(secrets) < 10 {

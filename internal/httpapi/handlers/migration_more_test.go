@@ -41,7 +41,6 @@ func TestMigrationErrors(t *testing.T) {
 		status       int
 		code         string
 	}{
-		{http.MethodPost, "/run", map[string]any{"planVersion": 0, "reload": "manual"}, http.StatusConflict, "blocked"},
 		{http.MethodPost, "/rollback", nil, http.StatusConflict, "busy"},
 		{http.MethodGet, "/report", nil, http.StatusNotFound, "not_found"},
 		{http.MethodGet, "/passwords.csv", nil, http.StatusGone, "gone"},
@@ -316,5 +315,34 @@ func TestRestoreNeedsTheTypedID(t *testing.T) {
 	}
 	if res := m.do(http.MethodPost, path, map[string]any{"confirm": "0123456789abcdef"}); res.status != http.StatusNotFound {
 		t.Fatalf("unknown backup: %d %s", res.status, res.body)
+	}
+}
+
+// The final admin step lists PasarGuard's roles with their groups, and
+// users go to the chosen role's groups when no targets were picked.
+func TestRolesAndDefaultTargets(t *testing.T) {
+	m := newMigrationEnv(t, 2)
+	id := m.create()
+	var got struct {
+		RoleID int64 `json:"roleId"`
+		Roles  []struct {
+			ID        int64 `json:"id"`
+			Name      string
+			AllGroups bool `json:"allGroups"`
+			Groups    []struct {
+				ID        string   `json:"id"`
+				Protocols []string `json:"protocols"`
+			} `json:"groups"`
+		} `json:"roles"`
+	}
+	m.do(http.MethodGet, api+"/migrations/"+id+"/roles", nil).json(t, &got)
+	if got.RoleID != 3 || len(got.Roles) != 3 || got.Roles[2].Name != "operator" || !got.Roles[2].AllGroups ||
+		len(got.Roles[2].Groups) != 1 || got.Roles[2].Groups[0].ID != "1" {
+		t.Fatalf("roles %+v", got)
+	}
+	var sum run.Summary
+	m.do(http.MethodGet, api+"/migrations/"+id+"/summary", nil).json(t, &sum)
+	if strings.Join(sum.UserTargets, ",") != "1" || sum.RoleID != 3 || sum.Blockers != 0 {
+		t.Fatalf("summary %+v", sum)
 	}
 }

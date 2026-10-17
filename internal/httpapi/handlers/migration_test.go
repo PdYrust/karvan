@@ -188,12 +188,13 @@ func checkDownloads(t *testing.T, m *migrationEnv, id string) {
 	if res := m.do(http.MethodGet, api+"/migrations/"+id+"/report.csv", nil); res.status != http.StatusOK {
 		t.Fatalf("report.csv: %d", res.status)
 	}
-	first := m.do(http.MethodGet, api+"/migrations/"+id+"/passwords.csv", nil)
-	if first.status != http.StatusOK || !strings.Contains(string(first.body), "reseller,") {
-		t.Fatalf("passwords.csv: %d %q", first.status, first.body)
+	// The reseller keeps the password it signed in to the old panel with,
+	// so there is no generated one to hand out.
+	if rep.Admin.Password != run.PasswordKept {
+		t.Fatalf("admin password %q", rep.Admin.Password)
 	}
-	if again := m.do(http.MethodGet, api+"/migrations/"+id+"/passwords.csv", nil); again.status != http.StatusGone {
-		t.Fatalf("second passwords.csv: %d", again.status)
+	if res := m.do(http.MethodGet, api+"/migrations/"+id+"/passwords.csv", nil); res.status != http.StatusGone {
+		t.Fatalf("passwords.csv: %d", res.status)
 	}
 }
 
