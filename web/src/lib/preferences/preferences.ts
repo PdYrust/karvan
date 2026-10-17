@@ -1,11 +1,18 @@
 import { directionOf, type Locale } from '../../i18n/core';
+import { defaultTimeZone } from '../format/date';
 
 // Same keys as public/boot.js, which applies them before first paint.
 const langKey = 'karvan.lang';
 const themeKey = 'karvan.theme';
+const timeZoneKey = 'karvan.timeZone';
+const calendarKey = 'karvan.calendar';
+const sidebarKey = 'karvan.sidebar';
+const panelKey = 'karvan.panel';
 
 export type ThemePref = 'system' | 'light' | 'dark';
 export type Mode = 'light' | 'dark';
+/** "auto" follows the language: Jalali in Persian, Gregorian in English. */
+export type CalendarPref = 'auto' | 'persian' | 'gregory';
 
 function read(key: string): string | null {
   try {
@@ -15,12 +22,58 @@ function read(key: string): string | null {
   }
 }
 
-function write(key: string, value: string): void {
+function write(key: string, value: string | null): void {
   try {
-    localStorage.setItem(key, value);
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
   } catch {
     // Blocked storage only means the choice is not remembered.
   }
+}
+
+export function isTimeZone(tz: string): boolean {
+  try {
+    new Intl.DateTimeFormat('en', { timeZone: tz });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function readTimeZone(): string {
+  const v = read(timeZoneKey);
+  return v && isTimeZone(v) ? v : defaultTimeZone;
+}
+
+export function saveTimeZone(tz: string): void {
+  write(timeZoneKey, tz === defaultTimeZone ? null : tz);
+}
+
+export function readCalendarPref(): CalendarPref {
+  const v = read(calendarKey);
+  return v === 'persian' || v === 'gregory' ? v : 'auto';
+}
+
+export function saveCalendarPref(pref: CalendarPref): void {
+  write(calendarKey, pref === 'auto' ? null : pref);
+}
+
+export function readSidebarCollapsed(): boolean {
+  return read(sidebarKey) === 'collapsed';
+}
+
+export function saveSidebarCollapsed(collapsed: boolean): void {
+  write(sidebarKey, collapsed ? 'collapsed' : null);
+}
+
+/** The panel the switcher points at; null is "All panels". */
+export function readCurrentPanel(): number | null {
+  const n = Number(read(panelKey));
+  return Number.isInteger(n) && n > 0 ? n : null;
+}
+
+export function saveCurrentPanel(id: number | null): void {
+  write(panelKey, id === null ? null : String(id));
 }
 
 export function readLocale(): Locale {

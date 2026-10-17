@@ -1,11 +1,20 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   applyTheme,
+  isTimeZone,
+  readCalendarPref,
+  readCurrentPanel,
   readLocale,
+  readSidebarCollapsed,
   readThemePref,
+  readTimeZone,
   resolveMode,
+  saveCalendarPref,
+  saveCurrentPanel,
   saveLocale,
+  saveSidebarCollapsed,
   saveThemePref,
+  saveTimeZone,
   watchSystemTheme,
 } from './preferences';
 
@@ -23,6 +32,7 @@ function mockSystemDark(dark: boolean) {
 }
 
 afterEach(() => {
+  vi.restoreAllMocks();
   vi.unstubAllGlobals();
   localStorage.clear();
 });
@@ -67,6 +77,15 @@ describe('theme', () => {
     expect(listeners.size).toBe(0);
   });
 
+  it('reads defaults when storage is blocked', () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
+      throw new Error('blocked');
+    });
+    expect(readTimeZone()).toBe('Asia/Tehran');
+    expect(readCurrentPanel()).toBeNull();
+    expect(readCalendarPref()).toBe('auto');
+  });
+
   it('survives blocked storage', () => {
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => {
       throw new Error('blocked');
@@ -77,6 +96,46 @@ describe('theme', () => {
     mockSystemDark(false);
     expect(readThemePref()).toBe('system');
     expect(saveThemePref('dark')).toBe('dark');
-    vi.restoreAllMocks();
+  });
+});
+
+describe('region', () => {
+  it('defaults to Tehran and keeps only real zones', () => {
+    expect(readTimeZone()).toBe('Asia/Tehran');
+    saveTimeZone('Europe/Berlin');
+    expect(readTimeZone()).toBe('Europe/Berlin');
+    localStorage.setItem('karvan.timeZone', 'Mars/Olympus');
+    expect(readTimeZone()).toBe('Asia/Tehran');
+    expect(isTimeZone('UTC')).toBe(true);
+    saveTimeZone('Asia/Tehran');
+    expect(localStorage.getItem('karvan.timeZone')).toBeNull();
+  });
+
+  it('follows the language until a calendar is chosen', () => {
+    expect(readCalendarPref()).toBe('auto');
+    saveCalendarPref('gregory');
+    expect(readCalendarPref()).toBe('gregory');
+    saveCalendarPref('auto');
+    expect(localStorage.getItem('karvan.calendar')).toBeNull();
+  });
+});
+
+describe('layout and panel', () => {
+  it('remembers a collapsed sidebar', () => {
+    expect(readSidebarCollapsed()).toBe(false);
+    saveSidebarCollapsed(true);
+    expect(readSidebarCollapsed()).toBe(true);
+    saveSidebarCollapsed(false);
+    expect(readSidebarCollapsed()).toBe(false);
+  });
+
+  it('remembers the current panel and rejects junk', () => {
+    expect(readCurrentPanel()).toBeNull();
+    saveCurrentPanel(3);
+    expect(readCurrentPanel()).toBe(3);
+    localStorage.setItem('karvan.panel', '-1');
+    expect(readCurrentPanel()).toBeNull();
+    saveCurrentPanel(null);
+    expect(localStorage.getItem('karvan.panel')).toBeNull();
   });
 });

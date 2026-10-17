@@ -62,6 +62,32 @@ describe('api', () => {
     reply(204);
     await expect(api('DELETE', 'session')).resolves.toBeUndefined();
   });
+
+  it('keeps the extra fields of an error', async () => {
+    reply(400, { error: { code: 'confirm_required', confirm: 'turn-off-safe-mode' } });
+    const err = (await api('PUT', 'settings/safe-mode', {}).catch((e: unknown) => e)) as ApiError;
+    expect(err.detail).toEqual({ confirm: 'turn-off-safe-mode' });
+  });
+
+  it('sends If-Match, the background marker and raw bodies', async () => {
+    const f = reply(200, {});
+    await api('PUT', 'migrations/a/plan', { x: 1 }, { ifMatch: 7 });
+    expect(lastCall(f).headers['If-Match']).toBe('"7"');
+    await api('GET', 'analytics/server', undefined, { background: true });
+    expect(lastCall(f).headers['X-Karvan-Background']).toBe('1');
+    expect(lastCall(f).headers['If-Match']).toBeUndefined();
+    await api('POST', 'legacy-sites/1/tokens', undefined, { raw: 'a\nb' });
+    expect(lastCall(f).headers['Content-Type']).toBe('text/plain; charset=utf-8');
+    expect(lastCall(f).init.body).toBe('a\nb');
+  });
+
+  it('lets an aborted request stay an abort', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(() => Promise.reject(new DOMException('stop', 'AbortError'))),
+    );
+    await expect(api('GET', 'overview')).rejects.toMatchObject({ name: 'AbortError' });
+  });
 });
 
 describe('session calls', () => {

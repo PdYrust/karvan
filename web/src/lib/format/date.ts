@@ -65,6 +65,23 @@ export function formatTime(date: Date, locale: Locale, opts: DateOptions = {}): 
   );
 }
 
+/** "۲۳ مهر" / "Oct 15": axis labels and short lists. */
+export function formatShortDate(date: Date, locale: Locale, opts: DateOptions = {}): string {
+  return formatter(locale, opts, { month: 'short', day: 'numeric' }).format(date);
+}
+
+/** "تهران" / "Tehran" for Karvan's default zone, else the zone's own name ("Central European Time"). */
+export function zoneLabel(timeZone: string, locale: Locale): string {
+  if (timeZone === defaultTimeZone) return locale === 'fa' ? 'تهران' : 'Tehran';
+  const part = new Intl.DateTimeFormat(intlLocale(locale), {
+    timeZone,
+    timeZoneName: 'longGeneric',
+  })
+    .formatToParts(new Date())
+    .find((p) => p.type === 'timeZoneName');
+  return part?.value ?? timeZone;
+}
+
 const relativeSteps: [Intl.RelativeTimeFormatUnit, number][] = [
   ['second', 60],
   ['minute', 60],
