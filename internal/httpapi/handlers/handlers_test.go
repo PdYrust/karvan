@@ -178,6 +178,17 @@ func TestPagesAndAssets(t *testing.T) {
 	}
 }
 
+func TestDeepLinksOpenTheApp(t *testing.T) {
+	e := newEnv(t)
+	e.login("")
+	for _, deep := range []string{"/settings", "/settings/safe-mode", "/migrations/abc/live"} {
+		page := e.do(http.MethodGet, "/"+base+deep, nil)
+		if page.status != http.StatusOK || !bytes.Contains(page.body, []byte("app")) || page.header.Get("Cache-Control") != "no-store" {
+			t.Fatalf("deep link %s: %d %v %s", deep, page.status, page.header, page.body)
+		}
+	}
+}
+
 func TestBuildFilesAreGzippedWhenAccepted(t *testing.T) {
 	e := newEnv(t)
 	get := func(path, accept string) (http.Header, []byte) {
@@ -227,6 +238,9 @@ func TestMissesLookIdentical(t *testing.T) {
 		{http.MethodPut, "/" + base + "/api/v1/session"},
 		{http.MethodGet, "/" + base + "/api/v1/users"},
 		{http.MethodGet, "/" + base + "/overview"},
+		// App pages exist only with a session.
+		{http.MethodGet, "/" + base + "/settings"},
+		{http.MethodGet, "/" + base + "/migrations/abc/live"},
 	} {
 		if got := e.raw(m[0], m[1]); !bytes.Equal(got, want) {
 			t.Errorf("%s %s:\n%s\nwant\n%s", m[0], m[1], got, want)

@@ -20,6 +20,9 @@ import (
 // staticFiles are top-level files from web/public served without a session.
 var staticFiles = []string{"favicon.svg", "boot.js"}
 
+// appPages are the first path segments of the web panel's own pages.
+var appPages = []string{"analytics", "migrations", "reports", "templates", "links", "panels", "backups", "settings"}
+
 // Deps is everything the handler needs.
 type Deps struct {
 	BasePath       string
@@ -56,6 +59,10 @@ func New(d Deps) (http.Handler, error) {
 	rt.HandleFunc("GET /assets/{file}", spa.Asset)
 	for _, name := range staticFiles {
 		rt.HandleFunc("GET /"+name, spa.Static(name))
+	}
+	for _, p := range appPages {
+		rt.HandleFunc("GET /"+p, spa.App)
+		rt.HandleFunc("GET /"+p+"/{rest...}", spa.App)
 	}
 
 	rt.HandleFunc("GET /api/v1/session", api.GetSession)

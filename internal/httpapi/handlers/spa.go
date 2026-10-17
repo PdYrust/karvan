@@ -98,6 +98,19 @@ func publicFiles(dist fs.FS) (map[string]bool, error) {
 	return public, nil
 }
 
+// App serves the app for a deep link into one of its pages, so a reload or
+// a shared link opens the same page. Without a session these paths do not
+// exist, like any other unknown path.
+func (s *SPA) App(w http.ResponseWriter, r *http.Request) {
+	if _, ok := middleware.Session(r.Context()); !ok {
+		middleware.NotFound(w, r)
+		return
+	}
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	w.Header().Set("Cache-Control", "no-store")
+	s.gz.write(w, r, appEntry, s.appHTML)
+}
+
 // Page serves the sign-in page or the app, depending on the session.
 func (s *SPA) Page(w http.ResponseWriter, r *http.Request) {
 	name, html := loginEntry, s.loginHTML
