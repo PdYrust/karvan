@@ -11,6 +11,8 @@ import (
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/auth"
 	"github.com/PdYrust/karvan/internal/bridge"
+	"github.com/PdYrust/karvan/internal/dbstats"
+	"github.com/PdYrust/karvan/internal/hoststats"
 	"github.com/PdYrust/karvan/internal/httpapi/handlers"
 	"github.com/PdYrust/karvan/internal/httpapi/middleware"
 	"github.com/PdYrust/karvan/internal/migration/run"
@@ -41,6 +43,12 @@ type Deps struct {
 	// Closing is closed when the server shuts down, so long-lived event
 	// streams end and let the shutdown finish.
 	Closing <-chan struct{}
+
+	// Analytics: this server's numbers and the panels' databases.
+	Host       *hoststats.Sampler
+	HostStore  *hoststats.Store
+	HostReader hoststats.Reader
+	DBStats    *dbstats.Sampler
 }
 
 // New builds the root handler.
@@ -51,7 +59,8 @@ func New(d Deps) (http.Handler, error) {
 	}
 	cookies := middleware.Cookies{Path: "/" + d.BasePath + "/"}
 	api := &handlers.API{Auth: d.Auth, Audit: d.Audit, Cookies: cookies, Version: d.Version,
-		Runs: d.Runs, Bridge: d.Bridge, Settings: d.Settings, ScanRoots: d.ScanRoots, Closing: d.Closing}
+		Runs: d.Runs, Bridge: d.Bridge, Settings: d.Settings, ScanRoots: d.ScanRoots, Closing: d.Closing,
+		Host: d.Host, HostStore: d.HostStore, HostReader: d.HostReader, DBStats: d.DBStats}
 	signedIn := func(h http.HandlerFunc) http.Handler { return middleware.RequireSession(h) }
 
 	rt := middleware.NewRouter()
@@ -74,6 +83,9 @@ func New(d Deps) (http.Handler, error) {
 	rt.Handle("DELETE /api/v1/account/totp", signedIn(api.DisableTOTP))
 	if d.Runs != nil {
 		migrationRoutes(rt, api, signedIn)
+		rt.Handle("GET /api/v1/analytics/server", signedIn(api.ServerAnalytics))
+		rt.Handle("GET /api/v1/analytics/panels", signedIn(api.PanelsAnalytics))
+		rt.Handle("GET /api/v1/analytics/panels/{id}", signedIn(api.PanelAnalytics))
 	}
 
 	var h http.Handler = rt

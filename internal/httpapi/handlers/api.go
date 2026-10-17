@@ -9,6 +9,8 @@ import (
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/auth"
 	"github.com/PdYrust/karvan/internal/bridge"
+	"github.com/PdYrust/karvan/internal/dbstats"
+	"github.com/PdYrust/karvan/internal/hoststats"
 	"github.com/PdYrust/karvan/internal/httpapi/middleware"
 	"github.com/PdYrust/karvan/internal/migration/run"
 	"github.com/PdYrust/karvan/internal/settings"
@@ -38,6 +40,12 @@ type API struct {
 	Settings  *settings.Store
 	ScanRoots []string
 	Closing   <-chan struct{} // closed on shutdown; ends event streams
+
+	// Analytics: this server and the panels' databases.
+	Host       *hoststats.Sampler
+	HostStore  *hoststats.Store
+	HostReader hoststats.Reader
+	DBStats    *dbstats.Sampler
 }
 
 // record audits an operator action. A failed audit write is logged, not

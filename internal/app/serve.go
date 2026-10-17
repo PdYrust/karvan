@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/PdYrust/karvan/internal/buildinfo"
+	"github.com/PdYrust/karvan/internal/hoststats"
 	"github.com/PdYrust/karvan/internal/httpapi"
 )
 
@@ -47,6 +48,10 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 		Settings:       a.Settings,
 		ScanRoots:      scanRoots(),
 		Closing:        closing,
+		Host:           svc.host,
+		HostStore:      svc.hostStore,
+		HostReader:     hoststats.System,
+		DBStats:        svc.dbstats,
 	})
 	if err != nil {
 		return err

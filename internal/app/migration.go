@@ -5,11 +5,14 @@ import (
 	"errors"
 	"fmt"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/bridge"
+	"github.com/PdYrust/karvan/internal/dbstats"
 	"github.com/PdYrust/karvan/internal/discovery"
+	"github.com/PdYrust/karvan/internal/hoststats"
 	"github.com/PdYrust/karvan/internal/migration/reload"
 	"github.com/PdYrust/karvan/internal/migration/run"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
@@ -43,27 +46,33 @@ func (a *App) newRuns() *run.Service {
 		}})
 }
 
-// services are the migration service and the bridge that serve runs
-// next to the web panel.
+// services are the migration service, the bridge and the analytics
+// samplers that serve runs next to the web panel.
 type services struct {
-	runs   *run.Service
-	bridge *bridge.Bridge
-	done   chan struct{}
+	runs      *run.Service
+	bridge    *bridge.Bridge
+	host      *hoststats.Sampler
+	hostStore *hoststats.Store
+	dbstats   *dbstats.Sampler
+	wg        sync.WaitGroup
 }
 
 // startServices settles migrations a crash interrupted, then starts the
-// bridge and the login sweep until ctx ends.
+// bridge, the analytics samplers and the login sweep until ctx ends.
 func (a *App) startServices(ctx context.Context) *services {
-	s := &services{runs: a.newRuns(), bridge: bridge.New(bridge.Deps{DB: a.DB, Key: a.Key, Log: a.Logger}), done: make(chan struct{})}
+	s := &services{runs: a.newRuns(), bridge: bridge.New(bridge.Deps{DB: a.DB, Key: a.Key, Log: a.Logger}), hostStore: hoststats.NewStore(a.DB)}
+	s.host = &hoststats.Sampler{Reader: hoststats.System, Store: s.hostStore, Log: a.Logger}
+	s.dbstats = &dbstats.Sampler{Store: dbstats.NewStore(a.DB), Log: a.Logger, Panels: s.panelRefs}
 	if err := s.runs.Recover(ctx); err != nil {
 		a.Logger.Warn("settle interrupted migrations", "err", err)
 	}
-	go func() {
-		defer close(s.done)
+	s.wg.Go(func() {
 		if err := s.bridge.Run(ctx); err != nil {
 			a.Logger.Warn("subscription bridge", "err", err)
 		}
-	}()
+	})
+	s.wg.Go(func() { s.host.Run(ctx) })
+	s.wg.Go(func() { s.dbstats.Run(ctx) })
 	go func() {
 		t := time.NewTicker(credentialSweep)
 		defer t.Stop()
@@ -79,10 +88,24 @@ func (a *App) startServices(ctx context.Context) *services {
 	return s
 }
 
-// stop ends running jobs (Safe Mode undoes them) and waits for the bridge.
+// stop ends running jobs (Safe Mode undoes them) and waits for the bridge
+// and the samplers.
 func (s *services) stop() {
 	s.runs.Shutdown()
-	<-s.done
+	s.wg.Wait()
+}
+
+// panelRefs lists the registered panels for the database sampler.
+func (s *services) panelRefs(ctx context.Context) ([]dbstats.PanelRef, error) {
+	rows, err := s.runs.Panels(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]dbstats.PanelRef, len(rows))
+	for i, p := range rows {
+		out[i] = dbstats.PanelRef{ID: p.ID, EnvPath: p.EnvPath, Name: p.Name}
+	}
+	return out, nil
 }
 
 // scanRoots are where panels are looked for.

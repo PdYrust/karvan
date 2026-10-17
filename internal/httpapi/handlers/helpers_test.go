@@ -24,6 +24,8 @@ import (
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/auth"
 	"github.com/PdYrust/karvan/internal/bridge"
+	"github.com/PdYrust/karvan/internal/dbstats"
+	"github.com/PdYrust/karvan/internal/hoststats"
 	"github.com/PdYrust/karvan/internal/httpapi"
 	"github.com/PdYrust/karvan/internal/migration/migrationtest"
 	"github.com/PdYrust/karvan/internal/migration/run"
@@ -84,6 +86,8 @@ type env struct {
 	data   string // Karvan's data directory
 	// closing is the server's shutdown signal; close it to end streams.
 	closing chan struct{}
+	host    *hoststats.Sampler
+	dbstats *dbstats.Sampler
 }
 
 func newEnv(t *testing.T) *env {
@@ -111,10 +115,21 @@ func newEnv(t *testing.T) *env {
 	runs := run.New(run.Deps{DB: db, Key: key, DataDir: filepath.Join(dir, "data"), Tools: migrationtest.Tools})
 	br := bridge.New(bridge.Deps{DB: db, Key: key, Log: slog.New(slog.DiscardHandler)})
 	closing := make(chan struct{})
+	hostStore := hoststats.NewStore(db)
+	host := &hoststats.Sampler{Reader: hoststats.System, Store: hostStore}
+	dbs := &dbstats.Sampler{Store: dbstats.NewStore(db), Panels: func(ctx context.Context) ([]dbstats.PanelRef, error) {
+		rows, err := runs.Panels(ctx)
+		out := make([]dbstats.PanelRef, len(rows))
+		for i, p := range rows {
+			out[i] = dbstats.PanelRef{ID: p.ID, EnvPath: p.EnvPath, Name: p.Name}
+		}
+		return out, err
+	}}
 	h, err := httpapi.New(httpapi.Deps{
 		BasePath: base, Auth: svc, Audit: log, Web: webBuild, Version: "test",
 		Logger: slog.New(slog.NewTextHandler(testLog, &slog.HandlerOptions{Level: slog.LevelDebug})),
 		Runs:   runs, Bridge: br, Settings: settings.New(db), Closing: closing,
+		Host: host, HostStore: hostStore, HostReader: hoststats.System, DBStats: dbs,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -123,7 +138,8 @@ func newEnv(t *testing.T) *env {
 	t.Cleanup(srv.Close)
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{Jar: jar, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	return &env{t: t, srv: srv, client: client, auth: svc, runs: runs, bridge: br, db: db, data: filepath.Join(dir, "data"), closing: closing}
+	return &env{t: t, srv: srv, client: client, auth: svc, runs: runs, bridge: br, db: db, data: filepath.Join(dir, "data"), closing: closing,
+		host: host, dbstats: dbs}
 }
 
 type response struct {
