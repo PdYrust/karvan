@@ -366,10 +366,28 @@ func (s *Service) backupTarget(ctx context.Context, id string) (safemode.Backup,
 	return b, jobID, env, d, nil
 }
 
+// controlTTL is how long a panel control probe is trusted. A probe runs
+// Docker several times and can take seconds per panel.
+const controlTTL = time.Minute
+
+type controlProbe struct {
+	err error
+	at  time.Time
+}
+
 // PanelControlStatus says whether Karvan can stop and start a panel, and
-// why not.
-func (s *Service) PanelControlStatus(ctx context.Context, envPath string) error {
+// why not. A probe younger than controlTTL is reused unless fresh is set.
+func (s *Service) PanelControlStatus(ctx context.Context, envPath string, fresh bool) error {
+	s.mu.Lock()
+	p, ok := s.probes[envPath]
+	s.mu.Unlock()
+	if ok && !fresh && s.now().Sub(p.at) < controlTTL {
+		return p.err
+	}
 	_, err := s.control(ctx, envPath)
+	s.mu.Lock()
+	s.probes[envPath] = controlProbe{err: err, at: s.now()}
+	s.mu.Unlock()
 	return err
 }
 

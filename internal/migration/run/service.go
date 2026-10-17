@@ -73,6 +73,7 @@ type Service struct {
 	mu      sync.Mutex
 	jobs    map[string]*Job
 	cancels map[string]context.CancelFunc
+	probes  map[string]controlProbe // panel control by ENV path
 	wg      sync.WaitGroup
 }
 
@@ -98,7 +99,8 @@ func New(d Deps) *Service {
 	if _, ok := d.Reloaders[ReloadManual]; !ok {
 		d.Reloaders[ReloadManual] = manualReload{}
 	}
-	return &Service{Deps: d, db: d.DB, now: d.Now, ledger: ledger.New(d.DB), events: newBus(d.DB, d.Now), jobs: map[string]*Job{}, cancels: map[string]context.CancelFunc{}}
+	return &Service{Deps: d, db: d.DB, now: d.Now, ledger: ledger.New(d.DB), events: newBus(d.DB, d.Now), jobs: map[string]*Job{},
+		cancels: map[string]context.CancelFunc{}, probes: map[string]controlProbe{}}
 }
 
 // control opens the panel control for envPath.

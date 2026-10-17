@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/discovery"
@@ -26,25 +27,32 @@ type controlJSON struct {
 	Reason    string `json:"reason,omitempty"`
 }
 
-func (a *API) controlOf(r *http.Request, envPath string) *controlJSON {
-	if err := a.Runs.PanelControlStatus(r.Context(), envPath); err != nil {
+func (a *API) controlOf(r *http.Request, envPath string, fresh bool) *controlJSON {
+	if err := a.Runs.PanelControlStatus(r.Context(), envPath, fresh); err != nil {
 		return &controlJSON{Reason: controlReason(err)}
 	}
 	return &controlJSON{Available: true}
 }
 
-// Panels lists the registered panels with a fresh look at each.
+// Panels lists the registered panels with a fresh look at each, all at
+// once. Panel control comes from a probe up to a minute old unless the
+// request says ?fresh=1.
 func (a *API) Panels(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.Runs.Panels(r.Context())
 	if err != nil {
 		respond.Internal(w, r, err)
 		return
 	}
-	out := []panelJSON{}
-	for _, p := range rows {
-		found := discovery.Inspect(r.Context(), p.EnvPath)
-		out = append(out, panelJSON{ID: p.ID, Panel: found, Ready: found.Ready(), Control: a.controlOf(r, p.EnvPath)})
+	fresh := r.URL.Query().Get("fresh") == "1"
+	out := make([]panelJSON, len(rows))
+	var wg sync.WaitGroup
+	for i, p := range rows {
+		wg.Go(func() {
+			found := discovery.Inspect(r.Context(), p.EnvPath)
+			out[i] = panelJSON{ID: p.ID, Panel: found, Ready: found.Ready(), Control: a.controlOf(r, p.EnvPath, fresh)}
+		})
 	}
+	wg.Wait()
 	respond.JSON(w, http.StatusOK, map[string]any{"panels": out})
 }
 
