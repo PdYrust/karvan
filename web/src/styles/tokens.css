@@ -7,4 +7,13 @@
 @theme {
   /* Text and marks drawn on top of the brand color. */
   --color-on-brand: oklch(100% 0 0);
+
+  /* Chart series: Kumo's ChartPalette.categorical, light and dark. */
+  --color-chart-1: light-dark(#4290f0, #4290f0);
+  --color-chart-2: light-dark(#f5b647, #eeb720);
+  --color-chart-3: light-dark(#e8649d, #e8649d);
+  --color-chart-4: light-dark(#8d58ee, #8d58ee);
+  --color-chart-5: light-dark(#50c3b6, #50c3b6);
+  /* Grid lines: Kumo's neutral chart fill (ChartPalette.mapColors area). */
+  --color-chart-grid: light-dark(#e5e7eb, #2b2c31);
 }
