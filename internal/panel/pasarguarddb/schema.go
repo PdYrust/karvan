@@ -16,8 +16,8 @@ const Revision = "48a6bcb8bba1"
 // columns are the columns Karvan reads or writes, per table, at Revision.
 var columns = map[string][]string{
 	"admins": {"id", "username", "hashed_password", "created_at", "password_reset_at", "telegram_id",
-		"discord_webhook", "used_traffic", "note", "role_id", "status", "data_limit", "last_status_change"},
-	"admin_roles": {"id", "name", "is_owner"},
+		"discord_webhook", "used_traffic", "note", "role_id", "status", "data_limit", "last_status_change", "permission_overrides"},
+	"admin_roles": {"id", "name", "is_owner", "limits", "features", "access"},
 	"users": {"id", "username", "status", "used_traffic", "data_limit", "created_at", "admin_id",
 		"data_limit_reset_strategy", "sub_revoked_at", "note", "online_at", "edit_at", "on_hold_timeout",
 		"on_hold_expire_duration", "auto_delete_in_days", "last_status_change", "expire", "proxy_settings",
@@ -32,6 +32,7 @@ var columns = map[string][]string{
 	"settings":                    {"id", "subscription"},
 	"wireguard_subnets":           {"id", "network", "next_offset", "free_offsets"},
 	"core_configs":                {"id", "config", "type"},
+	"hosts":                       {"id", "inbound_tag", "is_disabled"},
 }
 
 // children are the rows that hang off a user or an admin, in delete order

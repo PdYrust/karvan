@@ -22,9 +22,11 @@ type adminJSON struct {
 	Note           *string `json:"note"`
 	IsSudo         *bool   `json:"is_sudo"`
 	Role           *struct {
+		ID      *int64 `json:"id"`
 		Name    string `json:"name"`
 		IsOwner bool   `json:"is_owner"`
 	} `json:"role"`
+	Overrides *panel.RoleLimits `json:"permission_overrides"`
 }
 
 // userJSON is UserResponse (app/models/user.py:118-142).
@@ -82,12 +84,15 @@ func (a adminJSON) toAdmin() (panel.Admin, error) {
 	if a.Username == "" || a.shape() == "" {
 		return panel.Admin{}, source.BadResponse("admin: no username, or neither role nor is_sudo")
 	}
-	out := panel.Admin{Username: a.Username, TelegramID: a.TelegramID}
+	out := panel.Admin{Username: a.Username, TelegramID: a.TelegramID, Overrides: a.Overrides}
 	if a.ID != nil {
 		out.SourceID = *a.ID
 	}
 	if a.Role != nil {
-		out.IsOwner = a.Role.IsOwner
+		out.IsOwner, out.RoleName = a.Role.IsOwner, a.Role.Name
+		if a.Role.ID != nil {
+			out.RoleID = *a.Role.ID
+		}
 	} else {
 		out.IsOwner = *a.IsSudo
 	}

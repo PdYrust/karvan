@@ -10,6 +10,11 @@ type ExistingAdmin struct {
 	ID       int64
 	Username string
 	IsOwner  bool
+	// RoleID, Overrides and Users matter on PasarGuard: an admin Karvan
+	// merges into keeps its role, and its role's limits count its users.
+	RoleID    int64
+	Overrides *RoleLimits
+	Users     int
 }
 
 // ExistingUser is a user already on the destination.

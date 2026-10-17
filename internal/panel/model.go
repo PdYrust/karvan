@@ -68,6 +68,11 @@ type Admin struct {
 	DiscordWebhook string
 	Note           string
 	UsedTraffic    int64 // Marzban users_usage, PasarGuard used_traffic
+	// RoleID and RoleName are the admin's role on a PasarGuard source.
+	RoleID   int64
+	RoleName string
+	// Overrides are the admin's own limits over its role (PasarGuard).
+	Overrides *RoleLimits
 }
 
 // Credentials are the per-protocol secrets that live inside client configs.

@@ -2,6 +2,7 @@ package pasarguarddb
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"strconv"
 	"time"
@@ -39,11 +40,19 @@ type UsageLog struct {
 
 // InsertAdmin creates the moved admin with roleID and returns its id.
 func (w Writer) InsertAdmin(ctx context.Context, x paneldb.Execer, a panel.Admin, hash string, roleID int64, now time.Time) (int64, error) {
+	var overrides any
+	if a.Overrides != nil {
+		b, err := json.Marshal(a.Overrides)
+		if err != nil {
+			return 0, err
+		}
+		overrides = string(b)
+	}
 	id, err := paneldb.InsertID(ctx, x, w.Dialect,
-		"INSERT INTO admins (username, hashed_password, created_at, telegram_id, discord_webhook, used_traffic, note, role_id, status) "+
-			"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+		"INSERT INTO admins (username, hashed_password, created_at, telegram_id, discord_webhook, used_traffic, note, role_id, status, "+
+			"permission_overrides) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 		a.Username, hash, paneldb.TimeArg(w.Dialect, now), a.TelegramID, nullString(a.DiscordWebhook), a.UsedTraffic,
-		nullString(a.Note), roleID, "active")
+		nullString(a.Note), roleID, "active", overrides)
 	if err != nil {
 		return 0, fmt.Errorf("insert admin %s: %w", a.Username, err)
 	}

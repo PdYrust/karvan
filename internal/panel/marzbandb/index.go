@@ -86,3 +86,23 @@ func FindAdmins(ctx context.Context, q paneldb.Querier, names []string) (map[str
 	}
 	return out, nil
 }
+
+// HostCounts counts the enabled hosts of each target inbound, by target
+// id. An inbound with no row yet gets the panel's default host when it
+// first lists it (get_or_create_inbound), so it counts as one.
+func HostCounts(ctx context.Context, q paneldb.Querier, targets []panel.Target) (map[string]int, error) {
+	out := map[string]int{}
+	for _, t := range targets {
+		var rows, hosts int
+		err := q.QueryRowContext(ctx, "SELECT (SELECT count(*) FROM inbounds WHERE tag = ?), "+
+			"(SELECT count(*) FROM hosts WHERE inbound_tag = ? AND (is_disabled IS NULL OR is_disabled = ?))", t.Name, t.Name, false).Scan(&rows, &hosts)
+		if err != nil {
+			return nil, fmt.Errorf("count hosts: %w", err)
+		}
+		if rows == 0 {
+			hosts = 1
+		}
+		out[t.ID] = hosts
+	}
+	return out, nil
+}

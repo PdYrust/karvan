@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/PdYrust/karvan/internal/panel"
@@ -45,39 +46,51 @@ func LoadIndex(ctx context.Context, q paneldb.Querier) (*panel.Index, error) {
 }
 
 // FindAdmins returns the destination admins whose username equals one of
-// names under the column's own collation, keyed by the name asked for.
-// IsOwner comes from the admin's role.
+// names under the column's own collation, keyed by the name asked for,
+// with their role, own limits and how many users they own.
 func FindAdmins(ctx context.Context, q paneldb.Querier, names []string) (map[string]panel.ExistingAdmin, error) {
 	out := map[string]panel.ExistingAdmin{}
 	for _, n := range names {
 		var a panel.ExistingAdmin
-		err := q.QueryRowContext(ctx, "SELECT a.id, a.username, r.is_owner FROM admins a "+
-			"JOIN admin_roles r ON r.id = a.role_id WHERE a.username = ?", n).Scan(&a.ID, &a.Username, &a.IsOwner)
+		var overrides []byte
+		err := q.QueryRowContext(ctx, "SELECT a.id, a.username, r.is_owner, a.role_id, a.permission_overrides, "+
+			"(SELECT count(*) FROM users u WHERE u.admin_id = a.id) FROM admins a "+
+			"JOIN admin_roles r ON r.id = a.role_id WHERE a.username = ?", n).Scan(&a.ID, &a.Username, &a.IsOwner, &a.RoleID, &overrides, &a.Users)
 		switch {
 		case errors.Is(err, sql.ErrNoRows):
 			continue
 		case err != nil:
 			return nil, fmt.Errorf("find admin: %w", err)
 		}
+		if a.Overrides, err = decodeOverrides(overrides); err != nil {
+			return nil, fmt.Errorf("admin %s limits: %w", a.Username, err)
+		}
 		out[n] = a
 	}
 	return out, nil
 }
 
-// Role is an admin role the operator can give the moved admin.
-type Role struct {
-	ID      int64
-	Name    string
-	IsOwner bool
+func decodeOverrides(raw []byte) (*panel.RoleLimits, error) {
+	if len(raw) == 0 || string(raw) == "null" {
+		return nil, nil
+	}
+	var l panel.RoleLimits
+	if err := json.Unmarshal(raw, &l); err != nil {
+		return nil, err
+	}
+	return &l, nil
 }
+
+// Role is an admin role the operator can give the moved admin.
+type Role = panel.Role
 
 // OperatorRole is the built-in reseller role (scope OWN), the default for
 // a moved admin.
 const OperatorRole = 3
 
-// Roles lists the destination's admin roles.
+// Roles lists the destination's admin roles with what they allow.
 func Roles(ctx context.Context, q paneldb.Querier) ([]Role, error) {
-	rows, err := q.QueryContext(ctx, "SELECT id, name, is_owner FROM admin_roles ORDER BY id")
+	rows, err := q.QueryContext(ctx, "SELECT id, name, is_owner, limits, features, access FROM admin_roles ORDER BY id")
 	if err != nil {
 		return nil, fmt.Errorf("read admin roles: %w", err)
 	}
@@ -85,12 +98,47 @@ func Roles(ctx context.Context, q paneldb.Querier) ([]Role, error) {
 	var out []Role
 	for rows.Next() {
 		var r Role
-		if err := rows.Scan(&r.ID, &r.Name, &r.IsOwner); err != nil {
+		var limits, features, access []byte
+		if err := rows.Scan(&r.ID, &r.Name, &r.IsOwner, &limits, &features, &access); err != nil {
 			return nil, err
+		}
+		if err := decodeRole(&r, limits, features, access); err != nil {
+			return nil, fmt.Errorf("role %s: %w", r.Name, err)
 		}
 		out = append(out, r)
 	}
 	return out, rows.Err()
+}
+
+func decodeRole(r *Role, limits, features, access []byte) error {
+	r.Features = panel.RoleFeatures{ResetStrategy: true, NextPlan: true}
+	for _, f := range []struct {
+		raw []byte
+		dst any
+	}{{limits, &r.Limits}, {features, &r.Features}} {
+		if len(f.raw) > 0 && string(f.raw) != "null" {
+			if err := json.Unmarshal(f.raw, f.dst); err != nil {
+				return err
+			}
+		}
+	}
+	var a struct {
+		RequireTemplate bool     `json:"require_template"`
+		Groups          *[]int64 `json:"allowed_group_ids"`
+	}
+	if len(access) > 0 && string(access) != "null" {
+		if err := json.Unmarshal(access, &a); err != nil {
+			return err
+		}
+	}
+	r.RequireTemplate = a.RequireTemplate
+	if a.Groups != nil {
+		r.Groups = make([]string, 0, len(*a.Groups))
+		for _, id := range *a.Groups {
+			r.Groups = append(r.Groups, strconv.FormatInt(id, 10))
+		}
+	}
+	return nil
 }
 
 // InboundProtocols maps every inbound tag in the panel's core configs to
@@ -163,6 +211,27 @@ func Targets(ctx context.Context, q paneldb.Querier, d paneldb.Dialect) ([]panel
 			last := &out[len(out)-1]
 			last.Inbounds = append(last.Inbounds, tag.String)
 		}
+	}
+	return out, rows.Err()
+}
+
+// HostCounts counts the enabled hosts behind each group, by group id.
+func HostCounts(ctx context.Context, q paneldb.Querier, d paneldb.Dialect) (map[string]int, error) {
+	rows, err := q.QueryContext(ctx, "SELECT ig.group_id, count(h.id) FROM inbounds_groups_association ig "+
+		"JOIN inbounds i ON i.id = ig.inbound_id JOIN hosts h ON h.inbound_tag = i.tag "+
+		"WHERE h.is_disabled IS NULL OR h.is_disabled = ? GROUP BY ig.group_id", false)
+	if err != nil {
+		return nil, fmt.Errorf("count hosts: %w", err)
+	}
+	defer rows.Close()
+	out := map[string]int{}
+	for rows.Next() {
+		var id int64
+		var n int
+		if err := rows.Scan(&id, &n); err != nil {
+			return nil, err
+		}
+		out[strconv.FormatInt(id, 10)] = n
 	}
 	return out, rows.Err()
 }
