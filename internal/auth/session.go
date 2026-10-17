@@ -73,6 +73,17 @@ func (s *Sessions) Create(ctx context.Context, operatorID int64, ip, userAgent s
 
 // Lookup returns the live session for token and refreshes its idle timer.
 func (s *Sessions) Lookup(ctx context.Context, token string) (Session, error) {
+	return s.lookup(ctx, token, true)
+}
+
+// Peek returns the live session for token without refreshing its idle
+// timer, for polling the operator did not ask for: a dashboard left open
+// still signs out after IdleTimeout.
+func (s *Sessions) Peek(ctx context.Context, token string) (Session, error) {
+	return s.lookup(ctx, token, false)
+}
+
+func (s *Sessions) lookup(ctx context.Context, token string, touch bool) (Session, error) {
 	if token == "" {
 		return Session{}, ErrNoSession
 	}
@@ -96,7 +107,7 @@ func (s *Sessions) Lookup(ctx context.Context, token string) (Session, error) {
 		}
 		return Session{}, ErrNoSession
 	}
-	if now.Sub(sess.LastSeenAt) >= touchInterval {
+	if touch && now.Sub(sess.LastSeenAt) >= touchInterval {
 		if _, err := s.db.ExecContext(ctx, `UPDATE sessions SET last_seen_at = ? WHERE token_hash = ?`, now.Unix(), h); err != nil {
 			return Session{}, fmt.Errorf("touch session: %w", err)
 		}

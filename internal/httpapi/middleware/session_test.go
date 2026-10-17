@@ -158,3 +158,44 @@ func TestCookiesOverHTTPAndHTTPS(t *testing.T) {
 		t.Errorf("clear cookie = %q", rec.Header().Get("Set-Cookie"))
 	}
 }
+
+func TestBackgroundReadsDoNotKeepTheSessionAlive(t *testing.T) {
+	db, err := store.Open(context.Background(), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { db.Close() })
+	if _, err := db.Exec(`INSERT INTO operators (id, username, password_hash, created_at, updated_at) VALUES (1, 'owner', 'x', 0, 0)`); err != nil {
+		t.Fatal(err)
+	}
+	s := auth.NewSessions(db)
+	token, _, err := s.Create(context.Background(), 1, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// Last seen ten minutes ago, so a real read would move it.
+	if _, err := db.Exec("UPDATE sessions SET last_seen_at = last_seen_at - 600"); err != nil {
+		t.Fatal(err)
+	}
+	seen := func() int64 {
+		var at int64
+		if err := db.QueryRow("SELECT last_seen_at FROM sessions").Scan(&at); err != nil {
+			t.Fatal(err)
+		}
+		return at
+	}
+	before := seen()
+	h := protected(s)
+	r := withCookie(httptest.NewRequest(http.MethodGet, "/", nil), "s", token)
+	r.Header.Set(BackgroundHeader, "1")
+	rec := httptest.NewRecorder()
+	h.ServeHTTP(rec, r)
+	if rec.Code != http.StatusOK || seen() != before {
+		t.Fatalf("background read: status %d, last seen moved %d -> %d", rec.Code, before, seen())
+	}
+	rec = httptest.NewRecorder()
+	h.ServeHTTP(rec, withCookie(httptest.NewRequest(http.MethodGet, "/", nil), "s", token))
+	if rec.Code != http.StatusOK || seen() == before {
+		t.Fatalf("operator read: status %d, last seen still %d", rec.Code, seen())
+	}
+}

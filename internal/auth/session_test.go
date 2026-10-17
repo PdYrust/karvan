@@ -76,6 +76,31 @@ func TestSessionIdleTimeout(t *testing.T) {
 	}
 }
 
+func TestSessionPeekDoesNotKeepItAlive(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	s := newSessions(f)
+	token, _, err := s.Create(ctx, f.createOperator(t, "owner").ID, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	// A dashboard polling every few minutes, with nobody at the keyboard.
+	for i := 1; i <= 5; i++ {
+		f.clock.Advance(5 * time.Minute)
+		if _, err := s.Peek(ctx, token); err != nil {
+			t.Fatalf("peek after %d minutes: %v", 5*i, err)
+		}
+	}
+	f.clock.Advance(4 * time.Minute)
+	if _, err := s.Peek(ctx, token); err != nil {
+		t.Fatalf("peek just before the idle timeout: %v", err)
+	}
+	f.clock.Advance(2 * time.Minute)
+	if _, err := s.Peek(ctx, token); !errors.Is(err, ErrNoSession) {
+		t.Fatalf("polling kept the session alive: %v", err)
+	}
+}
+
 func TestSessionAbsoluteTimeout(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()

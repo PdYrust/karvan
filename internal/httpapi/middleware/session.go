@@ -15,6 +15,10 @@ type SessionInfo struct {
 	Session auth.Session
 }
 
+// BackgroundHeader marks a read the panel makes by itself, such as live
+// charts polling. It does not count as the operator being active.
+const BackgroundHeader = "X-Karvan-Background"
+
 // LoadSession attaches the session named by the cookie, if it is live.
 // A dead session's cookie is cleared.
 func LoadSession(sessions *auth.Sessions, cookies Cookies, next http.Handler) http.Handler {
@@ -24,7 +28,11 @@ func LoadSession(sessions *auth.Sessions, cookies Cookies, next http.Handler) ht
 			next.ServeHTTP(w, r)
 			return
 		}
-		sess, err := sessions.Lookup(r.Context(), token)
+		lookup := sessions.Lookup
+		if r.Method == http.MethodGet && r.Header.Get(BackgroundHeader) == "1" {
+			lookup = sessions.Peek
+		}
+		sess, err := lookup(r.Context(), token)
 		if errors.Is(err, auth.ErrNoSession) {
 			cookies.ClearSession(w, r)
 			next.ServeHTTP(w, r)
