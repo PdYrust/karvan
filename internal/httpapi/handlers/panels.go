@@ -16,6 +16,21 @@ type panelJSON struct {
 	ID int64 `json:"id"`
 	discovery.Panel
 	Ready bool `json:"ready"`
+	// Control says whether Karvan can stop and start the panel to put a
+	// whole backup back, and if not, why.
+	Control *controlJSON `json:"control,omitempty"`
+}
+
+type controlJSON struct {
+	Available bool   `json:"available"`
+	Reason    string `json:"reason,omitempty"`
+}
+
+func (a *API) controlOf(r *http.Request, envPath string) *controlJSON {
+	if err := a.Runs.PanelControlStatus(r.Context(), envPath); err != nil {
+		return &controlJSON{Reason: controlReason(err)}
+	}
+	return &controlJSON{Available: true}
 }
 
 // Panels lists the registered panels with a fresh look at each.
@@ -28,7 +43,7 @@ func (a *API) Panels(w http.ResponseWriter, r *http.Request) {
 	out := []panelJSON{}
 	for _, p := range rows {
 		found := discovery.Inspect(r.Context(), p.EnvPath)
-		out = append(out, panelJSON{ID: p.ID, Panel: found, Ready: found.Ready()})
+		out = append(out, panelJSON{ID: p.ID, Panel: found, Ready: found.Ready(), Control: a.controlOf(r, p.EnvPath)})
 	}
 	respond.JSON(w, http.StatusOK, map[string]any{"panels": out})
 }

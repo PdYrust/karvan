@@ -13,15 +13,17 @@ import (
 
 var backupIDRe = regexp.MustCompile(`^[0-9a-f]{16}$`)
 
-// runSafeMode is "karvan safe-mode restore [flags] <backup id>": the
-// last resort after a failed migration whose undo left rows behind (D36).
+// runSafeMode is "karvan safe-mode restore [flags] <backup id>". The web
+// panel does the same; this is for when Karvan's server is not running.
+// Karvan stops and starts the panel itself unless -panel-stopped says the
+// operator already stopped it.
 func runSafeMode(ctx context.Context, streams IO, args []string) error {
 	if len(args) == 0 || args[0] != "restore" {
-		return fmt.Errorf("%w: usage: karvan safe-mode restore -panel-stopped <backup id>", errUsage)
+		return fmt.Errorf("%w: usage: karvan safe-mode restore [-panel-stopped] <backup id>", errUsage)
 	}
 	fs := newFlagSet("safe-mode restore", streams)
 	flags := config.BindFlags(fs)
-	stopped := fs.Bool("panel-stopped", false, "confirm the panel is stopped (for example: marzban down, pasarguard down)")
+	stopped := fs.Bool("panel-stopped", false, "the panel is already stopped; do not stop or start it")
 	if err := fs.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return err
@@ -30,10 +32,6 @@ func runSafeMode(ctx context.Context, streams IO, args []string) error {
 	}
 	if fs.NArg() != 1 || !backupIDRe.MatchString(fs.Arg(0)) {
 		return fmt.Errorf("%w: give one backup id (see Safe Mode backups in the panel)", errUsage)
-	}
-	if !*stopped {
-		return fmt.Errorf("%w: stop the panel first, then run again with -panel-stopped; "+
-			"restoring under a running panel mixes its new writes into the old data", errUsage)
 	}
 	cfg, err := flags.Load()
 	if err != nil {
@@ -44,9 +42,13 @@ func runSafeMode(ctx context.Context, streams IO, args []string) error {
 		return err
 	}
 	defer func() { _ = a.Close() }()
-	if err := a.RestoreBackup(ctx, fs.Arg(0)); err != nil {
+	if err := a.RestoreBackup(ctx, fs.Arg(0), *stopped); err != nil {
 		return err
 	}
-	fmt.Fprintln(streams.Stdout, "Backup restored. Start the panel again.")
+	if *stopped {
+		fmt.Fprintln(streams.Stdout, "Backup restored. Start the panel again.")
+	} else {
+		fmt.Fprintln(streams.Stdout, "Backup restored. The panel is running again.")
+	}
 	return nil
 }

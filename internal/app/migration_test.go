@@ -26,7 +26,7 @@ func TestServicesAndTheDataDirLock(t *testing.T) {
 	if _, err := a.lockDataDir(); !errors.Is(err, ErrDataDirInUse) {
 		t.Fatalf("second lock: %v", err)
 	}
-	if err := a.RestoreBackup(ctx, "0123456789abcdef"); !errors.Is(err, ErrDataDirInUse) {
+	if err := a.RestoreBackup(ctx, "0123456789abcdef", true); !errors.Is(err, ErrDataDirInUse) {
 		t.Fatalf("restore while running: %v", err)
 	}
 	sctx, cancel := context.WithCancel(ctx)
@@ -34,7 +34,7 @@ func TestServicesAndTheDataDirLock(t *testing.T) {
 	cancel()
 	s.stop()
 	unlock()
-	if err := a.RestoreBackup(ctx, "0123456789abcdef"); err == nil {
+	if err := a.RestoreBackup(ctx, "0123456789abcdef", true); err == nil {
 		t.Fatal("an unknown backup restored")
 	}
 }

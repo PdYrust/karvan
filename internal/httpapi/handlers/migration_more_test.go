@@ -129,7 +129,7 @@ func TestBackupsAfterARun(t *testing.T) {
 	if res := m.do(http.MethodDelete, api+"/safe-mode/backups/"+bs.Backups[0].ID, nil); res.status != http.StatusNoContent {
 		t.Fatalf("delete backup: %d", res.status)
 	}
-	if err := m.runs.RestoreBackup(context.Background(), bs.Backups[0].ID); err == nil {
+	if err := m.runs.RestoreBackup(context.Background(), bs.Backups[0].ID, true); err == nil {
 		t.Fatal("a deleted backup restored")
 	}
 }
@@ -264,5 +264,57 @@ func TestUnknownReloadIsABadRequest(t *testing.T) {
 	v := m.plan(id)
 	if res := m.do(http.MethodPost, api+"/migrations/"+id+"/run", map[string]any{"planVersion": v, "reload": "fly"}); res.status != http.StatusBadRequest {
 		t.Fatalf("%d %s", res.status, res.body)
+	}
+}
+
+// The rollback choice is a Safe Mode setting; a run with "backup" needs
+// Karvan to be able to stop and start the panel, and says why it cannot.
+func TestRollbackSettingAndPanelControl(t *testing.T) {
+	m := newMigrationEnv(t, 1)
+	res := m.do(http.MethodPut, api+"/settings/safe-mode", map[string]any{"enabled": true, "rollback": "backup"})
+	var sm struct {
+		Enabled  bool   `json:"enabled"`
+		Rollback string `json:"rollback"`
+	}
+	res.json(t, &sm)
+	if res.status != http.StatusOK || !sm.Enabled || sm.Rollback != "backup" {
+		t.Fatalf("set: %d %s", res.status, res.body)
+	}
+	if bad := m.do(http.MethodPut, api+"/settings/safe-mode", map[string]any{"enabled": true, "rollback": "both"}); bad.status != http.StatusBadRequest {
+		t.Fatalf("bad rollback: %d", bad.status)
+	}
+	id := m.create()
+	v := m.plan(id)
+	run := m.do(http.MethodPost, api+"/migrations/"+id+"/run", map[string]any{"planVersion": v, "reload": "manual"})
+	if run.status != http.StatusConflict || run.errorCode(t) != "panel_control_unavailable" || !strings.Contains(string(run.body), `"reason"`) {
+		t.Fatalf("run without panel control: %d %s", run.status, run.body)
+	}
+	var panels struct {
+		Panels []struct {
+			Control struct {
+				Available bool   `json:"available"`
+				Reason    string `json:"reason"`
+			} `json:"control"`
+		} `json:"panels"`
+	}
+	m.do(http.MethodGet, api+"/panels", nil).json(t, &panels)
+	if len(panels.Panels) != 1 || panels.Panels[0].Control.Available || panels.Panels[0].Control.Reason == "" {
+		t.Fatalf("panels %+v", panels)
+	}
+	var n int
+	_ = m.db.QueryRow("SELECT count(*) FROM audit_events WHERE action = 'safe_mode.rollback'").Scan(&n)
+	if n != 1 {
+		t.Fatalf("audit rows: %d", n)
+	}
+}
+
+func TestRestoreNeedsTheTypedID(t *testing.T) {
+	m := newMigrationEnv(t, 1)
+	path := api + "/safe-mode/backups/0123456789abcdef/restore"
+	if res := m.do(http.MethodPost, path, map[string]any{"confirm": "yes"}); res.status != http.StatusBadRequest || res.errorCode(t) != "confirm_required" {
+		t.Fatalf("wrong confirm: %d %s", res.status, res.body)
+	}
+	if res := m.do(http.MethodPost, path, map[string]any{"confirm": "0123456789abcdef"}); res.status != http.StatusNotFound {
+		t.Fatalf("unknown backup: %d %s", res.status, res.body)
 	}
 }

@@ -121,14 +121,15 @@ func (a *API) RunMigration(w http.ResponseWriter, r *http.Request) {
 		respond.BadRequest(w)
 		return
 	}
-	safe, err := a.Settings.SafeMode(r.Context())
+	sm, err := a.safeMode(r)
 	if err != nil {
 		respond.Internal(w, r, err)
 		return
 	}
+	safe := sm.Enabled
 	id := r.PathValue("id")
 	err = a.Runs.Run(r.Context(), id, run.Options{Version: b.PlanVersion, Reload: b.Reload, SafeMode: safe,
-		AdminPassword: secret.NewValue(b.AdminPassword)})
+		Rollback: sm.Rollback, AdminPassword: secret.NewValue(b.AdminPassword)})
 	if errors.Is(err, run.ErrStaleVer) {
 		respond.Error(w, respond.APIError{Status: http.StatusPreconditionFailed, Code: codeStalePlan})
 		return
@@ -137,7 +138,7 @@ func (a *API) RunMigration(w http.ResponseWriter, r *http.Request) {
 		writeRunError(w, r, err)
 		return
 	}
-	a.record(r, audit.ActionMigrationRun, audit.Success, map[string]string{"job": id, "reload": b.Reload, "safeMode": strconv.FormatBool(safe)})
+	a.record(r, audit.ActionMigrationRun, audit.Success, map[string]string{"job": id, "reload": b.Reload, "safeMode": strconv.FormatBool(safe), "rollback": sm.Rollback})
 	respond.JSON(w, http.StatusAccepted, map[string]any{"id": id, "state": run.StateRunning})
 }
 

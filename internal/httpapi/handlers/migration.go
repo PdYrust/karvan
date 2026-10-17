@@ -14,6 +14,7 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/run"
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/source"
+	"github.com/PdYrust/karvan/internal/panelctl"
 	"github.com/PdYrust/karvan/internal/secret"
 )
 
@@ -32,7 +33,21 @@ const (
 	codeNameTaken     = "name_taken"
 	codeConfirm       = "confirm_required"
 	codeNothingLeft   = "gone"
+	codePanelControl  = "panel_control_unavailable"
 )
+
+// controlReason says why Karvan cannot stop and start a panel, as a code.
+func controlReason(err error) string {
+	switch {
+	case errors.Is(err, panelctl.ErrOff):
+		return "turned_off"
+	case errors.Is(err, panelctl.ErrNoCompose):
+		return "no_compose_file"
+	case errors.Is(err, panelctl.ErrNoServices):
+		return "no_panel_service"
+	}
+	return "docker_denied" // no Docker, or no permission to use it
+}
 
 // writeRunError maps migration errors to API errors. Old panel errors
 // keep their code ("source_unreachable", "source_unauthorized"...), so the
@@ -52,6 +67,10 @@ func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeNotChecked})
 	case errors.Is(err, run.ErrNoLogin):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeLoginGone})
+	case errors.Is(err, run.ErrNoPanelControl):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codePanelControl, Extra: map[string]any{"reason": controlReason(err)}})
+	case errors.Is(err, run.ErrPanelChanged):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "panel_changed"})
 	case errors.Is(err, run.ErrBadReload):
 		respond.BadRequest(w)
 	case errors.Is(err, run.ErrBadPassword):

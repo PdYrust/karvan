@@ -33,7 +33,7 @@ func commands() []command {
 		{name: "init", summary: "Set up a new installation and print the sign-in details once", run: runInit},
 		{name: "serve", summary: "Run the web panel", run: runServe},
 		{name: "reset", summary: "Regenerate the path, username, password or port; or turn two-step off", run: runReset},
-		{name: "safe-mode", summary: "Restore a Safe Mode backup: safe-mode restore -panel-stopped <id>", run: runSafeMode},
+		{name: "safe-mode", summary: "Restore a Safe Mode backup: safe-mode restore <id>", run: runSafeMode},
 		{name: "version", summary: "Print version information", run: runVersion},
 	}
 }

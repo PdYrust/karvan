@@ -13,6 +13,7 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/reload"
 	"github.com/PdYrust/karvan/internal/migration/run"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
+	"github.com/PdYrust/karvan/internal/panelctl"
 )
 
 // ErrDataDirInUse means another Karvan process works on the data directory.
@@ -31,7 +32,15 @@ func (a *App) lockDataDir() (func(), error) {
 }
 
 func (a *App) newRuns() *run.Service {
-	return run.New(run.Deps{DB: a.DB, Key: a.Key, DataDir: a.Config.DataDir, Reloaders: reload.Methods()})
+	ctl := panelctl.Opener{Mode: a.Config.PanelControl}
+	return run.New(run.Deps{DB: a.DB, Key: a.Key, DataDir: a.Config.DataDir, Reloaders: reload.Methods(),
+		Control: func(ctx context.Context, envPath string) (run.PanelControl, error) {
+			c, err := ctl.Open(ctx, filepath.Dir(envPath))
+			if err != nil {
+				return nil, err
+			}
+			return c, nil
+		}})
 }
 
 // services are the migration service and the bridge that serve runs
@@ -79,15 +88,16 @@ func (s *services) stop() {
 // scanRoots are where panels are looked for.
 func scanRoots() []string { return discovery.DefaultRoots }
 
-// RestoreBackup puts a Safe Mode backup back. The operator stops the panel
-// first; Karvan must not be running, so no job writes meanwhile.
-func (a *App) RestoreBackup(ctx context.Context, id string) error {
+// RestoreBackup puts a Safe Mode backup back from the command line. Karvan
+// stops and starts the panel itself unless stopped says the operator
+// already did. Karvan's server must not be running meanwhile.
+func (a *App) RestoreBackup(ctx context.Context, id string, stopped bool) error {
 	unlock, err := a.lockDataDir()
 	if err != nil {
 		return err
 	}
 	defer unlock()
-	err = a.newRuns().RestoreBackup(ctx, id)
+	err = a.newRuns().RestoreBackup(ctx, id, stopped)
 	outcome := audit.Success
 	if err != nil {
 		outcome = audit.Failure
