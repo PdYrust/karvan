@@ -59,7 +59,6 @@ export function OverviewAside({
   return (
     <div className="flex flex-col">
       <Block title={t('safeModeTitle')} badge={<OnOff on={data.safeMode} />} />
-      <Block title={t('twoStep')} badge={<OnOff on={data.security.totpEnabled} />} />
       <Block title={t('accountTitle')}>
         <dl className="flex flex-col text-sm">
           <div className="flex justify-between gap-4 border-b border-kumo-hairline py-2">

@@ -1,19 +1,60 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
-import { SignOutIcon, UserCircleIcon } from '@phosphor-icons/react';
-import { locales } from '../../i18n/core';
-import { useLocale, useT } from '../../i18n/locale';
-import { languageNames, sharedMessages } from '../../i18n/shared';
-import { shellMessages } from './messages';
+import {
+  DesktopIcon,
+  GearSixIcon,
+  KeyboardIcon,
+  MoonIcon,
+  SignOutIcon,
+  SunIcon,
+  TranslateIcon,
+  UserCircleIcon,
+} from '@phosphor-icons/react';
+import type { ReactNode } from 'react';
+import { useNavigate } from 'react-router';
 import { useSession, useSignOut } from '../../features/session/use-session';
+import { locales, type Locale } from '../../i18n/core';
+import { useLocale, useT } from '../../i18n/locale';
+import { languageNames } from '../../i18n/shared';
+import type { ThemePref } from '../../lib/preferences/preferences';
+import { useTheme } from '../../lib/preferences/theme';
+import { shellMessages } from './messages';
+import { settingsPath } from './nav';
 
-export function AccountMenu() {
+// Kumo's item icon slot and submenu caret use physical margins, so icons go
+// in the children and the caret flips in RTL.
+const subTrigger = 'gap-2 rtl:[&>svg:last-child]:-scale-x-100';
+
+function Choice({ value, children }: { value: string; children: ReactNode }) {
+  return (
+    <DropdownMenu.RadioItem value={value} closeOnClick>
+      <span className="flex w-full items-center gap-2">
+        {children}
+        <span className="ms-auto">
+          <DropdownMenu.RadioItemIndicator />
+        </span>
+      </span>
+    </DropdownMenu.RadioItem>
+  );
+}
+
+/** Everything personal, as in the dashboard: who, settings, appearance, language, shortcuts, sign out. */
+export function AccountMenu({ onShortcuts }: { onShortcuts: () => void }) {
   const t = useT(shellMessages);
-  const ts = useT(sharedMessages);
+  const navigate = useNavigate();
   const { locale, setLocale } = useLocale();
-  const session = useSession();
+  const { pref, setPref } = useTheme();
   const signOut = useSignOut();
-  const username = session.data?.operator?.username ?? '';
+  const username = useSession().data?.operator?.username ?? '';
+  const themes: { value: ThemePref; label: string; icon: ReactNode }[] = [
+    { value: 'light', label: t('themeLight'), icon: <SunIcon size={16} aria-hidden="true" /> },
+    { value: 'dark', label: t('themeDark'), icon: <MoonIcon size={16} aria-hidden="true" /> },
+    {
+      value: 'system',
+      label: t('themeSystem'),
+      icon: <DesktopIcon size={16} aria-hidden="true" />,
+    },
+  ];
   return (
     <DropdownMenu>
       <DropdownMenu.Trigger
@@ -28,36 +69,57 @@ export function AccountMenu() {
           />
         }
       />
-      <DropdownMenu.Content className="min-w-56">
+      <DropdownMenu.Content className="min-w-60">
         <DropdownMenu.Group>
           <DropdownMenu.Label>
-            <span className="block text-tiny text-kumo-subtle">{t('signedInAs')}</span>
-            <bdi dir="ltr" className="font-mono text-sm text-kumo-default">
+            <span className="block text-tiny font-normal text-kumo-subtle">{t('signedInAs')}</span>
+            <bdi dir="ltr" className="font-mono text-sm font-normal text-kumo-default">
               {username}
             </bdi>
           </DropdownMenu.Label>
         </DropdownMenu.Group>
         <DropdownMenu.Separator />
-        <DropdownMenu.Group>
-          <DropdownMenu.Label>{ts('languageLabel')}</DropdownMenu.Label>
-          <DropdownMenu.RadioGroup
-            value={locale}
-            onValueChange={(v) => setLocale(v as typeof locale)}
-          >
-            {locales.map((l) => (
-              <DropdownMenu.RadioItem key={l} value={l} lang={l}>
-                <span className="flex w-full items-center gap-2">
-                  {languageNames[l]}
-                  <span className="ms-auto">
-                    <DropdownMenu.RadioItemIndicator />
-                  </span>
-                </span>
-              </DropdownMenu.RadioItem>
-            ))}
-          </DropdownMenu.RadioGroup>
-        </DropdownMenu.Group>
+        <DropdownMenu.Item className="gap-2" onClick={() => void navigate(settingsPath)}>
+          <GearSixIcon size={16} aria-hidden="true" />
+          {t('settings')}
+        </DropdownMenu.Item>
+        <DropdownMenu.Sub>
+          <DropdownMenu.SubTrigger className={subTrigger}>
+            {themes.find((x) => x.value === pref)?.icon}
+            {t('appearance')}
+          </DropdownMenu.SubTrigger>
+          <DropdownMenu.SubContent>
+            <DropdownMenu.RadioGroup value={pref} onValueChange={(v: ThemePref) => setPref(v)}>
+              {themes.map((x) => (
+                <Choice key={x.value} value={x.value}>
+                  {x.icon}
+                  {x.label}
+                </Choice>
+              ))}
+            </DropdownMenu.RadioGroup>
+          </DropdownMenu.SubContent>
+        </DropdownMenu.Sub>
+        <DropdownMenu.Sub>
+          <DropdownMenu.SubTrigger className={subTrigger}>
+            <TranslateIcon size={16} aria-hidden="true" />
+            {t('language')}
+          </DropdownMenu.SubTrigger>
+          <DropdownMenu.SubContent>
+            <DropdownMenu.RadioGroup value={locale} onValueChange={(v: Locale) => setLocale(v)}>
+              {locales.map((l) => (
+                <Choice key={l} value={l}>
+                  <span lang={l}>{languageNames[l]}</span>
+                </Choice>
+              ))}
+            </DropdownMenu.RadioGroup>
+          </DropdownMenu.SubContent>
+        </DropdownMenu.Sub>
+        <DropdownMenu.Item className="gap-2" onClick={onShortcuts}>
+          <KeyboardIcon size={16} aria-hidden="true" />
+          {t('shortcuts')}
+          <kbd className="ms-auto font-mono text-tiny text-kumo-subtle">?</kbd>
+        </DropdownMenu.Item>
         <DropdownMenu.Separator />
-        {/* Icon as a child: Kumo's icon slot uses a physical margin that breaks in RTL. */}
         <DropdownMenu.Item className="gap-2" onClick={signOut}>
           <SignOutIcon size={16} aria-hidden="true" className="rtl:-scale-x-100" />
           {t('signOut')}

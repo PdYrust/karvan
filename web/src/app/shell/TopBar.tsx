@@ -1,16 +1,25 @@
 import { ListIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
-import { Wordmark } from '../../components/brand/Wordmark';
-import { LanguageSwitch } from '../../components/preferences/LanguageSwitch';
-import { ThemeToggle } from '../../components/preferences/ThemeToggle';
+import { Mark } from '../../components/brand/Mark';
 import { useT } from '../../i18n/locale';
+import { sharedMessages } from '../../i18n/shared';
 import { AccountMenu } from './AccountMenu';
 import { shellMessages } from './messages';
+import { SafeModePill } from './SafeModePill';
 
 const iconButton =
-  'grid size-9 place-items-center rounded-md text-kumo-default transition-colors hover:bg-kumo-tint pointer-coarse:size-11';
+  'grid size-9 place-items-center rounded-md text-kumo-default hover:bg-kumo-tint pointer-coarse:size-11';
 
-export function TopBar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () => void }) {
+export function TopBar({
+  onMenu,
+  onSearch,
+  onShortcuts,
+}: {
+  onMenu: () => void;
+  onSearch: () => void;
+  onShortcuts: () => void;
+}) {
   const t = useT(shellMessages);
+  const ts = useT(sharedMessages);
   return (
     <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-1 border-b border-kumo-hairline bg-kumo-canvas px-3 sm:px-5">
       <button
@@ -22,10 +31,10 @@ export function TopBar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () 
         <ListIcon size={20} aria-hidden="true" />
       </button>
       <span className="ms-1 lg:hidden">
-        <Wordmark size={24} />
+        <Mark size={26} title={ts('brand')} />
       </span>
 
-      <div className="ms-auto flex items-center gap-1">
+      <div className="ms-auto flex items-center gap-2">
         <button
           type="button"
           aria-label={t('search')}
@@ -34,9 +43,8 @@ export function TopBar({ onMenu, onSearch }: { onMenu: () => void; onSearch: () 
         >
           <MagnifyingGlassIcon size={18} aria-hidden="true" />
         </button>
-        <LanguageSwitch className="hidden text-kumo-default hover:bg-kumo-tint sm:inline-flex" />
-        <ThemeToggle />
-        <AccountMenu />
+        <SafeModePill />
+        <AccountMenu onShortcuts={onShortcuts} />
       </div>
     </header>
   );

@@ -9,13 +9,15 @@ const kbd = 'rounded border border-kumo-hairline bg-kumo-base px-1.5 py-0.5 font
 export function CommandMenu({
   open,
   onOpenChange,
+  onShortcuts,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
+  onShortcuts: () => void;
 }) {
   const t = useT(shellMessages);
   const [query, setQuery] = useState('');
-  const groups = filterCommands(useCommands(), query);
+  const groups = filterCommands(useCommands(onShortcuts), query);
 
   function run(c: Command) {
     onOpenChange(false);
@@ -47,7 +49,9 @@ export function CommandMenu({
                 {(c: Command) => (
                   <CommandPalette.Item key={c.id} value={c} onClick={() => run(c)}>
                     <span className="flex items-center gap-3">
-                      <span className="text-kumo-subtle">{c.icon}</span>
+                      <span className="grid size-[18px] place-items-center text-kumo-subtle">
+                        {c.icon}
+                      </span>
                       <span>{c.title}</span>
                     </span>
                   </CommandPalette.Item>

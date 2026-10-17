@@ -3,7 +3,7 @@ import { ArrowsClockwiseIcon, HardDrivesIcon } from '@phosphor-icons/react';
 import { Section } from '../../components/layout/Section';
 import { PanelLogo } from '../../components/panels/PanelLogo';
 import { useT } from '../../i18n/locale';
-import { useScanPanels } from '../panels/use-scan-panels';
+import { useScanPanels } from '../panels/use-panels';
 import { overviewMessages } from './messages';
 
 /** Panels found on this server. Discovery lands in phase 3; until then this is the empty state. */
@@ -37,7 +37,7 @@ export function PanelsSection() {
           className="mt-2 h-9 pointer-coarse:h-11"
           icon={<ArrowsClockwiseIcon size={16} />}
           loading={scanning}
-          onClick={() => void scan()}
+          onClick={scan}
         >
           {t('scanAgain')}
         </Button>

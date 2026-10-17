@@ -1,13 +1,12 @@
 import {
   ArchiveIcon,
   ArrowsLeftRightIcon,
-  ClockCounterClockwiseIcon,
+  ChartLineIcon,
   FileTextIcon,
-  GearSixIcon,
   HardDrivesIcon,
-  LockKeyIcon,
-  ShieldCheckIcon,
+  LinkSimpleIcon,
   SquaresFourIcon,
+  StackIcon,
   type Icon,
 } from '@phosphor-icons/react';
 import type { ShellKey } from './messages';
@@ -17,6 +16,8 @@ export interface NavItem {
   icon: Icon;
   /** Route path; absent while the page is not built yet. */
   to?: string;
+  /** The `g` shortcut letter, as a physical key code. */
+  key?: string;
 }
 
 export interface NavGroup {
@@ -24,30 +25,31 @@ export interface NavGroup {
   items: NavItem[];
 }
 
-/** Sidebar structure. Pages without `to` show as "Soon" until they land. */
+/** Sidebar structure. Settings live in the account menu, as in the dashboard. */
 export const nav: NavGroup[] = [
-  { items: [{ label: 'navOverview', icon: SquaresFourIcon, to: '/' }] },
   {
-    label: 'groupMove',
     items: [
-      { label: 'navMigrations', icon: ArrowsLeftRightIcon },
-      { label: 'navReports', icon: FileTextIcon },
+      { label: 'navOverview', icon: SquaresFourIcon, to: '/', key: 'KeyO' },
+      { label: 'navAnalytics', icon: ChartLineIcon, key: 'KeyA' },
     ],
   },
   {
-    label: 'groupProtect',
+    label: 'groupMove',
     items: [
-      { label: 'navBackups', icon: ArchiveIcon },
-      { label: 'navSafeMode', icon: ShieldCheckIcon },
+      { label: 'navMigrations', icon: ArrowsLeftRightIcon, key: 'KeyM' },
+      { label: 'navReports', icon: FileTextIcon, key: 'KeyR' },
+      { label: 'navTemplates', icon: StackIcon, key: 'KeyT' },
+      { label: 'navLinks', icon: LinkSimpleIcon, key: 'KeyL' },
     ],
   },
   {
     label: 'groupServer',
     items: [
-      { label: 'navPanels', icon: HardDrivesIcon },
-      { label: 'navActivity', icon: ClockCounterClockwiseIcon },
-      { label: 'navSecurity', icon: LockKeyIcon },
-      { label: 'navSettings', icon: GearSixIcon },
+      { label: 'navPanels', icon: HardDrivesIcon, key: 'KeyP' },
+      { label: 'navBackups', icon: ArchiveIcon, key: 'KeyB' },
     ],
   },
 ];
+
+/** Pages that `g` and the palette can reach, besides the sidebar ones. */
+export const settingsPath = '/settings';

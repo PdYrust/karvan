@@ -1,6 +1,7 @@
+import type { PanelKind } from '../../lib/api/panels';
 import pasarguardUrl from './pasarguard.png';
 
-export type PanelKind = 'marzban' | 'pasarguard';
+export type { PanelKind };
 
 export const panelNames: Record<PanelKind, string> = {
   marzban: 'Marzban',
