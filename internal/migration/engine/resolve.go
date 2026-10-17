@@ -130,6 +130,10 @@ func (r *resolver) apply(it *Item, c Conflict, res plan.Resolution) bool {
 		return false
 	case OptNormalize:
 		return normalizeOnHold(u)
+	case OptFit:
+		return fitLimits(u, r.in.limits, r.in.now)
+	case OptRemove:
+		return r.in.role != nil && removeForbidden(u, r.in.role.Features)
 	}
 	// keep, move_again: nothing to change.
 	return false

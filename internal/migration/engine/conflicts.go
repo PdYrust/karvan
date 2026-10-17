@@ -199,6 +199,7 @@ func (d *detector) shape(it *Item) {
 	if u.ResetStrategy != panel.ResetNever && u.ResetStrategy != "" {
 		it.add(ResetEstimated, Info, map[string]string{"strategy": string(u.ResetStrategy)})
 	}
+	d.roleChecks(it)
 }
 
 func (d *detector) credentialShape(it *Item) {
@@ -216,7 +217,9 @@ func (d *detector) credentialShape(it *Item) {
 	if c.VLESS != nil && c.VLESS.Flow != "" {
 		it.add(FlowDropped, Blocker, map[string]string{"flow": c.VLESS.Flow})
 	}
-	if c.WireGuard != nil {
+	if c.WireGuard != nil && len(c.WireGuard.PeerIPs) > 0 {
+		// The panel gives new peer IPs (D21); a client config holding the
+		// old ones must change. A WireGuard key Karvan added has none.
 		it.add(WireGuardIPs, Blocker, nil)
 	}
 }

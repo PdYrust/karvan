@@ -31,6 +31,11 @@ type Dest struct {
 	Targets []panel.Target
 	// TargetProtocols lists the protocols each target serves.
 	TargetProtocols map[string][]string
+	// TargetHosts counts the enabled hosts behind each target, for the
+	// operator; links come from hosts.
+	TargetHosts map[string]int
+	// Roles are PasarGuard's admin roles; nil on Marzban.
+	Roles []panel.Role
 }
 
 // Moved is a ledger entry for a source user moved earlier.
@@ -56,6 +61,12 @@ type Inputs struct {
 	// Generated holds what Generate returned, by "<key>/<protocol>". The
 	// job keeps it in memory between builds; it holds secrets.
 	Generated map[string]panel.Credentials
+
+	// Set by Build: the role the moved admin gets, its limits with the
+	// admin's own overrides, and the plan's "now".
+	role   *panel.Role
+	limits panel.RoleLimits
+	now    time.Time
 }
 
 // Item is one user on its way through the build.

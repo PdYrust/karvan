@@ -1,6 +1,7 @@
 package run
 
 import (
+	"crypto/ecdh"
 	"crypto/rand"
 	"encoding/base64"
 	"fmt"
@@ -10,9 +11,11 @@ import (
 )
 
 // generate makes fresh credentials for one protocol the way both panels'
-// defaults do: uuid4 ids and secrets.token_urlsafe(24) passwords (32
-// characters, long enough for PasarGuard's shadowsocks rule). Only used
-// for fixes the operator chose (D20, D25).
+// defaults do: uuid4 ids, secrets.token_urlsafe(24) passwords (32
+// characters, long enough for PasarGuard's shadowsocks rule) and X25519
+// WireGuard keys in standard base64 (generate_wireguard_keypair). Used for
+// protocols a user lacks (D20, D67) and for fixes the operator chose (D25).
+// PasarGuard gives a new WireGuard key its peer IP itself (D21).
 func generate(protocol string) panel.Credentials {
 	switch protocol {
 	case "vmess":
@@ -25,6 +28,13 @@ func generate(protocol string) panel.Credentials {
 		return panel.Credentials{Shadowsocks: &panel.Shadowsocks{Password: token(), Method: "chacha20-ietf-poly1305"}}
 	case "hysteria":
 		return panel.Credentials{Hysteria: &panel.Hysteria{Auth: token()}}
+	case "wireguard":
+		k, err := ecdh.X25519().GenerateKey(rand.Reader)
+		if err != nil {
+			return panel.Credentials{}
+		}
+		return panel.Credentials{WireGuard: &panel.WireGuard{PrivateKey: secret.NewValue(base64.StdEncoding.EncodeToString(k.Bytes())),
+			PublicKey: base64.StdEncoding.EncodeToString(k.PublicKey().Bytes())}}
 	}
 	return panel.Credentials{}
 }

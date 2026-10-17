@@ -15,6 +15,7 @@ const maxPasses = 5
 // Result is the outcome of one build.
 type Result struct {
 	Items     []*Item
+	Targets   []string // where users go unless an operation says otherwise
 	Admin     AdminOutcome
 	Conflicts []Conflict // job-level ones (admin, clock, targets, settling)
 	Groups    []Group    // problem groups for the operator
@@ -46,21 +47,19 @@ func Build(p plan.Plan, in Inputs) (*Result, error) {
 	}
 	gen := generator(in)
 	ctx := opContext{now: p.Now, generate: gen}
-	items := newItems(in, p.Targets)
-	for _, it := range items {
-		fitProtocols(it, in.Dest.Kind)
-		tree.run(it, ctx)
-		if d, ok := p.Users[it.Key]; ok {
-			for _, o := range d.Ops {
-				apply(it, o, ctx)
-			}
-			if d.Exclude {
-				it.Include = false
-				it.note("excluded")
-			}
-		}
+	res := &Result{}
+	in.now = p.Now
+	res.Admin, res.Conflicts = admin(p, in)
+	res.Conflicts = append(res.Conflicts, chooseRole(p, &in, &res.Admin)...)
+	res.Targets = p.Targets
+	if len(res.Targets) == 0 {
+		res.Targets = defaultTargets(in)
 	}
-	res := &Result{Items: items}
+	items := newItems(in, res.Targets)
+	for _, it := range items {
+		prepare(it, tree, p, in, ctx)
+	}
+	res.Items = items
 	res.Stable = settle(p, in, items, gen, ctx)
 	for _, it := range items {
 		deriveStatus(&it.User, p.Now)
@@ -68,10 +67,30 @@ func Build(p plan.Plan, in Inputs) (*Result, error) {
 			it.note("reset:restart")
 		}
 	}
-	res.Admin, res.Conflicts = admin(p, in)
-	res.Conflicts = append(res.Conflicts, jobConflicts(p, in, res.Stable)...)
+	res.Conflicts = append(res.Conflicts, jobConflicts(res.Targets, in, res.Stable)...)
+	res.Conflicts = append(res.Conflicts, maxUsers(in, res.Admin, items)...)
+	if out := outsideRole(in, items); len(out) > 0 {
+		res.Conflicts = append(res.Conflicts, Conflict{Type: RoleGroups, Severity: Warning, Detail: map[string]string{"targets": joinSorted(out)}})
+	}
 	res.Groups, res.Blockers = groups(items, res.Conflicts)
 	return res, nil
+}
+
+// prepare runs the categories' and the user's own operations, then gives
+// the user every protocol its targets serve.
+func prepare(it *Item, t *tree, p plan.Plan, in Inputs, ctx opContext) {
+	fitProtocols(it, in.Dest.Kind)
+	t.run(it, ctx)
+	if d, ok := p.Users[it.Key]; ok {
+		for _, o := range d.Ops {
+			apply(it, o, ctx)
+		}
+		if d.Exclude {
+			it.Include = false
+			it.note("excluded")
+		}
+	}
+	fillProtocols(it, in.Dest, ctx.generate)
 }
 
 // settle detects and fixes conflicts until a pass changes nothing.
@@ -175,9 +194,9 @@ func admin(p plan.Plan, in Inputs) (AdminOutcome, []Conflict) {
 // lie in the destination's future (D12).
 const clockSkewLimit = time.Minute
 
-func jobConflicts(p plan.Plan, in Inputs, stable bool) []Conflict {
+func jobConflicts(targets []string, in Inputs, stable bool) []Conflict {
 	var out []Conflict
-	if len(p.Targets) == 0 {
+	if len(targets) == 0 {
 		out = append(out, Conflict{Type: NoTargets, Severity: Blocker})
 	}
 	if in.Source.Skew > clockSkewLimit || in.Source.Skew < -clockSkewLimit {

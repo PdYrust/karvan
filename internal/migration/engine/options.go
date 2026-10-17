@@ -24,6 +24,8 @@ const (
 	OptNormalize     = "normalize"
 	OptMerge         = "merge"
 	OptKeep          = "keep"
+	OptFit           = "fit"    // move values inside the role's limits
+	OptRemove        = "remove" // drop settings the role does not allow
 )
 
 var (
@@ -60,6 +62,8 @@ var optionTable = map[string][]Option{
 	SourceInvalid:  {skip, newCred},
 	ResetEstimated: {{ID: OptKeep}},
 	AlreadyHere:    {{ID: OptAdopt}, skip},
+	RoleLimit:      {{ID: OptKeep}, {ID: OptFit}, skip},
+	RoleFeature:    {{ID: OptKeep}, {ID: OptRemove}, skip},
 }
 
 // manyRenames is when "prefix all" beats "suffix each" (D25): with five or
@@ -91,7 +95,7 @@ func moveFirst(opts []Option, id string) []Option {
 func defaultFix(t string, rc rankContext) (Option, bool) {
 	switch t {
 	case NameTaken, CaseOnly, NameInvalid, NameTwice, CredTwice, CredTaken, NoProtocol,
-		AlreadyMoved, MovedGone, OnHoldInvalid, SourceInvalid, ResetEstimated, AlreadyHere:
+		AlreadyMoved, MovedGone, OnHoldInvalid, SourceInvalid, ResetEstimated, AlreadyHere, RoleLimit, RoleFeature:
 	default:
 		return Option{}, false
 	}

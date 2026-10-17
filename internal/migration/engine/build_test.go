@@ -203,7 +203,9 @@ func TestAdmin(t *testing.T) {
 }
 
 func TestJobConflicts(t *testing.T) {
+	// No targets chosen and none on the destination: nowhere to put users.
 	in := inputs(panel.Marzban, dest(panel.Marzban), mUser("a", 1))
+	in.Dest.Targets = nil
 	in.Source.Skew = 3 * time.Minute
 	p := basePlan()
 	p.Targets = nil

@@ -88,7 +88,12 @@ func (p *Panel) marzbanFacts(ctx context.Context, q paneldb.Querier, srv paneldb
 	for _, t := range targets {
 		protos[t.ID] = []string{t.Protocol}
 	}
-	return engine.Dest{Kind: panel.Marzban, Rules: rules, Index: x, Admins: found, Targets: targets, TargetProtocols: protos}, nil
+	hosts, err := marzbandb.HostCounts(ctx, q, targets)
+	if err != nil {
+		return engine.Dest{}, err
+	}
+	return engine.Dest{Kind: panel.Marzban, Rules: rules, Index: x, Admins: found, Targets: targets, TargetProtocols: protos,
+		TargetHosts: hosts}, nil
 }
 
 func pasarguardFacts(ctx context.Context, q paneldb.Querier, srv paneldb.Server, admins []string) (engine.Dest, error) {
@@ -119,5 +124,14 @@ func pasarguardFacts(ctx context.Context, q paneldb.Querier, srv paneldb.Server,
 			}
 		}
 	}
-	return engine.Dest{Kind: panel.PasarGuard, Rules: pasarguard.Rules{}, Index: x, Admins: found, Targets: targets, TargetProtocols: protos}, nil
+	hosts, err := pasarguarddb.HostCounts(ctx, q, srv.Dialect)
+	if err != nil {
+		return engine.Dest{}, err
+	}
+	roles, err := pasarguarddb.Roles(ctx, q)
+	if err != nil {
+		return engine.Dest{}, err
+	}
+	return engine.Dest{Kind: panel.PasarGuard, Rules: pasarguard.Rules{}, Index: x, Admins: found, Targets: targets, TargetProtocols: protos,
+		TargetHosts: hosts, Roles: roles}, nil
 }

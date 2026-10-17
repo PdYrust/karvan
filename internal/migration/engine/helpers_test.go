@@ -50,11 +50,15 @@ func dest(kind panel.Kind, users ...destUser) Dest {
 		x.Add(rules.UserKey(d.name), u)
 		x.AddCredentials(d.user.Credentials, d.id)
 	}
-	return Dest{
+	d := Dest{
 		Kind: kind, Rules: rules, Index: x, Admins: map[string]panel.ExistingAdmin{},
 		Targets:         []panel.Target{{ID: "1", Name: "Main"}},
 		TargetProtocols: map[string][]string{"1": {"vmess", "vless", "trojan", "shadowsocks"}},
 	}
+	if kind == panel.PasarGuard {
+		d.Roles = builtInRoles()
+	}
+	return d
 }
 
 func inputs(kind panel.Kind, d Dest, users ...panel.User) Inputs {
@@ -125,3 +129,10 @@ func pUser(id int64, name string) panel.User {
 type foldRules struct{ panel.Rules }
 
 func (foldRules) UserKey(name string) string { return marzban.NewRules(true).UserKey(name) }
+
+// builtInRoles are PasarGuard's three default roles, allowing everything.
+func builtInRoles() []panel.Role {
+	all := panel.RoleFeatures{ResetStrategy: true, NextPlan: true}
+	return []panel.Role{{ID: 1, Name: "owner", IsOwner: true, Features: all}, {ID: 2, Name: "administrator", Features: all},
+		{ID: 3, Name: "operator", Features: all}}
+}
