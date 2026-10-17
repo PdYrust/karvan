@@ -15,6 +15,7 @@ import { PageBoundary } from './PageBoundary';
 import { ShortcutSheet } from './ShortcutSheet';
 import { Sidebar, SidebarBody } from './Sidebar';
 import { TopBar } from './TopBar';
+import { useActivity } from './use-activity';
 import { useModHotkey } from './use-hotkey';
 import { useShortcuts } from './use-shortcuts';
 
@@ -23,6 +24,7 @@ export function AppShell() {
   const t = useT(shellMessages);
   // Loads the CSRF token every state-changing request needs.
   useSession();
+  useActivity();
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
