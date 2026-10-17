@@ -11,7 +11,14 @@ import {
   type DateOptions,
 } from './date';
 import { formatDuration } from './duration';
-import { formatBytes, formatCompact, formatNumber, formatPercent, formatRate } from './number';
+import {
+  bytesParts,
+  formatBytes,
+  formatCompact,
+  formatNumber,
+  formatPercent,
+  formatRate,
+} from './number';
 
 export interface Region {
   timeZone: string;
@@ -32,6 +39,7 @@ export function makeFormat(locale: Locale, region: Region) {
     compact: (n: number) => formatCompact(n, locale),
     percent: (ratio: number, maxFraction?: number) => formatPercent(ratio, locale, maxFraction),
     bytes: (b: number) => formatBytes(b, locale),
+    bytesParts: (b: number) => bytesParts(b, locale),
     rate: (bytesPerSecond: number) => formatRate(bytesPerSecond, locale),
     duration: (seconds: number, parts?: number) => formatDuration(seconds, locale, parts),
     dateTime: (d: Date) => formatDateTime(d, locale, opts),

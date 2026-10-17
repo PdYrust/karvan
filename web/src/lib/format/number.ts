@@ -43,11 +43,20 @@ export function splitBytes(bytes: number): { value: number; unit: (typeof byteUn
   return { value: Math.sign(bytes) * value, unit: byteUnits[i] ?? 'B' };
 }
 
-/** "12.5 GB" / "۱۲٫۵ GB". Under 10 of a unit keeps one decimal, above none. */
-export function formatBytes(bytes: number, locale: Locale): string {
+/**
+ * A byte count as a number and a unit apart ("12.5" and "GB"), for a big
+ * number with a small unit beside it. Under 10 of a unit keeps one decimal.
+ */
+export function bytesParts(bytes: number, locale: Locale): { value: string; unit: string } {
   const { value, unit } = splitBytes(bytes);
   const digits = unit === 'B' || Math.abs(value) >= 10 ? 0 : 1;
-  return `${formatNumber(value, locale, digits)} ${unit}`;
+  return { value: formatNumber(value, locale, digits), unit };
+}
+
+/** "12.5 GB" / "۱۲٫۵ GB". */
+export function formatBytes(bytes: number, locale: Locale): string {
+  const { value, unit } = bytesParts(bytes, locale);
+  return `${value} ${unit}`;
 }
 
 /** "1.2 MB/s". */

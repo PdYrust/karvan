@@ -7,7 +7,10 @@
 @theme {
   /* Text and marks drawn on top of the brand color. */
   --color-on-brand: oklch(100% 0 0);
+}
 
+/* Static: charts pick their colors by number at run time, which a class scan cannot see. */
+@theme static {
   /* Chart series: Kumo's ChartPalette.categorical, light and dark. */
   --color-chart-1: light-dark(#4290f0, #4290f0);
   --color-chart-2: light-dark(#f5b647, #eeb720);

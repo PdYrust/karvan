@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { formatDuration } from './duration';
 import {
+  bytesParts,
   formatBytes,
   formatCompact,
   formatNumber,
@@ -40,6 +41,11 @@ describe('bytes', () => {
     expect(formatBytes(0, 'en')).toBe('0 B');
     expect(formatBytes(1024 ** 2 * 3.5, 'fa')).toBe('۳٫۵ MB');
     expect(formatRate(1024 * 200, 'en')).toBe('200 KB/s');
+  });
+
+  it('splits the number from its unit for tiles', () => {
+    expect(bytesParts(1024 ** 3 * 7.46, 'en')).toEqual({ value: '7.5', unit: 'GB' });
+    expect(bytesParts(1024 * 640, 'fa')).toEqual({ value: '۶۴۰', unit: 'KB' });
   });
 
   it('stops at the largest unit', () => {
