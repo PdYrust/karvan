@@ -8,6 +8,7 @@ const budgetsKB = {
   'login (JS)': 145,
   'login globe (JS, lazy)': 15,
   'app (JS)': 260,
+  'largest page (JS, lazy)': 60,
   'stylesheet (CSS)': 35,
 };
 
@@ -37,10 +38,29 @@ const loginLazy = new Set(
 );
 const css = new Set(Object.values(manifest).flatMap((c) => c.css ?? []));
 
+// A page is every lazy chunk of one feature folder (the analytics page and
+// its tabs load together), less what the app entry already has.
+const appStatic = files(closure('index.html'));
+const lazyKeys = Object.values(manifest).flatMap((c) => c.dynamicImports ?? []);
+const pages = new Map();
+for (const key of new Set(lazyKeys)) {
+  if (manifest['login.html'].dynamicImports?.includes(key)) continue;
+  const page = key.match(/src\/features\/([^/]+)\//)?.[1] ?? key;
+  const set = pages.get(page) ?? new Set();
+  for (const f of files(closure(key))) {
+    if (!appStatic.has(f)) set.add(f);
+  }
+  pages.set(page, set);
+}
+const [largestPage, largestBytes] = [...pages]
+  .map(([page, set]) => [page, sum(set)])
+  .reduce((a, b) => (b[1] > a[1] ? b : a), ['none', 0]);
+
 const measured = {
   'login (JS)': sum(loginStatic),
   'login globe (JS, lazy)': sum(loginLazy),
-  'app (JS)': sum(files(closure('index.html'))),
+  'app (JS)': sum(appStatic),
+  'largest page (JS, lazy)': largestBytes,
   'stylesheet (CSS)': sum(css),
 };
 
@@ -49,8 +69,9 @@ for (const [name, bytes] of Object.entries(measured)) {
   const kb = bytes / 1024;
   const over = kb > budgetsKB[name];
   failed ||= over;
+  const note = name.startsWith('largest page') ? ` (${largestPage})` : '';
   console.log(
-    `${over ? 'OVER' : 'ok  '} ${name.padEnd(26)} ${kb.toFixed(1).padStart(6)} KB / ${budgetsKB[name]} KB`,
+    `${over ? 'OVER' : 'ok  '} ${name.padEnd(26)} ${kb.toFixed(1).padStart(6)} KB / ${budgetsKB[name]} KB${note}`,
   );
 }
 process.exit(failed ? 1 : 0);

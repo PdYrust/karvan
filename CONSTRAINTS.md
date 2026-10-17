@@ -35,7 +35,7 @@ Last reviewed: 2026-10-15.
 | Web lint and format | zero errors | `eslint`, `prettier --check` | `make check` |
 | Component size | 250 lines or less per `.tsx` (aim for 200) | ESLint `max-lines` | `make check` |
 | Web tests and coverage | all pass; 80% or more lines in `web/src/lib` and `web/src/i18n` | `vitest run --coverage` | `make check` |
-| Bundle (gzip, fonts excluded) | sign-in JS 145 KB or less; sign-in globe (lazy) 15 KB or less; app JS 260 KB or less; stylesheet 35 KB or less | `web/scripts/bundle-size.mjs` (follows the Vite manifest) | `make web` |
+| Bundle (gzip, fonts excluded) | sign-in JS 145 KB or less; sign-in globe (lazy) 15 KB or less; app JS 260 KB or less; largest lazy page 60 KB or less; stylesheet 35 KB or less | `web/scripts/bundle-size.mjs` (follows the Vite manifest) | `make web` |
 | Web dependencies | nothing at high or above | `pnpm audit --audit-level high` | `make check-full` |
 
 The coverage floor (80%) is high enough that new logic needs a test, and low enough to leave room for wiring code.
