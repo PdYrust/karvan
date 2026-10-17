@@ -1,11 +1,14 @@
 import { cn } from '@cloudflare/kumo/utils';
-import { NavLink } from 'react-router';
+import { useEffect, useRef, type ReactNode } from 'react';
+import { NavLink, useLocation } from 'react-router';
 import { useT } from '../../i18n/locale';
 import { sharedMessages } from '../../i18n/shared';
 
 export interface RouteTab {
   to: string;
   label: string;
+  /** Drawn before the label, such as a panel's logo. */
+  icon?: ReactNode;
   /** Matches only this exact path, for the first tab of a section. */
   end?: boolean;
   /** Not built yet: shown, inert, with a "Soon" tag. */
@@ -18,8 +21,16 @@ const tab =
 /** Kumo's underline tabs, one route per tab, so every tab has its own address. */
 export function RouteTabs({ label, tabs }: { label: string; tabs: RouteTab[] }) {
   const ts = useT(sharedMessages);
+  const ref = useRef<HTMLElement>(null);
+  const { pathname } = useLocation();
+  // On a phone the row scrolls sideways; the open tab must not sit cut off at the edge.
+  useEffect(() => {
+    ref.current
+      ?.querySelector('[aria-current="page"]')
+      ?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+  }, [pathname, tabs.length]);
   return (
-    <nav aria-label={label} className="flex overflow-x-auto [scrollbar-width:none]">
+    <nav ref={ref} aria-label={label} className="flex overflow-x-auto [scrollbar-width:none]">
       {tabs.map((x) =>
         x.soon ? (
           <span
@@ -42,6 +53,7 @@ export function RouteTabs({ label, tabs }: { label: string; tabs: RouteTab[] }) 
               'text-kumo-subtle hover:text-kumo-default aria-[current=page]:font-medium aria-[current=page]:text-kumo-strong aria-[current=page]:after:bg-kumo-brand',
             )}
           >
+            {x.icon}
             {x.label}
           </NavLink>
         ),

@@ -30,7 +30,7 @@ export const nav: NavGroup[] = [
   {
     items: [
       { label: 'navOverview', icon: SquaresFourIcon, to: '/', key: 'KeyO' },
-      { label: 'navAnalytics', icon: ChartLineIcon, key: 'KeyA' },
+      { label: 'navAnalytics', icon: ChartLineIcon, to: '/analytics', key: 'KeyA' },
     ],
   },
   {

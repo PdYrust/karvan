@@ -24,6 +24,18 @@ const SafeModeTab = lazy(() =>
 const NotFoundPage = lazy(() =>
   import('../features/not-found/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
 );
+const AnalyticsPage = lazy(() =>
+  import('../features/analytics/AnalyticsPage').then((m) => ({ default: m.AnalyticsPage })),
+);
+const AnalyticsIndex = lazy(() =>
+  import('../features/analytics/AnalyticsPage').then((m) => ({ default: m.AnalyticsIndex })),
+);
+const ServerTab = lazy(() =>
+  import('../features/analytics/server/ServerTab').then((m) => ({ default: m.ServerTab })),
+);
+const PanelTab = lazy(() =>
+  import('../features/analytics/databases/PanelTab').then((m) => ({ default: m.PanelTab })),
+);
 
 /**
  * A request that finds no session means it ended (timeout or sign-out
@@ -73,6 +85,11 @@ export function App() {
                   <Routes>
                     <Route element={<AppShell />}>
                       <Route index element={<OverviewPage />} />
+                      <Route path="analytics" element={<AnalyticsPage />}>
+                        <Route index element={<AnalyticsIndex />} />
+                        <Route path="server" element={<ServerTab />} />
+                        <Route path="panels/:id" element={<PanelTab />} />
+                      </Route>
                       <Route path="settings" element={<SettingsPage />}>
                         <Route index element={<GeneralTab />} />
                         <Route path="safe-mode" element={<SafeModeTab />} />

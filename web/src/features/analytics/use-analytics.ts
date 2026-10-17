@@ -1,0 +1,89 @@
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useState } from 'react';
+import {
+  getPanelStats,
+  getPanelsStats,
+  getServerStats,
+  type RangeKey,
+  type ServerStats,
+} from '../../lib/api/analytics';
+import { getSession } from '../../lib/api/session';
+import { databaseRange } from './range';
+import { mergeLive } from './server-view';
+
+export const analyticsKey = ['analytics'] as const;
+
+const serverKey = (r: RangeKey) => [...analyticsKey, 'server', r] as const;
+
+// The server samples every 5 seconds and keeps minutes; panel databases
+// are read once a minute. Polling pauses while the tab is hidden.
+const liveEvery = 5_000;
+const minutesEvery = 60_000;
+const databasesEvery = 30_000;
+
+/** This server's numbers; the live range adds each poll's new samples to the ones it has. */
+export function useServerStats(range: RangeKey) {
+  const qc = useQueryClient();
+  return useQuery({
+    queryKey: serverKey(range),
+    queryFn: async () => {
+      if (range !== 'live') return getServerStats(range);
+      const prev = qc.getQueryData<ServerStats>(serverKey('live'));
+      return mergeLive(prev, await getServerStats('live', prev?.seq));
+    },
+    refetchInterval: range === 'live' ? liveEvery : minutesEvery,
+  });
+}
+
+const panelsKey = (r: RangeKey) => [...analyticsKey, 'panels', r] as const;
+
+/** Every panel database's last reading and its minutes over the range. */
+export function usePanelsStats(range: RangeKey) {
+  const r = databaseRange(range);
+  return useQuery({
+    queryKey: panelsKey(r),
+    queryFn: () => getPanelsStats(r),
+    refetchInterval: databasesEvery,
+  });
+}
+
+/** One panel database in full: reading, minutes, tables, hourly traffic, sign-ups, apps. */
+export function usePanelStats(id: number, range: RangeKey) {
+  const r = databaseRange(range);
+  return useQuery({
+    queryKey: [...analyticsKey, 'panel', id, r],
+    queryFn: () => getPanelStats(id, r),
+    refetchInterval: databasesEvery,
+    enabled: id > 0,
+  });
+}
+
+/**
+ * Registered panels for the tabs. The analytics list answers from memory,
+ * while the panel list looks at every panel first and can take seconds.
+ */
+export function usePanelTabs() {
+  // Shares its cache with the live databases list, so a page showing both asks once.
+  return useQuery({
+    queryKey: panelsKey('1h'),
+    queryFn: () => getPanelsStats('1h'),
+    staleTime: 60_000,
+    select: (d) => d.panels,
+  });
+}
+
+/**
+ * The refresh button. Polls do not count as activity, but the operator
+ * pressing refresh does, so the session hears about it first.
+ */
+export function useRefreshAnalytics() {
+  const qc = useQueryClient();
+  // Only a refresh the operator asked for spins the icon, not every poll.
+  const [fetching, setFetching] = useState(false);
+  const refresh = () => {
+    setFetching(true);
+    void getSession().catch(() => undefined);
+    void qc.invalidateQueries({ queryKey: analyticsKey }).finally(() => setFetching(false));
+  };
+  return { refresh, fetching };
+}
