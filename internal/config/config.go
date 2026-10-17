@@ -29,6 +29,10 @@ type Config struct {
 	KeyFile        string   `json:"keyFile"`
 	LogLevel       string   `json:"logLevel"`
 	TrustedProxies []string `json:"trustedProxies"`
+	// PanelControl says how Karvan stops and starts a panel to put a Safe
+	// Mode backup back: "auto" (Docker, else sudo -n), "docker", "sudo"
+	// or "off".
+	PanelControl string `json:"panelControl"`
 
 	level   slog.Level
 	proxies []netip.Prefix
@@ -37,9 +41,10 @@ type Config struct {
 // Defaults returns the configuration used when nothing overrides it.
 func Defaults() Config {
 	return Config{
-		DataDir:  "/var/lib/karvan",
-		KeyFile:  "/etc/karvan/secret.key",
-		LogLevel: "info",
+		DataDir:      "/var/lib/karvan",
+		KeyFile:      "/etc/karvan/secret.key",
+		LogLevel:     "info",
+		PanelControl: "auto",
 	}
 }
 
@@ -134,6 +139,11 @@ func (c *Config) validate() error {
 	}
 	if err := c.level.UnmarshalText([]byte(c.LogLevel)); err != nil {
 		return fmt.Errorf("logLevel %q: use debug, info, warn or error", c.LogLevel)
+	}
+	switch c.PanelControl {
+	case "auto", "docker", "sudo", "off":
+	default:
+		return fmt.Errorf("panelControl %q: use auto, docker, sudo or off", c.PanelControl)
 	}
 	c.proxies = c.proxies[:0]
 	for _, s := range c.TrustedProxies {
