@@ -1,65 +1,66 @@
 import { Button } from '@cloudflare/kumo/components/button';
-import { useEffect } from 'react';
-import { useSession } from '../session/use-session';
-import { InlineAlert } from '../../components/feedback/InlineAlert';
+import { PlusIcon } from '@phosphor-icons/react';
 import { PageHeader } from '../../components/layout/PageHeader';
-import { useLocale, useT } from '../../i18n/locale';
+import { usePageTitle } from '../../components/layout/use-page-title';
+import { useT } from '../../i18n/locale';
 import { sharedMessages } from '../../i18n/shared';
-import { ApiError, offline } from '../../lib/api/client';
-import { formatLongDate, formatTime } from '../../lib/format/date';
+import { useFormat } from '../../lib/preferences/region';
+import { NoPanels } from '../panels/NoPanels';
+import { usePanels, useScanPanels } from '../panels/use-panels';
+import { MigrationsColumn } from './columns/MigrationsColumn';
+import { PanelsColumn } from './columns/PanelsColumn';
+import { RecentsColumn } from './columns/RecentsColumn';
+import { HomeSearch } from './HomeSearch';
 import { overviewMessages } from './messages';
-import { OverviewAside } from './OverviewAside';
-import { OverviewSkeleton } from './OverviewSkeleton';
-import { PanelsSection } from './PanelsSection';
+import { Summary } from './summary/Summary';
 import { useNow } from './use-now';
-import { useOverview } from './use-overview';
 
-export function OverviewPage() {
+/** Inert with its "Soon" tag until the wizard is built. */
+function NewMigration() {
   const t = useT(overviewMessages);
   const ts = useT(sharedMessages);
-  const { locale } = useLocale();
+  return (
+    <Button disabled icon={<PlusIcon size={16} />} className="pointer-coarse:h-11">
+      {t('newMigration')}
+      <span className="rounded-md px-1.5 text-tiny font-normal ring ring-kumo-line">
+        {ts('soon')}
+      </span>
+    </Button>
+  );
+}
+
+/** Laid out like the dashboard's account home: search, three columns and a summary. */
+export function OverviewPage() {
+  const t = useT(overviewMessages);
+  usePageTitle(t('title'));
+  const fmt = useFormat();
   const now = useNow();
-  const overview = useOverview();
-  const username = useSession().data?.operator?.username ?? '';
-
-  useEffect(() => {
-    document.title = t('pageTitle');
-  }, [t]);
-
-  const today = t('today', { date: formatLongDate(now, locale), time: formatTime(now, locale) });
-
-  let body;
-  if (overview.isPending) {
-    body = <OverviewSkeleton label={t('loading')} />;
-  } else if (overview.isError) {
-    const isOffline = overview.error instanceof ApiError && overview.error.code === offline;
-    body = (
-      <div className="flex flex-col items-start gap-3 p-4 sm:p-8">
-        <InlineAlert>
-          {t('loadFailed')} {isOffline ? ts('errorOffline') : ts('errorServer')}
-        </InlineAlert>
-        <Button className="h-9 pointer-coarse:h-11" onClick={() => void overview.refetch()}>
-          {ts('retry')}
-        </Button>
-      </div>
-    );
-  } else {
-    body = (
-      <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem]">
-        <div className="flex min-w-0 flex-col gap-6 p-4 sm:p-8">
-          <PanelsSection />
-        </div>
-        <aside className="border-t border-kumo-hairline p-4 sm:p-8 lg:border-t-0 lg:border-s">
-          <OverviewAside data={overview.data} username={username} now={now} />
-        </aside>
-      </div>
-    );
-  }
+  const panels = usePanels();
+  const { scan, scanning } = useScanPanels();
+  const noPanels = panels.data !== undefined && !panels.data.some((p) => p.id > 0);
 
   return (
     <div className="flex flex-col">
-      <PageHeader title={t('title')} description={today} />
-      {body}
+      <PageHeader
+        title={t('title')}
+        description={t('today', { date: fmt.longDate(now), time: fmt.time(now), zone: fmt.zone })}
+        actions={<NewMigration />}
+      />
+      <div className="flex max-w-[1400px] flex-col gap-10 p-4 sm:p-8">
+        <HomeSearch />
+        {noPanels ? (
+          <NoPanels onScan={scan} scanning={scanning} />
+        ) : (
+          <>
+            <div className="grid gap-8 lg:grid-cols-3">
+              <PanelsColumn panels={panels} />
+              <MigrationsColumn now={now} />
+              <RecentsColumn panels={panels} />
+            </div>
+            <Summary />
+          </>
+        )}
+      </div>
     </div>
   );
 }
