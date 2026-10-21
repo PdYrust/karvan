@@ -31,6 +31,7 @@ type Error struct {
 	Code   string
 	Status int // HTTP status, 0 when no response came back
 	Err    error
+	Cert   *Certificate // the certificate that was not trusted, for tls_untrusted
 }
 
 func (e *Error) Error() string {

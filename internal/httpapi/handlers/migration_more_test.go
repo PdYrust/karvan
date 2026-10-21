@@ -2,8 +2,11 @@ package handlers_test
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strconv"
 	"strings"
 	"testing"
@@ -262,6 +265,54 @@ func TestUnknownReloadIsABadRequest(t *testing.T) {
 	id := m.create()
 	v := m.plan(id)
 	if res := m.do(http.MethodPost, api+"/migrations/"+id+"/run", map[string]any{"planVersion": v, "reload": "fly"}); res.status != http.StatusBadRequest {
+		t.Fatalf("%d %s", res.status, res.body)
+	}
+}
+
+// A typed admin password that breaks the destination's policy says which
+// rule it broke, so the page can say what to change.
+func TestWeakPasswordNamesTheRule(t *testing.T) {
+	m := newMigrationEnv(t, 1)
+	id := m.create()
+	v := m.plan(id)
+	for pw, rule := range map[string]string{"Short1!": "password_short", "longbutonlylowercase": "password_weak"} {
+		res := m.do(http.MethodPost, api+"/migrations/"+id+"/run", map[string]any{"planVersion": v, "reload": "manual", "adminPassword": pw})
+		var body struct {
+			Error struct{ Code, Rule string } `json:"error"`
+		}
+		res.json(t, &body)
+		if res.status != http.StatusBadRequest || body.Error.Code != "weak_password" || body.Error.Rule != rule {
+			t.Errorf("%s: %d %s", pw, res.status, res.body)
+		}
+	}
+}
+
+// An old panel with a certificate Karvan cannot verify answers
+// source_tls_untrusted with the certificate's fingerprint, subject and
+// expiry, for the operator to compare before trusting it.
+func TestUntrustedCertificateIsDescribed(t *testing.T) {
+	m := newMigrationEnv(t, 0)
+	srv := httptest.NewTLSServer(http.NotFoundHandler())
+	defer srv.Close()
+	res := m.do(http.MethodPost, api+"/migrations", map[string]any{"sourceUrl": srv.URL, "sourceKind": "marzban",
+		"username": "admin", "password": "secret-pass", "panelId": m.panelID})
+	if res.status == http.StatusCreated { // the first call to the panel is the check
+		var job struct{ ID string }
+		res.json(t, &job)
+		res = m.do(http.MethodPost, api+"/migrations/"+job.ID+"/compare", nil)
+	}
+	var body struct {
+		Error struct {
+			Code     string    `json:"code"`
+			SHA256   string    `json:"sha256"`
+			Subject  string    `json:"subject"`
+			NotAfter time.Time `json:"notAfter"`
+		} `json:"error"`
+	}
+	res.json(t, &body)
+	sum := sha256.Sum256(srv.Certificate().Raw)
+	if res.status != http.StatusBadGateway || body.Error.Code != "source_tls_untrusted" || body.Error.SHA256 != hex.EncodeToString(sum[:]) ||
+		body.Error.Subject == "" || !body.Error.NotAfter.Equal(srv.Certificate().NotAfter) {
 		t.Fatalf("%d %s", res.status, res.body)
 	}
 }

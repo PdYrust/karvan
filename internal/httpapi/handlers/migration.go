@@ -56,6 +56,7 @@ func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
 	var stale *run.ErrStale
 	var planErr *engine.PlanError
 	var srcErr *source.Error
+	var weak *run.WeakPasswordError
 	switch {
 	case errors.Is(err, run.ErrNoJob), errors.Is(err, run.ErrNotFound):
 		respond.Error(w, respond.APIError{Status: http.StatusNotFound, Code: codeNotFound})
@@ -73,8 +74,8 @@ func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "panel_changed"})
 	case errors.Is(err, run.ErrBadReload):
 		respond.BadRequest(w)
-	case errors.Is(err, run.ErrBadPassword):
-		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: codeWeakPassword})
+	case errors.As(err, &weak):
+		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: codeWeakPassword, Extra: map[string]any{"rule": weak.Rule}})
 	case errors.Is(err, run.ErrTemplateName):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeTemplateName})
 	case errors.Is(err, dest.ErrNotReady):
@@ -85,10 +86,20 @@ func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
 		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: codePlanInvalid,
 			Extra: map[string]any{"where": planErr.Where, "problem": planErr.Problem}})
 	case errors.As(err, &srcErr):
-		respond.Error(w, respond.APIError{Status: http.StatusBadGateway, Code: "source_" + srcErr.Code})
+		respond.Error(w, respond.APIError{Status: http.StatusBadGateway, Code: "source_" + srcErr.Code, Extra: certificateDetail(srcErr.Cert)})
 	default:
 		respond.Internal(w, r, err)
 	}
+}
+
+// certificateDetail is what source_tls_untrusted says about the panel's
+// certificate, so the operator can compare the fingerprint before trusting
+// it. Nil for other errors.
+func certificateDetail(c *source.Certificate) map[string]any {
+	if c == nil {
+		return nil
+	}
+	return map[string]any{"sha256": c.SHA256, "subject": c.Subject, "notAfter": c.NotAfter}
 }
 
 type createBody struct {

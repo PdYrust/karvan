@@ -148,7 +148,7 @@ func (s *Service) adminPassword(j *Job, typed secret.Value) (secret.Value, error
 			code = "" // Marzban has no policy; Karvan asks for 12 characters
 		}
 		if code != "" {
-			return secret.Value{}, fmt.Errorf("%w: %s", ErrBadPassword, code)
+			return secret.Value{}, &WeakPasswordError{Rule: code}
 		}
 		j.passwordFrom = PasswordTyped
 		return typed, nil

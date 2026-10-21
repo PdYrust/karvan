@@ -82,20 +82,26 @@ func FetchCertificate(ctx context.Context, base string, r Resolver) (Certificate
 		return Certificate{}, &Error{Code: CodeTLS, Err: errors.New("no certificate")}
 	}
 	leaf := certs[0]
-	sum := sha256.Sum256(leaf.Raw)
 	pool := x509.NewCertPool()
 	for _, c := range certs[1:] {
 		pool.AddCert(c)
 	}
 	_, verr := leaf.Verify(x509.VerifyOptions{DNSName: u.Hostname(), Intermediates: pool})
+	cert := certificateOf(leaf)
+	cert.Trusted = verr == nil
+	return cert, nil
+}
+
+// certificateOf describes a leaf certificate. Trusted is left false.
+func certificateOf(leaf *x509.Certificate) Certificate {
+	sum := sha256.Sum256(leaf.Raw)
 	return Certificate{
 		SHA256:   hex.EncodeToString(sum[:]),
 		Subject:  leaf.Subject.String(),
 		Issuer:   leaf.Issuer.String(),
 		DNSNames: leaf.DNSNames,
-		NotAfter: leaf.NotAfter,
-		Trusted:  verr == nil,
-	}, nil
+		NotAfter: leaf.NotAfter.UTC(),
+	}
 }
 
 // Fingerprint formats a SHA-256 as colon-separated hex pairs for display.

@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"net/netip"
@@ -146,8 +147,15 @@ func TestTLSPinning(t *testing.T) {
 	pin := hex.EncodeToString(sum[:])
 
 	c, _ := client(t, srv.URL, Options{})
-	if _, err := c.Get(context.Background(), "/", nil, nil); CodeOf(err) != CodeTLSUntrusted {
+	_, err := c.Get(context.Background(), "/", nil, nil)
+	var se *Error
+	if !errors.As(err, &se) || se.Code != CodeTLSUntrusted {
 		t.Fatalf("self-signed without a pin: %v", err)
+	}
+	// The error carries the certificate, so the operator can compare it
+	// before trusting it.
+	if se.Cert == nil || se.Cert.SHA256 != pin || se.Cert.Subject == "" || !se.Cert.NotAfter.Equal(srv.Certificate().NotAfter) {
+		t.Fatalf("certificate in the error: %+v", se.Cert)
 	}
 	c, _ = client(t, srv.URL, Options{PinSHA256: Fingerprint(pin)})
 	if _, err := c.Get(context.Background(), "/", nil, nil); err != nil {

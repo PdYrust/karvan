@@ -37,6 +37,13 @@ var (
 	ErrNoPanelControl = errors.New("cannot stop and start this panel")
 )
 
+// WeakPasswordError is ErrBadPassword with the policy rule the typed
+// password broke: one of the pasarguard.Password* codes.
+type WeakPasswordError struct{ Rule string }
+
+func (e *WeakPasswordError) Error() string { return ErrBadPassword.Error() + ": " + e.Rule }
+func (e *WeakPasswordError) Unwrap() error { return ErrBadPassword }
+
 // PanelControl stops and starts a destination panel, for a full backup
 // restore (D36).
 type PanelControl interface {

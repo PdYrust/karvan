@@ -239,7 +239,12 @@ func transportError(err error) error {
 	var ce *tls.CertificateVerificationError
 	switch {
 	case errors.As(err, &ce):
-		return &Error{Code: CodeTLSUntrusted, Err: err}
+		e := &Error{Code: CodeTLSUntrusted, Err: err}
+		if len(ce.UnverifiedCertificates) > 0 {
+			cert := certificateOf(ce.UnverifiedCertificates[0])
+			e.Cert = &cert
+		}
+		return e
 	case errors.Is(err, errPinMismatch):
 		return &Error{Code: CodeTLS, Err: err}
 	case strings.Contains(err.Error(), "tls:"):
