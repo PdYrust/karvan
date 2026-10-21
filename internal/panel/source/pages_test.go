@@ -49,6 +49,26 @@ func TestReadAllStableList(t *testing.T) {
 	}
 }
 
+// Each page read is reported with its pass, so the operator sees users
+// read of total, and a second pass that makes sure nothing changed.
+func TestReadAllReportsEachPage(t *testing.T) {
+	l := &list{names: names(1234)}
+	var got []Progress
+	ctx := WithProgress(context.Background(), func(p Progress) { got = append(got, p) })
+	if _, err := ReadAll(ctx, 500, l.page, id); err != nil {
+		t.Fatal(err)
+	}
+	var want []Progress
+	for pass := 1; pass <= 2; pass++ {
+		for _, read := range []int{500, 1000, 1234} {
+			want = append(want, Progress{Pass: pass, Read: read, Total: 1234})
+		}
+	}
+	if !slices.Equal(got, want) {
+		t.Fatalf("progress %v", got)
+	}
+}
+
 func TestReadAllCatchesSwapDuringPaging(t *testing.T) {
 	// During the first pass one user is deleted and one created before it,
 	// so the count stays right but a page boundary shifts.
