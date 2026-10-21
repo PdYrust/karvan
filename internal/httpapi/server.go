@@ -122,7 +122,7 @@ func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(htt
 		"GET " + m + "/report":                        api.Report,
 		"GET " + m + "/report.csv":                    api.ReportCSV,
 		"GET " + m + "/links.csv":                     api.LinksCSV,
-		"GET " + m + "/passwords.csv":                 api.PasswordsCSV,
+		"POST " + m + "/passwords.csv":                api.PasswordsCSV,
 		"GET /api/v1/operations":                      api.Operations,
 		"GET /api/v1/templates":                       api.Templates,
 		"POST /api/v1/templates":                      api.SaveTemplate,

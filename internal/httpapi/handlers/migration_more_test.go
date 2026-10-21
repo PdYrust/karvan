@@ -43,7 +43,7 @@ func TestMigrationErrors(t *testing.T) {
 	}{
 		{http.MethodPost, "/rollback", nil, http.StatusConflict, "busy"},
 		{http.MethodGet, "/report", nil, http.StatusNotFound, "not_found"},
-		{http.MethodGet, "/passwords.csv", nil, http.StatusGone, "gone"},
+		{http.MethodPost, "/passwords.csv", nil, http.StatusGone, "gone"},
 		{http.MethodPut, "/plan", map[string]any{}, http.StatusPreconditionRequired, "stale_plan"},
 	} {
 		res := m.do(c.method, api+"/migrations/"+id+c.path, c.body)

@@ -193,7 +193,7 @@ func checkDownloads(t *testing.T, m *migrationEnv, id string) {
 	if rep.Admin.Password != run.PasswordKept {
 		t.Fatalf("admin password %q", rep.Admin.Password)
 	}
-	if res := m.do(http.MethodGet, api+"/migrations/"+id+"/passwords.csv", nil); res.status != http.StatusGone {
+	if res := m.do(http.MethodPost, api+"/migrations/"+id+"/passwords.csv", nil); res.status != http.StatusGone {
 		t.Fatalf("passwords.csv: %d", res.status)
 	}
 }
@@ -266,9 +266,18 @@ func TestMigrationRoutesNeedASession(t *testing.T) {
 		}
 	}
 	m := newMigrationEnv(t, 0)
+	id := m.create()
+	// The passwords go once, so only a POST with the CSRF token takes them:
+	// a GET (a prefetch, a link) finds no route.
+	if res := m.do(http.MethodGet, api+"/migrations/"+id+"/passwords.csv", nil); res.status != http.StatusNotFound || string(res.body) != "Not Found\n" {
+		t.Fatalf("GET passwords.csv: %d %q", res.status, res.body)
+	}
 	m.csrf = "wrong"
 	if res := m.do(http.MethodPost, api+"/migrations", map[string]any{}); res.status != http.StatusForbidden {
 		t.Fatalf("no CSRF token: %d", res.status)
+	}
+	if res := m.do(http.MethodPost, api+"/migrations/"+id+"/passwords.csv", nil); res.status != http.StatusForbidden {
+		t.Fatalf("passwords.csv without CSRF: %d", res.status)
 	}
 }
 
