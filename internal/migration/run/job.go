@@ -130,10 +130,17 @@ func (s *Service) save(ctx context.Context, j *Job) error {
 	if err != nil {
 		return err
 	}
-	var report []byte
+	var report, counts []byte
+	var ended int64
 	if j.report != nil {
 		if report, err = json.Marshal(j.report.WithoutLinks()); err != nil {
 			return err
+		}
+		if counts, err = json.Marshal(j.report.Counts); err != nil {
+			return err
+		}
+		if !j.report.EndedAt.IsZero() {
+			ended = j.report.EndedAt.UnixMilli()
 		}
 	}
 	admin := ""
@@ -141,13 +148,15 @@ func (s *Service) save(ctx context.Context, j *Job) error {
 		admin = j.snapshot.Admin.Username
 	}
 	_, err = s.db.ExecContext(ctx, `INSERT INTO jobs (id, state, source_kind, source_origin, source_admin, panel_id, plan,
-		plan_version, safe_mode, rollback, backup_id, report, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+		plan_version, safe_mode, rollback, backup_id, report, counts, ended_at, created_at, updated_at)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
 		ON CONFLICT (id) DO UPDATE SET state = excluded.state, source_kind = excluded.source_kind,
 		source_admin = CASE WHEN excluded.source_admin = '' THEN jobs.source_admin ELSE excluded.source_admin END,
 		plan = excluded.plan, plan_version = excluded.plan_version, safe_mode = excluded.safe_mode, rollback = excluded.rollback,
-		backup_id = excluded.backup_id, report = excluded.report, updated_at = excluded.updated_at`,
+		backup_id = excluded.backup_id, report = excluded.report, counts = excluded.counts, ended_at = excluded.ended_at,
+		updated_at = excluded.updated_at`,
 		j.ID, j.state, string(j.kind), j.origin, admin, j.PanelID, string(raw), j.version, j.safeMode, j.rollbackOrUndo(), j.backupID,
-		string(report), s.now().UnixMilli(), s.now().UnixMilli())
+		string(report), string(counts), ended, s.now().UnixMilli(), s.now().UnixMilli())
 	if err != nil {
 		return fmt.Errorf("save job %s: %w", j.ID, err)
 	}
