@@ -8,7 +8,7 @@ export const panelsKey = ['panels'] as const;
 
 /** Registered panels with a fresh look at each. The server probes every database, so it is not polled. */
 export function usePanels() {
-  return useQuery({ queryKey: panelsKey, queryFn: getPanels, staleTime: 60_000 });
+  return useQuery({ queryKey: panelsKey, queryFn: () => getPanels(), staleTime: 60_000 });
 }
 
 /** "Scan this server" from anywhere: the switcher, the panels page and Ctrl+K. */
