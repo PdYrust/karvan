@@ -34,6 +34,12 @@ const en = {
   linksNone: 'No sites yet. A site keeps the old subscription links of moved users working.',
   linksPorts: { one: "{count} port couldn't open", other: "{count} ports couldn't open" },
   cardFailed: "Couldn't load this.",
+
+  analyticsTitle: 'Analytics',
+  allAnalytics: 'All analytics',
+  thisServer: 'This server',
+  cacheHits: '{rate} from cache',
+  journalMode: 'Journal mode `{mode}`',
 };
 
 type Key = keyof typeof en;
@@ -72,6 +78,12 @@ const fa: Messages<Key>['fa'] = {
   linksNone: 'هنوز سایتی نیست. با یک سایت، لینک های اشتراک قدیمی کاربرهای منتقل شده کار میکنند.',
   linksPorts: { one: '{count} پورت باز نشد', other: '{count} پورت باز نشد' },
   cardFailed: 'بارگذاری نشد.',
+
+  analyticsTitle: 'آمار',
+  allAnalytics: 'همه آمار',
+  thisServer: 'این سرور',
+  cacheHits: '{rate} از کش',
+  journalMode: 'حالت ژورنال `{mode}`',
 };
 
 export const overviewMessages: Messages<Key> = { en, fa };

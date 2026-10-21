@@ -1,5 +1,8 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { PlusIcon } from '@phosphor-icons/react';
+import { lazy, Suspense } from 'react';
+import { StatTileSkeleton } from '../../components/charts/StatTile';
+import { Bone } from '../../components/feedback/PageSkeleton';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { usePageTitle } from '../../components/layout/use-page-title';
 import { useT } from '../../i18n/locale';
@@ -15,6 +18,11 @@ import { overviewMessages } from './messages';
 import { Summary } from './summary/Summary';
 import { useNow } from './use-now';
 
+// The charts load after the rest of the page, so the columns and the summary come first.
+const OverviewAnalytics = lazy(() =>
+  import('./analytics/OverviewAnalytics').then((m) => ({ default: m.OverviewAnalytics })),
+);
+
 /** Inert with its "Soon" tag until the wizard is built. */
 function NewMigration() {
   const t = useT(overviewMessages);
@@ -29,7 +37,20 @@ function NewMigration() {
   );
 }
 
-/** Laid out like the dashboard's account home: search, three columns and a summary. */
+function AnalyticsSkeleton({ label }: { label: string }) {
+  return (
+    <div role="status" aria-label={label} className="flex flex-col gap-4">
+      <Bone className="h-6 w-28" />
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {[0, 1, 2, 3].map((i) => (
+          <StatTileSkeleton key={i} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/** Laid out like the dashboard's account home: search, three columns, a summary, then analytics. */
 export function OverviewPage() {
   const t = useT(overviewMessages);
   usePageTitle(t('title'));
@@ -60,6 +81,9 @@ export function OverviewPage() {
             <Summary />
           </>
         )}
+        <Suspense fallback={<AnalyticsSkeleton label={t('analyticsTitle')} />}>
+          <OverviewAnalytics />
+        </Suspense>
       </div>
     </div>
   );
