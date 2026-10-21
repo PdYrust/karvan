@@ -7,6 +7,7 @@ import (
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/httpapi/middleware"
 	"github.com/PdYrust/karvan/internal/httpapi/respond"
+	"github.com/PdYrust/karvan/internal/migration/run"
 )
 
 const overviewActivityLimit = 8
@@ -32,12 +33,14 @@ type overviewJSON struct {
 		TOTPEnabled    bool        `json:"totpEnabled"`
 		PreviousSignIn *signInJSON `json:"previousSignIn"`
 	} `json:"security"`
-	Panels   []struct{}     `json:"panels"`
-	Activity []activityJSON `json:"activity"`
+	// Migrations sums up every job: how many are in each state, and the
+	// users they moved and left out.
+	Migrations run.Totals     `json:"migrations"`
+	Activity   []activityJSON `json:"activity"`
 }
 
-// Overview returns the data for the first page after sign-in. Panels stay
-// empty here until the web panel lists them (phase 4; GET /panels has them).
+// Overview returns the data for the first page after sign-in. The panels
+// themselves come from GET /panels, which inspects each one.
 func (a *API) Overview(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 	s, _ := middleware.Session(ctx)
@@ -64,7 +67,14 @@ func (a *API) Overview(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	out := overviewJSON{Version: a.Version, SafeMode: safe, Panels: []struct{}{}, Activity: []activityJSON{}}
+	totals := run.Totals{Jobs: map[string]int64{}}
+	if a.Runs != nil {
+		if totals, err = a.Runs.Totals(ctx); err != nil {
+			respond.Internal(w, r, err)
+			return
+		}
+	}
+	out := overviewJSON{Version: a.Version, SafeMode: safe, Migrations: totals, Activity: []activityJSON{}}
 	out.Security.TOTPEnabled = op.TOTPEnabled
 	if len(prev) == 1 {
 		out.Security.PreviousSignIn = &signInJSON{At: prev[0].At.UTC(), IP: prev[0].IP}

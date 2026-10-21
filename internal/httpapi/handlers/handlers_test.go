@@ -32,7 +32,9 @@ func TestSignInOverviewSignOut(t *testing.T) {
 				At time.Time `json:"at"`
 			} `json:"previousSignIn"`
 		} `json:"security"`
-		Panels   []any `json:"panels"`
+		Migrations struct {
+			Jobs map[string]int64 `json:"jobs"`
+		} `json:"migrations"`
 		Activity []struct {
 			Action  string `json:"action"`
 			Outcome string `json:"outcome"`
@@ -43,7 +45,7 @@ func TestSignInOverviewSignOut(t *testing.T) {
 		t.Fatalf("overview: %d %s", res.status, res.body)
 	}
 	res.json(t, &ov)
-	if ov.Version != "test" || !ov.SafeMode || ov.Panels == nil || len(ov.Activity) != 1 || ov.Activity[0].Action != "login" {
+	if ov.Version != "test" || !ov.SafeMode || ov.Migrations.Jobs == nil || len(ov.Activity) != 1 || ov.Activity[0].Action != "login" {
 		t.Fatalf("overview = %+v", ov)
 	}
 	if ov.Security.PreviousSignIn != nil {
