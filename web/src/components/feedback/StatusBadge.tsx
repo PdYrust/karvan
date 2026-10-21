@@ -3,19 +3,25 @@ import { cn } from '@cloudflare/kumo/utils';
 import {
   CheckCircleIcon,
   MinusCircleIcon,
+  PlayCircleIcon,
   WarningCircleIcon,
+  XCircleIcon,
   type Icon,
 } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 
-export type StatusTone = 'success' | 'warning' | 'neutral';
+/** `active` is something under way, such as a running migration. */
+export type StatusTone = 'success' | 'warning' | 'danger' | 'active' | 'neutral';
 
 const tones: Record<
   StatusTone,
-  { icon: Icon; color: string; badge: 'success' | 'warning' | 'secondary' }
+  { icon: Icon; color: string; badge: 'success' | 'warning' | 'error' | 'info' | 'secondary' }
 > = {
   success: { icon: CheckCircleIcon, color: 'text-kumo-success', badge: 'success' },
   warning: { icon: WarningCircleIcon, color: 'text-kumo-warning', badge: 'warning' },
+  danger: { icon: XCircleIcon, color: 'text-kumo-danger', badge: 'error' },
+  // Kumo's info blue is under 3:1 on white; the brand blue reads.
+  active: { icon: PlayCircleIcon, color: 'text-(--color-kumo-brand)', badge: 'info' },
   neutral: { icon: MinusCircleIcon, color: 'text-kumo-subtle', badge: 'secondary' },
 };
 
@@ -24,10 +30,10 @@ export function StatusBadge({ tone, children }: { tone: StatusTone; children: Re
   const look = tones[tone];
   const Glyph = look.icon;
   return (
-    // Kumo's warning text on its own tint is under 4.5:1, so that word stays in the default color.
+    // Kumo's warning, error and info text on their own tints is under 4.5:1, so those words stay in the default color.
     <Badge
       variant={look.badge}
-      className={tone === 'warning' ? 'text-kumo-default' : undefined}
+      className={tone === 'success' || tone === 'neutral' ? undefined : 'text-kumo-default'}
       icon={<Glyph size={14} weight="bold" aria-hidden="true" className={look.color} />}
     >
       {children}
