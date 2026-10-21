@@ -5,8 +5,11 @@
 @theme {
   --font-sans: 'Vazirmatn Variable', system-ui, sans-serif;
   --font-mono: 'JetBrains Mono Variable', ui-monospace, monospace;
+  /* Machine values read exactly as typed: no ligature turns :// or -> into one glyph. */
+  --font-mono--font-feature-settings: 'calt' 0, 'liga' 0;
   --default-font-family: var(--font-sans);
   --default-mono-font-family: var(--font-mono);
+  --default-mono-font-feature-settings: var(--font-mono--font-feature-settings);
 
   --text-tiny: 12px;
   --text-tiny--line-height: 16px;
