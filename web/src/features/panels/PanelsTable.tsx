@@ -3,8 +3,9 @@ import { useT } from '../../i18n/locale';
 import type { Panel } from '../../lib/api/panels';
 import { useCurrentPanel } from './current-panel';
 import { panelsMessages } from './messages';
-import { ControlState, PanelDatabase, PanelName, PanelStatus, PanelVersion } from './PanelCells';
+import { ControlState, PanelDatabase, PanelName, PanelVersion } from './PanelCells';
 import { PanelMenu } from './PanelMenu';
+import { PanelStatus } from './PanelStatus';
 
 /** On a phone a panel is a card: name first, then version and database, status at the foot. */
 function PanelCard({ panel, current }: { panel: Panel; current: boolean }) {

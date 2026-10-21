@@ -1,16 +1,14 @@
 import { HardDrivesIcon } from '@phosphor-icons/react';
 import type { UseQueryResult } from '@tanstack/react-query';
-import { StatusLabel } from '../../../components/feedback/StatusBadge';
 import { PanelMark } from '../../../components/panels/PanelLabel';
 import { useT } from '../../../i18n/locale';
 import { panelKind, type Panel } from '../../../lib/api/panels';
-import { panelsMessages } from '../../panels/messages';
+import { PanelStatus } from '../../panels/PanelStatus';
 import { PartFailed } from '../PartFailed';
 import { HomeColumn, HomeRow, HomeRows, HomeRowsSkeleton } from './HomeColumn';
 import { overviewMessages } from '../messages';
 
 function PanelRow({ panel }: { panel: Panel }) {
-  const tp = useT(panelsMessages);
   const kind = panelKind(panel);
   return (
     <HomeRow to={`/panels/${String(panel.id)}`}>
@@ -21,13 +19,7 @@ function PanelRow({ panel }: { panel: Panel }) {
       )}
       <bdi className="min-w-0 truncate font-medium text-kumo-strong">{panel.name}</bdi>
       <span className="ms-auto shrink-0 text-sm">
-        {panel.ready ? (
-          <StatusLabel tone="success">{tp('ready')}</StatusLabel>
-        ) : (
-          <StatusLabel tone="warning">
-            {tp('problems', { count: panel.findings.length })}
-          </StatusLabel>
-        )}
+        <PanelStatus panel={panel} />
       </span>
     </HomeRow>
   );

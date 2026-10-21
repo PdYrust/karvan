@@ -88,16 +88,6 @@ export function PanelDatabase({ panel }: { panel: Panel }) {
   );
 }
 
-/** Ready, or how many problems keep Karvan from using the panel. */
-export function PanelStatus({ panel }: { panel: Panel }) {
-  const t = useT(panelsMessages);
-  return panel.ready ? (
-    <StatusLabel tone="success">{t('ready')}</StatusLabel>
-  ) : (
-    <StatusLabel tone="warning">{t('problems', { count: panel.findings.length })}</StatusLabel>
-  );
-}
-
 /** Whether Karvan can stop and start the panel, or in a few words why not. */
 export function ControlState({ control }: { control: PanelControl | undefined }) {
   const tc = useT(controlMessages);
