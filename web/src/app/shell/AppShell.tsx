@@ -17,6 +17,7 @@ import { Sidebar, SidebarBody } from './Sidebar';
 import { TopBar } from './TopBar';
 import { useActivity } from './use-activity';
 import { useModHotkey } from './use-hotkey';
+import { useRecordRecents } from './use-record-recents';
 import { useShortcuts } from './use-shortcuts';
 
 /** Dashboard layout: sidebar (a sheet on small screens), top bar, the page and the footer. */
@@ -25,6 +26,7 @@ export function AppShell() {
   // Loads the CSRF token every state-changing request needs.
   useSession();
   useActivity();
+  useRecordRecents();
   const { pathname } = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
