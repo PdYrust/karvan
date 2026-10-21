@@ -4,6 +4,9 @@ import { shellMessages } from './messages';
 
 const isMac = /Mac|iPhone|iPad/.test(navigator.platform);
 
+/** The palette's shortcut as this keyboard writes it. */
+export const paletteShortcut = isMac ? '⌘K' : 'Ctrl K';
+
 /** Looks like a search field, opens the Ctrl+K palette. */
 export function SearchButton({ onClick }: { onClick: () => void }) {
   const t = useT(shellMessages);
@@ -16,7 +19,7 @@ export function SearchButton({ onClick }: { onClick: () => void }) {
       <MagnifyingGlassIcon size={16} aria-hidden="true" className="text-kumo-subtle" />
       <span className="flex-1 text-start">{t('quickSearch')}</span>
       <kbd dir="ltr" className="font-mono text-tiny text-kumo-subtle">
-        {isMac ? '⌘K' : 'Ctrl K'}
+        {paletteShortcut}
       </kbd>
     </button>
   );

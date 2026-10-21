@@ -1,6 +1,6 @@
 import { TooltipProvider } from '@cloudflare/kumo/components/tooltip';
 import { cn } from '@cloudflare/kumo/utils';
-import { Suspense, useCallback, useRef, useState } from 'react';
+import { Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { PageSkeleton } from '../../components/feedback/PageSkeleton';
 import { CurrentPanelProvider } from '../../features/panels/current-panel';
@@ -11,6 +11,7 @@ import { CommandMenu } from './CommandMenu';
 import { Footer } from './Footer';
 import { shellMessages } from './messages';
 import { MobileNav } from './MobileNav';
+import type { ShellOutlet } from './outlet';
 import { PageBoundary } from './PageBoundary';
 import { ShortcutSheet } from './ShortcutSheet';
 import { Sidebar, SidebarBody } from './Sidebar';
@@ -39,6 +40,7 @@ export function AppShell() {
     setSearchOpen(true);
   }, []);
   const openHelp = useCallback(() => setHelpOpen(true), []);
+  const outlet = useMemo<ShellOutlet>(() => ({ openSearch }), [openSearch]);
   useModHotkey('KeyK', openSearch);
   useShortcuts(openHelp);
 
@@ -80,7 +82,7 @@ export function AppShell() {
             <main id="content" tabIndex={-1} className="flex-1 outline-none">
               <PageBoundary page={pathname}>
                 <Suspense fallback={<PageSkeleton label={t('loadingPage')} />}>
-                  <Outlet />
+                  <Outlet context={outlet} />
                 </Suspense>
               </PageBoundary>
             </main>
