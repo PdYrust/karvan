@@ -36,6 +36,9 @@ const ServerTab = lazy(() =>
 const PanelTab = lazy(() =>
   import('../features/analytics/databases/PanelTab').then((m) => ({ default: m.PanelTab })),
 );
+const PanelsPage = lazy(() =>
+  import('../features/panels/PanelsPage').then((m) => ({ default: m.PanelsPage })),
+);
 
 /**
  * A request that finds no session means it ended (timeout or sign-out
@@ -90,6 +93,7 @@ export function App() {
                         <Route path="server" element={<ServerTab />} />
                         <Route path="panels/:id" element={<PanelTab />} />
                       </Route>
+                      <Route path="panels" element={<PanelsPage />} />
                       <Route path="settings" element={<SettingsPage />}>
                         <Route index element={<GeneralTab />} />
                         <Route path="safe-mode" element={<SafeModeTab />} />

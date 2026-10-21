@@ -2,6 +2,7 @@ import {
   ArrowsClockwiseIcon,
   DesktopIcon,
   GearSixIcon,
+  HardDrivesIcon,
   KeyboardIcon,
   MoonIcon,
   ShieldCheckIcon,
@@ -12,13 +13,14 @@ import {
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { PanelMark } from '../../components/panels/PanelLabel';
+import { panelSearchNames } from '../../components/panels/PanelLogo';
 import { useCurrentPanel } from '../../features/panels/current-panel';
 import { usePanels, useScanPanels } from '../../features/panels/use-panels';
 import { useSignOut } from '../../features/session/use-session';
 import { locales } from '../../i18n/core';
 import { useLocale, useT } from '../../i18n/locale';
 import { languageNames } from '../../i18n/shared';
-import { panelKind } from '../../lib/api/panels';
+import { panelKind, panelRelease } from '../../lib/api/panels';
 import { useTheme } from '../../lib/preferences/theme';
 import { shellMessages } from './messages';
 import { settingsPath } from './nav';
@@ -63,17 +65,30 @@ export function useCommands(onShortcuts: () => void): CommandGroup[] {
     };
   });
 
+  // Each panel opens its page, and can become the panel the other pages work on.
+  // Both rows carry the panel's logo, as every panel name does.
   const panelItems: Command[] = panels
     .filter((p) => p.id > 0)
-    .map((p) => {
+    .flatMap((p) => {
       const kind = panelKind(p);
-      return {
-        id: `panel:${p.id}`,
-        title: t('actionUsePanel', { name: p.name }),
-        keywords: `${kind ?? ''} ${p.db ?? ''}`,
-        icon: kind ? <PanelMark kind={kind} size={18} /> : null,
-        run: () => select(p.id),
-      };
+      const mark = kind ? <PanelMark kind={kind} size={18} /> : <HardDrivesIcon className={icon} />;
+      const keywords = `${kind ? panelSearchNames[kind] : ''} ${panelRelease(p.revision) ?? ''} ${p.db ?? ''}`;
+      return [
+        {
+          id: `panel:${String(p.id)}`,
+          title: p.name,
+          keywords,
+          icon: mark,
+          run: () => void navigate(`/panels/${String(p.id)}`),
+        },
+        {
+          id: `panel:${String(p.id)}:use`,
+          title: t('actionUsePanel', { name: p.name }),
+          keywords,
+          icon: mark,
+          run: () => select(p.id),
+        },
+      ];
     });
 
   const settings: Command[] = [
