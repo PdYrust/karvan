@@ -99,12 +99,9 @@ func (s *Service) start(j *Job, hash string, o Options) {
 	s.wg.Add(1)
 	go func() {
 		defer s.wg.Done()
-		defer func() {
-			cancel()
-			s.mu.Lock()
-			delete(s.cancels, j.ID)
-			s.mu.Unlock()
-		}()
+		// execute forgets the cancel itself, under the job's lock: the job
+		// can run or compare again as soon as it lets go.
+		defer cancel()
 		s.execute(runCtx, j, hash, o)
 	}()
 }
@@ -175,6 +172,10 @@ func (s *Service) execute(ctx context.Context, j *Job, hash string, o Options) {
 	rep := newReport(j, start)
 	j.report = rep
 	w, err := s.prepare(ctx, j, rep)
+	if errors.Is(err, errStale) {
+		s.backToChecked(j)
+		return
+	}
 	if err == nil {
 		defer w.release()
 		err = s.write(ctx, j, w, hash, rep)
@@ -202,10 +203,26 @@ func (s *Service) execute(ctx context.Context, j *Job, hash string, o Options) {
 	rep.State, rep.EndedAt, rep.BackupID = j.state, s.now(), j.backupID
 	j.wipe()
 	_ = s.save(context.Background(), j)
+	s.dropCancel(j.ID)
 	// Not running any more before "done" goes out: a client that asks for
 	// the report on "done" then waits for mu instead of getting ErrBusy.
 	j.running.Store(false)
 	s.emit(j, "", EventDone, map[string]any{"state": j.state})
+}
+
+// backToChecked ends a run whose re-check found the outcome changed (B4).
+// Nothing was written, so the job goes back to checked with the new build
+// and its changes, and keeps the login: the operator reviews the changes
+// and runs again with the new plan version. A password generated for this
+// run was never set, so it goes too.
+func (s *Service) backToChecked(j *Job) {
+	j.state, j.report, j.lastUse = StateChecked, nil, s.now()
+	j.passwords, j.passwordFrom = map[string]string{}, ""
+	s.emit(j, StageCheck, EventLog, map[string]any{"code": "plan_stale"})
+	_ = s.save(context.Background(), j)
+	s.dropCancel(j.ID)
+	j.running.Store(false)
+	s.emit(j, "", EventDone, map[string]any{"state": StateChecked})
 }
 
 // links adds each moved user's new subscription link to the report. A
@@ -315,8 +332,6 @@ func errorCode(err error) string {
 	var tool *safemode.ToolError
 	var space *safemode.SpaceError
 	switch {
-	case errors.Is(err, errStale):
-		return "plan_stale"
 	case errors.As(err, &verify):
 		return "verify_failed"
 	case errors.As(err, &tool):

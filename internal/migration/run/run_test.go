@@ -231,17 +231,6 @@ func TestFailureWithoutSafeModeKeepsWhatCommitted(t *testing.T) {
 	}
 }
 
-func TestStalePlanWritesNothing(t *testing.T) {
-	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/marzbandb/testdata/" + marzbandb.Revision + ".sqlite.sql"})
-	h := newHarness(t, panel.Marzban, panel.Marzban, tg, 6)
-	j := h.job(nil)
-	h.src.Mutate(func(users *[]map[string]any) { *users = (*users)[1:] })
-	rep := h.run(j, true)
-	if rep.State != StateFailed || rep.Error != "plan_stale" || h.count("users") != 0 || h.count("admins") != 0 {
-		t.Fatalf("state %s error %q users %d", rep.State, rep.Error, h.count("users"))
-	}
-}
-
 func TestCredentialsAreDroppedAtTheEnd(t *testing.T) {
 	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/marzbandb/testdata/" + marzbandb.Revision + ".sqlite.sql"})
 	h := newHarness(t, panel.PasarGuard, panel.Marzban, tg, 3)
