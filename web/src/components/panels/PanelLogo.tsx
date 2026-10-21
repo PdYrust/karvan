@@ -8,6 +8,12 @@ export const panelNames: Record<PanelKind, string> = {
   pasarguard: 'PasarGuard',
 };
 
+/** Each panel's name in both spellings, so a search finds it in either language. */
+export const panelSearchNames: Record<PanelKind, string> = {
+  marzban: 'marzban مرزبان',
+  pasarguard: 'pasarguard پاسارگارد',
+};
+
 // Both logos come from the projects' own repositories (AGPL-3.0) and are only
 // used to name the panel Karvan works with.
 const marzbanPath =
