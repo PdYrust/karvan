@@ -45,6 +45,10 @@ type Job struct {
 	// holds mu; readers then use frozen instead of waiting.
 	running atomic.Bool
 	frozen  atomic.Pointer[frozenView]
+	// checking is set while a compare reads the panels in the background.
+	// It holds mu only to put its build in place, so readers keep the
+	// previous build meanwhile; whatever would change the job is busy.
+	checking atomic.Bool
 
 	mu         sync.Mutex
 	state      string
@@ -77,6 +81,39 @@ type frozenView struct {
 	result  *engine.Result
 	plan    plan.Plan
 	version int
+}
+
+// readFrom is what reading the panels needs from a job, copied under its
+// lock so a compare can read without holding it.
+type readFrom struct {
+	source    panel.Source
+	kind      panel.Kind
+	origin    string
+	envPath   string
+	planAdmin string // the admin's name in the plan, when it renames it
+}
+
+func (j *Job) readFrom() readFrom {
+	return readFrom{source: j.source, kind: j.kind, origin: j.origin, envPath: j.envPath, planAdmin: j.plan.Admin.Username}
+}
+
+// reading is one read of both panels: the old panel's admin and users,
+// the destination's facts, and who the ledger says moved before.
+type reading struct {
+	snapshot   *engine.Source
+	facts      engine.Dest
+	moved      map[string]engine.Moved
+	movedAdmin string
+}
+
+// current is the job's last reading.
+func (j *Job) current() reading {
+	return reading{snapshot: j.snapshot, facts: j.facts, moved: j.moved, movedAdmin: j.movedAdmin}
+}
+
+// inputs are what a build of the job's plan over r reads.
+func (j *Job) inputs(r reading) engine.Inputs {
+	return engine.Inputs{Source: *r.snapshot, Dest: r.facts, Moved: r.moved, MovedAdmin: r.movedAdmin, Generate: generate, Generated: j.generated}
 }
 
 func (j *Job) rollbackOrUndo() string {

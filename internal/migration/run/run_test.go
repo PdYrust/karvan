@@ -76,15 +76,22 @@ func (h *harness) targets() []string {
 	return migrationtest.PasarGuardTargets
 }
 
-// job creates and checks a job, and sets a plan with the targets.
-func (h *harness) job(edit func(p *plan.Plan)) *Job {
+// created starts a job; nothing is read yet.
+func (h *harness) created() *Job {
 	h.t.Helper()
-	ctx := context.Background()
-	j, err := h.svc.Create(ctx, Login{URL: h.src.URL, Username: h.src.Username, Password: secret.NewValue(h.src.Password)}, h.panel,
+	j, err := h.svc.Create(context.Background(), Login{URL: h.src.URL, Username: h.src.Username, Password: secret.NewValue(h.src.Password)}, h.panel,
 		source.Options{Sleep: func(context.Context, time.Duration) error { return nil }})
 	if err != nil {
 		h.t.Fatal(err)
 	}
+	return j
+}
+
+// job creates and checks a job, and sets a plan with the targets.
+func (h *harness) job(edit func(p *plan.Plan)) *Job {
+	h.t.Helper()
+	ctx := context.Background()
+	j := h.created()
 	if _, err := h.svc.Check(ctx, j.ID); err != nil {
 		h.t.Fatal(err)
 	}

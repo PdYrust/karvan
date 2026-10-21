@@ -34,6 +34,16 @@ type Error struct {
 	Cert   *Certificate // the certificate that was not trusted, for tls_untrusted
 }
 
+// Extra is what the operator needs besides the code to act on the error:
+// for tls_untrusted, the certificate's fingerprint, subject and expiry,
+// to compare before trusting it. Nil for other errors.
+func (e *Error) Extra() map[string]any {
+	if e.Cert == nil {
+		return nil
+	}
+	return map[string]any{"sha256": e.Cert.SHA256, "subject": e.Cert.Subject, "notAfter": e.Cert.NotAfter}
+}
+
 func (e *Error) Error() string {
 	if e.Status != 0 {
 		return fmt.Sprintf("source %s (HTTP %d)", e.Code, e.Status)

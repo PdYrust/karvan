@@ -55,9 +55,10 @@ func (m *migrationEnv) create() string {
 	}
 	var job struct{ ID string }
 	res.json(m.t, &job)
-	if res := m.do(http.MethodPost, api+"/migrations/"+job.ID+"/compare", nil); res.status != http.StatusOK {
+	if res := m.do(http.MethodPost, api+"/migrations/"+job.ID+"/compare", nil); res.status != http.StatusAccepted {
 		m.t.Fatalf("compare: %d %s", res.status, res.body)
 	}
+	m.runs.Wait()
 	return job.ID
 }
 
@@ -201,6 +202,12 @@ func checkDownloads(t *testing.T, m *migrationEnv, id string) {
 // readEvents reads the event stream until the done event.
 func readEvents(t *testing.T, m *migrationEnv, id, lastID string) []run.Event {
 	t.Helper()
+	return readUntil(t, m, id, lastID, func(e run.Event) bool { return e.Type == run.EventDone })
+}
+
+// readUntil reads the event stream up to the first event last accepts.
+func readUntil(t *testing.T, m *migrationEnv, id, lastID string, last func(run.Event) bool) []run.Event {
+	t.Helper()
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, m.srv.URL+api+"/migrations/"+id+"/events", nil)
@@ -227,11 +234,11 @@ func readEvents(t *testing.T, m *migrationEnv, id, lastID string) []run.Event {
 			t.Fatal(err)
 		}
 		out = append(out, e)
-		if e.Type == run.EventDone {
+		if last(e) {
 			return out
 		}
 	}
-	t.Fatalf("stream ended without done after %d events: %v", len(out), sc.Err())
+	t.Fatalf("stream ended early after %d events: %v", len(out), sc.Err())
 	return nil
 }
 

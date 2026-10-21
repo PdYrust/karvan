@@ -86,20 +86,10 @@ func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
 		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: codePlanInvalid,
 			Extra: map[string]any{"where": planErr.Where, "problem": planErr.Problem}})
 	case errors.As(err, &srcErr):
-		respond.Error(w, respond.APIError{Status: http.StatusBadGateway, Code: "source_" + srcErr.Code, Extra: certificateDetail(srcErr.Cert)})
+		respond.Error(w, respond.APIError{Status: http.StatusBadGateway, Code: "source_" + srcErr.Code, Extra: srcErr.Extra()})
 	default:
 		respond.Internal(w, r, err)
 	}
-}
-
-// certificateDetail is what source_tls_untrusted says about the panel's
-// certificate, so the operator can compare the fingerprint before trusting
-// it. Nil for other errors.
-func certificateDetail(c *source.Certificate) map[string]any {
-	if c == nil {
-		return nil
-	}
-	return map[string]any{"sha256": c.SHA256, "subject": c.Subject, "notAfter": c.NotAfter}
 }
 
 type createBody struct {
@@ -155,13 +145,16 @@ func (a *API) GetMigration(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusOK, map[string]any{"id": r.PathValue("id"), "state": sum.State, "summary": sum})
 }
 
-// Compare reads both panels again and rebuilds the plan (steps 1 and 2).
+// Compare reads both panels again in the background and rebuilds the
+// plan (steps 1 and 2, B2): reading many users can take longer than a
+// request may. Progress and the outcome come on the job's event stream.
 func (a *API) Compare(w http.ResponseWriter, r *http.Request) {
-	if _, err := a.Runs.Check(r.Context(), r.PathValue("id")); err != nil {
+	id := r.PathValue("id")
+	if err := a.Runs.Compare(id); err != nil {
 		writeRunError(w, r, err)
 		return
 	}
-	a.Summary(w, r)
+	respond.JSON(w, http.StatusAccepted, map[string]any{"id": id})
 }
 
 // Summary is step 1: who the admin is, how many users, how much traffic.

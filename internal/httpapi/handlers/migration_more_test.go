@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -191,7 +192,6 @@ func TestMoreErrorCodes(t *testing.T) {
 	}{
 		{http.MethodGet, "/migrations/" + j.ID + "/groups", nil, http.StatusConflict, "not_checked"},
 		{http.MethodGet, "/migrations/" + j.ID + "/users", nil, http.StatusConflict, "not_checked"},
-		{http.MethodPost, "/migrations/" + j.ID + "/compare", nil, http.StatusConflict, "panel_not_ready"},
 		{http.MethodPost, "/templates", map[string]any{"jobId": j.ID, "name": " "}, http.StatusConflict, "template_name"},
 		{http.MethodPost, "/migrations", map[string]any{"sourceUrl": m.src.URL, "username": "a", "password": "b", "panelId": 999}, http.StatusNotFound, "not_found"},
 		{http.MethodGet, "/migrations/nope", nil, http.StatusNotFound, "not_found"},
@@ -212,6 +212,10 @@ func TestMoreErrorCodes(t *testing.T) {
 	}
 	if res := m.do(http.MethodPut, api+"/settings/safe-mode", map[string]any{"enabled": true}); res.status != http.StatusOK {
 		t.Errorf("turn on: %d", res.status)
+	}
+	// The compare reads the old panel, then finds the destination unusable.
+	if code := compareLog(t, m, j.ID)["code"]; code != "panel_not_ready" {
+		t.Errorf("compare on a broken panel: %v", code)
 	}
 }
 
@@ -289,31 +293,30 @@ func TestWeakPasswordNamesTheRule(t *testing.T) {
 
 // An old panel with a certificate Karvan cannot verify answers
 // source_tls_untrusted with the certificate's fingerprint, subject and
-// expiry, for the operator to compare before trusting it.
+// expiry, for the operator to compare before trusting it: at once when
+// Karvan signs in to tell the panel's kind, else on the compare's stream.
 func TestUntrustedCertificateIsDescribed(t *testing.T) {
 	m := newMigrationEnv(t, 0)
 	srv := httptest.NewTLSServer(http.NotFoundHandler())
 	defer srv.Close()
-	res := m.do(http.MethodPost, api+"/migrations", map[string]any{"sourceUrl": srv.URL, "sourceKind": "marzban",
-		"username": "admin", "password": "secret-pass", "panelId": m.panelID})
-	if res.status == http.StatusCreated { // the first call to the panel is the check
-		var job struct{ ID string }
-		res.json(t, &job)
-		res = m.do(http.MethodPost, api+"/migrations/"+job.ID+"/compare", nil)
-	}
+	login := map[string]any{"sourceUrl": srv.URL, "username": "admin", "password": "secret-pass", "panelId": m.panelID}
+	res := m.do(http.MethodPost, api+"/migrations", login)
 	var body struct {
-		Error struct {
-			Code     string    `json:"code"`
-			SHA256   string    `json:"sha256"`
-			Subject  string    `json:"subject"`
-			NotAfter time.Time `json:"notAfter"`
-		} `json:"error"`
+		Error map[string]any `json:"error"`
 	}
 	res.json(t, &body)
 	sum := sha256.Sum256(srv.Certificate().Raw)
-	if res.status != http.StatusBadGateway || body.Error.Code != "source_tls_untrusted" || body.Error.SHA256 != hex.EncodeToString(sum[:]) ||
-		body.Error.Subject == "" || !body.Error.NotAfter.Equal(srv.Certificate().NotAfter) {
-		t.Fatalf("%d %s", res.status, res.body)
+	want := map[string]any{"code": "source_tls_untrusted", "sha256": hex.EncodeToString(sum[:]),
+		"subject": srv.Certificate().Subject.String(), "notAfter": srv.Certificate().NotAfter.UTC().Format(time.RFC3339)}
+	if res.status != http.StatusBadGateway || fmt.Sprint(body.Error) != fmt.Sprint(want) {
+		t.Fatalf("detect: %d %s", res.status, res.body)
+	}
+	login["sourceKind"] = "marzban" // nothing is called until the compare
+	res = m.do(http.MethodPost, api+"/migrations", login)
+	var job struct{ ID string }
+	res.json(t, &job)
+	if got := compareLog(t, m, job.ID); fmt.Sprint(got) != fmt.Sprint(want) {
+		t.Fatalf("compare: %v", got)
 	}
 }
 

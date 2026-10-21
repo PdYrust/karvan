@@ -185,11 +185,22 @@ func (s *Service) Sweep() {
 		if j.running.Load() || !j.mu.TryLock() {
 			continue
 		}
-		if !j.running.Load() && s.now().Sub(j.lastUse) > IdleTimeout {
+		// A compare reads without the lock and sets checking under it, so
+		// the flag only counts once the lock is held.
+		if !j.running.Load() && !j.checking.Load() && s.now().Sub(j.lastUse) > IdleTimeout {
 			j.wipe()
 		}
 		j.mu.Unlock()
 	}
+}
+
+// dropCancel forgets a job's cancel once its background work ends. The
+// caller holds the job's lock, so the job's next run or compare cannot
+// have put its own there yet.
+func (s *Service) dropCancel(id string) {
+	s.mu.Lock()
+	delete(s.cancels, id)
+	s.mu.Unlock()
 }
 
 // Events returns stored events after seq and a channel of new ones.

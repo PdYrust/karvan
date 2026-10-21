@@ -20,10 +20,16 @@ const (
 	StageRestore = "restore"
 )
 
+// Stages of a compare.
+const (
+	StageRead  = "read"  // the old panel: its admin and users, page by page
+	StageBuild = "build" // the destination and the ledger, then the plan over all
+)
+
 // Event types.
 const (
 	EventStage    = "stage"    // a stage started or ended: {"state": "start"|"done"|"failed"}
-	EventProgress = "progress" // {"done": n, "total": n, "etaSeconds": n}
+	EventProgress = "progress" // {"done": n, "total": n, "etaSeconds": n}; a compare's read: {"done": n, "total": n, "pass": n}
 	EventLog      = "log"      // {"code": "...", ...}: the UI words it
 	EventDone     = "done"     // {"state": final job state}
 )

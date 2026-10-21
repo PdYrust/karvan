@@ -4,6 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
+	"errors"
+	"log/slog"
+	"maps"
 	"time"
 
 	"github.com/PdYrust/karvan/internal/migration/dest"
@@ -39,57 +42,177 @@ func (s *Service) Create(ctx context.Context, l Login, panelID int64, sourceOpts
 	return j, nil
 }
 
-// Check reads the old panel and the destination (read only) and builds
-// the current plan over them (steps 1 and 2).
-func (s *Service) Check(ctx context.Context, jobID string) (*engine.Result, error) {
-	j, err := s.job(jobID)
+// Compare reads both panels again in the background and builds the plan
+// over them (steps 1 and 2, B2). It returns once the read is under way.
+// Progress and the outcome come as events: the read stage with a progress
+// event for each page of users, then the build stage. Cancel and
+// Shutdown stop it.
+func (s *Service) Compare(jobID string) error {
+	ctx, cancel := context.WithCancel(context.Background())
+	j, f, err := s.beginCheck(jobID, cancel)
 	if err != nil {
-		return nil, err
+		cancel()
+		return err
 	}
-	if !j.lockIdle() {
-		return nil, ErrBusy
-	}
-	defer j.mu.Unlock()
-	if j.source == nil {
-		return nil, ErrNoLogin
-	}
-	if err := s.read(ctx, j); err != nil {
-		return nil, err
-	}
-	if err := s.rebuild(j); err != nil {
-		return nil, err
-	}
-	j.state, j.lastUse = StateChecked, s.now()
-	return j.result, s.save(ctx, j)
+	s.wg.Add(1)
+	go func() {
+		defer s.wg.Done()
+		defer cancel()
+		_, _ = s.check(ctx, j, f)
+	}()
+	return nil
 }
 
-// read takes a fresh snapshot of the source, the destination and the
-// ledger.
-func (s *Service) read(ctx context.Context, j *Job) error {
-	admin, err := j.source.CurrentAdmin(ctx)
+// Check is Compare that waits for the outcome and returns the new build.
+func (s *Service) Check(ctx context.Context, jobID string) (*engine.Result, error) {
+	j, f, err := s.beginCheck(jobID, nil)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	users, err := j.source.Users(ctx)
+	return s.check(ctx, j, f)
+}
+
+// beginCheck marks the job as checking and copies what the read needs. A
+// cancel, when given, is what Cancel and Shutdown call to stop the read.
+func (s *Service) beginCheck(jobID string, cancel context.CancelFunc) (*Job, readFrom, error) {
+	j, err := s.job(jobID)
 	if err != nil {
-		return err
+		return nil, readFrom{}, err
 	}
-	j.snapshot = &engine.Source{Kind: j.kind, Origin: j.origin, Admin: admin, Users: users, Skew: skewOf(j.source)}
-	d, err := dest.Open(ctx, j.envPath)
+	if !j.lockIdle() {
+		return nil, readFrom{}, ErrBusy
+	}
+	defer j.mu.Unlock()
+	switch {
+	case j.checking.Load():
+		return nil, readFrom{}, ErrBusy
+	case j.source == nil:
+		return nil, readFrom{}, ErrNoLogin
+	}
+	j.checking.Store(true)
+	j.lastUse = s.now()
+	if cancel != nil {
+		s.mu.Lock()
+		s.cancels[j.ID] = cancel
+		s.mu.Unlock()
+	}
+	return j, j.readFrom(), nil
+}
+
+// check reads the old panel (the read stage), then the destination, and
+// builds the plan over both (the build stage). The old panel is read
+// without the job's lock; the new build is put in place under it, and
+// only when all of it worked.
+func (s *Service) check(ctx context.Context, j *Job, f readFrom) (*engine.Result, error) {
+	s.emit(j, StageRead, EventStage, map[string]any{"state": "start"})
+	src, err := readSource(source.WithProgress(ctx, s.readProgress(j)), f)
 	if err != nil {
-		return err
+		j.mu.Lock()
+		defer j.mu.Unlock()
+		return nil, s.endCheck(j, StageRead, err)
 	}
-	if err := s.readLedger(ctx, j, d.Target.String()); err != nil {
-		return err
+	s.emit(j, StageRead, EventStage, map[string]any{"state": "done"})
+	s.emit(j, StageBuild, EventStage, map[string]any{"state": "start"})
+	r, err := s.readDest(ctx, f, src)
+	j.mu.Lock()
+	defer j.mu.Unlock()
+	if err == nil {
+		err = s.install(j, r)
 	}
-	names := []string{admin.Username}
-	for _, n := range []string{j.plan.Admin.Username, j.movedAdmin} {
+	if err != nil {
+		return nil, s.endCheck(j, StageBuild, err)
+	}
+	j.state = StateChecked
+	// Saved even when the compare was cancelled just now: the build is in
+	// place already.
+	err = s.save(context.Background(), j)
+	return j.result, s.endCheck(j, StageBuild, err)
+}
+
+// readProgress sends each page of users read as a progress event.
+func (s *Service) readProgress(j *Job) func(source.Progress) {
+	return func(p source.Progress) {
+		s.emit(j, StageRead, EventProgress, map[string]any{"done": p.Read, "total": p.Total, "pass": p.Pass})
+	}
+}
+
+// endCheck ends a compare and sends its last event: stage done, or the
+// error's code as a log event and then stage failed. The caller holds
+// j.mu, so nothing else can begin on the job before that event is out,
+// and whatever waits for the lock finds the job free and its new build.
+func (s *Service) endCheck(j *Job, stage string, err error) error {
+	j.lastUse = s.now()
+	s.dropCancel(j.ID)
+	j.checking.Store(false)
+	if err == nil {
+		s.emit(j, stage, EventStage, map[string]any{"state": "done"})
+		return nil
+	}
+	p := problemOf(err)
+	if p["code"] == "internal" {
+		slog.Warn("compare failed", "job", j.ID, "err", err)
+	}
+	s.emit(j, stage, EventLog, p)
+	s.emit(j, stage, EventStage, map[string]any{"state": "failed"})
+	return err
+}
+
+// problemOf names a failed compare for its log event: the code the API
+// gives the same error, with its extras (the certificate of an old panel
+// Karvan cannot verify, where a plan does not build).
+func problemOf(err error) map[string]any {
+	var srcErr *source.Error
+	var planErr *engine.PlanError
+	out := map[string]any{"code": "internal"}
+	switch {
+	case errors.Is(err, context.Canceled):
+		out["code"] = "cancelled"
+	case errors.As(err, &srcErr):
+		maps.Copy(out, srcErr.Extra())
+		out["code"] = "source_" + srcErr.Code
+	case errors.Is(err, dest.ErrNotReady):
+		out["code"] = "panel_not_ready"
+	case errors.As(err, &planErr):
+		out["code"], out["where"], out["problem"] = "plan_invalid", planErr.Where, planErr.Problem
+	}
+	return out
+}
+
+// readSource reads the old panel: its admin and every user.
+func readSource(ctx context.Context, f readFrom) (*engine.Source, error) {
+	admin, err := f.source.CurrentAdmin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	users, err := f.source.Users(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &engine.Source{Kind: f.kind, Origin: f.origin, Admin: admin, Users: users, Skew: skewOf(f.source)}, nil
+}
+
+// readDest reads the destination (read only) and the ledger for a fresh
+// read of the old panel.
+func (s *Service) readDest(ctx context.Context, f readFrom, src *engine.Source) (reading, error) {
+	d, err := dest.Open(ctx, f.envPath)
+	if err != nil {
+		return reading{}, err
+	}
+	moved, movedAdmin, err := s.readLedger(ctx, src, d.Target.String())
+	if err != nil {
+		return reading{}, err
+	}
+	names := []string{src.Admin.Username}
+	for _, n := range []string{f.planAdmin, movedAdmin} {
 		if n != "" {
 			names = append(names, n)
 		}
 	}
-	j.facts, err = d.Facts(ctx, names)
-	return err
+	facts, err := d.Facts(ctx, names)
+	if err != nil {
+		return reading{}, err
+	}
+	return reading{snapshot: src, facts: facts, moved: moved, movedAdmin: movedAdmin}, nil
 }
 
 // skewOf reads the clock skew the HTTP client saw, when it has one.
@@ -100,22 +223,23 @@ func skewOf(src panel.Source) time.Duration {
 	return 0
 }
 
-// readLedger maps live ledger rows to source users. A row only counts if
-// the source user still has the same created_at; otherwise it is someone
-// new with a reused id or name (D31).
-func (s *Service) readLedger(ctx context.Context, j *Job, destID string) error {
-	live, err := s.ledger.Live(ctx, j.origin, destID)
+// readLedger maps live ledger rows to the users of a source read, and
+// finds the admin an earlier run moved. A row only counts if the source
+// user still has the same created_at; otherwise it is someone new with a
+// reused id or name (D31).
+func (s *Service) readLedger(ctx context.Context, src *engine.Source, destID string) (map[string]engine.Moved, string, error) {
+	live, err := s.ledger.Live(ctx, src.Origin, destID)
 	if err != nil {
-		return err
+		return nil, "", err
 	}
 	created := map[string]time.Time{}
-	for _, u := range j.snapshot.Users {
-		created[engine.KeyOf(j.kind, u)] = u.CreatedAt
+	for _, u := range src.Users {
+		created[engine.KeyOf(src.Kind, u)] = u.CreatedAt
 	}
-	j.moved, j.movedAdmin = map[string]engine.Moved{}, ""
+	moved, movedAdmin := map[string]engine.Moved{}, ""
 	for _, e := range live {
-		if e.Kind == ledger.KindAdmin && e.SourceKey == j.snapshot.Admin.Username && e.State == ledger.Done {
-			j.movedAdmin = e.Username
+		if e.Kind == ledger.KindAdmin && e.SourceKey == src.Admin.Username && e.State == ledger.Done {
+			movedAdmin = e.Username
 		}
 		if e.Kind != ledger.KindUser || !e.SourceCreated.Equal(created[e.SourceKey].UTC()) {
 			continue
@@ -124,20 +248,25 @@ func (s *Service) readLedger(ctx context.Context, j *Job, destID string) error {
 		if state == ledger.Pending {
 			state = ledger.Unknown // settled by the next run before it writes
 		}
-		j.moved[e.SourceKey] = engine.Moved{State: state, DestID: e.Row.ID, Username: e.Username, Created: e.CreatedAt}
+		moved[e.SourceKey] = engine.Moved{State: state, DestID: e.Row.ID, Username: e.Username, Created: e.CreatedAt}
 	}
-	return nil
+	return moved, movedAdmin, nil
 }
 
-func (s *Service) rebuild(j *Job) error {
-	in := engine.Inputs{Source: *j.snapshot, Dest: j.facts, Moved: j.moved, MovedAdmin: j.movedAdmin, Generate: generate, Generated: j.generated}
-	r, err := engine.Build(j.plan, in)
+// install builds the plan over a fresh reading and makes both the job's
+// own. A plan that does not build leaves the previous reading and build.
+func (s *Service) install(j *Job, r reading) error {
+	res, err := engine.Build(j.plan, j.inputs(r))
 	if err != nil {
 		return err
 	}
-	j.result, j.print = r, engine.Fingerprint(r)
+	j.snapshot, j.facts, j.moved, j.movedAdmin = r.snapshot, r.facts, r.moved, r.movedAdmin
+	j.result, j.print = res, engine.Fingerprint(res)
 	return nil
 }
+
+// rebuild builds the plan again over the last reading (a plan edit).
+func (s *Service) rebuild(j *Job) error { return s.install(j, j.current()) }
 
 // SetPlan replaces the plan if version is current, and rebuilds on the
 // last snapshot (steps 3 and 4).
@@ -151,6 +280,8 @@ func (s *Service) SetPlan(ctx context.Context, jobID string, version int, p plan
 	}
 	defer j.mu.Unlock()
 	switch {
+	case j.checking.Load():
+		return nil, j.version, ErrBusy
 	case version != j.version:
 		return nil, j.version, ErrStaleVer
 	case j.snapshot == nil:

@@ -54,7 +54,7 @@ func (s *Service) Run(ctx context.Context, jobID string, o Options) error {
 		return ErrBusy
 	}
 	defer j.mu.Unlock()
-	if j.state == StateRunning {
+	if j.state == StateRunning || j.checking.Load() {
 		return ErrBusy
 	}
 	if err := s.canRun(j, o); err != nil {
@@ -281,11 +281,16 @@ func (s *Service) prepare(ctx context.Context, j *Job, rep *Report) (*prepared, 
 
 // recheck reads everything again and refuses a plan whose outcome moved.
 func (s *Service) recheck(ctx context.Context, j *Job) error {
-	approved, before := j.print, j.result
-	if err := s.read(ctx, j); err != nil {
+	approved, before, f := j.print, j.result, j.readFrom()
+	src, err := readSource(ctx, f)
+	if err != nil {
 		return err
 	}
-	if err := s.rebuild(j); err != nil {
+	r, err := s.readDest(ctx, f, src)
+	if err != nil {
+		return err
+	}
+	if err := s.install(j, r); err != nil {
 		return err
 	}
 	if j.print != approved {
