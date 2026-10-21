@@ -25,6 +25,8 @@ const en = {
   ifFails: 'If a migration fails',
   rollbackUndo: 'Remove what it wrote',
   rollbackBackup: 'Put the whole backup back',
+  rollbackOff: 'What it wrote stays',
+  withSafeMode: 'With Safe Mode on',
   backups: 'Backups',
   backupsNone: 'None yet',
   backupsValue: { one: '{count} backup, {size}', other: '{count} backups, {size}' },
@@ -42,9 +44,9 @@ const en = {
   journalMode: 'Journal mode `{mode}`',
 };
 
-type Key = keyof typeof en;
+export type OverviewKey = keyof typeof en;
 
-const fa: Messages<Key>['fa'] = {
+const fa: Messages<OverviewKey>['fa'] = {
   title: 'نمای کلی',
   today: '{date}، ساعت {time} به وقت {zone}',
   newMigration: 'انتقال جدید',
@@ -69,6 +71,8 @@ const fa: Messages<Key>['fa'] = {
   ifFails: 'اگر انتقال شکست بخورد',
   rollbackUndo: 'حذف چیزهایی که نوشته',
   rollbackBackup: 'برگرداندن کامل پشتیبان',
+  rollbackOff: 'هر چه نوشته باشد میماند',
+  withSafeMode: 'اگر حالت امن روشن باشد',
   backups: 'پشتیبان ها',
   backupsNone: 'هنوز گرفته نشده',
   backupsValue: { one: '{count} پشتیبان، {size}', other: '{count} پشتیبان، {size}' },
@@ -86,4 +90,4 @@ const fa: Messages<Key>['fa'] = {
   journalMode: 'حالت ژورنال `{mode}`',
 };
 
-export const overviewMessages: Messages<Key> = { en, fa };
+export const overviewMessages: Messages<OverviewKey> = { en, fa };

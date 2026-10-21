@@ -10,6 +10,7 @@ import { useSafeMode } from '../../settings/use-safe-mode';
 import { overviewMessages } from '../messages';
 import { PartFailed } from '../PartFailed';
 import { useBackups } from '../use-overview';
+import { failureFacts } from './safe-mode-facts';
 import { SummaryCard, SummarySkeleton } from './SummaryCard';
 
 /** "2 backups, 3.4 MB"; a list that failed to load reads as a dash. */
@@ -29,10 +30,7 @@ function Facts({ safe }: { safe: SafeMode }) {
     <>
       <FactList
         facts={[
-          {
-            label: t('ifFails'),
-            value: t(safe.rollback === 'backup' ? 'rollbackBackup' : 'rollbackUndo'),
-          },
+          ...failureFacts(safe, t),
           {
             label: t('backups'),
             value: <BackupsValue backups={backups.data} failed={backups.isError} />,
