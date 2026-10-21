@@ -1,6 +1,7 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { HourglassIcon, QuestionIcon, WarningCircleIcon } from '@phosphor-icons/react';
 import { useLocation, useNavigate, useParams } from 'react-router';
+import { CodeText } from '../../../components/text/CodeText';
 import { useT } from '../../../i18n/locale';
 import { ApiError } from '../../../lib/api/client';
 import { analyticsMessages } from '../messages';
@@ -45,8 +46,12 @@ function Problem({ code }: { code: string }) {
   const text = findingText(code);
   return (
     <Notice icon={<WarningCircleIcon {...iconProps} />}>
-      {text ? tf(text.what) : t('problemOther')}
-      {text ? <span className="mt-1 block text-sm text-kumo-subtle">{tf(text.fix)}</span> : null}
+      {text ? <CodeText text={tf(text.what)} /> : t('problemOther')}
+      {text ? (
+        <span className="mt-1 block text-sm text-kumo-subtle">
+          <CodeText text={tf(text.fix)} />
+        </span>
+      ) : null}
     </Notice>
   );
 }
