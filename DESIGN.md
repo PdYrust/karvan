@@ -43,7 +43,7 @@ The chart tokens sit in a `@theme static` block: charts pick a color by number a
 ## 3. Type
 
 - **One family: Vazirmatn (variable)** for Persian and English. Its Latin is drawn to sit with its Persian, so a Persian sentence with a username in it reads as one voice.
-- **JetBrains Mono** only for machine values: UUIDs, tokens, ports, paths, IPs, commands.
+- **JetBrains Mono** only for machine values: UUIDs, tokens, ports, paths, IPs, commands. Drawn without ligatures, so `://` and `->` read exactly as typed.
 
 | Step | Size / line-height (en) | fa | Weight | Use |
 |---|---|---|---|---|
@@ -88,13 +88,14 @@ The chart tokens sit in a `@theme static` block: charts pick a color by number a
 - Icons that point a direction (arrows, chevrons, sign out) flip in RTL with `rtl:-scale-x-100`. The logo, the panel logos and the globe never flip.
 - Charts keep time running left to right in both languages, like a graph in a school book; only their labels are Persian. A move from one panel to another reads in the page direction ("Marzban, arrow, PasarGuard" runs right to left in Persian).
 - Machine values (UUID, IP, port, path, username, commands) are wrapped in `<bdi dir="ltr">` or `dir="ltr"` and stay in Latin digits.
+- A machine value inside a translated sentence (a file, a setting, a command) is marked with backticks in the message, and the sentence is drawn with `CodeText`: the value keeps left to right in mono at about 0.9 em. Left unmarked, `.env` after Persian words reads `env.`.
 - Persian text uses Persian digits (۰ to ۹); English uses Latin digits. `src/lib/format` does this; never format numbers by hand.
 - Dates: Jalali calendar and Asia/Tehran by default, Gregorian in English unless the operator chooses otherwise. Times say which zone they are in when it matters ("It is 18:40 in Tehran").
-- Kumo components that use physical classes get checked in RTL; any broken one gets a wrapper or a workaround in Karvan code instead of being used raw. Known cases: Kumo's Sidebar (not used), the DropdownMenu item `icon` slot (put the icon in the children with `gap-2` instead).
+- Kumo components that use physical classes get checked in RTL; any broken one gets a wrapper or a workaround in Karvan code instead of being used raw. Known cases: Kumo's Sidebar (not used), the DropdownMenu item `icon` slot (put the icon in the children with `gap-2` instead), Kumo's Table (`text-left`) and InputGroup (`pl-*`, `rounded-l-*`), which Karvan replaces with its own table and search field (section 8, Tables).
 
 ## 8. Components and patterns
 
-- **Kumo first** for leaf components: Button, Input, Field, Select, Switch, Dialog, DropdownMenu, Tooltip, Badge, Toast, CommandPalette, Table. Import each from `@cloudflare/kumo/components/<name>`, and add its chunk name to the `@source` line in `src/styles/app.css`, or its styles are missing.
+- **Kumo first** for leaf components: Button, Input, Field, Select, Switch, Dialog, DropdownMenu, Tooltip, Badge, Toast, CommandPalette. Import each from `@cloudflare/kumo/components/<name>`, and add its chunk name to the `@source` line in `src/styles/app.css`, or its styles are missing.
 - The sign-in page stays light: no Tooltip, Dropdown or CommandPalette there. `LanguageSwitch` (one button naming the other language) and `ThemeToggle` (one button) exist for this reason.
 
 ### Shell
@@ -113,9 +114,13 @@ The Cloudflare dashboard's frame, built from Karvan's own components with logica
 - **Cards:** `bg-kumo-base`, hairline ring, radius 8, title row at the top, no shadow, no divider under the title unless the card holds a table.
 - **Layer cards** (analytics, grouped facts): Kumo's LayerCard, a tinted title row over a white body, one level only (never a LayerCard inside another).
 - **Tables:** a search field across the top with filters and refresh next to it; the table in a ringed frame with a tinted header row; rows about 48 high; "..." row menus; a footer that says how much is shown ("Showing 1 to 20 of 340") with Kumo's pagination. Long lists live on their own page, never on the overview. Under 640 rows become stacked cards with the main value first, like the dashboard's DNS records on a phone.
+  - Built from `components/data`: `DataTable` (the columns, and the card one row becomes on a phone) and `SearchField` (`/` focuses it). Kumo's Table is not used: it sets `text-left` and stripes its rows.
+  - The first column names the row with its logo and links to its page, underlined as in the dashboard. Status cells are an icon in the status color and a word in the default color, like the dashboard's "Active".
+  - A short list the server does not page ends with "Showing 2 of 2" and no pager.
 - **Detail pages:** title with status badges, underline tabs, content cards, an aside for facts and quick actions.
 - **Settings pages:** one page with underline tabs, one route per tab. Each setting is a row: title and one line of description at the start, the control at the end, rows split by hairlines.
 - **Aside:** short status blocks, each a heading, a status badge and one sentence, divided by hairlines.
+- **Facts** (`FactList`): label at the start, value at the end, rows split by hairlines. A value too long for the rest of its row (a path on a phone) moves under its label.
 - **Panel names:** always with their logo (`PanelLabel`). A move between panels is shown as the source logo, an arrow and the destination logo (`MoveLabel`), in lists, the wizard, the live view, reports, old links and backups.
 
 ### Analytics
@@ -140,10 +145,11 @@ The Cloudflare dashboard's frame, built from Karvan's own components with logica
 - **Kumo's own rules** (kumo-ui.com/skill): content text is 14 (15 in Persian), only headings are larger; sentence case; no letter spacing changes; `font-semibold` for headings and `font-medium` for bold inline text, never `font-bold`; related text sits closer than the block it belongs to; a ring instead of a border next to a shadow; nested corners are concentric (outer radius = inner radius + padding); icons line up with the first line of text; inline mono text at about 0.9 em; a hairline under anything sticky; collapsing content keeps its size while it closes; dialogs are always rendered and opened with `open`, never mounted on demand.
 - **Primary action:** one per area, `variant="primary"`. Everything else is secondary or ghost.
 - **Loading:** skeletons shaped like the content, never spinners for content. Spinners only inside a button that is working.
-- **Empty states:** an icon, what is missing, why, and one action.
+- **Empty states:** an icon, what is missing, why, and one action (`components/feedback/EmptyState`: Kumo's Empty in shape, with the card radius and the heading size of section 3).
 - **Errors:** say what happened and how to fix it, in plain words. Never show raw server errors. Errors do not apologize.
+- **Problems Karvan found** (a panel finding, why it cannot stop a panel): what is wrong, then how to fix it, then the machine value it is about (a path, a revision, a table) when there is one. The raw error text behind it never shows.
 - **Dangerous actions:** need the name typed to confirm (delete, restore, turning Safe Mode off).
-- **Status badges:** icon + word + Kumo status color.
+- **Status badges:** icon + word + Kumo status color (`StatusBadge`). Kumo's warning text on its own tint is under 4.5:1, so a warning badge keeps the word in the default color and the icon in the warning color.
 - **Touch:** every target is at least 44 × 44 px on touch screens.
 - **Not yet built:** navigation items for later pages stay visible but inert with a "Soon" tag, so the structure can be judged early.
 
