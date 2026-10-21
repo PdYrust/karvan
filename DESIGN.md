@@ -123,6 +123,17 @@ The Cloudflare dashboard's frame, built from Karvan's own components with logica
 - **Facts** (`FactList`): label at the start, value at the end, rows split by hairlines. A value too long for the rest of its row (a path on a phone) moves under its label.
 - **Panel names:** always with their logo (`PanelLabel`). A move between panels is shown as the source logo, an arrow and the destination logo (`MoveLabel`), in lists, the wizard, the live view, reports, old links and backups.
 
+### Overview
+Laid out like the dashboard's account home, top to bottom:
+- **Header:** the title, the date line ("Wednesday, October 21, 2026, 16:39 in Tehran", in the operator's zone and calendar) and "New migration" at the end.
+- **Search:** one wide field across the content that opens the palette; it says what the palette finds and shows its shortcut.
+- **Three columns:** Panels, Migrations and Recents. Each has a quiet title (a link with a chevron when its page exists) and at most a handful of short rows split by hairlines, each row a link with a chevron at the end. A column with nothing in it says so in one line on a tinted box. Columns stack on phones.
+  - Panels: logo, name and its status. Migrations: the move (`MoveLabel`), the admin, the state, then how many users moved and when.
+  - Recents: the last pages this browser opened, newest first, at most 8, named in the current language as "section / page" ("Panels / logo name"). Kept in localStorage as paths inside the hidden path, never the hidden path itself.
+- **Summary:** a heading, then three cards that differ in shape: users moved (the number, a meter of moved and skipped, the jobs by outcome), Safe Mode (status badge and its facts) and Old links (the count and the way in).
+- **Analytics:** a heading with "All analytics", refresh and the range (Live, 24 hours, 7 days, 30 days) at the end. Then this server's tiles, and for each panel database its name with its logo, a row of tiles (size; connections and queries per second for a database server, the write-ahead log and used traffic for SQLite, which counts neither; online now) and two layer cards: users by status and traffic per hour. The section loads after the rest of the page.
+- **No panels yet:** one empty state with both logos and "Scan this server" takes the place of the columns and the summary.
+
 ### Analytics
 - Laid out like the dashboard's analytics: header with refresh and a range button (Live, 1 hour, 24 hours, 7 days, 30 days) joined in one group, underline tabs (Server, then one per panel with its logo), a row of stat tiles, then layer cards in two columns (one on phones).
 - The range lives in the address (`?range=24h`) and carries across tabs, so two tabs compare the same time. Polls run only while the tab is visible and do not count as activity; pressing refresh does.
@@ -150,6 +161,7 @@ The Cloudflare dashboard's frame, built from Karvan's own components with logica
 - **Problems Karvan found** (a panel finding, why it cannot stop a panel): what is wrong, then how to fix it, then the machine value it is about (a path, a revision, a table) when there is one. The raw error text behind it never shows.
 - **Dangerous actions:** need the name typed to confirm (delete, restore, turning Safe Mode off).
 - **Status badges:** icon + word + Kumo status color (`StatusBadge`). Kumo's warning text on its own tint is under 4.5:1, so a warning badge keeps the word in the default color and the icon in the warning color.
+  - A migration's state uses the same pieces: done is success, failed is danger, running is info, interrupted is warning, drafts and rolled back jobs are neutral.
 - **Touch:** every target is at least 44 × 44 px on touch screens.
 - **Not yet built:** navigation items for later pages stay visible but inert with a "Soon" tag, so the structure can be judged early.
 
