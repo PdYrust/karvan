@@ -108,6 +108,8 @@ func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(htt
 		"GET " + m:                                    api.GetMigration,
 		"POST " + m + "/compare":                      api.Compare,
 		"GET " + m + "/changes":                       api.Changes,
+		"GET " + m + "/check-report":                  api.CheckReport,
+		"GET " + m + "/check-report.csv":              api.CheckReportCSV,
 		"GET " + m + "/summary":                       api.Summary,
 		"GET " + m + "/groups":                        api.Groups,
 		"GET " + m + "/users":                         api.Users,

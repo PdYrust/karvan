@@ -61,6 +61,36 @@ func WriteLinks(w io.Writer, r *run.Report) error {
 	return c.Error()
 }
 
+// WriteCheck writes the pre-flight report, one row per user: what the run
+// would do with them (B7).
+func WriteCheck(w io.Writer, r *run.CheckReport) error {
+	if _, err := io.WriteString(w, bom); err != nil {
+		return err
+	}
+	c := csv.NewWriter(w)
+	if err := c.Write([]string{"key", "source_username", "username", "moves", "adopted", "targets",
+		"config_changed", "link_changed", "fixes", "conflicts", "operations"}); err != nil {
+		return err
+	}
+	for _, u := range r.Users {
+		targets := make([]string, len(u.Targets))
+		for i, t := range u.Targets {
+			targets[i] = safe(t) // a Marzban inbound tag is the panel's own text
+		}
+		conflicts := make([]string, len(u.Conflicts))
+		for i, k := range u.Conflicts {
+			conflicts[i] = strings.TrimSuffix(k.Type+":"+k.Fix, ":")
+		}
+		if err := c.Write([]string{safe(u.Key), safe(u.SourceUsername), safe(u.Username), yes(u.Moving), yes(u.Adopted),
+			strings.Join(targets, " "), yes(u.ChangesConfig), yes(u.ChangesLink), strings.Join(u.Fixed, " "),
+			strings.Join(conflicts, " "), strings.Join(u.Applied, " ")}); err != nil {
+			return err
+		}
+	}
+	c.Flush()
+	return c.Error()
+}
+
 func yes(b bool) string {
 	if b {
 		return "yes"
