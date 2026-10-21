@@ -1,11 +1,11 @@
 import { BarList } from '../../../components/charts/BarList';
 import { Legend } from '../../../components/charts/Legend';
 import { TimeSeries } from '../../../components/charts/TimeSeries';
+import { Machine } from '../../../components/text/Machine';
 import { useT } from '../../../i18n/locale';
 import type { PanelData, PanelStats, RangeKey } from '../../../lib/api/analytics';
 import { useFormat } from '../../../lib/preferences/region';
 import { ChartCard } from '../ChartCard';
-import { Machine } from '../FactList';
 import { analyticsMessages, type AnalyticsKey } from '../messages';
 import { databaseRange } from '../range';
 

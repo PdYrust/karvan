@@ -1,12 +1,13 @@
 import { Bar } from '../../../components/charts/Bar';
 import { TimeSeries } from '../../../components/charts/TimeSeries';
+import { FactList, type Fact } from '../../../components/layout/FactList';
+import { Machine } from '../../../components/text/Machine';
 import type { Translate } from '../../../i18n/core';
 import { useT } from '../../../i18n/locale';
 import type { EngineStats, PanelStats, RangeKey } from '../../../lib/api/analytics';
 import type { Format } from '../../../lib/format/format';
 import { useFormat } from '../../../lib/preferences/region';
 import { ChartCard } from '../ChartCard';
-import { FactList, Machine, type Fact } from '../FactList';
 import { analyticsMessages, type AnalyticsKey } from '../messages';
 import { databaseRange } from '../range';
 import { engineLabel, isServerEngine } from './engine';

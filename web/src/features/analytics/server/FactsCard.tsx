@@ -1,9 +1,10 @@
+import { FactList } from '../../../components/layout/FactList';
+import { Machine } from '../../../components/text/Machine';
 import { useT } from '../../../i18n/locale';
 import type { Sample, ServerStats } from '../../../lib/api/analytics';
 import { useFormat } from '../../../lib/preferences/region';
 import { useOverview } from '../../overview/use-overview';
 import { ChartCard } from '../ChartCard';
-import { FactList, Machine } from '../FactList';
 import { analyticsMessages } from '../messages';
 
 /** What the server is and how long it has run, with Karvan's own share. */

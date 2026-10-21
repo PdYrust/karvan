@@ -9,12 +9,12 @@ import {
   type Icon,
 } from '@phosphor-icons/react';
 import { BarList } from '../../../components/charts/BarList';
+import { Machine } from '../../../components/text/Machine';
 import { useT } from '../../../i18n/locale';
 import type { PanelData, PanelDetail, RangeKey } from '../../../lib/api/analytics';
 import type { PanelKind } from '../../../lib/api/panels';
 import { useFormat } from '../../../lib/preferences/region';
 import { ChartCard } from '../ChartCard';
-import { Machine } from '../FactList';
 import { analyticsMessages, type AnalyticsKey } from '../messages';
 import { databaseRange } from '../range';
 
