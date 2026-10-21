@@ -30,6 +30,16 @@ func TestTakenNamesGetTheFirstFreeNumber(t *testing.T) {
 	}
 }
 
+// A group counts its users once each, fixed or open, and lists no keys:
+// the page reads the members through the paged users list.
+func TestGroupsCountTheirUsers(t *testing.T) {
+	d := dest(panel.Marzban, destUser{1, "ali", mUser("x", 900)}, destUser{2, "reza", mUser("y", 901)})
+	r := build(t, basePlan(), inputs(panel.Marzban, d, mUser("ali", 1), mUser("reza", 2), mUser("bob", 3)))
+	if len(r.Groups) != 1 || r.Groups[0].Type != NameTaken || r.Groups[0].Count != 2 || r.Groups[0].Open != 0 {
+		t.Fatalf("groups = %+v", r.Groups)
+	}
+}
+
 func TestPrefixForAllAndManualRename(t *testing.T) {
 	d := dest(panel.Marzban, destUser{1, "ali", mUser("x", 900)}, destUser{2, "reza", mUser("y", 901)}, destUser{3, "shop_reza", mUser("z", 902)})
 	p := basePlan()

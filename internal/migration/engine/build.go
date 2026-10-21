@@ -33,7 +33,7 @@ type AdminOutcome struct {
 // Group is one problem type with its users and ranked options.
 type Group struct {
 	Type    string   `json:"type"`
-	Users   []string `json:"users"`
+	Count   int      `json:"count"` // users with this conflict, fixed or open
 	Options []Option `json:"options"`
 	Open    int      `json:"open"` // users still without a fix
 }
@@ -218,14 +218,16 @@ func groups(items []*Item, job []Conflict) ([]Group, int) {
 	}
 	rc := rank(items)
 	for _, it := range items {
+		var seen []string // the types this user is already counted in
 		for _, c := range append(slices.Clone(it.Resolved), it.Conflicts...) {
 			g := byType[c.Type]
 			if g == nil {
 				g = &Group{Type: c.Type, Options: Options(c.Type, rc)}
 				byType[c.Type] = g
 			}
-			if !slices.Contains(g.Users, it.Key) {
-				g.Users = append(g.Users, it.Key)
+			if !slices.Contains(seen, c.Type) {
+				seen = append(seen, c.Type)
+				g.Count++
 			}
 			if c.Fix == "" && c.Severity == Blocker {
 				g.Open++
