@@ -183,14 +183,14 @@ func TestDeterministic(t *testing.T) {
 	a := build(t, basePlan(), inputs(panel.Marzban, d, users...))
 	rand.Shuffle(len(users), func(i, j int) { users[i], users[j] = users[j], users[i] })
 	b := build(t, basePlan(), inputs(panel.Marzban, d, users...))
-	if Fingerprint(a) != Fingerprint(b) {
+	if Diff(a, b).Changed() {
 		t.Fatal("the same input in another order must give the same plan")
 	}
 	moreTraffic := users[0]
 	moreTraffic.UsedTraffic += 5 * gib
 	users[0] = moreTraffic
-	if Fingerprint(build(t, basePlan(), inputs(panel.Marzban, d, users...))) != Fingerprint(a) {
-		t.Fatal("traffic is volatile and must not change the fingerprint")
+	if Diff(a, build(t, basePlan(), inputs(panel.Marzban, d, users...))).Changed() {
+		t.Fatal("traffic is volatile and must not change the outcome")
 	}
 }
 

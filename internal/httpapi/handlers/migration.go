@@ -3,6 +3,7 @@ package handlers
 import (
 	"errors"
 	"net/http"
+	"net/url"
 	"slices"
 	"strconv"
 	"strings"
@@ -22,7 +23,6 @@ import (
 const (
 	codeNotFound      = "not_found"
 	codeStalePlan     = "stale_plan"
-	codeStaleSource   = "stale"
 	codeBlocked       = "blocked"
 	codeNotChecked    = "not_checked"
 	codeLoginGone     = "login_gone"
@@ -53,7 +53,6 @@ func controlReason(err error) string {
 // keep their code ("source_unreachable", "source_unauthorized"...), so the
 // panel can say what went wrong there.
 func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
-	var stale *run.ErrStale
 	var planErr *engine.PlanError
 	var srcErr *source.Error
 	var weak *run.WeakPasswordError
@@ -80,8 +79,6 @@ func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeTemplateName})
 	case errors.Is(err, dest.ErrNotReady):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codePanelNotReady})
-	case errors.As(err, &stale):
-		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeStaleSource, Extra: map[string]any{"changed": stale.Diff}})
 	case errors.As(err, &planErr):
 		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: codePlanInvalid,
 			Extra: map[string]any{"where": planErr.Where, "problem": planErr.Problem}})
@@ -247,6 +244,17 @@ func toUserJSON(it *engine.Item, final bool) userJSON {
 // page.
 const pageLimit = 200
 
+// pageOf reads a page's cursor (an offset; anything else is 0) and its
+// limit (1 to pageLimit; anything else is pageLimit).
+func pageOf(q url.Values) (int, int) {
+	cursor, _ := strconv.Atoi(q.Get("cursor"))
+	limit, err := strconv.Atoi(q.Get("limit"))
+	if err != nil || limit <= 0 || limit > pageLimit {
+		limit = pageLimit
+	}
+	return max(cursor, 0), limit
+}
+
 // Users is step 2's list of users as read: filtered by group or category
 // and a name search, in pages.
 func (a *API) Users(w http.ResponseWriter, r *http.Request) { a.userPage(w, r, false) }
@@ -261,11 +269,7 @@ func (a *API) userPage(w http.ResponseWriter, r *http.Request, final bool) {
 		return
 	}
 	q := r.URL.Query()
-	cursor, _ := strconv.Atoi(q.Get("cursor"))
-	limit, err := strconv.Atoi(q.Get("limit"))
-	if err != nil || limit <= 0 || limit > pageLimit {
-		limit = pageLimit
-	}
+	cursor, limit := pageOf(q)
 	match := itemFilter(q.Get("group"), strings.ToLower(q.Get("q")))
 	out, total := []userJSON{}, 0
 	for _, it := range items {

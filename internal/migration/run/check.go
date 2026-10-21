@@ -117,7 +117,7 @@ func (s *Service) check(ctx context.Context, j *Job, f readFrom) (*engine.Result
 	j.mu.Lock()
 	defer j.mu.Unlock()
 	if err == nil {
-		err = s.install(j, r)
+		_, err = s.install(j, r)
 	}
 	if err != nil {
 		return nil, s.endCheck(j, StageBuild, err)
@@ -254,19 +254,50 @@ func (s *Service) readLedger(ctx context.Context, src *engine.Source, destID str
 }
 
 // install builds the plan over a fresh reading and makes both the job's
-// own. A plan that does not build leaves the previous reading and build.
-func (s *Service) install(j *Job, r reading) error {
+// own, with what changed since the build before (B3). When the outcome
+// changed, the plan version goes up: the operator reviewed another one.
+// A plan that does not build leaves the previous reading and build.
+func (s *Service) install(j *Job, r reading) (engine.Changes, error) {
 	res, err := engine.Build(j.plan, j.inputs(r))
 	if err != nil {
-		return err
+		return engine.Changes{}, err
 	}
-	j.snapshot, j.facts, j.moved, j.movedAdmin = r.snapshot, r.facts, r.moved, r.movedAdmin
-	j.result, j.print = res, engine.Fingerprint(res)
-	return nil
+	changes := engine.Diff(j.result, res)
+	if changes.Changed() {
+		j.version++
+	}
+	j.snapshot, j.facts, j.moved, j.movedAdmin, j.result = r.snapshot, r.facts, r.moved, r.movedAdmin, res
+	j.changes, j.checkedAt = changes, s.now().UTC()
+	return changes, nil
 }
 
 // rebuild builds the plan again over the last reading (a plan edit).
-func (s *Service) rebuild(j *Job) error { return s.install(j, j.current()) }
+func (s *Service) rebuild(j *Job) error {
+	res, err := engine.Build(j.plan, j.inputs(j.current()))
+	if err != nil {
+		return err
+	}
+	j.result = res
+	return nil
+}
+
+// Changes is what the last read of the panels changed in the outcome: a
+// compare's, or a run's own re-check (B3). It comes with the plan version
+// and when the panels were read.
+func (s *Service) Changes(jobID string) (engine.Changes, int, time.Time, error) {
+	j, err := s.job(jobID)
+	if err != nil {
+		return engine.Changes{}, 0, time.Time{}, err
+	}
+	if !j.lockIdle() {
+		return engine.Changes{}, 0, time.Time{}, ErrBusy
+	}
+	defer j.mu.Unlock()
+	if j.result == nil {
+		return engine.Changes{}, 0, time.Time{}, ErrNotChecked
+	}
+	return j.changes, j.version, j.checkedAt, nil
+}
 
 // SetPlan replaces the plan if version is current, and rebuilds on the
 // last snapshot (steps 3 and 4).

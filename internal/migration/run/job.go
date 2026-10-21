@@ -65,13 +65,16 @@ type Job struct {
 	version    int
 	generated  map[string]panel.Credentials
 	result     *engine.Result
-	print      string
-	safeMode   bool
-	rollback   string // RollbackUndo or RollbackBackup
-	backupID   string
-	lastUse    time.Time
-	report     *Report
-	passwords  map[string]string // generated admin passwords, shown once
+	// changes is what the last read changed in the outcome, and checkedAt
+	// when the panels were read.
+	changes   engine.Changes
+	checkedAt time.Time
+	safeMode  bool
+	rollback  string // RollbackUndo or RollbackBackup
+	backupID  string
+	lastUse   time.Time
+	report    *Report
+	passwords map[string]string // generated admin passwords, shown once
 	// passwordFrom says where the moved admin's password came from.
 	passwordFrom string
 }

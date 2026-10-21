@@ -9,7 +9,6 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/PdYrust/karvan/internal/migration/dest"
-	"github.com/PdYrust/karvan/internal/migration/engine"
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 	"github.com/PdYrust/karvan/internal/panel/pasarguard"
@@ -34,11 +33,9 @@ const (
 	RollbackBackup = "backup" // put the whole backup back
 )
 
-// ErrStale means the source or the destination changed since the plan
-// was approved (D29). Diff names what changed.
-type ErrStale struct{ Diff []string }
-
-func (e *ErrStale) Error() string { return fmt.Sprintf("the plan is stale: %v", e.Diff) }
+// errStale means the source or the destination changed since the plan
+// was approved (D29); the job's changes say how.
+var errStale = errors.New("the outcome changed since the plan was approved")
 
 // bcryptCost matches PasarGuard (app/models/admin.py:26).
 const bcryptCost = 12
@@ -281,7 +278,7 @@ func (s *Service) prepare(ctx context.Context, j *Job, rep *Report) (*prepared, 
 
 // recheck reads everything again and refuses a plan whose outcome moved.
 func (s *Service) recheck(ctx context.Context, j *Job) error {
-	approved, before, f := j.print, j.result, j.readFrom()
+	f := j.readFrom()
 	src, err := readSource(ctx, f)
 	if err != nil {
 		return err
@@ -290,11 +287,12 @@ func (s *Service) recheck(ctx context.Context, j *Job) error {
 	if err != nil {
 		return err
 	}
-	if err := s.install(j, r); err != nil {
+	changes, err := s.install(j, r)
+	if err != nil {
 		return err
 	}
-	if j.print != approved {
-		return &ErrStale{Diff: diff(before, j.result)}
+	if changes.Changed() {
+		return errStale
 	}
 	return nil
 }
@@ -313,12 +311,11 @@ func (s *Service) stage(j *Job, rep *Report, name string, fn func() error) error
 }
 
 func errorCode(err error) string {
-	var stale *ErrStale
 	var verify *VerifyError
 	var tool *safemode.ToolError
 	var space *safemode.SpaceError
 	switch {
-	case errors.As(err, &stale):
+	case errors.Is(err, errStale):
 		return "plan_stale"
 	case errors.As(err, &verify):
 		return "verify_failed"
@@ -332,30 +329,4 @@ func errorCode(err error) string {
 		return "cancelled"
 	}
 	return "run_failed"
-}
-
-// diff names the users whose outcome changed between two builds.
-func diff(a, b *engine.Result) []string {
-	keyed := map[string]*engine.Item{}
-	for _, it := range a.Items {
-		keyed[it.Key] = it
-	}
-	var out []string
-	for _, it := range b.Items {
-		old, ok := keyed[it.Key]
-		switch {
-		case !ok:
-			out = append(out, "new:"+it.Key)
-		case old.Include != it.Include || old.User.Username != it.User.Username || len(old.Conflicts) != len(it.Conflicts):
-			out = append(out, "changed:"+it.Key)
-		}
-		delete(keyed, it.Key)
-	}
-	for k := range keyed {
-		out = append(out, "gone:"+k)
-	}
-	if a.Admin.Username != b.Admin.Username || len(a.Conflicts) != len(b.Conflicts) {
-		out = append(out, "admin")
-	}
-	return out
 }

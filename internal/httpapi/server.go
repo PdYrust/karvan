@@ -107,6 +107,7 @@ func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(htt
 		"POST /api/v1/migrations":                     api.CreateMigration,
 		"GET " + m:                                    api.GetMigration,
 		"POST " + m + "/compare":                      api.Compare,
+		"GET " + m + "/changes":                       api.Changes,
 		"GET " + m + "/summary":                       api.Summary,
 		"GET " + m + "/groups":                        api.Groups,
 		"GET " + m + "/users":                         api.Users,

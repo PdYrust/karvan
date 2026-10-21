@@ -52,7 +52,7 @@ func BenchmarkBuild100k(b *testing.B) {
 		if err != nil || !r.Stable {
 			b.Fatal(err, r.Stable)
 		}
-		_ = Fingerprint(r)
+		_ = Diff(r, r)
 	}
 	b.StopTimer()
 	var after runtime.MemStats
