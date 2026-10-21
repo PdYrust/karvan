@@ -1,4 +1,5 @@
 import { api } from './client';
+import type { JobState } from './migrations';
 
 export type Outcome = 'success' | 'failure';
 
@@ -11,6 +12,17 @@ export interface ActivityEntry {
   ip: string;
 }
 
+/** Every migration summed up. */
+export interface MigrationTotals {
+  /** Jobs in each state; a state no job is in is left out. */
+  jobs: Partial<Record<JobState, number>>;
+  /** Users moved and still on their new panel. A rolled back job adds none. */
+  moved: number;
+  /** Users the runs left out. */
+  skipped: number;
+  lastEnded: string | null;
+}
+
 export interface Overview {
   version: string;
   safeMode: boolean;
@@ -18,8 +30,7 @@ export interface Overview {
     totpEnabled: boolean;
     previousSignIn: { at: string; ip: string } | null;
   };
-  // Panel discovery arrives in phase 3; the list is honest-empty until then.
-  panels: never[];
+  migrations: MigrationTotals;
   activity: ActivityEntry[];
 }
 
