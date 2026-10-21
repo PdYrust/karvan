@@ -1,6 +1,6 @@
 import { TooltipProvider } from '@cloudflare/kumo/components/tooltip';
 import { cn } from '@cloudflare/kumo/utils';
-import { Suspense, useCallback, useState } from 'react';
+import { Suspense, useCallback, useRef, useState } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { PageSkeleton } from '../../components/feedback/PageSkeleton';
 import { CurrentPanelProvider } from '../../features/panels/current-panel';
@@ -32,7 +32,12 @@ export function AppShell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(readSidebarCollapsed);
-  const openSearch = useCallback(() => setSearchOpen(true), []);
+  // What had focus when the palette opened: a search field, a button or the page itself.
+  const opener = useRef<HTMLElement | null>(null);
+  const openSearch = useCallback(() => {
+    opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setSearchOpen(true);
+  }, []);
   const openHelp = useCallback(() => setHelpOpen(true), []);
   useModHotkey('KeyK', openSearch);
   useShortcuts(openHelp);
@@ -82,7 +87,12 @@ export function AppShell() {
             <Footer />
           </div>
 
-          <CommandMenu open={searchOpen} onOpenChange={setSearchOpen} onShortcuts={openHelp} />
+          <CommandMenu
+            open={searchOpen}
+            onOpenChange={setSearchOpen}
+            onShortcuts={openHelp}
+            opener={opener}
+          />
           <ShortcutSheet open={helpOpen} onOpenChange={setHelpOpen} />
         </div>
       </TooltipProvider>

@@ -1,5 +1,5 @@
 import { CommandPalette } from '@cloudflare/kumo/components/command-palette';
-import { useState } from 'react';
+import { useState, type RefObject } from 'react';
 import { useT } from '../../i18n/locale';
 import { filterCommands, useCommands, type Command, type CommandGroup } from './commands';
 import { shellMessages } from './messages';
@@ -10,15 +10,19 @@ export function CommandMenu({
   open,
   onOpenChange,
   onShortcuts,
+  opener,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   onShortcuts: () => void;
+  /** What had focus when the palette opened; closing it without a choice goes back there. */
+  opener: RefObject<HTMLElement | null>;
 }) {
   const t = useT(shellMessages);
   const [query, setQuery] = useState('');
   const groups = filterCommands(useCommands(onShortcuts), query);
 
+  // A chosen command decides where focus goes (a new page, a dialog), so only a dismissal returns it.
   function run(c: Command) {
     onOpenChange(false);
     setQuery('');
@@ -30,7 +34,13 @@ export function CommandMenu({
       open={open}
       onOpenChange={(o) => {
         onOpenChange(o);
-        if (!o) setQuery('');
+        if (o) return;
+        setQuery('');
+        const back = opener.current;
+        // After the palette has let go of focus, which would leave it on the page body.
+        requestAnimationFrame(() => {
+          if (back?.isConnected) back.focus();
+        });
       }}
       items={groups}
       value={query}
