@@ -6,6 +6,11 @@ import { usePanels } from './use-panels';
 interface CurrentPanelValue {
   /** The chosen panel, or null for "All panels" (also when the saved one is gone). */
   panel: Panel | null;
+  /**
+   * False until the panel list has loaded or failed. A list filtered by the
+   * current panel waits for it, so it does not first load every panel's rows.
+   */
+  settled: boolean;
   select: (id: number | null) => void;
 }
 
@@ -21,12 +26,13 @@ export function CurrentPanelProvider({ children }: { children: ReactNode }) {
   const value = useMemo<CurrentPanelValue>(
     () => ({
       panel: panels.data?.find((p) => p.id === id) ?? null,
+      settled: !panels.isPending,
       select: (next) => {
         saveCurrentPanel(next);
         setId(next);
       },
     }),
-    [panels.data, id],
+    [panels.data, panels.isPending, id],
   );
   return <CurrentPanelContext value={value}>{children}</CurrentPanelContext>;
 }
