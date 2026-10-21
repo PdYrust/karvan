@@ -7,7 +7,7 @@ import {
   formatRelative,
   formatShortDate,
   formatTime,
-  zoneLabel,
+  zoneInSentence,
   type DateOptions,
 } from './date';
 import { formatDuration } from './duration';
@@ -34,7 +34,8 @@ export function makeFormat(locale: Locale, region: Region) {
   return {
     locale,
     timeZone: region.timeZone,
-    zone: zoneLabel(region.timeZone, locale),
+    /** For sentences: "16:39 in {zone}", "ساعت ۱۶:۳۹ به وقت {zone}". */
+    zone: zoneInSentence(region.timeZone, locale),
     number: (n: number, maxFraction?: number) => formatNumber(n, locale, maxFraction),
     compact: (n: number) => formatCompact(n, locale),
     percent: (ratio: number, maxFraction?: number) => formatPercent(ratio, locale, maxFraction),

@@ -33,4 +33,13 @@ describe('makeFormat', () => {
     expect(zoneLabel('Asia/Tehran', 'en')).toBe('Tehran');
     expect(zoneLabel('Europe/Berlin', 'en')).toMatch(/Europe|Germany/);
   });
+  it('names a zone so that it reads once after "به وقت"', () => {
+    const fa = makeFormat('fa', { timeZone: 'Europe/Berlin', calendar: 'auto' });
+    expect(fa.zone).not.toMatch(/^وقت/);
+    expect(fa.zone).toContain('اروپا');
+    expect(makeFormat('fa', { timeZone: 'Asia/Tehran', calendar: 'auto' }).zone).toBe('تهران');
+    expect(makeFormat('en', { timeZone: 'Europe/Berlin', calendar: 'auto' }).zone).toBe(
+      zoneLabel('Europe/Berlin', 'en'),
+    );
+  });
 });

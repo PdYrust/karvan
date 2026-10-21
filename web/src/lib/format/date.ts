@@ -82,6 +82,15 @@ export function zoneLabel(timeZone: string, locale: Locale): string {
   return part?.value ?? timeZone;
 }
 
+/**
+ * The zone's name as it reads after "in" or "به وقت". Persian names from Intl
+ * already start with وقت ("وقت مرکز اروپا"), so the sentence would say it twice.
+ */
+export function zoneInSentence(timeZone: string, locale: Locale): string {
+  const name = zoneLabel(timeZone, locale);
+  return locale === 'fa' ? name.replace(/^وقت /, '') : name;
+}
+
 const relativeSteps: [Intl.RelativeTimeFormatUnit, number][] = [
   ['second', 60],
   ['minute', 60],
