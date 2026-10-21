@@ -103,6 +103,7 @@ func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(htt
 	for pattern, h := range map[string]http.HandlerFunc{
 		"GET /api/v1/panels":                          api.Panels,
 		"POST /api/v1/panels/scan":                    api.ScanPanels,
+		"GET /api/v1/migrations":                      api.ListMigrations,
 		"POST /api/v1/migrations":                     api.CreateMigration,
 		"GET " + m:                                    api.GetMigration,
 		"POST " + m + "/compare":                      api.Compare,
