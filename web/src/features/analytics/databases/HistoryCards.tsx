@@ -69,63 +69,76 @@ function BarsCard({
 
 const sum = (xs: readonly number[] = []) => xs.reduce((a, b) => a + b, 0);
 
-/** Traffic from the panel's own usage table and new users, per hour for a day, per day beyond. */
-export function HistoryCards({
-  detail,
-  missing,
-  end,
-  range,
-}: {
+interface HistoryProps {
   detail: PanelDetail | undefined;
   /** Why the detail is missing, in words. */
   missing: string | undefined;
   end: number;
   range: RangeKey;
-}) {
+}
+
+/** Hours for a day, days beyond; the detail covers at least a day, since one hour of traffic would be a single bar. */
+function useBuckets(end: number, range: RangeKey) {
   const t = useT(analyticsMessages);
   const fmt = useFormat();
   const r = databaseRange(range);
-  // The detail covers at least a day: one hour of traffic would be a single bar.
   const span = Math.max(rangeSpan[r], day);
-  const within = t(span === day ? 'in_24h' : `in_${r}`);
   const size = bucketSize(span);
-  const bucket = (items: { at: number; values: number[] }[], n: number) =>
-    sumBuckets(items, end - span, end, size, fmt.timeZone, n);
+  return {
+    size,
+    within: t(span === day ? 'in_24h' : `in_${r}`),
+    bucket: (items: { at: number; values: number[] }[], n: number) =>
+      sumBuckets(items, end - span, end, size, fmt.timeZone, n),
+  };
+}
+
+/** Download and upload from the panel's own usage table, per hour for a day, per day beyond. */
+export function TrafficCard({ detail, missing, end, range }: HistoryProps) {
+  const t = useT(analyticsMessages);
+  const fmt = useFormat();
+  const { size, within, bucket } = useBuckets(end, range);
   const traffic = bucket(
     (detail?.traffic ?? []).map((h) => ({ at: Date.parse(h.at), values: [h.downlink, h.uplink] })),
     2,
   );
+  const down = traffic.series[0] ?? [];
+  const up = traffic.series[1] ?? [];
+  return (
+    <BarsCard
+      title={t(size === hour ? 'trafficTitle' : 'trafficPerDay')}
+      buckets={traffic}
+      series={[
+        { name: t('seriesDownload'), color: 1, values: down, value: fmt.bytes(sum(down)) },
+        { name: t('seriesUpload'), color: 2, values: up, value: fmt.bytes(sum(up)) },
+      ]}
+      kind="bytes"
+      format={fmt.bytes}
+      within={within}
+      missing={missing}
+    />
+  );
+}
+
+/** New users per hour for a day, per day beyond. */
+export function SignUpsCard({ detail, missing, end, range }: HistoryProps) {
+  const t = useT(analyticsMessages);
+  const fmt = useFormat();
+  const { within, bucket } = useBuckets(end, range);
   const signUps = bucket(
     (detail?.signUps ?? []).map((c) => ({ at: Date.parse(c.at), values: [c.n] })),
     1,
   );
-  const down = traffic.series[0] ?? [];
-  const up = traffic.series[1] ?? [];
   const joined = signUps.series[0] ?? [];
   const count = (n: number) => fmt.number(n);
   return (
-    <>
-      <BarsCard
-        title={t(size === hour ? 'trafficTitle' : 'trafficPerDay')}
-        buckets={traffic}
-        series={[
-          { name: t('seriesDownload'), color: 1, values: down, value: fmt.bytes(sum(down)) },
-          { name: t('seriesUpload'), color: 2, values: up, value: fmt.bytes(sum(up)) },
-        ]}
-        kind="bytes"
-        format={fmt.bytes}
-        within={within}
-        missing={missing}
-      />
-      <BarsCard
-        title={t('signUpsTitle')}
-        buckets={signUps}
-        series={[{ name: t('seriesSignUps'), color: 1, values: joined, value: count(sum(joined)) }]}
-        kind="count"
-        format={count}
-        within={within}
-        missing={missing}
-      />
-    </>
+    <BarsCard
+      title={t('signUpsTitle')}
+      buckets={signUps}
+      series={[{ name: t('seriesSignUps'), color: 1, values: joined, value: count(sum(joined)) }]}
+      kind="count"
+      format={count}
+      within={within}
+      missing={missing}
+    />
   );
 }

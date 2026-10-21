@@ -1,21 +1,18 @@
 import { Button } from '@cloudflare/kumo/components/button';
-import { HourglassIcon, QuestionIcon, WarningCircleIcon } from '@phosphor-icons/react';
+import { HourglassIcon, QuestionIcon } from '@phosphor-icons/react';
 import { useLocation, useNavigate, useParams } from 'react-router';
-import { CodeText } from '../../../components/text/CodeText';
 import { useT } from '../../../i18n/locale';
 import { ApiError } from '../../../lib/api/client';
 import { analyticsMessages } from '../messages';
-import { databaseRange, rangeSpan, useRange } from '../range';
-import { LoadFailed, Notice, TabSkeleton } from '../states';
+import { useRange } from '../range';
+import { DatabaseProblem, LoadFailed, Notice, noticeIcon, TabSkeleton } from '../states';
 import { usePanelStats } from '../use-analytics';
 import { EngineCard } from './EngineCard';
-import { HistoryCards } from './HistoryCards';
+import { SignUpsCard, TrafficCard } from './HistoryCards';
 import { AdminsCard, ClientsCard, NodesCard, TablesCard } from './ListCards';
-import { findingMessages, findingText } from '../../panels/findings';
 import { PanelTiles } from './PanelTiles';
 import { StatusCard, UsersTrendCard } from './UsersCards';
-
-const iconProps = { size: 40, weight: 'light', 'aria-hidden': true } as const;
+import { panelWindow } from './window';
 
 function UnknownPanel() {
   const t = useT(analyticsMessages);
@@ -23,7 +20,7 @@ function UnknownPanel() {
   const navigate = useNavigate();
   return (
     <Notice
-      icon={<QuestionIcon {...iconProps} />}
+      icon={<QuestionIcon {...noticeIcon} />}
       action={
         <Button
           variant="secondary"
@@ -35,23 +32,6 @@ function UnknownPanel() {
       }
     >
       {t('unknownPanel')}
-    </Notice>
-  );
-}
-
-/** The finding that keeps Karvan out of the database, with how to fix it. */
-function Problem({ code }: { code: string }) {
-  const t = useT(analyticsMessages);
-  const tf = useT(findingMessages);
-  const text = findingText(code);
-  return (
-    <Notice icon={<WarningCircleIcon {...iconProps} />}>
-      {text ? <CodeText text={tf(text.what)} /> : t('problemOther')}
-      {text ? (
-        <span className="mt-1 block text-sm text-kumo-subtle">
-          <CodeText text={tf(text.fix)} />
-        </span>
-      ) : null}
     </Notice>
   );
 }
@@ -75,13 +55,11 @@ export function PanelTab() {
     );
   }
   const { panel, detail, detailProblem } = q.data;
-  if (panel.problem) return <Problem code={panel.problem.code} />;
+  if (panel.problem) return <DatabaseProblem code={panel.problem.code} />;
   if (panel.pending || !panel.data) {
-    return <Notice icon={<HourglassIcon {...iconProps} />}>{t('pending')}</Notice>;
+    return <Notice icon={<HourglassIcon {...noticeIcon} />}>{t('pending')}</Notice>;
   }
-  const end = Date.parse(panel.at) || (panel.points.at(-1)?.t ?? 0) * 1000;
-  const step = q.data.step * 1000;
-  const domain: [number, number] = [end - rangeSpan[databaseRange(range)], end];
+  const { end, step, domain } = panelWindow(q.data, range);
   const missing =
     detailProblem === undefined
       ? undefined
@@ -93,7 +71,8 @@ export function PanelTab() {
       <div className="grid gap-4 lg:grid-cols-2">
         <StatusCard data={panel.data} />
         <UsersTrendCard panel={panel} data={panel.data} step={step} domain={domain} range={range} />
-        <HistoryCards detail={detail} missing={missing} end={end} range={range} />
+        <TrafficCard detail={detail} missing={missing} end={end} range={range} />
+        <SignUpsCard detail={detail} missing={missing} end={end} range={range} />
       </div>
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-4">

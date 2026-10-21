@@ -12,11 +12,14 @@ export function RangeControl({
   onRange,
   onRefresh,
   refreshing,
+  ranges = rangeKeys,
 }: {
   range: RangeKey;
   onRange: (r: RangeKey) => void;
   onRefresh: () => void;
   refreshing: boolean;
+  /** The ranges to offer; every range by default. */
+  ranges?: readonly RangeKey[];
 }) {
   const t = useT(analyticsMessages);
   return (
@@ -45,7 +48,7 @@ export function RangeControl({
         />
         <DropdownMenu.Content align="end" className="min-w-48">
           <DropdownMenu.RadioGroup value={range} onValueChange={(v: RangeKey) => onRange(v)}>
-            {rangeKeys.map((k) => (
+            {ranges.map((k) => (
               <DropdownMenu.RadioItem key={k} value={k} closeOnClick>
                 <span className="flex w-full items-center gap-2">
                   {t(`range_${k}`)}

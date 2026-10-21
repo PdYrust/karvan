@@ -1,12 +1,18 @@
 import { Button } from '@cloudflare/kumo/components/button';
+import { WarningCircleIcon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import { StatTileSkeleton } from '../../components/charts/StatTile';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { Bone } from '../../components/feedback/PageSkeleton';
+import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
 import { sharedMessages } from '../../i18n/shared';
 import { ApiError, offline } from '../../lib/api/client';
+import { findingMessages, findingText } from '../panels/findings';
 import { analyticsMessages } from './messages';
+
+/** The icon of a notice: large and light, as in an empty state. */
+export const noticeIcon = { size: 40, weight: 'light', 'aria-hidden': true } as const;
 
 /** A tab while its first numbers load: tiles and two cards, the shape it will take. */
 export function TabSkeleton({ label }: { label: string }) {
@@ -58,5 +64,22 @@ export function Notice({
       <p className="max-w-md text-kumo-default">{children}</p>
       {action}
     </div>
+  );
+}
+
+/** The finding that keeps Karvan out of a panel's database, with how to fix it. */
+export function DatabaseProblem({ code }: { code: string }) {
+  const t = useT(analyticsMessages);
+  const tf = useT(findingMessages);
+  const text = findingText(code);
+  return (
+    <Notice icon={<WarningCircleIcon {...noticeIcon} />}>
+      {text ? <CodeText text={tf(text.what)} /> : t('problemOther')}
+      {text ? (
+        <span className="mt-1 block text-sm text-kumo-subtle">
+          <CodeText text={tf(text.fix)} />
+        </span>
+      ) : null}
+    </Notice>
   );
 }
