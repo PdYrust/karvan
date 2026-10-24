@@ -145,6 +145,20 @@ func TestFixedUsersStayInTheirGroup(t *testing.T) {
 	}
 }
 
+// GET plan says what the plan does once the job is checked, as PUT does,
+// so the page shows it before the first edit.
+func TestGetPlanSaysWhatThePlanDoes(t *testing.T) {
+	m := newMigrationEnv(t, 2)
+	id := m.create()
+	var got struct {
+		Impact map[string]int `json:"impact"`
+	}
+	m.do(http.MethodGet, api+"/migrations/"+id+"/plan", nil).json(t, &got)
+	if got.Impact["users"] != 2 {
+		t.Fatalf("impact before an edit: %v", got.Impact)
+	}
+}
+
 // A run with Safe Mode on leaves a backup the operator can list and delete.
 func TestBackupsAfterARun(t *testing.T) {
 	m := newMigrationEnv(t, 2)

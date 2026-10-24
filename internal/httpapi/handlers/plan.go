@@ -37,13 +37,17 @@ func (a *API) Operations(w http.ResponseWriter, _ *http.Request) {
 // GetPlan returns the plan with its version, also as the ETag that PUT
 // must send back in If-Match.
 func (a *API) GetPlan(w http.ResponseWriter, r *http.Request) {
-	_, p, version, err := a.Runs.View(r.PathValue("id"))
+	res, p, version, err := a.Runs.View(r.PathValue("id"))
 	if err != nil {
 		writeRunError(w, r, err)
 		return
 	}
 	w.Header().Set("ETag", strconv.Quote(strconv.Itoa(version)))
-	respond.JSON(w, http.StatusOK, map[string]any{"planVersion": version, "plan": p})
+	out := map[string]any{"planVersion": version, "plan": p}
+	if res != nil {
+		out["impact"] = impact(res)
+	}
+	respond.JSON(w, http.StatusOK, out)
 }
 
 // PutPlan replaces the plan if If-Match names the current version, and
