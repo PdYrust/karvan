@@ -145,6 +145,13 @@ Laid out like the dashboard's account home, top to bottom:
 - **Numbers:** every chart shows its current or total value in text next to it; screen readers get a table of the values (at most 12 rows spread over the range). A chart is never the only place a number lives.
 - **States:** a skeleton shaped like the chart while loading; "No data in this range" with the range named when a series is empty; a database Karvan cannot reach shows the panel's finding instead of an empty chart.
 
+### Wizard
+- One route per step, each a lazy page in its own folder under `features/wizard`: Connect at `/migrations/new`, then `/migrations/:id/summary`, `compare`, `changes`, `preview` and `start`. Nothing on either panel changes before Start, and no step says otherwise.
+- **Header:** "Migrations" above the title, the title, and once a job exists the move (`MoveLabel`) with the old panel's address in the line under it.
+- **Steps** (`components/form/Steps`): from 640 px the six steps in one row under the header, each a number in a small ring and its name; done steps are links with a check, the current one is in brand blue with `aria-current="step"`, later ones are quiet. Under 640 px one line, "Step 2 of 6: Summary", over a thin bar.
+- **Body:** form steps in one column at most 720 wide; steps with lists may use the content width. Actions sit at the bottom end: the step's own verb as the primary action last, Back before it.
+- **Connect:** the destination as radio cards (logo, name, version), the current panel chosen; a panel that is not ready is disabled with its first finding's sentence. Then the old panel: address, kind (find out by itself, Marzban, PasarGuard) and the sign-in (username and password, or a PasarGuard API key). A certificate Karvan does not trust shows a warning card with its SHA-256 fingerprint (mono, in groups of two), subject and expiry, and "Trust this certificate", which trusts exactly that fingerprint for this migration. While Karvan reads, the form gives way to a counter ("Reading users: 12,500 of 20,000"; the second pass says "Checking again"), a thin meter and Cancel; when the read ends the wizard moves on to Summary. The address keeps the job (`?job=`), so a reload picks the counter up again.
+- **Errors:** every API code gets its sentence from `lib/errors` (D4), in an `InlineAlert` above the actions. No server text reaches the screen.
 ### Sign-in
 - Two halves on large screens. Start side on `bg-kumo-base`: wordmark at the top, then a centered form (title, username, password, one blue button) and the recovery hint with the `karvan reset -password` command.
 - End side on `bg-kumo-brand`: language and theme buttons at the top, the "Marzban ⇄ PasarGuard" line, and one short line, then a spinning dotted globe.
