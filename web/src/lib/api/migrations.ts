@@ -1,3 +1,4 @@
+import type { Plan } from '../plan/plan';
 import { api } from './client';
 import type { PanelKind } from './panels';
 
@@ -62,7 +63,13 @@ export function listJobs(f: JobFilter = {}): Promise<JobPage> {
 /** Query keys of everything about migrations, so one invalidation reaches them all (D2). */
 export const migrationKeys = {
   all: ['migrations'] as const,
+  /** The job and, under it, everything read from its last build. */
   job: (id: string) => ['migrations', 'job', id] as const,
+  summary: (id: string) => ['migrations', 'job', id, 'summary'] as const,
+  groups: (id: string) => ['migrations', 'job', id, 'groups'] as const,
+  users: (id: string, q: UserQuery) => ['migrations', 'job', id, 'users', q] as const,
+  plan: (id: string) => ['migrations', 'job', id, 'plan'] as const,
+  roles: (id: string) => ['migrations', 'job', id, 'roles'] as const,
 };
 
 const jobPath = (id: string, rest = '') => `migrations/${encodeURIComponent(id)}${rest}`;
@@ -97,6 +104,24 @@ export interface TargetInfo {
 
 export type UserStatus = 'active' | 'disabled' | 'limited' | 'expired' | 'on_hold';
 
+/** The old panel's users by when they expire. */
+export interface Expiries {
+  expired: number;
+  /** Within 7 days. */
+  week: number;
+  /** Within 30 days, after the first 7. */
+  month: number;
+  later: number;
+  never: number;
+}
+
+/** The admin a plan makes on the destination: its name, and whether it merges into one there. */
+export interface AdminSummary {
+  username: string;
+  merged: boolean;
+  roleId: number;
+}
+
 /** The old panel as read and the destination, after a compare (api-migration.md 2.3). */
 export interface JobSummary {
   state: JobState;
@@ -118,6 +143,14 @@ export interface JobSummary {
   stable: boolean;
   roleId?: number;
   userTargets: string[] | null;
+  /** The destination panel. */
+  panelId: number;
+  expiries: Expiries;
+  /** Users per protocol they have on the old panel. */
+  protocols: Record<string, number>;
+  newAdmin: AdminSummary;
+  /** A run without a typed password keeps the reseller's own one; otherwise Karvan makes one. */
+  canKeepPassword: boolean;
 }
 
 export interface Job {
@@ -129,6 +162,163 @@ export interface Job {
 
 export function getJob(id: string): Promise<Job> {
   return api('GET', jobPath(id));
+}
+
+export function getSummary(id: string): Promise<JobSummary> {
+  return api('GET', jobPath(id, '/summary'));
+}
+
+export type Severity = 'blocker' | 'warning' | 'info';
+
+export interface Conflict {
+  type: string;
+  severity: Severity;
+  detail?: Record<string, string>;
+  fix?: string;
+}
+
+/** A fix Karvan offers for a conflict type, best first. */
+export interface FixOption {
+  id: string;
+  params?: string[];
+  changesConfig: boolean;
+  changesLink: boolean;
+}
+
+/** Users with one conflict type, fixed or not: how many, the fixes, and how many still need one. */
+export interface ProblemGroup {
+  type: string;
+  count: number;
+  options: FixOption[];
+  open: number;
+}
+
+export interface Groups {
+  planVersion: number;
+  groups: ProblemGroup[];
+  /** Conflicts of the whole job, such as a taken admin name. */
+  conflicts: Conflict[];
+  /** Users per category id; categories without users are left out. */
+  categories: Record<string, number>;
+  blockers: number;
+  stable: boolean;
+}
+
+export function getGroups(id: string): Promise<Groups> {
+  return api('GET', jobPath(id, '/groups'));
+}
+
+/** One user as read (or, in the preview, as it will land) with the plan's outcome. */
+export interface UserRow {
+  key: string;
+  sourceUsername: string;
+  username: string;
+  include: boolean;
+  status: UserStatus;
+  usedTraffic: number;
+  dataLimit: number;
+  expire: string | null;
+  note?: string;
+  categories: string[];
+  targets?: string[];
+  conflicts: { type: string; severity: Severity; fix?: string }[];
+  /** What the plan does to the user, such as "fix:C02:suffix" or "op:traffic.add". */
+  applied: string[];
+  changesConfig: boolean;
+  changesLink: boolean;
+  movedBefore?: boolean;
+}
+
+export interface UserPage {
+  users: UserRow[];
+  total: number;
+  next?: string;
+}
+
+export interface UserQuery {
+  /** "" for everyone, "ready", "skipped", "category:<id>" or a conflict type. */
+  group?: string;
+  q?: string;
+  offset?: number;
+  limit?: number;
+}
+
+/** Users per page in the wizard's lists (D5). */
+export const usersPerPage = 50;
+
+/** Users a page at a time (D5), searched by name on the server. */
+export function getUsers(id: string, query: UserQuery = {}): Promise<UserPage> {
+  const q = new URLSearchParams();
+  if (query.group) q.set('group', query.group);
+  if (query.q) q.set('q', query.q);
+  if (query.offset) q.set('cursor', String(query.offset));
+  q.set('limit', String(query.limit ?? usersPerPage));
+  return api('GET', jobPath(id, `/users?${q.toString()}`));
+}
+
+/** What a plan does; every count but users is left out when it is 0. */
+export interface Impact {
+  users: number;
+  moving?: number;
+  skipped?: number;
+  configChanged?: number;
+  renamed?: number;
+  changed?: number;
+}
+
+export interface PlanState {
+  planVersion: number;
+  plan: Plan;
+  /** Present once a compare has read the old panel. */
+  impact?: Impact;
+}
+
+export function getPlan(id: string): Promise<PlanState> {
+  return api('GET', jobPath(id, '/plan'));
+}
+
+export interface PlanSaved {
+  planVersion: number;
+  blockers: number;
+  stable: boolean;
+  groups: ProblemGroup[];
+  conflicts: Conflict[];
+  impact: Impact;
+}
+
+/** Saves the whole plan if version is still the current one; a 412 says it is not (D7). */
+export function putPlan(id: string, version: number, plan: Plan): Promise<PlanSaved> {
+  return api('PUT', jobPath(id, '/plan'), plan, { ifMatch: version });
+}
+
+/** A role's limits: bytes, seconds and counts, null for no limit. */
+export interface RoleLimits {
+  max_users: number | null;
+  data_limit_min: number | null;
+  data_limit_max: number | null;
+  expire_min: number | null;
+  expire_max: number | null;
+  on_hold_timeout_min?: number | null;
+  on_hold_timeout_max?: number | null;
+  min_hwid_per_user: number | null;
+  max_hwid_per_user: number | null;
+}
+
+/** A PasarGuard admin role the moved admin can get. */
+export interface Role {
+  id: number;
+  name: string;
+  isOwner: boolean;
+  /** The role may use every group. */
+  allGroups: boolean;
+  groups: TargetInfo[];
+  limits: RoleLimits;
+  features: { can_use_reset_strategy: boolean; can_use_next_plan: boolean };
+  requireTemplate: boolean;
+}
+
+export function getRoles(id: string): Promise<{ roleId: number; roles: Role[] }> {
+  return api('GET', jobPath(id, '/roles'));
 }
 
 /** Reads both panels again in the background; the job's events say how far it got. */
