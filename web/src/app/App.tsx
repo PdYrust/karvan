@@ -2,7 +2,7 @@ import { Toasty } from '@cloudflare/kumo/components/toast';
 import { DirectionProvider } from '@cloudflare/kumo/primitives/direction-provider';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { lazy } from 'react';
-import { BrowserRouter, Route, Routes } from 'react-router';
+import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { OverviewPage } from '../features/overview/OverviewPage';
 import { returnToSignIn } from '../features/session/use-session';
 import { LocaleProvider, useLocale } from '../i18n/locale';
@@ -43,6 +43,27 @@ const PanelPage = lazy(() =>
   import('../features/panels/PanelPage').then((m) => ({ default: m.PanelPage })),
 );
 
+const ConnectStep = lazy(() =>
+  import('../features/wizard/connect/ConnectStep').then((m) => ({ default: m.ConnectStep })),
+);
+const JobWizard = lazy(() =>
+  import('../features/wizard/JobWizard').then((m) => ({ default: m.JobWizard })),
+);
+const SummaryStep = lazy(() =>
+  import('../features/wizard/summary/SummaryStep').then((m) => ({ default: m.SummaryStep })),
+);
+const CompareStep = lazy(() =>
+  import('../features/wizard/compare/CompareStep').then((m) => ({ default: m.CompareStep })),
+);
+const ChangesStep = lazy(() =>
+  import('../features/wizard/changes/ChangesStep').then((m) => ({ default: m.ChangesStep })),
+);
+const PreviewStep = lazy(() =>
+  import('../features/wizard/preview/PreviewStep').then((m) => ({ default: m.PreviewStep })),
+);
+const StartStep = lazy(() =>
+  import('../features/wizard/start/StartStep').then((m) => ({ default: m.StartStep })),
+);
 /**
  * A request that finds no session means it ended (timeout or sign-out
  * elsewhere); the server shows the sign-in page at the same address. A write
@@ -95,6 +116,15 @@ export function App() {
                         <Route index element={<AnalyticsIndex />} />
                         <Route path="server" element={<ServerTab />} />
                         <Route path="panels/:id" element={<PanelTab />} />
+                      </Route>
+                      <Route path="migrations/new" element={<ConnectStep />} />
+                      <Route path="migrations/:id" element={<JobWizard />}>
+                        <Route index element={<Navigate to="summary" replace />} />
+                        <Route path="summary" element={<SummaryStep />} />
+                        <Route path="compare" element={<CompareStep />} />
+                        <Route path="changes" element={<ChangesStep />} />
+                        <Route path="preview" element={<PreviewStep />} />
+                        <Route path="start" element={<StartStep />} />
                       </Route>
                       <Route path="panels" element={<PanelsPage />} />
                       <Route path="panels/:id" element={<PanelPage />} />
