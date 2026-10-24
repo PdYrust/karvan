@@ -1,5 +1,14 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { jobOutcome, listJobs, originHost, type Counts } from './migrations';
+import {
+  cancelJob,
+  compareJob,
+  createJob,
+  getJob,
+  jobOutcome,
+  listJobs,
+  originHost,
+  type Counts,
+} from './migrations';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -68,5 +77,36 @@ describe('originHost', () => {
 
   it('keeps what it cannot read', () => {
     expect(originHost('not a url')).toBe('not a url');
+  });
+});
+
+describe('job calls', () => {
+  it('creates a job with the fields given and nothing else', async () => {
+    const f = reply({ id: 'abc', state: 'created' });
+    await createJob({
+      panelId: 2,
+      sourceUrl: 'http://127.0.0.1:18000',
+      username: 'root',
+      password: 'x',
+    });
+    const [url, init] = f.mock.calls.at(-1) as unknown as [string, RequestInit];
+    expect(url).toMatch(/api\/v1\/migrations$/);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(String(init.body))).toEqual({
+      panelId: 2,
+      sourceUrl: 'http://127.0.0.1:18000',
+      username: 'root',
+      password: 'x',
+    });
+  });
+
+  it('starts a compare and cancels on the job path', async () => {
+    const f = reply({ id: 'a/b' });
+    await compareJob('a/b');
+    expect((f.mock.calls.at(-1) as unknown as [string])[0]).toMatch(/migrations\/a%2Fb\/compare$/);
+    await cancelJob('abc');
+    expect((f.mock.calls.at(-1) as unknown as [string])[0]).toMatch(/migrations\/abc\/cancel$/);
+    await getJob('abc');
+    expect((f.mock.calls.at(-1) as unknown as [string])[0]).toMatch(/migrations\/abc$/);
   });
 });
