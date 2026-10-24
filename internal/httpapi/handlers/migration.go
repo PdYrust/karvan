@@ -306,6 +306,8 @@ func itemFilter(group, search string) func(*engine.Item) bool {
 		case strings.HasPrefix(group, "category:"):
 			return slices.Contains(it.Nodes, strings.TrimPrefix(group, "category:"))
 		}
-		return slices.ContainsFunc(it.Conflicts, func(c engine.Conflict) bool { return c.Type == group })
+		// The group's members, fixed or open, as GET groups counts them.
+		is := func(c engine.Conflict) bool { return c.Type == group }
+		return slices.ContainsFunc(it.Conflicts, is) || slices.ContainsFunc(it.Resolved, is)
 	}
 }

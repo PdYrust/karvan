@@ -8,11 +8,13 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/PdYrust/karvan/internal/migration/migrationtest"
 	"github.com/PdYrust/karvan/internal/migration/run"
 )
 
@@ -110,6 +112,36 @@ func TestReadOnlyLists(t *testing.T) {
 	}
 	if res := m.do(http.MethodDelete, api+"/templates/99", nil); res.status != http.StatusNotFound {
 		t.Errorf("delete an unknown template: %d", res.status)
+	}
+}
+
+// A problem group lists its users once their conflict is fixed, as its
+// count says.
+func TestFixedUsersStayInTheirGroup(t *testing.T) {
+	m := newMigrationEnv(t, 2)
+	m.src.Mutate(func(users *[]map[string]any) {
+		(*users)[0]["proxies"].(map[string]any)["vless"] = map[string]any{"id": "00000000-0000-4000-8000-000000000000", "flow": "xtls-rprx-vision"}
+	})
+	id := m.create()
+	res := m.do(http.MethodGet, api+"/migrations/"+id+"/plan", nil)
+	var got struct {
+		Plan map[string]any `json:"plan"`
+	}
+	res.json(t, &got)
+	got.Plan["targets"] = migrationtest.PasarGuardTargets
+	got.Plan["resolutions"] = map[string]any{"C11": map[string]any{"option": "accept"}}
+	if out := m.withHeader("If-Match", res.header.Get("ETag"))(http.MethodPut, api+"/migrations/"+id+"/plan", got.Plan); out.status != http.StatusOK {
+		t.Fatalf("put plan: %d %s", out.status, out.body)
+	}
+	var page struct {
+		Total int `json:"total"`
+		Users []struct {
+			Applied []string `json:"applied"`
+		} `json:"users"`
+	}
+	m.do(http.MethodGet, api+"/migrations/"+id+"/users?group=C11", nil).json(t, &page)
+	if page.Total != 1 || !slices.Contains(page.Users[0].Applied, "fix:C11:accept") {
+		t.Fatalf("group C11: %+v", page)
 	}
 }
 
