@@ -40,6 +40,7 @@ Last reviewed: 2026-10-15.
 
 The coverage floor (80%) is high enough that new logic needs a test, and low enough to leave room for wiring code.
 The bundle numbers keep the sign-in page usable on a slow mobile connection. They were first guessed at 110 KB for the sign-in page; measured, React 19 alone is about 60 KB and Kumo's Button and Input about 55 KB, so the budget is today's 132 KB plus a little room. Fonts are left out because they cache across visits.
+A lazy page is one feature folder, except that each migration wizard step is a page of its own (its chunks plus the wizard frame), because each step is its own lazy route and loads alone; the report prints every step's size.
 The Lighthouse numbers are the "good" band of Core Web Vitals; accessibility is 100 because the panel must work with a keyboard and a screen reader.
 
 ## Reviewed by a person, every page

@@ -39,15 +39,22 @@ const loginLazy = new Set(
 const css = new Set(Object.values(manifest).flatMap((c) => c.css ?? []));
 
 // A page is every lazy chunk of one feature folder (the analytics page and
-// its tabs load together), less what the app entry already has.
+// its tabs load together), less what the app entry already has. A wizard
+// step is a page of its own, because each step is its own lazy route: its
+// chunks plus the frame the job's steps open in (Connect has its frame
+// inside its own chunk).
 const appStatic = files(closure('index.html'));
 const lazyKeys = Object.values(manifest).flatMap((c) => c.dynamicImports ?? []);
+const wizardFrame = 'src/features/wizard/JobWizard.tsx';
 const pages = new Map();
 for (const key of new Set(lazyKeys)) {
-  if (manifest['login.html'].dynamicImports?.includes(key)) continue;
-  const page = key.match(/src\/features\/([^/]+)\//)?.[1] ?? key;
+  if (manifest['login.html'].dynamicImports?.includes(key) || key === wizardFrame) continue;
+  const step = key.match(/src\/features\/wizard\/([^/]+)\//)?.[1];
+  const page = step ? `wizard ${step}` : (key.match(/src\/features\/([^/]+)\//)?.[1] ?? key);
   const set = pages.get(page) ?? new Set();
-  for (const f of files(closure(key))) {
+  const keys = closure(key);
+  if (step && step !== 'connect') closure(wizardFrame, keys);
+  for (const f of files(keys)) {
     if (!appStatic.has(f)) set.add(f);
   }
   pages.set(page, set);
@@ -72,6 +79,13 @@ for (const [name, bytes] of Object.entries(measured)) {
   const note = name.startsWith('largest page') ? ` (${largestPage})` : '';
   console.log(
     `${over ? 'OVER' : 'ok  '} ${name.padEnd(26)} ${kb.toFixed(1).padStart(6)} KB / ${budgetsKB[name]} KB${note}`,
+  );
+}
+// Every wizard step against the page budget, so each step sees its headroom.
+for (const [page, set] of [...pages].filter(([p]) => p.startsWith('wizard ')).sort()) {
+  const kb = sum(set) / 1024;
+  console.log(
+    `     ${page.padEnd(26)} ${kb.toFixed(1).padStart(6)} KB / ${budgetsKB['largest page (JS, lazy)']} KB`,
   );
 }
 process.exit(failed ? 1 : 0);
