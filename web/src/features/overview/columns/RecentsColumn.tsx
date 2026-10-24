@@ -10,9 +10,15 @@ import { readRecents } from '../../../lib/preferences/recents';
 import { HomeColumn, HomeNote, HomeRow, HomeRows, HomeRowsSkeleton } from './HomeColumn';
 import { overviewMessages } from '../messages';
 
-const sections = { analytics: 'navAnalytics', panels: 'navPanels', settings: 'settings' } as const;
+const sections = {
+  analytics: 'navAnalytics',
+  panels: 'navPanels',
+  migrations: 'navMigrations',
+  settings: 'settings',
+} as const;
 
-const panelOf = (page: RecentPage) => (page.section === 'settings' ? undefined : page.panelId);
+const panelOf = (page: RecentPage) =>
+  page.section === 'settings' || page.section === 'migrations' ? undefined : page.panelId;
 
 /** "Panels / logo name": the section in a quiet color, then the page. */
 function RecentName({ page, panel }: { page: RecentPage; panel: Panel | undefined }) {
@@ -22,6 +28,8 @@ function RecentName({ page, panel }: { page: RecentPage; panel: Panel | undefine
   let name;
   if (page.section === 'settings') {
     name = t(page.tab === 'general' ? 'recentGeneral' : 'recentSafeMode');
+  } else if (page.section === 'migrations') {
+    name = t('newMigration');
   } else if (panel) {
     name = (
       <span className="inline-flex max-w-full items-center gap-1.5">

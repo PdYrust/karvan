@@ -7,6 +7,7 @@ describe('recentPage', () => {
     expect(recentPage('/analytics/panels/2')).toEqual({ section: 'analytics', panelId: 2 });
     expect(recentPage('/panels')).toEqual({ section: 'panels' });
     expect(recentPage('/panels/12')).toEqual({ section: 'panels', panelId: 12 });
+    expect(recentPage('/migrations/new')).toEqual({ section: 'migrations', page: 'new' });
     expect(recentPage('/settings')).toEqual({ section: 'settings', tab: 'general' });
     expect(recentPage('/settings/safe-mode')).toEqual({ section: 'settings', tab: 'safe-mode' });
   });

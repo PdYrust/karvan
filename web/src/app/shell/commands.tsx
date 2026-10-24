@@ -5,6 +5,7 @@ import {
   HardDrivesIcon,
   KeyboardIcon,
   MoonIcon,
+  PlusIcon,
   ShieldCheckIcon,
   SignOutIcon,
   SunIcon,
@@ -16,6 +17,7 @@ import { PanelMark } from '../../components/panels/PanelLabel';
 import { panelSearchNames } from '../../components/panels/PanelLogo';
 import { useCurrentPanel } from '../../features/panels/current-panel';
 import { usePanels, useScanPanels } from '../../features/panels/use-panels';
+import { newMigrationPath } from '../../features/wizard/steps';
 import { useSignOut } from '../../features/session/use-session';
 import { locales } from '../../i18n/core';
 import { useLocale, useT } from '../../i18n/locale';
@@ -108,6 +110,13 @@ export function useCommands(onShortcuts: () => void): CommandGroup[] {
   ];
 
   const actions: Command[] = [
+    {
+      id: 'migration:new',
+      title: t('actionNewMigration'),
+      keywords: 'migrate move wizard انتقال',
+      icon: <PlusIcon className={icon} />,
+      run: () => void navigate(newMigrationPath),
+    },
     {
       id: 'scan',
       title: t('actionScan'),

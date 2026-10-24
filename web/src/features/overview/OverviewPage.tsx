@@ -1,15 +1,16 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { PlusIcon } from '@phosphor-icons/react';
 import { lazy, Suspense } from 'react';
+import { useNavigate } from 'react-router';
 import { StatTileSkeleton } from '../../components/charts/StatTile';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { usePageTitle } from '../../components/layout/use-page-title';
 import { useT } from '../../i18n/locale';
-import { sharedMessages } from '../../i18n/shared';
 import { useFormat } from '../../lib/preferences/region';
 import { NoPanels } from '../panels/NoPanels';
 import { usePanels, useScanPanels } from '../panels/use-panels';
+import { newMigrationPath } from '../wizard/steps';
 import { MigrationsColumn } from './columns/MigrationsColumn';
 import { PanelsColumn } from './columns/PanelsColumn';
 import { RecentsColumn } from './columns/RecentsColumn';
@@ -23,16 +24,17 @@ const OverviewAnalytics = lazy(() =>
   import('./analytics/OverviewAnalytics').then((m) => ({ default: m.OverviewAnalytics })),
 );
 
-/** Inert with its "Soon" tag until the wizard is built. */
 function NewMigration() {
   const t = useT(overviewMessages);
-  const ts = useT(sharedMessages);
+  const navigate = useNavigate();
   return (
-    <Button disabled icon={<PlusIcon size={16} />} className="pointer-coarse:h-11">
+    <Button
+      variant="primary"
+      icon={<PlusIcon size={16} />}
+      onClick={() => void navigate(newMigrationPath)}
+      className="pointer-coarse:h-11"
+    >
       {t('newMigration')}
-      <span className="rounded-md px-1.5 text-tiny font-normal ring ring-kumo-line">
-        {ts('soon')}
-      </span>
     </Button>
   );
 }
