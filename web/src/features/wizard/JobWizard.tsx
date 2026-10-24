@@ -11,6 +11,7 @@ import { migrationsMessages } from '../migrations/messages';
 import { wizardMessages } from './messages';
 import { stepOf } from './steps';
 import { WizardFrame } from './WizardFrame';
+import { WizardProvider } from './wizard-context';
 
 /** The move's logos and the old panel's host, once a compare has read the old panel. */
 function JobLine({ summary }: { summary: JobSummary | undefined }) {
@@ -46,9 +47,11 @@ export function JobWizard() {
         <ErrorState message={t('jobFailed')} error={job.error} onRetry={() => void job.refetch()} />
       ) : (
         // The step's own chunk loads under the header and the steps.
-        <Suspense fallback={<Bone className="h-24 w-full max-w-[720px]" />}>
-          <Outlet />
-        </Suspense>
+        <WizardProvider jobId={id}>
+          <Suspense fallback={<Bone className="h-24 w-full max-w-[720px]" />}>
+            <Outlet />
+          </Suspense>
+        </WizardProvider>
       )}
     </WizardFrame>
   );

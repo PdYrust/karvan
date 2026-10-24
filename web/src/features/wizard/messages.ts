@@ -19,6 +19,12 @@ const en = {
   continue: 'Continue',
   notChecked:
     "Karvan hasn't read the old panel for this migration yet. Start a new migration to read it.",
+  conflictTitle: 'This plan changed somewhere else',
+  conflictBody:
+    'Another tab changed this migration, or Karvan read the panels again, while you made your last change. It was not saved.',
+  conflictReplay: 'Apply my change again',
+  conflictKeep: 'Keep the saved plan',
+  saveFailed: "Your last change wasn't saved.",
 };
 
 export type WizardKey = keyof typeof en;
@@ -42,6 +48,12 @@ const fa: Messages<WizardKey>['fa'] = {
   continue: 'ادامه',
   notChecked:
     'کاروان هنوز پنل قدیمی این انتقال را نخوانده است. برای خواندن آن، انتقال جدیدی شروع کنید.',
+  conflictTitle: 'این برنامه جای دیگری تغییر کرد',
+  conflictBody:
+    'وقتی آخرین تغییر را میدادید، زبانه دیگری این انتقال را تغییر داد یا کاروان پنل ها را دوباره خواند. تغییر شما ذخیره نشد.',
+  conflictReplay: 'تغییر من دوباره اعمال شود',
+  conflictKeep: 'برنامه ذخیره شده بماند',
+  saveFailed: 'آخرین تغییر شما ذخیره نشد.',
 };
 
 export const wizardMessages: Messages<WizardKey> = { en, fa };

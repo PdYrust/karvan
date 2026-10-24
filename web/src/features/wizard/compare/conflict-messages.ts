@@ -1,0 +1,108 @@
+import type { Messages } from '../../../i18n/locale';
+
+/**
+ * What each conflict means and what each fix does, in the operator's words
+ * (api-migration.md section 4). Per-user types title a problem group; job
+ * types are sentences next to the part of the plan they are about.
+ * Protocol names are machine values in backticks (CodeText).
+ */
+const en = {
+  type_C02: 'Name taken on the destination',
+  type_C03: 'Name differs from a destination user only in capital letters',
+  type_C04: "Name the destination doesn't accept",
+  type_C05: 'Two moving users get the same name',
+  type_C06: 'Two moving users share a UUID or password',
+  type_C07: 'A destination user already has their UUID or password',
+  type_C10: 'None of their protocols is in the groups they join',
+  type_C11: 'Their `VLESS` flow is dropped on PasarGuard',
+  type_C12: '`Shadowsocks` password too short or method not supported',
+  type_C16: 'Moved by an earlier migration',
+  type_C16b: 'Moved before, but gone from the destination',
+  type_C18: "On hold settings the destination can't use",
+  type_C19: 'Their WireGuard IP addresses change',
+  type_C24: 'Bad UUID or empty password on the old panel',
+  type_C26: 'Next traffic reset is estimated',
+  type_C28: 'Already on the destination, exactly the same',
+  type_C31: "Outside the role's limits",
+  type_C32: "Use a setting the role doesn't allow",
+  type_unknown: 'Another problem ({type})',
+  job_C09: 'Choose at least one place for the users to go.',
+  job_C27: "The old panel's clock is off by `{skew}`. Times copied from it are off by as much.",
+  job_C29: 'Some fixes keep changing each other. Choose other fixes for the problems below.',
+  job_C30: "This admin name can't be used. Use up to 34 characters, with no spaces at the ends.",
+  job_C33: 'This role allows {max} users, and {users} move.',
+  job_C34: 'This role only allows users made from a template.',
+  job_C35: "This role isn't on the destination. Choose another one.",
+  job_C36: "This role doesn't allow some of the groups the users join.",
+  job_C37: 'An owner role skips every limit check.',
+  fix_suffix: 'Add a suffix',
+  fix_prefix: 'Add a prefix',
+  fix_rename: 'Rename',
+  fix_sanitize: 'Fix the name',
+  fix_skip: 'Leave out',
+  fix_new_credential: 'New UUID or password',
+  fix_keep: 'Keep as is',
+  fix_accept: 'Accept the change',
+  fix_change_method: 'Change the method',
+  fix_drop_protocol: 'Drop the protocol',
+  fix_move_again: 'Move again',
+  fix_normalize: 'Fix the settings',
+  fix_adopt: 'Link to the user there',
+  fix_fit: 'Fit into the limits',
+  fix_remove: 'Remove the setting',
+  fix_unknown: 'Fix {fix}',
+};
+
+export type ConflictKey = keyof typeof en;
+
+const fa: Messages<ConflictKey>['fa'] = {
+  type_C02: 'نام در پنل مقصد گرفته شده است',
+  type_C03: 'نام فقط در حروف بزرگ و کوچک با کاربری در مقصد فرق دارد',
+  type_C04: 'نامی که پنل مقصد نمیپذیرد',
+  type_C05: 'دو کاربر منتقل شونده یک نام میگیرند',
+  type_C06: 'دو کاربر منتقل شونده UUID یا رمز یکسان دارند',
+  type_C07: 'کاربری در پنل مقصد همین UUID یا رمز را دارد',
+  type_C10: 'هیچ کدام از پروتکل هایشان در گروه های مقصدشان نیست',
+  type_C11: 'فلوی `VLESS` آنها در پاسارگاد حذف میشود',
+  type_C12: 'رمز `Shadowsocks` کوتاه است یا روش آن پشتیبانی نمیشود',
+  type_C16: 'در انتقال قبلی منتقل شده اند',
+  type_C16b: 'قبلا منتقل شده اند ولی در مقصد نیستند',
+  type_C18: 'تنظیمات در انتظار شروع که مقصد نمیتواند استفاده کند',
+  type_C19: 'آدرس های IP وایرگارد آنها عوض میشود',
+  type_C24: 'UUID نادرست یا رمز خالی در پنل قدیمی',
+  type_C26: 'زمان ریست بعدی حجم تخمینی است',
+  type_C28: 'دقیقا همین کاربر در مقصد هست',
+  type_C31: 'خارج از محدودیت های نقش',
+  type_C32: 'تنظیمی دارند که نقش اجازه نمیدهد',
+  type_unknown: 'مشکل دیگر ({type})',
+  job_C09: 'دست کم یک مقصد برای کاربرها انتخاب کنید.',
+  job_C27:
+    'ساعت پنل قدیمی `{skew}` اختلاف دارد. زمان هایی که از آن کپی میشوند هم همین قدر اختلاف دارند.',
+  job_C29:
+    'بعضی راه حل ها مدام همدیگر را تغییر میدهند. برای مشکل های زیر راه حل دیگری انتخاب کنید.',
+  job_C30:
+    'از این نام ادمین نمیشود استفاده کرد. حداکثر ۳۴ نویسه بنویسید، بدون فاصله در ابتدا و انتها.',
+  job_C33: 'این نقش {max} کاربر را اجازه میدهد و {users} کاربر منتقل میشوند.',
+  job_C34: 'این نقش فقط کاربرهای ساخته شده از قالب را اجازه میدهد.',
+  job_C35: 'این نقش در پنل مقصد نیست. نقش دیگری انتخاب کنید.',
+  job_C36: 'این نقش بعضی از گروه هایی را که کاربرها به آنها میروند اجازه نمیدهد.',
+  job_C37: 'نقش مالک از همه محدودیت ها رد میشود.',
+  fix_suffix: 'افزودن پسوند',
+  fix_prefix: 'افزودن پیشوند',
+  fix_rename: 'تغییر نام',
+  fix_sanitize: 'اصلاح نام',
+  fix_skip: 'منتقل نشود',
+  fix_new_credential: 'UUID یا رمز جدید',
+  fix_keep: 'بدون تغییر',
+  fix_accept: 'تغییر پذیرفته شود',
+  fix_change_method: 'تغییر روش',
+  fix_drop_protocol: 'حذف پروتکل',
+  fix_move_again: 'دوباره منتقل شود',
+  fix_normalize: 'اصلاح تنظیمات',
+  fix_adopt: 'اتصال به کاربر موجود',
+  fix_fit: 'جا دادن در محدودیت ها',
+  fix_remove: 'حذف تنظیم',
+  fix_unknown: 'راه حل {fix}',
+};
+
+export const conflictMessages: Messages<ConflictKey> = { en, fa };
