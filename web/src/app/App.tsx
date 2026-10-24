@@ -1,4 +1,5 @@
 import { Toasty } from '@cloudflare/kumo/components/toast';
+import { CSPProvider } from '@cloudflare/kumo/primitives/csp-provider';
 import { DirectionProvider } from '@cloudflare/kumo/primitives/direction-provider';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { lazy } from 'react';
@@ -97,7 +98,13 @@ const basename = new URL(document.baseURI).pathname.replace(/\/$/, '');
 
 function Directed({ children }: { children: React.ReactNode }) {
   const { dir } = useLocale();
-  return <DirectionProvider direction={dir}>{children}</DirectionProvider>;
+  // The content security policy allows no inline styles, so Base UI's own
+  // <style> element (it hides a select's scrollbar) is off; app.css has the rule.
+  return (
+    <CSPProvider disableStyleElements>
+      <DirectionProvider direction={dir}>{children}</DirectionProvider>
+    </CSPProvider>
+  );
 }
 
 export function App() {

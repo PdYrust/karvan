@@ -28,6 +28,16 @@
     outline-offset: 2px;
   }
 
+  /* Base UI's own rule for a select's list, which it would inject as an
+     inline <style> the content security policy blocks (App.tsx). */
+  .base-ui-disable-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .base-ui-disable-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
