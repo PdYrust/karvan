@@ -63,7 +63,32 @@ func (p *Panel) Facts(ctx context.Context, adminNames []string) (engine.Dest, er
 		}
 		return err
 	})
+	d.Asked = slices.Clone(adminNames)
 	return d, err
+}
+
+// Admins looks up admin names a plan edit uses that the last check did
+// not, under the column's own collation as Facts does.
+func (p *Panel) Admins(ctx context.Context, names []string) (map[string]panel.ExistingAdmin, error) {
+	r, err := paneldb.OpenReader(ctx, p.Target)
+	if err != nil {
+		return nil, err
+	}
+	defer r.Close()
+	var found map[string]panel.ExistingAdmin
+	err = r.View(ctx, func(q paneldb.Querier) error {
+		var err error
+		switch p.Found.Kind {
+		case panel.Marzban:
+			found, err = marzbandb.FindAdmins(ctx, q, names)
+		case panel.PasarGuard:
+			found, err = pasarguarddb.FindAdmins(ctx, q, names)
+		default:
+			err = fmt.Errorf("unknown panel kind %q", p.Found.Kind)
+		}
+		return err
+	})
+	return found, err
 }
 
 func (p *Panel) marzbanFacts(ctx context.Context, q paneldb.Querier, srv paneldb.Server, admins []string) (engine.Dest, error) {

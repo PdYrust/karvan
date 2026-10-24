@@ -1,12 +1,14 @@
 package run
 
 import (
+	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
 	"errors"
 	"log/slog"
 	"maps"
+	"slices"
 	"time"
 
 	"github.com/PdYrust/karvan/internal/migration/dest"
@@ -202,9 +204,10 @@ func (s *Service) readDest(ctx context.Context, f readFrom, src *engine.Source) 
 	if err != nil {
 		return reading{}, err
 	}
-	names := []string{src.Admin.Username}
-	for _, n := range []string{f.planAdmin, movedAdmin} {
-		if n != "" {
+	name := cmp.Or(f.planAdmin, src.Admin.Username)
+	names := append([]string{name}, engine.AdminSuggestions(name)...)
+	for _, n := range []string{src.Admin.Username, movedAdmin} {
+		if n != "" && !slices.Contains(names, n) {
 			names = append(names, n)
 		}
 	}
@@ -319,6 +322,9 @@ func (s *Service) SetPlan(ctx context.Context, jobID string, version int, p plan
 		return nil, j.version, ErrNotChecked
 	}
 	p.Now = j.plan.Now
+	if err := s.askAdmins(ctx, j, p.Admin.Username); err != nil {
+		return nil, j.version, err
+	}
 	old := j.plan
 	j.plan = p
 	if err := s.rebuild(j); err != nil {
@@ -328,6 +334,39 @@ func (s *Service) SetPlan(ctx context.Context, jobID string, version int, p plan
 	j.version++
 	j.lastUse = s.now()
 	return j.result, j.version, s.save(ctx, j)
+}
+
+// askAdmins looks up an admin name a plan edit uses, and its suggestions,
+// when the last check did not, so a rename to a taken name or a merge
+// into another admin shows at once instead of at the next read. The
+// caller holds j.mu.
+func (s *Service) askAdmins(ctx context.Context, j *Job, name string) error {
+	var missing []string
+	for _, n := range append([]string{name}, engine.AdminSuggestions(name)...) {
+		if n != "" && !slices.Contains(j.facts.Asked, n) {
+			missing = append(missing, n)
+		}
+	}
+	if len(missing) == 0 {
+		return nil
+	}
+	d, err := dest.Open(ctx, j.envPath)
+	if err != nil {
+		return err
+	}
+	found, err := d.Admins(ctx, missing)
+	if err != nil {
+		return err
+	}
+	// A fresh map and list: a frozen view of the last build may share them.
+	admins := maps.Clone(j.facts.Admins)
+	if admins == nil {
+		admins = map[string]panel.ExistingAdmin{}
+	}
+	maps.Copy(admins, found)
+	j.facts.Admins = admins
+	j.facts.Asked = append(slices.Clone(j.facts.Asked), missing...)
+	return nil
 }
 
 // View returns the job's last build and plan version.

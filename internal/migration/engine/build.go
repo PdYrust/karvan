@@ -2,6 +2,7 @@ package engine
 
 import (
 	"slices"
+	"strconv"
 	"strings"
 	"time"
 
@@ -185,9 +186,44 @@ func admin(p plan.Plan, in Inputs) (AdminOutcome, []Conflict) {
 	case p.Admin.Mode == plan.AdminMerge:
 		return out, []Conflict{{Type: AdminTaken, Severity: Blocker, Detail: map[string]string{"username": name, "missing": "true"}}}
 	case taken:
-		return out, []Conflict{{Type: AdminTaken, Severity: Blocker, Detail: map[string]string{"username": existing.Username}}}
+		d := map[string]string{"username": existing.Username}
+		if s := freeAdminName(name, in.Dest); s != "" {
+			d["suggestion"] = s
+		}
+		return out, []Conflict{{Type: AdminTaken, Severity: Blocker, Detail: d}}
 	}
 	return out, nil
+}
+
+// maxAdminName is the longest admin name the destination takes.
+const maxAdminName = 34
+
+// AdminSuggestions are the names offered when name is taken: name_2 to
+// name_6, cut to fit. A check looks them up with the name itself.
+func AdminSuggestions(name string) []string {
+	out := make([]string, 0, 5)
+	for n := 2; n <= 6; n++ {
+		end := "_" + strconv.Itoa(n)
+		base := []rune(name)
+		for len(string(base))+len(end) > maxAdminName && len(base) > 0 {
+			base = base[:len(base)-1]
+		}
+		if b := strings.TrimSpace(string(base)); b != "" {
+			out = append(out, b+end)
+		}
+	}
+	return out
+}
+
+// freeAdminName is the first suggestion for name that was looked up and
+// is free, or "".
+func freeAdminName(name string, d Dest) string {
+	for _, s := range AdminSuggestions(name) {
+		if _, taken := d.Admins[s]; !taken && slices.Contains(d.Asked, s) {
+			return s
+		}
+	}
+	return ""
 }
 
 // clockSkewLimit is when a source clock ahead of ours makes copied times

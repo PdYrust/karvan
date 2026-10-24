@@ -24,10 +24,13 @@ type Source struct {
 
 // Dest is what the destination already holds.
 type Dest struct {
-	Kind    panel.Kind
-	Rules   panel.Rules
-	Index   *panel.Index
-	Admins  map[string]panel.ExistingAdmin // existing admins, by the names asked for
+	Kind   panel.Kind
+	Rules  panel.Rules
+	Index  *panel.Index
+	Admins map[string]panel.ExistingAdmin // existing admins, by the names asked for
+	// Asked are the admin names looked up, found or not; a name outside
+	// it may exist on the destination.
+	Asked   []string
 	Targets []panel.Target
 	// TargetProtocols lists the protocols each target serves.
 	TargetProtocols map[string][]string

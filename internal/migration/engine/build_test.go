@@ -3,9 +3,11 @@ package engine
 import (
 	"errors"
 	"math/rand/v2"
+	"slices"
 	"strings"
 	"testing"
 	"time"
+	"unicode/utf8"
 
 	"github.com/PdYrust/karvan/internal/migration/plan"
 	"github.com/PdYrust/karvan/internal/panel"
@@ -209,6 +211,39 @@ func TestAdmin(t *testing.T) {
 	p.Admin = plan.AdminPlan{Mode: plan.AdminMerge, Username: "shop"}
 	if r := build(t, p, inputs(panel.Marzban, d, mUser("a", 1))); r.Admin.Merge == nil || r.Admin.Merge.ID != 4 {
 		t.Fatal("merge")
+	}
+}
+
+// A taken admin name comes with the first suggestion the check looked up
+// and found free; one it did not look up may exist, so it is not offered.
+func TestAdminTakenSuggestsAFreeName(t *testing.T) {
+	d := dest(panel.Marzban)
+	d.Admins["shop"] = panel.ExistingAdmin{ID: 4, Username: "shop"}
+	d.Admins["shop_2"] = panel.ExistingAdmin{ID: 5, Username: "shop_2"}
+	d.Asked = []string{"shop", "shop_2", "shop_3"}
+	r := build(t, basePlan(), inputs(panel.Marzban, d, mUser("a", 1)))
+	if len(r.Conflicts) != 1 || r.Conflicts[0].Detail["suggestion"] != "shop_3" {
+		t.Fatalf("C01: %+v", r.Conflicts)
+	}
+	d.Asked = []string{"shop", "shop_2"}
+	r = build(t, basePlan(), inputs(panel.Marzban, d, mUser("a", 1)))
+	if _, ok := r.Conflicts[0].Detail["suggestion"]; ok {
+		t.Fatalf("a name never looked up was offered: %+v", r.Conflicts)
+	}
+}
+
+func TestAdminSuggestionsFitTheLimit(t *testing.T) {
+	if got := AdminSuggestions("shop"); !slices.Equal(got, []string{"shop_2", "shop_3", "shop_4", "shop_5", "shop_6"}) {
+		t.Fatalf("%q", got)
+	}
+	long := strings.Repeat("a", 33) + "é"
+	for _, s := range AdminSuggestions(long) {
+		if len(s) > maxAdminName || !utf8.ValidString(s) {
+			t.Fatalf("%q does not fit", s)
+		}
+	}
+	if got := AdminSuggestions(""); len(got) != 0 {
+		t.Fatalf("an empty name: %q", got)
 	}
 }
 
