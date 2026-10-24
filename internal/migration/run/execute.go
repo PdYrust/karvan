@@ -147,11 +147,9 @@ func (s *Service) adminPassword(j *Job, typed secret.Value) (secret.Value, error
 		j.passwordFrom = PasswordTyped
 		return typed, nil
 	}
-	// The reseller signed in to the old panel with this password, so the
-	// moved admin keeps it (owner, 2026-10-16). bcrypt reads 72 bytes.
-	if l := j.login; l.APIKey.IsZero() && !l.Password.IsZero() && len(l.Password.Reveal()) <= 72 && l.Username == j.snapshot.Admin.Username {
+	if j.ownPassword() {
 		j.passwordFrom = PasswordKept
-		return l.Password, nil
+		return j.login.Password, nil
 	}
 	j.passwordFrom = PasswordGenerated
 	p, err := pasarguard.GeneratePassword(name)

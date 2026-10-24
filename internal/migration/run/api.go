@@ -41,6 +41,52 @@ type Summary struct {
 	// UserTargets where its users go unless an operation says otherwise.
 	RoleID      int64    `json:"roleId,omitempty"`
 	UserTargets []string `json:"userTargets"`
+	// PanelID is the destination; Expiries and Protocols sum up the old
+	// panel's users; NewAdmin is the admin the plan makes on the
+	// destination (its name, and whether it merges into one there).
+	PanelID   int64               `json:"panelId"`
+	Expiries  Expiries            `json:"expiries"`
+	Protocols map[string]int      `json:"protocols"`
+	NewAdmin  engine.AdminSummary `json:"newAdmin"`
+	// CanKeepPassword is true when a run without a typed password keeps
+	// the reseller's own one; otherwise Karvan generates one.
+	CanKeepPassword bool `json:"canKeepPassword"`
+}
+
+// Expiries counts users by when they expire on the old panel.
+type Expiries struct {
+	Expired int `json:"expired"`
+	Week    int `json:"week"`  // within 7 days
+	Month   int `json:"month"` // within 30 days, after the first 7
+	Later   int `json:"later"`
+	Never   int `json:"never"`
+}
+
+func (e *Expiries) add(expire *time.Time, now time.Time) {
+	switch {
+	case expire == nil:
+		e.Never++
+	case !expire.After(now):
+		e.Expired++
+	case expire.Sub(now) <= 7*24*time.Hour:
+		e.Week++
+	case expire.Sub(now) <= 30*24*time.Hour:
+		e.Month++
+	default:
+		e.Later++
+	}
+}
+
+// protocols names the protocols a user has credentials for.
+func protocols(c panel.Credentials) []string {
+	var out []string
+	for p, ok := range map[string]bool{"vmess": c.VMess != nil, "vless": c.VLESS != nil, "trojan": c.Trojan != nil,
+		"shadowsocks": c.Shadowsocks != nil, "wireguard": c.WireGuard != nil, "hysteria": c.Hysteria != nil} {
+		if ok {
+			out = append(out, p)
+		}
+	}
+	return out
 }
 
 // TargetInfo is a destination group or inbound users can be put in.
@@ -110,7 +156,8 @@ func (s *Service) Summary(jobID string) (Summary, error) {
 		return Summary{}, ErrNotChecked
 	}
 	sum := Summary{State: j.state, PlanVersion: j.version, SourceKind: j.kind, Origin: j.origin, DestKind: j.facts.Kind,
-		Statuses: map[string]int{}, Blockers: j.result.Blockers, Stable: j.result.Stable}
+		Statuses: map[string]int{}, Blockers: j.result.Blockers, Stable: j.result.Stable, PanelID: j.PanelID,
+		Protocols: map[string]int{}, NewAdmin: j.result.Admin.Summary(), CanKeepPassword: j.ownPassword()}
 	if j.snapshot != nil {
 		sum.Admin = j.snapshot.Admin.Username
 	}
@@ -118,10 +165,15 @@ func (s *Service) Summary(jobID string) (Summary, error) {
 		sum.Targets = append(sum.Targets, targetInfo(j.facts, t))
 	}
 	sum.RoleID, sum.UserTargets = j.result.Admin.RoleID, j.result.Targets
+	now := s.now()
 	for _, it := range j.result.Items {
 		sum.Users++
 		sum.UsedTraffic += it.Source.UsedTraffic
 		sum.Statuses[string(it.Source.Status)]++
+		sum.Expiries.add(it.Source.Expire, now)
+		for _, p := range protocols(it.Source.Credentials) {
+			sum.Protocols[p]++
+		}
 		_, moved := j.moved[it.Key]
 		switch {
 		case moved:

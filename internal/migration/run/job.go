@@ -126,6 +126,15 @@ func (j *Job) rollbackOrUndo() string {
 	return RollbackUndo
 }
 
+// ownPassword reports whether the reseller signed in to the old panel with
+// their own username and password, so the moved admin can keep it (owner,
+// 2026-10-16). bcrypt reads 72 bytes. The caller holds mu.
+func (j *Job) ownPassword() bool {
+	l := j.login
+	return j.snapshot != nil && l.APIKey.IsZero() && !l.Password.IsZero() && len(l.Password.Reveal()) <= 72 &&
+		l.Username == j.snapshot.Admin.Username
+}
+
 // lockIdle locks j unless it runs, and never waits for a run, which holds
 // mu from start to end. A caller that loses the race to a starting run
 // would otherwise wait for the whole migration.
