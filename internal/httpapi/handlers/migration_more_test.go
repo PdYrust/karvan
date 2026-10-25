@@ -145,6 +145,42 @@ func TestFixedUsersStayInTheirGroup(t *testing.T) {
 	}
 }
 
+// The preview's renamed and configChanged filters hold the moving users
+// the plan's impact counts that way.
+func TestPreviewFiltersRenamedAndConfigChanged(t *testing.T) {
+	m := newMigrationEnv(t, 3)
+	id := m.create()
+	res := m.do(http.MethodGet, api+"/migrations/"+id+"/plan", nil)
+	var got struct {
+		Plan map[string]any `json:"plan"`
+	}
+	res.json(t, &got)
+	only := func(key string) []map[string]any {
+		return []map[string]any{{"field": "users", "op": "in", "list": []string{key}}}
+	}
+	got.Plan["targets"] = migrationtest.PasarGuardTargets
+	got.Plan["tree"] = []map[string]any{
+		{"id": "a", "name": "A", "conditions": only("user000"), "ops": []map[string]any{{"kind": "name.prefix", "params": map[string]string{"text": "x_"}}}},
+		{"id": "b", "name": "B", "conditions": only("user001"), "ops": []map[string]any{{"kind": "cred.new", "params": map[string]string{"protocols": "vless"}}}},
+		{"id": "c", "name": "C", "conditions": only("user002"), "ops": []map[string]any{{"kind": "name.prefix", "params": map[string]string{"text": "y_"}}, {"kind": "skip"}}},
+	}
+	if out := m.withHeader("If-Match", res.header.Get("ETag"))(http.MethodPut, api+"/migrations/"+id+"/plan", got.Plan); out.status != http.StatusOK {
+		t.Fatalf("put plan: %d %s", out.status, out.body)
+	}
+	for group, want := range map[string]string{"renamed": "x_user000", "configChanged": "user001", "skipped": "y_user002"} {
+		var page struct {
+			Total int `json:"total"`
+			Users []struct {
+				Username string `json:"username"`
+			} `json:"users"`
+		}
+		m.do(http.MethodGet, api+"/migrations/"+id+"/preview?group="+group, nil).json(t, &page)
+		if page.Total != 1 || page.Users[0].Username != want {
+			t.Errorf("group %s: %+v", group, page)
+		}
+	}
+}
+
 // GET plan says what the plan does once the job is checked, as PUT does,
 // so the page shows it before the first edit.
 func TestGetPlanSaysWhatThePlanDoes(t *testing.T) {

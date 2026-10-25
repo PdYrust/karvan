@@ -288,8 +288,10 @@ func (a *API) userPage(w http.ResponseWriter, r *http.Request, final bool) {
 	respond.JSON(w, http.StatusOK, page)
 }
 
-// itemFilter matches a group ("ready", "skipped", a conflict type such
-// as "C02", or "category:<id>") and a name search.
+// itemFilter matches a group ("ready", "skipped", "renamed",
+// "configChanged", a conflict type such as "C02", or "category:<id>") and
+// a name search. renamed and configChanged count moving users only, as
+// the plan's impact does.
 func itemFilter(group, search string) func(*engine.Item) bool {
 	return func(it *engine.Item) bool {
 		if search != "" && !strings.Contains(strings.ToLower(it.Source.Username), search) &&
@@ -303,6 +305,10 @@ func itemFilter(group, search string) func(*engine.Item) bool {
 			return it.Include && len(it.Conflicts) == 0
 		case group == "skipped":
 			return !it.Include
+		case group == "renamed":
+			return it.Include && it.User.Username != it.Source.Username
+		case group == "configChanged":
+			return it.Include && it.ChangesConfig
 		case strings.HasPrefix(group, "category:"):
 			return slices.Contains(it.Nodes, strings.TrimPrefix(group, "category:"))
 		}
