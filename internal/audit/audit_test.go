@@ -68,6 +68,31 @@ func TestListFilters(t *testing.T) {
 	}
 }
 
+func TestListPagesByID(t *testing.T) {
+	l := newLog(t)
+	ctx := context.Background()
+	now := time.Now()
+	for i := range 5 {
+		// The clock jumps back for the last two; the order stays the ids'.
+		at := now.Add(time.Duration(i) * time.Minute)
+		if i >= 3 {
+			at = now.Add(-time.Hour)
+		}
+		if err := l.Record(ctx, Event{At: at, Actor: "owner", Action: ActionLogin, Outcome: Success}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	first, err := l.List(ctx, Filter{Limit: 2})
+	if err != nil || len(first) != 2 || first[0].ID != 5 || first[1].ID != 4 {
+		t.Fatalf("first page = %+v, %v", first, err)
+	}
+	next, _ := l.List(ctx, Filter{Limit: 2, Before: first[1].ID})
+	last, _ := l.List(ctx, Filter{Limit: 2, Before: next[1].ID})
+	if len(next) != 2 || next[0].ID != 3 || next[1].ID != 2 || len(last) != 1 || last[0].ID != 1 {
+		t.Fatalf("next = %+v, last = %+v", next, last)
+	}
+}
+
 func TestRecordDefaultsTimeToNow(t *testing.T) {
 	l := newLog(t)
 	fixed := time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC)

@@ -97,17 +97,21 @@ type Filter struct {
 	// SkipNewest drops the newest matches, for example the sign-in that
 	// started the current session.
 	SkipNewest int
+	// Before keeps events with a smaller id, to read the page after an
+	// event (keyset paging). 0 starts at the newest.
+	Before int64
 }
 
-// List returns matching events, newest first.
+// List returns matching events, newest first. Ids grow with time, so the
+// order is the id's; it stays stable under paging even if the clock jumps.
 func (l *Log) List(ctx context.Context, f Filter) ([]Event, error) {
 	if f.Limit <= 0 || f.Limit > 500 {
 		f.Limit = 50
 	}
 	rows, err := l.db.QueryContext(ctx, `SELECT id, at, actor, ip, action, outcome, detail FROM audit_events
-		WHERE (? = '' OR actor = ?) AND (? = '' OR action = ?) AND (? = '' OR outcome = ?)
-		ORDER BY at DESC, id DESC LIMIT ? OFFSET ?`,
-		f.Actor, f.Actor, f.Action, f.Action, string(f.Outcome), string(f.Outcome), f.Limit, max(f.SkipNewest, 0))
+		WHERE (? = '' OR actor = ?) AND (? = '' OR action = ?) AND (? = '' OR outcome = ?) AND (? = 0 OR id < ?)
+		ORDER BY id DESC LIMIT ? OFFSET ?`,
+		f.Actor, f.Actor, f.Action, f.Action, string(f.Outcome), string(f.Outcome), f.Before, f.Before, f.Limit, max(f.SkipNewest, 0))
 	if err != nil {
 		return nil, fmt.Errorf("list audit events: %w", err)
 	}

@@ -78,9 +78,7 @@ func New(d Deps) (http.Handler, error) {
 	rt.HandleFunc("POST /api/v1/session", api.CreateSession)
 	rt.Handle("DELETE /api/v1/session", signedIn(api.DeleteSession))
 	rt.Handle("GET /api/v1/overview", signedIn(api.Overview))
-	rt.Handle("POST /api/v1/account/totp", signedIn(api.BeginTOTP))
-	rt.Handle("POST /api/v1/account/totp/confirm", signedIn(api.ConfirmTOTP))
-	rt.Handle("DELETE /api/v1/account/totp", signedIn(api.DisableTOTP))
+	accountRoutes(rt, api, signedIn)
 	if d.Runs != nil {
 		migrationRoutes(rt, api, signedIn)
 		rt.Handle("GET /api/v1/analytics/server", signedIn(api.ServerAnalytics))
@@ -96,6 +94,19 @@ func New(d Deps) (http.Handler, error) {
 	h = middleware.AccessLog(d.Logger, h)
 	h = middleware.ClientIP(d.TrustedProxies, h)
 	return middleware.BasePath(d.BasePath, h), nil
+}
+
+// accountRoutes are the operator's login, sessions and audit log.
+func accountRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.HandlerFunc) http.Handler) {
+	routes := map[string]http.HandlerFunc{
+		"POST /api/v1/account/totp":         api.BeginTOTP,
+		"POST /api/v1/account/totp/confirm": api.ConfirmTOTP,
+		"DELETE /api/v1/account/totp":       api.DisableTOTP,
+		"GET /api/v1/audit":                 api.AuditLog,
+	}
+	for pattern, h := range routes {
+		rt.Handle(pattern, signedIn(h))
+	}
 }
 
 func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.HandlerFunc) http.Handler) {
