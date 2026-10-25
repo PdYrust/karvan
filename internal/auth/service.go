@@ -177,20 +177,7 @@ func (s *Service) fail(ctx context.Context, req LoginRequest, account string, op
 	if actor == "" {
 		actor = "unknown"
 	}
-	lock, err := s.Limiter.Fail(ctx, req.IP, account)
-	if err != nil {
-		return err
-	}
-	if err := s.record(ctx, actor, req.IP, audit.ActionLogin, audit.Failure, map[string]string{"reason": reason}); err != nil {
-		return err
-	}
-	if lock > 0 {
-		if err := s.record(ctx, actor, req.IP, audit.ActionLockout, audit.Success, map[string]string{"seconds": fmt.Sprint(int(lock.Seconds()))}); err != nil {
-			return err
-		}
-		return &LockedError{RetryAfter: lock}
-	}
-	return cause
+	return s.failed(ctx, req.IP, account, actor, audit.ActionLogin, reason, cause)
 }
 
 // Logout ends the session for token.
