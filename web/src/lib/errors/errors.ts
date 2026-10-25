@@ -50,6 +50,9 @@ const en = {
   site_invalid: "A field of this site has a value Karvan can't use. Check the fields.",
   site_overlap: 'Another site already serves this domain and port.',
   plain_http_off: 'Plain HTTP is off for old links. Turn it on or use HTTPS.',
+  port_mixed:
+    'This port already has sites the other way. All sites on one port use HTTPS, or none do.',
+  too_large: 'The file is larger than 16 MB. Split it and upload the parts one by one.',
   source_unknown: "Karvan couldn't read the old panel. Try again in a bit.",
   source_unreachable:
     "Karvan can't reach the old panel. Check the address and that the panel is running.",
@@ -121,6 +124,10 @@ const fa: Messages<ErrorKey>['fa'] = {
   site_overlap: 'سایت دیگری همین دامنه و پورت را دارد.',
   plain_http_off:
     'HTTP ساده برای لینک های قدیمی خاموش است. آن را روشن کنید یا از HTTPS استفاده کنید.',
+  port_mixed:
+    'این پورت سایت هایی به روش دیگر دارد. یا همه سایت های یک پورت HTTPS هستند یا هیچ کدام.',
+  too_large:
+    'فایل بزرگتر از ۱۶ مگابایت است. آن را چند قسمت کنید و قسمت ها را یکی یکی بارگذاری کنید.',
   source_unknown: 'کاروان نتوانست پنل قدیمی را بخواند. چند لحظه دیگر دوباره امتحان کنید.',
   source_unreachable:
     'کاروان به پنل قدیمی دسترسی ندارد. آدرس را بررسی کنید و مطمئن شوید پنل روشن است.',
