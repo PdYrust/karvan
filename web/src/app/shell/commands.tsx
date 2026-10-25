@@ -35,6 +35,8 @@ import { builtPages } from './routes-built';
 export interface Command {
   id: string;
   title: string;
+  /** Quiet words after the title that tell like rows apart, such as a date. */
+  hint?: string;
   icon: ReactNode;
   /** Extra words that should also find this command, such as the other language's name. */
   keywords?: string;
@@ -65,12 +67,11 @@ export function useCommands(onShortcuts: () => void, open: boolean): CommandGrou
 
   const pages: Command[] = builtPages().map((item) => {
     const Icon = item.icon;
-    const to = item.to ?? '/';
     return {
-      id: `page:${to}`,
+      id: `page:${item.to}`,
       title: t(item.label),
       icon: <Icon className={icon} />,
-      run: () => void navigate(to),
+      run: () => void navigate(item.to),
     };
   });
 

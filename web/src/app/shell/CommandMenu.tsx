@@ -63,6 +63,7 @@ export function CommandMenu({
                         {c.icon}
                       </span>
                       <span>{c.title}</span>
+                      {c.hint ? <span className="text-sm text-kumo-subtle">{c.hint}</span> : null}
                     </span>
                   </CommandPalette.Item>
                 )}
