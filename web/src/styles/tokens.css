@@ -7,6 +7,9 @@
 @theme {
   /* Text and marks drawn on top of the brand color. */
   --color-on-brand: oklch(100% 0 0);
+  /* A QR code stays dark on light in both themes, so every camera reads it. */
+  --color-qr-ink: oklch(0% 0 0);
+  --color-qr-paper: oklch(100% 0 0);
 }
 
 /* Static: charts pick their colors by number at run time, which a class scan cannot see. */
