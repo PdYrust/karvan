@@ -21,3 +21,8 @@ export function templateNameFits(name: string): boolean {
   const bytes = new TextEncoder().encode(name.trim()).length;
   return bytes > 0 && bytes <= 64;
 }
+
+/** Deletes a saved template; 404 when it is already gone. */
+export function deleteTemplate(id: number): Promise<void> {
+  return api('DELETE', `templates/${String(id)}`);
+}
