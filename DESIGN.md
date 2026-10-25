@@ -71,7 +71,7 @@ The chart tokens sit in a `@theme static` block: charts pick a color by number a
 - State changes: 150 ms, ease-out. Drawers and dialogs: 220 ms. Nothing bounces.
 - Hover colors change at once, never with a transition (Kumo's rule: fading hovers feel slow).
 - Motion answers an action (open, expand, confirm) or shows real progress. No entrance animations on page load.
-- Live charts redraw in place when a sample arrives; they do not slide or tween. The live migration view moves dots only in step with real batches (section 8, Live progress).
+- Live charts redraw in place when a sample arrives; they do not slide or tween. The live migration view moves dots only in step with real batches, and while a backup restore runs, which has no batches (section 8, Live progress).
 - The one exception is the globe on the sign-in page: it turns slowly (about one turn a minute) and acts out what Karvan does (section 8, Sign-in). It draws at about 30 frames a second and stops when it is off screen.
 - `prefers-reduced-motion: reduce`: no transforms or autoplay; transitions shorten to 1 ms. The globe shows one still frame.
 
@@ -169,6 +169,22 @@ Laid out like the dashboard's account home, top to bottom:
 - **Plan edits:** a choice saves at once and shows at once, on top of the saved plan; a value that needs typing (a name, a prefix) saves with its own button. A save that meets a change from another tab reads the plan again and makes the change once more; a second conflict opens a dialog with "Keep the saved plan" and "Apply my change again".
 - **Users in the wizard:** a search field, then rows with the name (the new one after an arrow when the plan renames it, "Left out" when the user stays behind), 50 a page with `Pager`.
 - **Errors:** every API code gets its sentence from `lib/errors` (D4), in an `InlineAlert` above the actions. No server text reaches the screen.
+
+### Live progress
+- `/migrations/:id/live`, a lazy page that Start opens. It works in every state of the job, also after a restart: it reads the job's row by id and the job's stored event stream, and the report once the job ends.
+- **Header:** "Migrations" above the title; the title says what happens now (Moving users, Taking users back, Putting the backup back, then Migration result) with the job's state as a label at the end; the move (`MoveLabel`), the old panel's address and its admin in the line under it.
+- **Stage rail:** Check, Backup, Write, Verify, Reload in one row from 640 px (a list under it): a status icon, the name and its time (how long it took, or "since 16:39" while it runs). With Safe Mode off, Backup reads "Off"; stages a failure skipped read "Didn't run"; a stage a restart cut off reads "Stopped". Undo and Restore join the rail only when they run. The running stage has `aria-current="step"`.
+- **The scene** (the page's one bold thing), in a card under the rail: the counter in heading size ("820 of 1,170 moved", tabular), the server's estimate ("About 2 minutes left") and Stop at the end, a thin meter, then the drawing:
+  - Move: the two panels as tiles (logo, name, a number), a dashed arc between them that runs in the page direction. Each batch sends dots along the arc in `chart-1`, as many as the batch's share of the run and at least three, so a small batch still reads as one; skipped users branch off to a small sink under the arc with their count.
+  - Undo: the same tiles; dots travel back in the warning color, and the destination counts the users removed.
+  - Restore: the backup as a tile next to the panel; while the restore runs, dots flow from the backup into the panel, which reads Offline with its timer ("Offline for 0:14"), then Online again.
+  - The tiles and numbers are HTML; the SVG draws only the arc, the sink branch and the dots, in pixels so the dots stay round. At most 24 dots are in flight. One animation loop at about 30 frames a second runs only while dots fly, the card is on screen and the tab is visible.
+  - `prefers-reduced-motion` or the browser's Data Saver: no drawing, the meter and the tiles' numbers as a line of text.
+- **Log:** one plain sentence for each stage, log line and end, with its time to the second in the operator's zone, oldest first. Batches move the counter, not the log. It sits in the aside from 1024 px, under the scene below that.
+- **Order on phones:** the scene (or the result) comes first and the rail under it, so the counter is on the first screen; from 640 px the rail heads the page.
+- **Result:** when the job ends, a card with the state, one sentence on what it means, the counts that are not zero, the reload result (a manual reload or a failed one shows the command to run), the downloads (report as JSON and CSV, the new links as CSV, and the admin password CSV once, behind a warning that it can be downloaded only once), then Set up old links (prefilled from the job), Save as template, and Roll back for a failed or interrupted job that may have left users behind. A run sent back because the panels changed says nothing was written and links to Start.
+- Stop and Roll back ask first in a dialog that says what happens with Safe Mode on and off.
+
 ### Sign-in
 - Two halves on large screens. Start side on `bg-kumo-base`: wordmark at the top, then a centered form (title, username, password, one blue button) and the recovery hint with the `karvan reset -password` command.
 - End side on `bg-kumo-brand`: language and theme buttons at the top, the "Marzban ⇄ PasarGuard" line, and one short line, then a spinning dotted globe.
