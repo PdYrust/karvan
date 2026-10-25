@@ -139,7 +139,9 @@ func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(htt
 		"POST /api/v1/legacy-sites":                   api.SaveSite,
 		"PATCH /api/v1/legacy-sites/{id}":             api.SaveSite,
 		"DELETE /api/v1/legacy-sites/{id}":            api.DeleteSite,
+		"POST /api/v1/legacy-sites/cert":              api.InspectCert,
 		"POST /api/v1/legacy-sites/{id}/tokens":       api.UploadTokens,
+		"GET /api/v1/legacy-sites/{id}/tokens":        api.UploadStatus,
 	} {
 		rt.Handle(pattern, signedIn(h))
 	}

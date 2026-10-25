@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -33,7 +34,7 @@ type Site struct {
 	CertFile    string     `json:"certFile,omitempty"`
 	KeyFile     string     `json:"keyFile,omitempty"`
 	CertPEM     string     `json:"certPem,omitempty"`
-	KeyPEM      string     `json:"-"` // write only; stored sealed
+	KeyPEM      string     `json:"-"` // write only (the handler reads keyPem); stored sealed
 	HasKey      bool       `json:"hasKey"`
 	Lazy        bool       `json:"lazy"`
 	PlainHTTPOK bool       `json:"plainHttpOk"`
@@ -47,13 +48,28 @@ var (
 	pathRe  = regexp.MustCompile(`^[A-Za-z0-9_\-]{1,64}$`)
 	labelRe = regexp.MustCompile(`^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$`)
 	pinRe   = regexp.MustCompile(`^[0-9a-f]{64}$`)
-	// ErrInvalidSite means a site field is wrong; the message says which.
+	// ErrInvalidSite means a site field is wrong; an *InvalidError says which.
 	ErrInvalidSite = errors.New("invalid site")
 	siteKind       = []panel.Kind{panel.Marzban, panel.PasarGuard}
 )
 
-func invalid(f string, a ...any) error {
-	return fmt.Errorf("%w: %s", ErrInvalidSite, fmt.Sprintf(f, a...))
+// InvalidError names the first site field that is wrong, by its JSON key.
+type InvalidError struct{ Field string }
+
+func (e *InvalidError) Error() string { return fmt.Sprintf("%v: %s", ErrInvalidSite, e.Field) }
+
+// Is makes errors.Is(err, ErrInvalidSite) hold.
+func (e *InvalidError) Is(target error) bool { return target == ErrInvalidSite }
+
+func invalid(field string) error { return &InvalidError{Field: field} }
+
+// FieldOf is the field an invalid site error names, or "".
+func FieldOf(err error) string {
+	var e *InvalidError
+	if errors.As(err, &e) {
+		return e.Field
+	}
+	return ""
 }
 
 // normalize checks s and puts it in the stored form.
@@ -66,13 +82,13 @@ func (s *Site) normalize() error {
 	}
 	u, err := source.ParseBase(s.SourceURL)
 	if err != nil {
-		return invalid("%v", err)
+		return invalid("sourceUrl")
 	}
 	s.SourceURL = u.String()
 	// Once the old domain points at this server, a lookup would reach the
 	// bridge itself, so lazy checks need the address the migration used.
 	if _, err := netip.ParseAddr(u.Hostname()); err != nil && s.Lazy && s.SourceIP == "" {
-		return invalid("lazy checks need the old panel's address")
+		return invalid("sourceIp") // lazy checks need the old panel's address
 	}
 	return s.normalizeDomains()
 }
@@ -82,22 +98,39 @@ func (s *Site) checkFields() error {
 	case s.Name == "" || len(s.Name) > 64:
 		return invalid("name")
 	case !slices.Contains(siteKind, s.SourceKind):
-		return invalid("source kind %q", s.SourceKind)
+		return invalid("sourceKind")
 	case !pathRe.MatchString(s.OldPath):
-		return invalid("old path %q", s.OldPath)
+		return invalid("oldPath")
 	case s.Port < 1 || s.Port > 65535:
-		return invalid("port %d", s.Port)
+		return invalid("port")
 	case s.SourcePin != "" && !pinRe.MatchString(s.SourcePin):
-		return invalid("certificate pin")
-	case (s.CertFile == "") != (s.KeyFile == ""):
-		return invalid("a certificate file needs its key file")
-	case s.CertFile != "" && s.CertPEM != "":
-		return invalid("a certificate file or a pasted certificate, not both")
+		return invalid("sourcePin")
+	}
+	if err := s.checkCert(); err != nil {
+		return err
 	}
 	if s.SourceIP != "" {
 		if a, err := netip.ParseAddr(s.SourceIP); err != nil || !source.Allowed(a) {
-			return invalid("source address %q", s.SourceIP)
+			return invalid("sourceIp")
 		}
+	}
+	return nil
+}
+
+// checkCert checks how the site gets its certificate: files on this
+// server (absolute paths, both), a pasted certificate with its key, or none.
+func (s *Site) checkCert() error {
+	switch {
+	case s.CertFile != "" && s.CertPEM != "":
+		return invalid("certPem") // a certificate file or a pasted certificate, not both
+	case s.CertFile != "" && !filepath.IsAbs(s.CertFile):
+		return invalid("certFile")
+	case (s.CertFile == "") != (s.KeyFile == ""):
+		return invalid("keyFile")
+	case s.KeyFile != "" && !filepath.IsAbs(s.KeyFile):
+		return invalid("keyFile")
+	case s.KeyPEM != "" && s.CertPEM == "":
+		return invalid("keyPem")
 	}
 	return nil
 }
@@ -107,7 +140,7 @@ func (s *Site) normalizeDomains() error {
 	for i, d := range s.Domains {
 		d = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(d), "."))
 		if !validPattern(d) {
-			return invalid("domain %q", d)
+			return invalid("domains")
 		}
 		s.Domains[i] = d
 	}

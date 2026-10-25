@@ -40,26 +40,50 @@ type UploadResult struct {
 // belong to a moved user. The upload itself is not kept.
 func (b *Bridge) Upload(ctx context.Context, siteID int64, r io.Reader) (UploadResult, error) {
 	var res UploadResult
+	u, err := b.prepareUpload(ctx, siteID, r)
+	if err != nil {
+		return res, err
+	}
+	res.Found, res.TooLarge = len(u.tokens), u.tooLarge
+	b.checkTokens(ctx, u, func(o uploadOutcome) { count(&res, o) })
+	return res, ctx.Err()
+}
+
+// upload is a token list ready to check.
+type upload struct {
+	site     Site
+	dest     Destination
+	tokens   []string
+	tooLarge bool
+}
+
+func (b *Bridge) prepareUpload(ctx context.Context, siteID int64, r io.Reader) (upload, error) {
 	s, ok := b.site(siteID)
 	if !ok {
-		return res, ErrNotFound
+		return upload{}, ErrNotFound
 	}
 	if plainHTTPRefused(s) {
-		return res, ErrPlainHTTP
+		return upload{}, ErrPlainHTTP
 	}
 	d, err := b.dest(ctx, s.PanelID)
 	if err != nil {
-		return res, err
+		return upload{}, err
 	}
 	raw, err := io.ReadAll(io.LimitReader(r, maxUpload+1))
 	if err != nil {
-		return res, err
+		return upload{}, err
 	}
+	u := upload{site: s, dest: d}
 	if len(raw) > maxUpload {
-		raw, res.TooLarge = raw[:maxUpload], true
+		raw, u.tooLarge = raw[:maxUpload], true
 	}
-	tokens := extractTokens(string(raw), s.OldPath)
-	res.Found = len(tokens)
+	u.tokens = extractTokens(string(raw), s.OldPath)
+	return u, nil
+}
+
+// checkTokens checks u's tokens uploadWorkers at a time and reports each
+// outcome to done, which is never called by two workers at once.
+func (b *Bridge) checkTokens(ctx context.Context, u upload, done func(uploadOutcome)) {
 	jobs := make(chan string)
 	var mu sync.Mutex
 	var wg sync.WaitGroup
@@ -68,14 +92,14 @@ func (b *Bridge) Upload(ctx context.Context, siteID int64, r io.Reader) (UploadR
 		go func() {
 			defer wg.Done()
 			for t := range jobs {
-				out := b.uploadOne(ctx, request{site: s, dest: d, token: t, mac: mac(b.macKey, t)})
+				out := b.uploadOne(ctx, request{site: u.site, dest: u.dest, token: t, mac: mac(b.macKey, t)})
 				mu.Lock()
-				count(&res, out)
+				done(out)
 				mu.Unlock()
 			}
 		}()
 	}
-	for _, t := range tokens {
+	for _, t := range u.tokens {
 		if ctx.Err() != nil {
 			break
 		}
@@ -83,7 +107,6 @@ func (b *Bridge) Upload(ctx context.Context, siteID int64, r io.Reader) (UploadR
 	}
 	close(jobs)
 	wg.Wait()
-	return res, ctx.Err()
 }
 
 type uploadOutcome int

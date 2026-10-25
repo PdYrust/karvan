@@ -133,9 +133,12 @@ func uploadOldToken(t *testing.T, m *migrationEnv) string {
 	var s struct{ ID int64 }
 	created.json(t, &s)
 	t.Cleanup(func() { _ = m.bridge.DeleteSite(t.Context(), s.ID) })
-	res := uploadText(t, m, fmt.Sprintf("%s/legacy-sites/%d/tokens", api, s.ID), "https://old.example.com/sub/"+tok)
-	if !strings.Contains(res, `"stored":1`) {
+	path := fmt.Sprintf("%s/legacy-sites/%d/tokens", api, s.ID)
+	if res := uploadText(t, m, path, "https://old.example.com/sub/"+tok); !strings.Contains(res, `"found":1`) {
 		t.Fatalf("upload: %s", res)
+	}
+	if res := waitUpload(t, m, path); !strings.Contains(string(res.body), `"stored":1`) {
+		t.Fatalf("checked: %s", res.body)
 	}
 	return tok
 }

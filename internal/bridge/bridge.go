@@ -51,6 +51,12 @@ type Bridge struct {
 	servers  map[int]*listener   // by port
 	errs     map[int]string      // ports that could not listen
 	wg       sync.WaitGroup
+	// bg is cancelled when Run ends, which stops token lists in the background.
+	bg     context.Context
+	stopBg context.CancelFunc
+	upMu   sync.Mutex
+	ups    map[int64]*UploadProgress // by site id
+	upWG   sync.WaitGroup            // token lists being checked
 }
 
 type openDest struct {
@@ -75,9 +81,10 @@ func New(d Deps) *Bridge {
 	if d.OpenOld == nil {
 		d.OpenOld = openOldPanel
 	}
+	bg, stop := context.WithCancel(context.Background())
 	return &Bridge{Deps: d, st: &store{db: d.DB, key: d.Key, now: d.Now}, macKey: d.Key.Derive("bridge/token-mac"),
 		lim: newLimits(d.Now), neg: newNegative(d.Now), dests: map[int64]*openDest{}, olds: map[int64]OldPanel{},
-		servers: map[int]*listener{}, errs: map[int]string{}}
+		servers: map[int]*listener{}, errs: map[int]string{}, bg: bg, stopBg: stop, ups: map[int64]*UploadProgress{}}
 }
 
 // Sites lists every site.
@@ -100,6 +107,7 @@ func (b *Bridge) DeleteSite(ctx context.Context, id int64) error {
 	if err := b.st.Delete(ctx, id); err != nil {
 		return err
 	}
+	b.forgetUpload(id)
 	return b.Reload(ctx)
 }
 

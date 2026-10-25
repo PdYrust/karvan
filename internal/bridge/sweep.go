@@ -107,5 +107,8 @@ func (b *Bridge) sweepOne(ctx context.Context, s Site, d Destination, closed map
 	return n, nil
 }
 
-// Wait waits for background checks to end.
-func (b *Bridge) Wait() { b.wg.Wait() }
+// Wait waits for background checks to end, token lists included.
+func (b *Bridge) Wait() {
+	b.wg.Wait()
+	b.upWG.Wait()
+}

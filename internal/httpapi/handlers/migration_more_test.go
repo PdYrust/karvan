@@ -238,13 +238,17 @@ func TestSiteChangesAndTokenUpload(t *testing.T) {
 	site["plainHttpOk"] = true
 	m.do(http.MethodPatch, path, site)
 	up := upload(http.MethodPost, path+"/tokens", nil)
-	if up.status != http.StatusOK || !strings.Contains(string(up.body), `"found":0`) {
+	if up.status != http.StatusAccepted || !strings.Contains(string(up.body), `"found":0`) {
 		t.Fatalf("empty upload: %d %s", up.status, up.body)
+	}
+	if st := waitUpload(t, m, path+"/tokens"); !strings.Contains(string(st.body), `"state":"done"`) {
+		t.Fatalf("upload state: %d %s", st.status, st.body)
 	}
 	if res := m.do(http.MethodDelete, path, nil); res.status != http.StatusNoContent {
 		t.Fatalf("delete: %d", res.status)
 	}
-	for _, c := range []struct{ method, path string }{{http.MethodDelete, path}, {http.MethodPatch, path}, {http.MethodPost, path + "/tokens"}} {
+	for _, c := range []struct{ method, path string }{{http.MethodDelete, path}, {http.MethodPatch, path}, {http.MethodPost, path + "/tokens"},
+		{http.MethodGet, path + "/tokens"}} {
 		if res := m.do(c.method, c.path, site); res.status != http.StatusNotFound {
 			t.Errorf("%s %s after delete: %d", c.method, c.path, res.status)
 		}

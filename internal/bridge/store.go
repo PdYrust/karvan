@@ -2,6 +2,7 @@ package bridge
 
 import (
 	"context"
+	"crypto/tls"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -18,6 +19,13 @@ var ErrNotFound = errors.New("no such site")
 
 // ErrOverlap means another site already answers the same requests.
 var ErrOverlap = errors.New("another site answers the same port, domain and path")
+
+// ErrNameTaken means another site has this name.
+var ErrNameTaken = errors.New("another site has this name")
+
+// ErrPortMixed means the port already serves sites the other way: one
+// port is either HTTPS for all its sites or plain HTTP for all of them.
+var ErrPortMixed = errors.New("the port has sites with and without a certificate")
 
 // store keeps sites, verified tokens and closed users in Karvan's DB.
 type store struct {
@@ -82,7 +90,11 @@ func (st *store) Site(ctx context.Context, id int64) (Site, error) {
 // key reads a site's private key, for an uploaded certificate.
 func (st *store) siteKey(ctx context.Context, id int64) ([]byte, error) {
 	var sealed []byte
-	if err := st.db.QueryRowContext(ctx, "SELECT key_sealed FROM legacy_sites WHERE id = ?", id).Scan(&sealed); err != nil {
+	err := st.db.QueryRowContext(ctx, "SELECT key_sealed FROM legacy_sites WHERE id = ?", id).Scan(&sealed)
+	if errors.Is(err, sql.ErrNoRows) {
+		return nil, ErrNotFound
+	}
+	if err != nil {
 		return nil, err
 	}
 	if sealed == nil {
@@ -97,14 +109,8 @@ func (st *store) Save(ctx context.Context, s Site) (Site, error) {
 	if err := s.normalize(); err != nil {
 		return s, err
 	}
-	all, err := st.Sites(ctx)
-	if err != nil {
+	if err := st.checkSave(ctx, s); err != nil {
 		return s, err
-	}
-	for _, o := range all {
-		if o.ID != s.ID && s.overlaps(o) {
-			return s, fmt.Errorf("%w: %s", ErrOverlap, o.Name)
-		}
 	}
 	domains, _ := json.Marshal(s.Domains)
 	now := st.now().Unix()
@@ -135,6 +141,59 @@ func (st *store) Save(ctx context.Context, s Site) (Site, error) {
 		return s, err
 	}
 	return st.Site(ctx, s.ID)
+}
+
+// checkSave checks s against the other sites, its panel and its pasted key.
+func (st *store) checkSave(ctx context.Context, s Site) error {
+	var n int
+	if err := st.db.QueryRowContext(ctx, "SELECT count(*) FROM panels WHERE id = ?", s.PanelID).Scan(&n); err != nil {
+		return fmt.Errorf("read panel: %w", err)
+	}
+	if n == 0 {
+		return invalid("panelId")
+	}
+	all, err := st.Sites(ctx)
+	if err != nil {
+		return err
+	}
+	for _, o := range all {
+		switch {
+		case o.ID == s.ID:
+		case o.Name == s.Name:
+			return ErrNameTaken
+		case o.Port == s.Port && o.TLS() != s.TLS():
+			return fmt.Errorf("%w: %s", ErrPortMixed, o.Name)
+		case s.overlaps(o):
+			return fmt.Errorf("%w: %s", ErrOverlap, o.Name)
+		}
+	}
+	return st.checkPastedKey(ctx, s)
+}
+
+// checkPastedKey makes sure a pasted certificate parses and has its key:
+// the one sent, or the one stored for the site.
+func (st *store) checkPastedKey(ctx context.Context, s Site) error {
+	if s.CertPEM == "" {
+		return nil
+	}
+	if firstCert([]byte(s.CertPEM)) == nil {
+		return invalid("certPem")
+	}
+	key := []byte(s.KeyPEM)
+	if len(key) == 0 && s.ID != 0 {
+		stored, err := st.siteKey(ctx, s.ID)
+		if err != nil && !errors.Is(err, ErrNotFound) {
+			return err
+		}
+		key = stored
+	}
+	if len(key) == 0 {
+		return invalid("keyPem")
+	}
+	if _, err := tls.X509KeyPair([]byte(s.CertPEM), key); err != nil {
+		return invalid("keyPem")
+	}
+	return nil
 }
 
 func update(ctx context.Context, tx *sql.Tx, id int64, args []any) error {

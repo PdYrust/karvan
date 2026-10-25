@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"io"
 	"net/http"
 	"strconv"
 
@@ -21,32 +22,50 @@ func writeSiteError(w http.ResponseWriter, r *http.Request, err error) {
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "plain_http_off"})
 	case errors.Is(err, bridge.ErrOverlap):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "site_overlap"})
+	case errors.Is(err, bridge.ErrNameTaken):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeNameTaken})
+	case errors.Is(err, bridge.ErrPortMixed):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "port_mixed"})
+	case errors.Is(err, bridge.ErrUploadBusy):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeBusy})
+	case errors.Is(err, bridge.ErrNoCert):
+		respond.BadRequest(w)
 	case errors.Is(err, bridge.ErrInvalidSite):
-		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: "site_invalid", Extra: map[string]any{"problem": err.Error()}})
+		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: "site_invalid",
+			Extra: map[string]any{"field": bridge.FieldOf(err)}})
 	default:
 		respond.Internal(w, r, err)
 	}
 }
 
-// Sites lists the legacy sites, and ports that could not listen.
+// Sites lists the legacy sites with their certificate facts and numbers,
+// and ports that could not listen.
 func (a *API) Sites(w http.ResponseWriter, r *http.Request) {
-	ss, err := a.Bridge.Sites(r.Context())
+	vs, err := a.Bridge.Views(r.Context())
 	if err != nil {
 		respond.Internal(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, map[string]any{"sites": orEmpty(ss), "portErrors": a.Bridge.Status()})
+	respond.JSON(w, http.StatusOK, map[string]any{"sites": vs, "portErrors": a.Bridge.Status()})
+}
+
+// siteBody is a site as sent: the private key of a pasted certificate
+// comes in, but never goes out.
+type siteBody struct {
+	bridge.Site
+	KeyPEM string `json:"keyPem"`
 }
 
 // SaveSite adds (POST) or changes (PATCH /{id}) a legacy site. A change
 // sends the whole site; an empty private key keeps the stored one.
 func (a *API) SaveSite(w http.ResponseWriter, r *http.Request) {
-	var s bridge.Site
-	if err := respond.DecodeLimit(w, r, &s, 256<<10); err != nil {
+	var b siteBody
+	if err := respond.DecodeLimit(w, r, &b, 256<<10); err != nil {
 		respond.BadRequest(w)
 		return
 	}
-	s.ID = 0
+	s := b.Site
+	s.ID, s.KeyPEM = 0, b.KeyPEM
 	status := http.StatusCreated
 	if v := r.PathValue("id"); v != "" {
 		id, err := strconv.ParseInt(v, 10, 64)
@@ -62,7 +81,23 @@ func (a *API) SaveSite(w http.ResponseWriter, r *http.Request) {
 		writeSiteError(w, r, err)
 		return
 	}
-	respond.JSON(w, status, saved)
+	respond.JSON(w, status, a.Bridge.View(r.Context(), saved))
+}
+
+// InspectCert says what a certificate covers and what is wrong with it,
+// before the site is saved.
+func (a *API) InspectCert(w http.ResponseWriter, r *http.Request) {
+	var in bridge.CertInput
+	if err := respond.DecodeLimit(w, r, &in, 256<<10); err != nil {
+		respond.BadRequest(w)
+		return
+	}
+	facts, err := a.Bridge.InspectCert(r.Context(), in)
+	if err != nil {
+		writeSiteError(w, r, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, facts)
 }
 
 // DeleteSite removes a legacy site and its verified tokens.
@@ -81,22 +116,48 @@ func (a *API) DeleteSite(w http.ResponseWriter, r *http.Request) {
 	respond.NoContent(w)
 }
 
-// UploadTokens takes a list of old links (text or CSV) and stores the
-// ones that check out, so their users never wait for a lazy check.
+// UploadTokens takes a list of old links (text or CSV) and checks it in
+// the background; the ones that check out are stored, so their users
+// never wait for a lazy check. UploadStatus follows the checks.
 func (a *API) UploadTokens(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
 	if err != nil {
 		respond.BadRequest(w)
 		return
 	}
-	res, err := a.Bridge.Upload(r.Context(), id, http.MaxBytesReader(w, r.Body, maxTokenUpload))
+	list, err := io.ReadAll(http.MaxBytesReader(w, r.Body, maxTokenUpload))
+	var tooLarge *http.MaxBytesError
+	switch {
+	case errors.As(err, &tooLarge):
+		respond.Error(w, respond.APIError{Status: http.StatusRequestEntityTooLarge, Code: "too_large"})
+		return
+	case err != nil:
+		respond.BadRequest(w)
+		return
+	}
+	p, err := a.Bridge.StartUpload(id, list)
 	a.record(r, audit.ActionSiteTokens, outcomeOf(err), map[string]string{"site": r.PathValue("id"),
-		"stored": strconv.Itoa(res.Stored), "found": strconv.Itoa(res.Found)})
+		"found": strconv.Itoa(p.Found)})
 	if err != nil {
 		writeSiteError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, res)
+	respond.JSON(w, http.StatusAccepted, p)
+}
+
+// UploadStatus is the progress of a site's latest token list.
+func (a *API) UploadStatus(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		respond.BadRequest(w)
+		return
+	}
+	p, err := a.Bridge.UploadStatus(id)
+	if err != nil {
+		writeSiteError(w, r, err)
+		return
+	}
+	respond.JSON(w, http.StatusOK, p)
 }
 
 func outcomeOf(err error) audit.Outcome {
