@@ -58,11 +58,14 @@ type Expiries struct {
 	Week    int `json:"week"`  // within 7 days
 	Month   int `json:"month"` // within 30 days, after the first 7
 	Later   int `json:"later"`
+	OnHold  int `json:"onHold"` // on hold without an end: the time starts at the first connection
 	Never   int `json:"never"`
 }
 
-func (e *Expiries) add(expire *time.Time, now time.Time) {
+func (e *Expiries) add(expire *time.Time, status panel.Status, now time.Time) {
 	switch {
+	case expire == nil && status == panel.StatusOnHold:
+		e.OnHold++
 	case expire == nil:
 		e.Never++
 	case !expire.After(now):
@@ -169,7 +172,7 @@ func (s *Service) Summary(jobID string) (Summary, error) {
 		sum.Users++
 		sum.UsedTraffic += it.Source.UsedTraffic
 		sum.Statuses[string(it.Source.Status)]++
-		sum.Expiries.add(it.Source.Expire, now)
+		sum.Expiries.add(it.Source.Expire, it.Source.Status, now)
 		for _, p := range protocols(it.Source.Credentials) {
 			sum.Protocols[p]++
 		}

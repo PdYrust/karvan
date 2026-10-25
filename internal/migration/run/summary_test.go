@@ -10,11 +10,12 @@ import (
 	"github.com/PdYrust/karvan/internal/secret"
 )
 
-// The summary counts the old panel's users by expiry and protocol, names
-// the destination and the admin the plan makes, and says whether the
-// reseller's own password stays.
+// The summary counts the old panel's users by expiry (an on hold user's
+// time starts at its first connection, so it is not "no expiry") and
+// protocol, names the destination and the admin the plan makes, and says
+// whether the reseller's own password stays.
 func TestSummarySumsUpTheOldPanel(t *testing.T) {
-	h := newHarness(t, panel.Marzban, panel.PasarGuard, pasarGuardDB(t), 4)
+	h := newHarness(t, panel.Marzban, panel.PasarGuard, pasarGuardDB(t), 5)
 	now := time.Now()
 	h.src.Mutate(func(users *[]map[string]any) {
 		u := *users
@@ -23,16 +24,17 @@ func TestSummarySumsUpTheOldPanel(t *testing.T) {
 		u[2]["expire"] = now.Add(20 * 24 * time.Hour).Unix()
 		u[3]["expire"] = now.Add(-time.Hour).Unix()
 		delete(u[3]["proxies"].(map[string]any), "trojan")
+		u[4]["expire"], u[4]["status"], u[4]["on_hold_expire_duration"] = nil, "on_hold", 7*24*3600
 	})
 	j := h.job(nil)
 	sum, err := h.svc.Summary(j.ID)
 	if err != nil {
 		t.Fatal(err)
 	}
-	if want := (Expiries{Expired: 1, Week: 1, Month: 1, Never: 1}); sum.Expiries != want {
+	if want := (Expiries{Expired: 1, Week: 1, Month: 1, OnHold: 1, Never: 1}); sum.Expiries != want {
 		t.Errorf("expiries %+v", sum.Expiries)
 	}
-	if p := sum.Protocols; p["vless"] != 4 || p["vmess"] != 4 || p["trojan"] != 3 || p["shadowsocks"] != 4 || len(p) != 4 {
+	if p := sum.Protocols; p["vless"] != 5 || p["vmess"] != 5 || p["trojan"] != 4 || p["shadowsocks"] != 5 || len(p) != 4 {
 		t.Errorf("protocols %v", p)
 	}
 	if sum.PanelID != h.panel || !sum.CanKeepPassword || sum.NewAdmin.Username != "reseller" || sum.NewAdmin.Merged {
