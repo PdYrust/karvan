@@ -58,36 +58,57 @@ func RestartCommand(k panel.Kind) string {
 	return "marzban restart"
 }
 
+// complete is true when the panel picked up every user Karvan wrote: never
+// for the manual method, which leaves the reload to the operator.
+func (r ReloadResult) complete() bool {
+	return r.Method != ReloadManual && r.Error == "" && len(r.Failed) == 0
+}
+
 // reload runs the chosen method on what the job wrote. Its result goes to
-// the report; a failure never undoes data.
+// the report; a failure never undoes data. Both stage events name the
+// method and the end says whether the reload is complete, so the live log
+// never says the panel reloaded when the operator must restart it or when
+// some users missed the reload.
 func (s *Service) reload(ctx context.Context, j *Job, rep *Report, method string) {
-	_ = s.stage(j, rep, StageReload, func() error {
-		rows, err := s.ledger.Job(ctx, j.ID, "done")
+	start := s.now()
+	s.emit(j, StageReload, EventStage, map[string]any{"state": "start", "method": method})
+	end := map[string]any{"state": "done", "method": method}
+	if err := s.reloadUsers(ctx, j, rep, method); err != nil {
+		end["state"] = "failed"
+	} else {
+		end["complete"] = rep.Reload.complete()
+	}
+	rep.stage(StageReload, start, end["state"] == "done", s.now())
+	s.emit(j, StageReload, EventStage, end)
+}
+
+// reloadUsers runs the method on the users the ledger says this job wrote.
+func (s *Service) reloadUsers(ctx context.Context, j *Job, rep *Report, method string) error {
+	rows, err := s.ledger.Job(ctx, j.ID, "done")
+	if err != nil {
+		return err
+	}
+	wg := map[string]bool{}
+	for _, it := range j.result.Items {
+		wg[it.Key] = it.User.Credentials.WireGuard != nil
+	}
+	in := ReloadInput{Kind: j.facts.Kind}
+	for _, e := range rows {
+		if e.Kind == "user" {
+			in.Users = append(in.Users, ReloadTarget{ID: e.Row.ID, Username: e.Username, WireGuard: wg[e.SourceKey]})
+		}
+	}
+	if method != ReloadManual {
+		api, err := s.panelAPI(ctx, j.envPath)
 		if err != nil {
-			return err
+			rep.Reload = ReloadResult{Method: method, Error: err.Error(), Command: RestartCommand(in.Kind)}
+			return nil
 		}
-		wg := map[string]bool{}
-		for _, it := range j.result.Items {
-			wg[it.Key] = it.User.Credentials.WireGuard != nil
-		}
-		in := ReloadInput{Kind: j.facts.Kind}
-		for _, e := range rows {
-			if e.Kind == "user" {
-				in.Users = append(in.Users, ReloadTarget{ID: e.Row.ID, Username: e.Username, WireGuard: wg[e.SourceKey]})
-			}
-		}
-		if method != ReloadManual {
-			api, err := s.panelAPI(ctx, j.envPath)
-			if err != nil {
-				rep.Reload = ReloadResult{Method: method, Error: err.Error(), Command: RestartCommand(in.Kind)}
-				return nil
-			}
-			in.API = api
-		}
-		rep.Reload = s.Reloaders[method].Reload(ctx, in)
-		rep.NotUndoable = append(rep.NotUndoable, UndoAfterReload)
-		return nil
-	})
+		in.API = api
+	}
+	rep.Reload = s.Reloaders[method].Reload(ctx, in)
+	rep.NotUndoable = append(rep.NotUndoable, UndoAfterReload)
+	return nil
 }
 
 // ReloadOption is one reload method as the final step shows it (owner

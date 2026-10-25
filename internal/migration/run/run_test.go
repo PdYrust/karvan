@@ -357,20 +357,8 @@ func TestReloadOptions(t *testing.T) {
 		opts[1].Reason != "no_full_admin" || opts[2].Reason != "not_built_in" {
 		t.Fatalf("options: %+v", opts)
 	}
-	ctx := context.Background()
-	w, err := paneldb.OpenWriter(ctx, tg)
-	if err != nil {
-		t.Fatal(err)
-	}
-	err = w.Batch(ctx, func(x paneldb.Execer) error {
-		_, err := pasarguarddb.Writer{Dialect: tg.Dialect}.InsertAdmin(ctx, x, panel.Admin{Username: "root"}, "$2b$12$x", 1, time.Now())
-		return err
-	})
-	_ = w.Close()
-	if err != nil {
-		t.Fatal(err)
-	}
-	if opts, _ = h.svc.ReloadOptions(ctx, j.ID); !opts[1].Available {
+	addFullAdmin(t, tg)
+	if opts, _ = h.svc.ReloadOptions(context.Background(), j.ID); !opts[1].Available {
 		t.Fatalf("touch with a full admin: %+v", opts[1])
 	}
 }
