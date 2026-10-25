@@ -39,7 +39,7 @@ export const nav: NavGroup[] = [
       { label: 'navMigrations', icon: ArrowsLeftRightIcon, to: '/migrations', key: 'KeyM' },
       { label: 'navReports', icon: FileTextIcon, to: '/reports', key: 'KeyR' },
       { label: 'navTemplates', icon: StackIcon, to: '/templates', key: 'KeyT' },
-      { label: 'navLinks', icon: LinkSimpleIcon, key: 'KeyL' },
+      { label: 'navLinks', icon: LinkSimpleIcon, to: '/links', key: 'KeyL' },
     ],
   },
   {

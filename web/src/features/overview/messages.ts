@@ -35,6 +35,10 @@ const en = {
   linksSites: { one: 'site', other: 'sites' },
   linksNone: 'No sites yet. A site keeps the old subscription links of moved users working.',
   linksPorts: { one: "{count} port couldn't open", other: "{count} ports couldn't open" },
+  linksProven: '{verified} of {moved} users proven',
+  linksPending: { one: '{count} pending', other: '{count} pending' },
+  linksOpen: 'All sites',
+  newSite: 'Add a site',
   cardFailed: "Couldn't load this.",
 
   analyticsTitle: 'Analytics',
@@ -81,6 +85,10 @@ const fa: Messages<OverviewKey>['fa'] = {
   linksSites: { one: 'سایت', other: 'سایت' },
   linksNone: 'هنوز سایتی نیست. با یک سایت، لینک های اشتراک قدیمی کاربرهای منتقل شده کار میکنند.',
   linksPorts: { one: '{count} پورت باز نشد', other: '{count} پورت باز نشد' },
+  linksProven: '{verified} از {moved} کاربر تایید شده',
+  linksPending: { one: '{count} در انتظار', other: '{count} در انتظار' },
+  linksOpen: 'همه سایت ها',
+  newSite: 'افزودن سایت',
   cardFailed: 'بارگذاری نشد.',
 
   analyticsTitle: 'آمار',

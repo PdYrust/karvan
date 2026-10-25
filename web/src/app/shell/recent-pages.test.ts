@@ -15,6 +15,8 @@ describe('recentPage', () => {
       jobId: '9f1c2b3a4d5e6f7081920a1b',
     });
     expect(recentPage('/templates')).toEqual({ section: 'templates' });
+    expect(recentPage('/links')).toEqual({ section: 'links' });
+    expect(recentPage('/links/new')).toEqual({ section: 'links', page: 'new' });
     expect(recentPage('/settings')).toEqual({ section: 'settings', tab: 'general' });
     expect(recentPage('/settings/safe-mode')).toEqual({ section: 'settings', tab: 'safe-mode' });
   });
@@ -36,6 +38,7 @@ describe('recentPage', () => {
       '/settings/access',
       '/migrations/9f1c2b3a4d5e6f7081920a1b',
       '/reports/x',
+      '/links/3',
       '/nope',
     ]) {
       expect(recentPage(path)).toBeUndefined();

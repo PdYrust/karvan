@@ -88,6 +88,12 @@ const ReportPrint = lazy(() =>
 const TemplatesPage = lazy(() =>
   import('../features/templates/TemplatesPage').then((m) => ({ default: m.TemplatesPage })),
 );
+const LinksPage = lazy(() =>
+  import('../features/links/LinksPage').then((m) => ({ default: m.LinksPage })),
+);
+const SiteFormPage = lazy(() =>
+  import('../features/links/SiteFormPage').then((m) => ({ default: m.SiteFormPage })),
+);
 const LivePage = lazy(() =>
   import('../features/live/LivePage').then((m) => ({ default: m.LivePage })),
 );
@@ -183,6 +189,9 @@ export function App() {
                       <Route path="reports" element={<ReportsPage />} />
                       <Route path="reports/:id" element={<ReportPage />} />
                       <Route path="templates" element={<TemplatesPage />} />
+                      <Route path="links" element={<LinksPage />} />
+                      <Route path="links/new" element={<SiteFormPage />} />
+                      <Route path="links/:id" element={<SiteFormPage />} />
                       <Route path="panels" element={<PanelsPage />} />
                       <Route path="panels/:id" element={<PanelPage />} />
                       <Route path="settings" element={<SettingsPage />}>
