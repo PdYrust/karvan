@@ -280,19 +280,28 @@ func (s *Service) DeleteTemplate(ctx context.Context, id int64) error {
 	return nil
 }
 
-// BackupInfo is a Safe Mode backup on disk.
+// BackupInfo is a Safe Mode backup on disk, with the job that took it:
+// its panel, its state and the old panel's kind, address and admin.
 type BackupInfo struct {
-	ID      string    `json:"id"`
-	JobID   string    `json:"jobId"`
-	Dest    string    `json:"dest"`
-	Size    int64     `json:"size"`
-	Method  string    `json:"method"`
-	Created time.Time `json:"createdAt"`
+	ID          string    `json:"id"`
+	JobID       string    `json:"jobId"`
+	Dest        string    `json:"dest"`
+	Size        int64     `json:"size"`
+	Method      string    `json:"method"`
+	Created     time.Time `json:"createdAt"`
+	PanelID     int64     `json:"panelId"`
+	JobState    string    `json:"jobState"`
+	SourceKind  string    `json:"sourceKind"`
+	SourceOrig  string    `json:"sourceOrigin"`
+	SourceAdmin string    `json:"sourceAdmin"`
 }
 
 // Backups lists Safe Mode backups, newest first.
 func (s *Service) Backups(ctx context.Context) ([]BackupInfo, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT id, job_id, dest, size, method, created_at FROM safe_mode_backups ORDER BY created_at DESC")
+	// A backup whose job row is gone still lists, with the job's fields empty.
+	rows, err := s.db.QueryContext(ctx, "SELECT b.id, b.job_id, b.dest, b.size, b.method, b.created_at, COALESCE(j.panel_id, 0), "+
+		"COALESCE(j.state, ''), COALESCE(j.source_kind, ''), COALESCE(j.source_origin, ''), COALESCE(j.source_admin, '') "+
+		"FROM safe_mode_backups b LEFT JOIN jobs j ON j.id = b.job_id ORDER BY b.created_at DESC")
 	if err != nil {
 		return nil, fmt.Errorf("read backups: %w", err)
 	}
@@ -301,7 +310,7 @@ func (s *Service) Backups(ctx context.Context) ([]BackupInfo, error) {
 	for rows.Next() {
 		var b BackupInfo
 		var at int64
-		if err := rows.Scan(&b.ID, &b.JobID, &b.Dest, &b.Size, &b.Method, &at); err != nil {
+		if err := rows.Scan(&b.ID, &b.JobID, &b.Dest, &b.Size, &b.Method, &at, &b.PanelID, &b.JobState, &b.SourceKind, &b.SourceOrig, &b.SourceAdmin); err != nil {
 			return nil, err
 		}
 		b.Created = time.UnixMilli(at).UTC()

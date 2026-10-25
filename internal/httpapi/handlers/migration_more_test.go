@@ -208,7 +208,8 @@ func TestBackupsAfterARun(t *testing.T) {
 		Backups []run.BackupInfo `json:"backups"`
 	}
 	m.do(http.MethodGet, api+"/safe-mode/backups", nil).json(t, &bs)
-	if len(bs.Backups) != 1 || bs.Backups[0].JobID != id {
+	if len(bs.Backups) != 1 || bs.Backups[0].JobID != id || bs.Backups[0].PanelID != m.panelID ||
+		bs.Backups[0].JobState != run.StateDone || bs.Backups[0].SourceKind != "marzban" {
 		t.Fatalf("backups %+v", bs)
 	}
 	if res := m.do(http.MethodDelete, api+"/safe-mode/backups/"+bs.Backups[0].ID, nil); res.status != http.StatusNoContent {
