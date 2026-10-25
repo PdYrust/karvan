@@ -14,10 +14,10 @@ import type { ShellKey } from './messages';
 export interface NavItem {
   label: ShellKey;
   icon: Icon;
-  /** Route path; absent while the page is not built yet. */
-  to?: string;
+  /** Route path. */
+  to: string;
   /** The `g` shortcut letter, as a physical key code. */
-  key?: string;
+  key: string;
 }
 
 export interface NavGroup {
@@ -51,5 +51,5 @@ export const nav: NavGroup[] = [
   },
 ];
 
-/** Pages that `g` and the palette can reach, besides the sidebar ones. */
+/** The page that `g s` and the palette reach besides the sidebar ones. */
 export const settingsPath = '/settings';

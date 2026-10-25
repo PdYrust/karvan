@@ -3,7 +3,7 @@ import { nav, settingsPath, type NavItem } from './nav';
 
 const items: NavItem[] = nav.flatMap((g) => g.items);
 
-/** The route of a sidebar page, or undefined while it is not built yet. */
+/** The route of a sidebar page. */
 export function pathOf(label: ShellKey): string | undefined {
   return items.find((i) => i.label === label)?.to;
 }
@@ -11,13 +11,11 @@ export function pathOf(label: ShellKey): string | undefined {
 /** Physical key code after `g` to the route it opens. */
 export function gotoTargets(): Record<string, string> {
   const out: Record<string, string> = { KeyS: settingsPath };
-  for (const i of items) {
-    if (i.to && i.key) out[i.key] = i.to;
-  }
+  for (const i of items) out[i.key] = i.to;
   return out;
 }
 
-/** Built pages with their shortcut letters, for the shortcut sheet. */
+/** Every sidebar page with its shortcut letter, for the shortcut sheet and the palette. */
 export function builtPages(): NavItem[] {
-  return items.filter((i) => i.to);
+  return items;
 }

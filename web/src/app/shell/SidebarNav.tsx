@@ -2,7 +2,6 @@ import { Tooltip } from '@cloudflare/kumo/components/tooltip';
 import { cn } from '@cloudflare/kumo/utils';
 import { NavLink } from 'react-router';
 import { useLocale, useT } from '../../i18n/locale';
-import { sharedMessages } from '../../i18n/shared';
 import { shellMessages } from './messages';
 import { nav, type NavItem } from './nav';
 
@@ -22,40 +21,9 @@ function NavRow({
   onNavigate?: () => void;
 }) {
   const t = useT(shellMessages);
-  const ts = useT(sharedMessages);
   const { dir } = useLocale();
   const Icon = item.icon;
   const label = t(item.label);
-
-  if (!item.to) {
-    const soon = (
-      <span
-        aria-disabled="true"
-        aria-label={collapsed ? `${label} (${ts('soon')})` : undefined}
-        className={cn(
-          collapsed ? iconRow : row,
-          'cursor-default text-kumo-subtle hover:bg-transparent',
-        )}
-      >
-        <Icon size={18} aria-hidden="true" className="text-kumo-inactive" />
-        {collapsed ? null : (
-          <>
-            <span className="flex-1">{label}</span>
-            <span className="rounded-md px-1.5 text-tiny text-kumo-subtle ring ring-kumo-line">
-              {ts('soon')}
-            </span>
-          </>
-        )}
-      </span>
-    );
-    return collapsed ? (
-      <Tooltip content={`${label} (${ts('soon')})`} side={dir === 'rtl' ? 'left' : 'right'} asChild>
-        {soon}
-      </Tooltip>
-    ) : (
-      soon
-    );
-  }
 
   if (collapsed) {
     return (

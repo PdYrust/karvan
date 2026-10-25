@@ -63,7 +63,7 @@ The chart tokens sit in a `@theme static` block: charts pick a color by number a
 
 - **Spacing scale (px):** 4, 8, 12, 16, 20, 24, 32, 40, 56. Nothing off-scale, except 2 px optical nudges and 2 or 6 px padding inside small inline elements (badges, keyboard keys).
 - **Layout:** sidebar 256 wide (64 when collapsed), top bar and sidebar header 56 high, content gutters 32 (16 under 640). Pages with side information use a main column plus a 352 aside, split by a hairline. Content stops growing at 1400 wide and stays at the start edge, like the dashboard.
-- **Radius:** 6 for badges and nav rows; 8 for buttons, inputs and cards; 12 for dialogs and the command palette. Pills only for "Soon" tags and status dots.
+- **Radius:** 6 for badges and nav rows; 8 for buttons, inputs and cards; 12 for dialogs and the command palette. Pills only for status dots.
 - **Elevation:** surfaces are flat, separated by a 1 px hairline. Shadows only on things that float: menus, popovers, dialogs, the mobile sheet, toasts. Cards have no shadow.
 
 ## 5. Motion
@@ -107,7 +107,7 @@ The Cloudflare dashboard's frame, built from Karvan's own components with logica
 - **Account menu:** like the dashboard's: who is signed in, Settings, Appearance (light, dark, same as system), Language (فارسی, English), Keyboard shortcuts, then Sign out. Language and theme have no buttons of their own in the app.
 - **Mobile:** the sidebar opens as a sheet from the start edge, with focus inside it and Escape to close.
 - **Footer:** one quiet row at the end of the content: version, source code, report a security issue.
-- **Command palette:** every page, panel, migration, report, setting and preference is reachable from Ctrl K. `?` opens the shortcut sheet.
+- **Command palette:** every page, panel, setting, preference and action is reachable from Ctrl K. Migrations and their reports (by admin, address and panel), templates and old link sites (by name, address, domain and port) are listed once something is typed, and read only while the palette is open. `?` opens the shortcut sheet, which lists every page with its `g` letter.
 
 ### Page
 - **Page header:** a small label above the title when the page sits inside another (the dashboard's breadcrumb), the title, one line of context under it, actions at the end, a bottom hairline across the full width.
@@ -237,7 +237,7 @@ Laid out like the dashboard's account home, top to bottom:
 - **Status badges:** icon + word + Kumo status color (`StatusBadge`). Kumo's warning text on its own tint is under 4.5:1, so a warning badge keeps the word in the default color and the icon in the warning color.
   - A migration's state uses the same pieces: done is success, failed is danger, running is info, interrupted is warning, drafts and rolled back jobs are neutral.
 - **Touch:** every target is at least 44 × 44 px on touch screens.
-- **Not yet built:** navigation items for later pages stay visible but inert with a "Soon" tag, so the structure can be judged early.
+- **Every page is built:** each sidebar item has its route and its `g` letter; there are no inert "Soon" items or tabs.
 
 ## 9. Writing
 
