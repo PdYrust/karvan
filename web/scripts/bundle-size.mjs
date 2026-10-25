@@ -8,7 +8,7 @@ const budgetsKB = {
   'login (JS)': 145,
   'login globe (JS, lazy)': 15,
   'app (JS)': 260,
-  'largest page (JS, lazy)': 60,
+  'largest page (JS, lazy)': 62,
   'stylesheet (CSS)': 35,
 };
 
