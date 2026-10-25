@@ -29,6 +29,9 @@ var ErrNoSession = errors.New("no valid session")
 
 // Session is a signed-in browser.
 type Session struct {
+	// ID names the session in lists. It is derived from the token hash
+	// one way, so neither the token nor its hash leaves the server.
+	ID         string
 	OperatorID int64
 	CreatedAt  time.Time
 	LastSeenAt time.Time
@@ -52,6 +55,12 @@ func hashToken(token string) []byte {
 	return sum[:]
 }
 
+// sessionID is the opaque id of the session stored under tokenHash.
+func sessionID(tokenHash []byte) string {
+	sum := sha256.Sum256(append([]byte("session-id/v1:"), tokenHash...))
+	return base64.RawURLEncoding.EncodeToString(sum[:12])
+}
+
 // Create starts a session and returns its token.
 func (s *Sessions) Create(ctx context.Context, operatorID int64, ip, userAgent string) (string, Session, error) {
 	token, err := secret.NewToken()
@@ -61,10 +70,10 @@ func (s *Sessions) Create(ctx context.Context, operatorID int64, ip, userAgent s
 	if len(userAgent) > maxUserAgent {
 		userAgent = userAgent[:maxUserAgent]
 	}
-	now := s.now()
-	sess := Session{OperatorID: operatorID, CreatedAt: now, LastSeenAt: now, ExpiresAt: now.Add(AbsoluteTimeout), IP: ip, UserAgent: userAgent}
+	now, h := s.now(), hashToken(token)
+	sess := Session{ID: sessionID(h), OperatorID: operatorID, CreatedAt: now, LastSeenAt: now, ExpiresAt: now.Add(AbsoluteTimeout), IP: ip, UserAgent: userAgent}
 	_, err = s.db.ExecContext(ctx, `INSERT INTO sessions (token_hash, operator_id, created_at, last_seen_at, expires_at, ip, user_agent)
-		VALUES (?, ?, ?, ?, ?, ?, ?)`, hashToken(token), operatorID, now.Unix(), now.Unix(), sess.ExpiresAt.Unix(), ip, userAgent)
+		VALUES (?, ?, ?, ?, ?, ?, ?)`, h, operatorID, now.Unix(), now.Unix(), sess.ExpiresAt.Unix(), ip, userAgent)
 	if err != nil {
 		return "", Session{}, fmt.Errorf("create session: %w", err)
 	}
@@ -98,6 +107,7 @@ func (s *Sessions) lookup(ctx context.Context, token string, touch bool) (Sessio
 	if err != nil {
 		return Session{}, fmt.Errorf("look up session: %w", err)
 	}
+	sess.ID = sessionID(h)
 	sess.CreatedAt, sess.LastSeenAt, sess.ExpiresAt = time.Unix(created, 0), time.Unix(seen, 0), time.Unix(expires, 0)
 
 	now := s.now()
@@ -131,6 +141,89 @@ func (s *Sessions) DeleteForOperator(ctx context.Context, operatorID int64) erro
 		return fmt.Errorf("end sessions of operator %d: %w", operatorID, err)
 	}
 	return nil
+}
+
+// List returns the operator's live sessions, the most recently used first.
+func (s *Sessions) List(ctx context.Context, operatorID int64) ([]Session, error) {
+	now := s.now()
+	rows, err := s.db.QueryContext(ctx, `SELECT token_hash, created_at, last_seen_at, expires_at, ip, user_agent FROM sessions
+		WHERE operator_id = ? AND expires_at > ? AND last_seen_at > ? ORDER BY last_seen_at DESC, created_at DESC`,
+		operatorID, now.Unix(), now.Add(-IdleTimeout).Unix())
+	if err != nil {
+		return nil, fmt.Errorf("list sessions: %w", err)
+	}
+	defer rows.Close()
+	var out []Session
+	for rows.Next() {
+		var h []byte
+		var created, seen, expires int64
+		sess := Session{OperatorID: operatorID}
+		if err := rows.Scan(&h, &created, &seen, &expires, &sess.IP, &sess.UserAgent); err != nil {
+			return nil, fmt.Errorf("list sessions: %w", err)
+		}
+		sess.ID = sessionID(h)
+		sess.CreatedAt, sess.LastSeenAt, sess.ExpiresAt = time.Unix(created, 0), time.Unix(seen, 0), time.Unix(expires, 0)
+		out = append(out, sess)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("list sessions: %w", err)
+	}
+	return out, nil
+}
+
+// DeleteOthers ends every session of the operator except the one for
+// keepToken, and returns how many it ended.
+func (s *Sessions) DeleteOthers(ctx context.Context, operatorID int64, keepToken string) (int64, error) {
+	res, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE operator_id = ? AND token_hash != ?`, operatorID, hashToken(keepToken))
+	if err != nil {
+		return 0, fmt.Errorf("end other sessions of operator %d: %w", operatorID, err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return 0, fmt.Errorf("end other sessions of operator %d: %w", operatorID, err)
+	}
+	return n, nil
+}
+
+// DeleteByID ends the operator's session with the opaque id. It reports
+// false when the operator has no such session.
+func (s *Sessions) DeleteByID(ctx context.Context, operatorID int64, id string) (bool, error) {
+	h, err := s.hashByID(ctx, operatorID, id)
+	if err != nil || h == nil {
+		return false, err
+	}
+	res, err := s.db.ExecContext(ctx, `DELETE FROM sessions WHERE token_hash = ? AND operator_id = ?`, h, operatorID)
+	if err != nil {
+		return false, fmt.Errorf("end session: %w", err)
+	}
+	n, err := res.RowsAffected()
+	if err != nil {
+		return false, fmt.Errorf("end session: %w", err)
+	}
+	return n == 1, nil
+}
+
+// hashByID finds the token hash behind an id. Ids are not stored, so the
+// operator's few sessions are read and each id is derived again.
+func (s *Sessions) hashByID(ctx context.Context, operatorID int64, id string) ([]byte, error) {
+	rows, err := s.db.QueryContext(ctx, `SELECT token_hash FROM sessions WHERE operator_id = ?`, operatorID)
+	if err != nil {
+		return nil, fmt.Errorf("find session: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var h []byte
+		if err := rows.Scan(&h); err != nil {
+			return nil, fmt.Errorf("find session: %w", err)
+		}
+		if subtle.ConstantTimeCompare([]byte(sessionID(h)), []byte(id)) == 1 {
+			return h, nil
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("find session: %w", err)
+	}
+	return nil, nil
 }
 
 // PurgeExpired removes sessions past either timeout.

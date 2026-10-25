@@ -99,10 +99,13 @@ func New(d Deps) (http.Handler, error) {
 // accountRoutes are the operator's login, sessions and audit log.
 func accountRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.HandlerFunc) http.Handler) {
 	routes := map[string]http.HandlerFunc{
-		"POST /api/v1/account/totp":         api.BeginTOTP,
-		"POST /api/v1/account/totp/confirm": api.ConfirmTOTP,
-		"DELETE /api/v1/account/totp":       api.DisableTOTP,
-		"GET /api/v1/audit":                 api.AuditLog,
+		"POST /api/v1/account/totp":            api.BeginTOTP,
+		"POST /api/v1/account/totp/confirm":    api.ConfirmTOTP,
+		"DELETE /api/v1/account/totp":          api.DisableTOTP,
+		"GET /api/v1/account/sessions":         api.AccountSessions,
+		"DELETE /api/v1/account/sessions":      api.EndOtherSessions,
+		"DELETE /api/v1/account/sessions/{id}": api.EndSession,
+		"GET /api/v1/audit":                    api.AuditLog,
 	}
 	for pattern, h := range routes {
 		rt.Handle(pattern, signedIn(h))
