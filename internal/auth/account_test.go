@@ -3,6 +3,7 @@ package auth
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -85,6 +86,62 @@ func TestReauthenticateNeedsTheCodeWhenTwoStepIsOn(t *testing.T) {
 	// A missing code is not a guess; the wrong and the replayed ones are.
 	if n := s.count(t, func(e audit.Event) bool { return e.Action == "account.test" && e.Detail["reason"] == "bad_totp" }); n != 2 {
 		t.Fatalf("audited %d bad codes, want 2", n)
+	}
+}
+
+func TestRenewLoginRefusesTheWrongPassword(t *testing.T) {
+	s := newService(t)
+	r := Reauth{OperatorID: s.op.ID, Password: secret.NewValue("wrong password!"), IP: reauthIP}
+	if _, err := s.svc.RenewLogin(context.Background(), r, "browser"); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("wrong password: %v", err)
+	}
+	if _, err := s.login("owner", goodPassword, ""); err != nil {
+		t.Fatalf("a refused renewal changed the login: %v", err)
+	}
+}
+
+func TestRenewLoginReplacesTheLoginAndEverySession(t *testing.T) {
+	s := newService(t)
+	ctx := context.Background()
+	other, err := s.login("owner", goodPassword, "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got, err := s.svc.RenewLogin(ctx, Reauth{OperatorID: s.op.ID, Password: secret.NewValue(goodPassword), IP: reauthIP}, "browser")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if got.Username == "owner" || got.Password.Reveal() == goodPassword || got.Session.IP != reauthIP || got.Session.UserAgent != "browser" {
+		t.Fatalf("renewed = %+v", got)
+	}
+	if _, err := s.svc.Sessions.Lookup(ctx, other.Token); !errors.Is(err, ErrNoSession) {
+		t.Fatal("an old session survived")
+	}
+	if _, err := s.svc.Sessions.Lookup(ctx, got.Token); err != nil {
+		t.Fatalf("the new session: %v", err)
+	}
+	if _, err := s.login("owner", goodPassword, ""); !errors.Is(err, ErrInvalidCredentials) {
+		t.Fatalf("the old login still works: %v", err)
+	}
+	if _, err := s.login(got.Username, got.Password.Reveal(), ""); err != nil {
+		t.Fatalf("the new login: %v", err)
+	}
+	if n := s.count(t, holdsAny(got.Username, got.Password.Reveal())); n != 0 {
+		t.Fatalf("%d audit events hold a new value", n)
+	}
+}
+
+// holdsAny matches an audit event whose detail holds one of values.
+func holdsAny(values ...string) func(audit.Event) bool {
+	return func(e audit.Event) bool {
+		for _, d := range e.Detail {
+			for _, v := range values {
+				if strings.Contains(d, v) {
+					return true
+				}
+			}
+		}
+		return false
 	}
 }
 

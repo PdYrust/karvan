@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"strings"
 	"testing"
@@ -83,5 +84,38 @@ func TestSessionDeleteByIDOnlyTouchesTheOperatorsOwn(t *testing.T) {
 	}
 	if _, err := s.Lookup(ctx, theirs); err != nil {
 		t.Fatalf("other operator's session ended: %v", err)
+	}
+}
+
+func TestSessionReplaceIsAllOrNothing(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	s := newSessions(f)
+	o := f.createOperator(t, "owner")
+	old, _, _ := s.Create(ctx, o.ID, "", "")
+
+	boom := errors.New("boom")
+	if _, _, err := s.Replace(ctx, o.ID, "", "", func(*sql.Tx) error { return boom }); !errors.Is(err, boom) {
+		t.Fatalf("failed change: %v", err)
+	}
+	if _, err := s.Lookup(ctx, old); err != nil {
+		t.Fatalf("a failed replace ended the session: %v", err)
+	}
+
+	fresh, sess, err := s.Replace(ctx, o.ID, "198.51.100.9", "browser", func(tx *sql.Tx) error {
+		_, err := tx.ExecContext(ctx, `UPDATE operators SET username = 'renamed' WHERE id = ?`, o.ID)
+		return err
+	})
+	if err != nil || sess.IP != "198.51.100.9" {
+		t.Fatalf("Replace = %+v, %v", sess, err)
+	}
+	if _, err := s.Lookup(ctx, old); !errors.Is(err, ErrNoSession) {
+		t.Fatal("old session survived")
+	}
+	if _, err := s.Lookup(ctx, fresh); err != nil {
+		t.Fatalf("new session: %v", err)
+	}
+	if got, _ := f.operators.ByID(ctx, o.ID); got.Username != "renamed" {
+		t.Fatalf("change not applied: %q", got.Username)
 	}
 }

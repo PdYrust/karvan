@@ -106,6 +106,107 @@ func TestSignOutOtherSessions(t *testing.T) {
 	}
 }
 
+type newLogin struct {
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	CSRFToken string `json:"csrfToken"`
+}
+
+func TestRenewLoginShowsTheNewLoginOnce(t *testing.T) {
+	e := newEnv(t)
+	e.login("")
+	other := e.browser()
+	other.login("")
+
+	res := e.do(http.MethodPost, account+"/credentials", map[string]string{"password": password})
+	var got newLogin
+	res.json(t, &got)
+	if res.status != http.StatusOK || got.Username == username || got.Password == "" || res.header.Get("Cache-Control") != "no-store" {
+		t.Fatalf("renew: %d %v %s", res.status, res.header, res.body)
+	}
+	e.csrf = got.CSRFToken
+	var sess struct {
+		Operator struct {
+			Username string `json:"username"`
+		} `json:"operator"`
+	}
+	e.do(http.MethodGet, api+"/session", nil).json(t, &sess)
+	if sess.Operator.Username != got.Username {
+		t.Fatalf("this browser's session: %+v", sess)
+	}
+	if res := other.do(http.MethodGet, account+"/sessions", nil); res.status != http.StatusUnauthorized {
+		t.Fatalf("the other browser kept its session: %d", res.status)
+	}
+	if res := other.login(""); res.status != http.StatusUnauthorized {
+		t.Fatalf("the old login: %d", res.status)
+	}
+	if res := other.loginAs(got.Username, got.Password, ""); res.status != http.StatusOK {
+		t.Fatalf("the new login: %d %s", res.status, res.body)
+	}
+}
+
+// A stolen session alone cannot change the login: it needs the password,
+// and the code when two-step is on. A wrong one answers 403, not 401, so
+// the panel does not take it for an ended session.
+func TestStolenSessionCannotChangeTheLogin(t *testing.T) {
+	e := newEnv(t)
+	e.login("")
+	for _, body := range []any{nil, map[string]string{}, map[string]string{"password": password, "code": "12"}} {
+		if res := e.do(http.MethodPost, account+"/credentials", body); res.status != http.StatusBadRequest {
+			t.Fatalf("body %v: %d", body, res.status)
+		}
+	}
+	res := e.do(http.MethodPost, account+"/credentials", map[string]string{"password": "a good guess"})
+	if res.status != http.StatusForbidden || res.errorCode(t) != "invalid_credentials" {
+		t.Fatalf("wrong password: %d %s", res.status, res.body)
+	}
+	turnOnTwoStep(t, e)
+	res = e.do(http.MethodPost, account+"/credentials", map[string]string{"password": password})
+	if res.status != http.StatusForbidden || res.errorCode(t) != "totp_required" {
+		t.Fatalf("no code: %d %s", res.status, res.body)
+	}
+	res = e.do(http.MethodPost, account+"/credentials", map[string]string{"password": password, "code": "000000"})
+	if res.status != http.StatusForbidden || res.errorCode(t) != "totp_invalid" {
+		t.Fatalf("wrong code: %d %s", res.status, res.body)
+	}
+	if n := auditCount(t, e, "account.credentials", "failure"); n != 2 {
+		t.Fatalf("audited %d failed changes, want 2", n)
+	}
+	if res := e.browser().loginAs(username, password, ""); res.status != http.StatusUnauthorized || res.errorCode(t) != "totp_required" {
+		t.Fatalf("the login changed: %d %s", res.status, res.body)
+	}
+}
+
+func TestAccountChangesLockLikeSignIn(t *testing.T) {
+	e := newEnv(t)
+	e.login("")
+	var res response
+	for i := range 5 {
+		res = e.do(http.MethodPost, account+"/credentials", map[string]string{"password": "wrong password!"})
+		if i < 4 && res.status != http.StatusForbidden {
+			t.Fatalf("guess %d: %d", i+1, res.status)
+		}
+	}
+	if res.status != http.StatusTooManyRequests || res.errorCode(t) != "locked" || res.header.Get("Retry-After") == "" {
+		t.Fatalf("fifth guess: %d %v %s", res.status, res.header, res.body)
+	}
+	res = e.do(http.MethodPost, account+"/credentials", map[string]string{"password": password})
+	if res.status != http.StatusTooManyRequests {
+		t.Fatalf("the right password during the lock: %d %s", res.status, res.body)
+	}
+}
+
+func turnOnTwoStep(t *testing.T, e *env) {
+	t.Helper()
+	var setup struct {
+		Secret string `json:"secret"`
+	}
+	e.do(http.MethodPost, account+"/totp", nil).json(t, &setup)
+	if res := e.do(http.MethodPost, account+"/totp/confirm", map[string]string{"code": totpNow(setup.Secret)}); res.status != http.StatusNoContent {
+		t.Fatalf("two-step on: %d %s", res.status, res.body)
+	}
+}
+
 // auditCount counts events with action and outcome through GET /audit.
 func auditCount(t *testing.T, e *env, action, outcome string) int {
 	t.Helper()

@@ -88,9 +88,27 @@ type env struct {
 	closing chan struct{}
 	host    *hoststats.Sampler
 	dbstats *dbstats.Sampler
+	// url and basePath are where do sends requests and login signs in.
+	url      string
+	basePath string
 }
 
 func newEnv(t *testing.T) *env {
+	t.Helper()
+	e, d := newEnvDeps(t)
+	h, err := httpapi.New(d)
+	if err != nil {
+		t.Fatal(err)
+	}
+	e.srv = httptest.NewServer(h)
+	t.Cleanup(e.srv.Close)
+	e.url = e.srv.URL
+	return e
+}
+
+// newEnvDeps sets up the services of a test server and the handler deps
+// for them, with the test base path.
+func newEnvDeps(t *testing.T) (*env, httpapi.Deps) {
 	t.Helper()
 	dir := t.TempDir()
 	db, err := store.Open(context.Background(), filepath.Join(dir, "data"))
@@ -125,21 +143,16 @@ func newEnv(t *testing.T) *env {
 		}
 		return out, err
 	}}
-	h, err := httpapi.New(httpapi.Deps{
+	d := httpapi.Deps{
 		BasePath: base, Auth: svc, Audit: log, Web: webBuild, Version: "test",
 		Logger: slog.New(slog.NewTextHandler(testLog, &slog.HandlerOptions{Level: slog.LevelDebug})),
 		Runs:   runs, Bridge: br, Settings: settings.New(db), Closing: closing,
 		Host: host, HostStore: hostStore, HostReader: hoststats.System, DBStats: dbs,
-	})
-	if err != nil {
-		t.Fatal(err)
 	}
-	srv := httptest.NewServer(h)
-	t.Cleanup(srv.Close)
 	jar, _ := cookiejar.New(nil)
 	client := &http.Client{Jar: jar, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
-	return &env{t: t, srv: srv, client: client, auth: svc, runs: runs, bridge: br, db: db, data: filepath.Join(dir, "data"), closing: closing,
-		host: host, dbstats: dbs}
+	return &env{t: t, client: client, auth: svc, runs: runs, bridge: br, db: db, data: filepath.Join(dir, "data"), closing: closing,
+		host: host, dbstats: dbs, basePath: base}, d
 }
 
 type response struct {
@@ -175,7 +188,7 @@ func (e *env) do(method, path string, body any) response {
 		b, _ := json.Marshal(body)
 		rd = strings.NewReader(string(b))
 	}
-	req, _ := http.NewRequest(method, e.srv.URL+path, rd)
+	req, _ := http.NewRequest(method, e.url+path, rd)
 	if body != nil {
 		req.Header.Set("Content-Type", "application/json")
 	}
@@ -192,7 +205,7 @@ func (e *env) do(method, path string, body any) response {
 
 func (e *env) raw(method, path string) []byte {
 	e.t.Helper()
-	req, _ := http.NewRequest(method, e.srv.URL+path, nil)
+	req, _ := http.NewRequest(method, e.url+path, nil)
 	res, err := http.DefaultTransport.RoundTrip(req)
 	if err != nil {
 		e.t.Fatal(err)
@@ -212,14 +225,19 @@ func (e *env) fetchCSRF() {
 	var s struct {
 		CSRFToken string `json:"csrfToken"`
 	}
-	e.do(http.MethodGet, "/"+base+"/api/v1/session", nil).json(e.t, &s)
+	e.do(http.MethodGet, "/"+e.basePath+"/api/v1/session", nil).json(e.t, &s)
 	e.csrf = s.CSRFToken
 }
 
 func (e *env) login(code string) response {
 	e.t.Helper()
+	return e.loginAs(username, password, code)
+}
+
+func (e *env) loginAs(user, pass, code string) response {
+	e.t.Helper()
 	e.fetchCSRF()
-	res := e.do(http.MethodPost, "/"+base+"/api/v1/session", map[string]string{"username": username, "password": password, "totpCode": code})
+	res := e.do(http.MethodPost, "/"+e.basePath+"/api/v1/session", map[string]string{"username": user, "password": pass, "totpCode": code})
 	if res.status == http.StatusOK {
 		var s struct {
 			CSRFToken string `json:"csrfToken"`

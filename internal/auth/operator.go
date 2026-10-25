@@ -96,6 +96,22 @@ func (s *Operators) SetPasswordHash(ctx context.Context, id int64, hash string) 
 	return s.update(ctx, id, `password_hash = ?`, hash)
 }
 
+// setLogin replaces the username and the password hash in tx.
+func (s *Operators) setLogin(ctx context.Context, tx *sql.Tx, id int64, username, hash string) error {
+	res, err := tx.ExecContext(ctx, `UPDATE operators SET username = ?, password_hash = ?, updated_at = ? WHERE id = ?`,
+		username, hash, s.now().Unix(), id)
+	if err != nil {
+		if isUniqueViolation(err) {
+			return ErrUsernameTaken
+		}
+		return fmt.Errorf("update login of operator %d: %w", id, err)
+	}
+	if n, err := res.RowsAffected(); err != nil || n == 0 {
+		return ErrNotFound
+	}
+	return nil
+}
+
 func (s *Operators) update(ctx context.Context, id int64, set string, args ...any) error {
 	args = append(args, s.now().Unix(), id)
 	res, err := s.db.ExecContext(ctx, `UPDATE operators SET `+set+`, updated_at = ? WHERE id = ?`, args...) //nolint:gosec // G202: set is a constant fragment from this package.

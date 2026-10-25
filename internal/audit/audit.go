@@ -45,6 +45,7 @@ const (
 	ActionPasswordsTaken   = "migration.passwords_download"
 
 	ActionSessionsEnd = "sessions.end"
+	ActionLoginRenew  = "account.credentials"
 )
 
 // ActorCLI is the actor for actions taken from the command line.

@@ -105,6 +105,7 @@ func accountRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.
 		"GET /api/v1/account/sessions":         api.AccountSessions,
 		"DELETE /api/v1/account/sessions":      api.EndOtherSessions,
 		"DELETE /api/v1/account/sessions/{id}": api.EndSession,
+		"POST /api/v1/account/credentials":     api.RenewLogin,
 		"GET /api/v1/audit":                    api.AuditLog,
 	}
 	for pattern, h := range routes {

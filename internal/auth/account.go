@@ -2,6 +2,7 @@ package auth
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 
@@ -58,6 +59,58 @@ func (s *Service) Reauthenticate(ctx context.Context, r Reauth, action string) (
 		return Operator{}, err
 	}
 	return op, nil
+}
+
+// RenewedLogin is a new username and password, and the session that took
+// the place of every old one.
+type RenewedLogin struct {
+	Username string
+	Password secret.Value
+	Token    string
+	Session  Session
+}
+
+// RenewLogin gives the operator a new random username and password after r
+// is checked. Every session ends and this browser gets a new one, in one
+// transaction, so the values are either all in place or nothing changed.
+// They are audited without the values.
+func (s *Service) RenewLogin(ctx context.Context, r Reauth, userAgent string) (RenewedLogin, error) {
+	op, err := s.Reauthenticate(ctx, r, audit.ActionLoginRenew)
+	if err != nil {
+		return RenewedLogin{}, err
+	}
+	user, err := GenerateUsername()
+	if err != nil {
+		return RenewedLogin{}, err
+	}
+	pw, err := GeneratePassword()
+	if err != nil {
+		return RenewedLogin{}, err
+	}
+	hash, err := s.hash(ctx, pw)
+	if err != nil {
+		return RenewedLogin{}, err
+	}
+	token, sess, err := s.Sessions.Replace(ctx, op.ID, r.IP, userAgent, func(tx *sql.Tx) error {
+		return s.Operators.setLogin(ctx, tx, op.ID, user, hash)
+	})
+	if err != nil {
+		return RenewedLogin{}, err
+	}
+	if err := s.record(ctx, op.Username, r.IP, audit.ActionLoginRenew, audit.Success, nil); err != nil {
+		return RenewedLogin{}, err
+	}
+	return RenewedLogin{Username: user, Password: secret.NewValue(pw), Token: token, Session: sess}, nil
+}
+
+// hash runs HashPassword in one of the few hash slots.
+func (s *Service) hash(ctx context.Context, pw string) (string, error) {
+	release, err := s.hashSlot(ctx)
+	if err != nil {
+		return "", err
+	}
+	defer release()
+	return HashPassword(pw)
 }
 
 // failed counts a wrong password or code, audits it under action and

@@ -7,8 +7,10 @@ import (
 	"time"
 
 	"github.com/PdYrust/karvan/internal/audit"
+	"github.com/PdYrust/karvan/internal/auth"
 	"github.com/PdYrust/karvan/internal/httpapi/middleware"
 	"github.com/PdYrust/karvan/internal/httpapi/respond"
+	"github.com/PdYrust/karvan/internal/secret"
 )
 
 var sessionIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{16}$`)
@@ -75,4 +77,45 @@ func (a *API) EndSession(w http.ResponseWriter, r *http.Request) {
 		a.Cookies.ClearSession(w, r)
 	}
 	respond.NoContent(w)
+}
+
+// reauthBody is the password, and the code when two-step is on, typed
+// again for an account change.
+type reauthBody struct {
+	Password string `json:"password"`
+	Code     string `json:"code"`
+}
+
+func (b reauthBody) valid() bool {
+	return b.Password != "" && len(b.Password) <= 1024 && (b.Code == "" || len(b.Code) == 6)
+}
+
+func (b reauthBody) reauth(r *http.Request) auth.Reauth {
+	s, _ := middleware.Session(r.Context())
+	return auth.Reauth{OperatorID: s.Session.OperatorID, Password: secret.NewValue(b.Password), Code: b.Code, IP: middleware.IP(r.Context())}
+}
+
+type newLoginJSON struct {
+	Username  string `json:"username"`
+	Password  string `json:"password"`
+	CSRFToken string `json:"csrfToken"`
+}
+
+// RenewLogin gives the operator a new random username and password. They
+// are in this response only, which is never stored; every other session
+// ends and this browser gets a new one.
+func (a *API) RenewLogin(w http.ResponseWriter, r *http.Request) {
+	var body reauthBody
+	if err := respond.Decode(w, r, &body); err != nil || !body.valid() {
+		respond.BadRequest(w)
+		return
+	}
+	res, err := a.Auth.RenewLogin(r.Context(), body.reauth(r), r.UserAgent())
+	if err != nil {
+		writeAuthError(w, r, err, http.StatusForbidden)
+		return
+	}
+	a.Cookies.SetSession(w, r, res.Token)
+	w.Header().Set("Cache-Control", "no-store")
+	respond.JSON(w, http.StatusOK, newLoginJSON{Username: res.Username, Password: res.Password.Reveal(), CSRFToken: auth.CSRFToken(res.Token)})
 }

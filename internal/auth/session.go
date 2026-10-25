@@ -61,8 +61,16 @@ func sessionID(tokenHash []byte) string {
 	return base64.RawURLEncoding.EncodeToString(sum[:12])
 }
 
+type execer interface {
+	ExecContext(ctx context.Context, query string, args ...any) (sql.Result, error)
+}
+
 // Create starts a session and returns its token.
 func (s *Sessions) Create(ctx context.Context, operatorID int64, ip, userAgent string) (string, Session, error) {
+	return s.insert(ctx, s.db, operatorID, ip, userAgent)
+}
+
+func (s *Sessions) insert(ctx context.Context, db execer, operatorID int64, ip, userAgent string) (string, Session, error) {
 	token, err := secret.NewToken()
 	if err != nil {
 		return "", Session{}, err
@@ -72,10 +80,34 @@ func (s *Sessions) Create(ctx context.Context, operatorID int64, ip, userAgent s
 	}
 	now, h := s.now(), hashToken(token)
 	sess := Session{ID: sessionID(h), OperatorID: operatorID, CreatedAt: now, LastSeenAt: now, ExpiresAt: now.Add(AbsoluteTimeout), IP: ip, UserAgent: userAgent}
-	_, err = s.db.ExecContext(ctx, `INSERT INTO sessions (token_hash, operator_id, created_at, last_seen_at, expires_at, ip, user_agent)
+	_, err = db.ExecContext(ctx, `INSERT INTO sessions (token_hash, operator_id, created_at, last_seen_at, expires_at, ip, user_agent)
 		VALUES (?, ?, ?, ?, ?, ?, ?)`, h, operatorID, now.Unix(), now.Unix(), sess.ExpiresAt.Unix(), ip, userAgent)
 	if err != nil {
 		return "", Session{}, fmt.Errorf("create session: %w", err)
+	}
+	return token, sess, nil
+}
+
+// Replace runs change, ends every session of the operator and starts a new
+// one, all in one transaction: either all of it happens or none does.
+func (s *Sessions) Replace(ctx context.Context, operatorID int64, ip, userAgent string, change func(*sql.Tx) error) (string, Session, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return "", Session{}, fmt.Errorf("replace sessions: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	if err := change(tx); err != nil {
+		return "", Session{}, err
+	}
+	if _, err := tx.ExecContext(ctx, `DELETE FROM sessions WHERE operator_id = ?`, operatorID); err != nil {
+		return "", Session{}, fmt.Errorf("end sessions of operator %d: %w", operatorID, err)
+	}
+	token, sess, err := s.insert(ctx, tx, operatorID, ip, userAgent)
+	if err != nil {
+		return "", Session{}, err
+	}
+	if err := tx.Commit(); err != nil {
+		return "", Session{}, fmt.Errorf("replace sessions: %w", err)
 	}
 	return token, sess, nil
 }
