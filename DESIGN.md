@@ -192,6 +192,17 @@ Laid out like the dashboard's account home, top to bottom:
 - **Report page:** "Reports" above the title, the state and the move in the header, Print and the downloads at the end. Then the result (state, counts), the facts (times, Safe Mode and its backup, the admin and its password), the stages with their times, what a rollback cannot take back and until when, the reload, and every user (filter buttons with counts, a search, 50 a page). Its printable page (`/reports/:id/print`) follows Printable pages.
 - **Templates:** one card per template: its name, when it was saved, and what it does as a short list in words (each category with its conditions and changes, the fixes for problems, how reset times are kept). Delete asks for the name typed. Templates are applied and saved in the wizard.
 
+### Old links
+- `/links` lists the sites, one card each, with "Add a site" at the end of the header. Ports that could not open come first as one warning naming them.
+- **Site card:** the name, the move (`MoveLabel`, old panel to the destination) and the destination's name in the title row, a "..." menu (Edit, Delete) at the end. Then, in two columns from 1024 px:
+  - Facts: the old address, the domains ("Every domain on this port" when there are none), the old path, the port, HTTPS or plain HTTP, lazy checks on or off.
+  - Certificate (HTTPS only): the names it covers, who issued it, the date it ends, then each warning as a status line: a site domain it does not cover, ends within 14 days, ended, not valid yet, no key or a key that does not fit, or a file Karvan cannot read.
+  - Users: "34 of 120 proven" with a meter of proven over moved, then pending and closed as quiet numbers. Without numbers (the destination did not answer) one line says so.
+  - Old links file: "Upload old links" takes a text or CSV file of old links or tokens; while Karvan checks it, a counter ("Checking 120 of 400") over a thin meter, read every second in the background; at the end the counts that are not zero.
+  - New links: the done migrations from this old panel into this destination, each a download of its new links file.
+- **Form** (`/links/new`, `/links/:id`): one column at most 720 wide. Name; the destination as radio cards (as in Connect); the old panel (kind, address, the address Karvan reaches it by, certificate fingerprint); what the site answers (old path, domains one per line, port); the certificate as radio cards (files on this server, upload files, paste, none) with the chosen way's fields and "Check certificate", which shows the same certificate facts before saving; None says the links go over plain HTTP. Lazy checks and "The old panel is plain HTTP" are switches. A field the server refuses gets its sentence under it. Cancel, then Save. A finished migration's "Set up old links" fills in the destination, the kind and the address. A pasted key is never shown again: on edit its field is empty and an empty field keeps the saved key.
+- Delete asks for the site's name typed.
+
 ### Sign-in
 - Two halves on large screens. Start side on `bg-kumo-base`: wordmark at the top, then a centered form (title, username, password, one blue button) and the recovery hint with the `karvan reset -password` command.
 - End side on `bg-kumo-brand`: language and theme buttons at the top, the "Marzban ⇄ PasarGuard" line, and one short line, then a spinning dotted globe.
