@@ -13,7 +13,10 @@ import (
 // defaultPage is how many jobs one page holds when the request does not say.
 const defaultPage = 20
 
-// readJobFilter reads ?panel=<id>&state=a,b&limit=<n>.
+// maxJobID bounds ?id=; job ids are 24 characters.
+const maxJobID = 64
+
+// readJobFilter reads ?panel=<id>&state=a,b&id=<job>&limit=<n>.
 func readJobFilter(r *http.Request) (run.JobFilter, int, bool) {
 	q := r.URL.Query()
 	var f run.JobFilter
@@ -26,6 +29,9 @@ func readJobFilter(r *http.Request) (run.JobFilter, int, bool) {
 	}
 	if s := q.Get("state"); s != "" {
 		f.States = strings.Split(s, ",")
+	}
+	if f.ID = q.Get("id"); len(f.ID) > maxJobID {
+		return f, 0, false
 	}
 	limit := defaultPage
 	if l := q.Get("limit"); l != "" {

@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/PdYrust/karvan/internal/migration/run"
@@ -43,6 +44,7 @@ func TestListMigrations(t *testing.T) {
 	}
 	for query, want := range map[string]int{
 		"?state=done": 0, "?state=checked,created": 2, "?panel=" + strconv.FormatInt(m.panelID, 10): 2, "?panel=999": 0,
+		"?id=" + first: 1, "?id=" + first + "&state=done": 0, "?id=ffffffffffffffffffffffff": 0,
 	} {
 		if n := len(listJobs(t, m, query).Jobs); n != want {
 			t.Errorf("%s: %d jobs", query, n)
@@ -75,7 +77,8 @@ func TestListMigrationsRejectsBadQueries(t *testing.T) {
 		t.Fatalf("signed out: %d", res.status)
 	}
 	e.login("")
-	for _, bad := range []string{"?limit=0", "?limit=500", "?limit=x", "?panel=x", "?panel=0", "?state=lost", "?state=done,", "?cursor=nodot"} {
+	long := "?id=" + strings.Repeat("a", 65)
+	for _, bad := range []string{"?limit=0", "?limit=500", "?limit=x", "?panel=x", "?panel=0", "?state=lost", "?state=done,", "?cursor=nodot", long} {
 		if res := e.do(http.MethodGet, api+"/migrations"+bad, nil); res.status != http.StatusBadRequest || res.errorCode(t) != "bad_request" {
 			t.Errorf("%s: %d", bad, res.status)
 		}

@@ -42,6 +42,9 @@ type JobRow struct {
 type JobFilter struct {
 	PanelID int64
 	States  []string
+	// ID finds one job, so a page about it reads its row in every state,
+	// also while it runs and after a restart.
+	ID string
 }
 
 // ErrBadCursor means a page cursor was not one this list handed out.
@@ -122,6 +125,10 @@ func jobsQuery(f JobFilter, c cursor, limit int) (string, []any, error) {
 	if f.PanelID != 0 {
 		q += " AND j.panel_id = ?"
 		args = append(args, f.PanelID)
+	}
+	if f.ID != "" {
+		q += " AND j.id = ?"
+		args = append(args, f.ID)
 	}
 	if len(f.States) > 0 {
 		for _, st := range f.States {

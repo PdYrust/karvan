@@ -149,6 +149,8 @@ func TestJobsFilters(t *testing.T) {
 		"state":  {JobFilter{States: []string{StateDone}}, "[job4]"},
 		"both":   {JobFilter{PanelID: 2, States: []string{StateDone, StateFailed}}, "[]"},
 		"nobody": {JobFilter{PanelID: 9}, "[]"},
+		"id":     {JobFilter{ID: "job3"}, "[job3]"},
+		"no id":  {JobFilter{ID: "job9"}, "[]"},
 	} {
 		rows, next, err := s.Jobs(ctx, c.f, "", 20)
 		if err != nil || fmt.Sprint(ids(rows)) != c.want || next != "" {
