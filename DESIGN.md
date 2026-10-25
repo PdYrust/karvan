@@ -211,6 +211,14 @@ Laid out like the dashboard's account home, top to bottom:
 - **Delete** asks for the backup id typed and says the backup cannot come back.
 - **Empty:** an icon, "No backups yet", that Safe Mode takes one before each migration writes, and a way to its settings.
 
+### Security settings
+- Access, Two-step sign-in, Sessions and Audit log are tabs of Settings and follow Settings pages: setting rows in cards, one primary action per card.
+- **Asking again:** a change to the login or the address opens a small dialog that asks for the current password, and the code when two-step sign-in is on. Its error sits above the fields; a lock says when to try again.
+- **Shown once** (a new username and password, the new hidden path): a card with each value in mono, a Copy button per value, a warning that they are not shown again, and "I saved them" as the only way to close it. The values live in component state only (D10) and go when the card closes or the page is left.
+- **Address change:** the waiting address sits in its own card with the time it is served until (a clock that counts down), the link that opens it in a new tab, and that nothing changes until it is confirmed from there. Opened from the new address, the same card has Confirm as its primary action. A new port shows the firewall and proxy warning next to the port field.
+- **Two-step setup:** the QR code (dark on a white tile in both themes, drawn as one SVG path), the secret in groups of four in mono with Copy, then the 6-digit field and Turn on. Turning it off asks again with the password and a code.
+- **Sessions:** a table, the current browser first with a "This browser" badge: browser and system in words, sign-in IP, signed in and last used. Sign out per row; "Sign out other sessions" in the header.
+- **Audit log:** a table newest first with action and outcome filters above it: when, what (the action in words, the outcome as icon and word, the reason under it for a failure), who and IP. "Load more" under the table instead of a pager, since the log only grows.
 ### Sign-in
 - Two halves on large screens. Start side on `bg-kumo-base`: wordmark at the top, then a centered form (title, username, password, one blue button) and the recovery hint with the `karvan reset -password` command.
 - End side on `bg-kumo-brand`: language and theme buttons at the top, the "Marzban ⇄ PasarGuard" line, and one short line, then a spinning dotted globe.
