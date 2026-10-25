@@ -34,6 +34,17 @@ function pluralForm(locale: Locale, n: number): 'one' | 'other' {
   return rules.select(n) === 'one' ? 'one' : 'other';
 }
 
+// Intl constructors are slow next to format(); every useT() builds a t(), so
+// the number format is made once per locale.
+const numberFormats = new Map<Locale, Intl.NumberFormat>();
+function numberFormat(locale: Locale): Intl.NumberFormat {
+  let f = numberFormats.get(locale);
+  if (!f) {
+    f = new Intl.NumberFormat(intlLocale(locale));
+    numberFormats.set(locale, f);
+  }
+  return f;
+}
 /**
  * Builds t() for one dictionary. `{name}` placeholders are filled from params;
  * numbers are formatted for the locale, so Persian gets Persian digits.
@@ -43,7 +54,6 @@ export function createTranslate<K extends string>(
   dict: Readonly<Record<K, Message>>,
   locale: Locale,
 ): Translate<K> {
-  const numbers = new Intl.NumberFormat(intlLocale(locale));
   return (key, params) => {
     const msg = dict[key];
     const text =
@@ -52,7 +62,7 @@ export function createTranslate<K extends string>(
     return text.replace(/\{(\w+)\}/g, (whole, name: string) => {
       const value = params[name];
       if (value === undefined) return whole;
-      return typeof value === 'number' ? numbers.format(value) : value;
+      return typeof value === 'number' ? numberFormat(locale).format(value) : value;
     });
   };
 }

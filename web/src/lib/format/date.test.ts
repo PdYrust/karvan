@@ -30,6 +30,14 @@ describe('dates in Tehran time', () => {
     expect(formatTime(moment, 'en', { timeZone: 'UTC' })).toBe('15:10');
   });
 
+  it('keeps one formatter per language, calendar and zone', () => {
+    expect(formatTime(moment, 'en')).toBe('18:40');
+    expect(formatTime(moment, 'en', { timeZone: 'UTC' })).toBe('15:10');
+    expect(formatTime(moment, 'fa', { timeZone: 'UTC' })).toBe('۱۵:۱۰');
+    expect(formatLongDate(moment, 'en', { calendar: 'persian' })).toContain('1405');
+    expect(formatLongDate(moment, 'en')).toBe('Thursday, October 15, 2026');
+  });
+
   it('gives log lines their seconds', () => {
     const later = new Date(moment.getTime() + 5000);
     expect(formatSeconds(later, 'en')).toBe('18:40:05');

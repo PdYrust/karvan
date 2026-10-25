@@ -19,15 +19,23 @@ function tag(locale: Locale, calendar: Calendar): string {
   return `${intlLocale(locale)}-u-ca-${calendar}`;
 }
 
+// Intl constructors are slow next to format(), and charts and lists format
+// many dates per render, so each formatter is made once.
+const formatters = new Map<string, Intl.DateTimeFormat>();
 function formatter(
   locale: Locale,
   opts: DateOptions,
   fields: Intl.DateTimeFormatOptions,
 ): Intl.DateTimeFormat {
-  return new Intl.DateTimeFormat(tag(locale, opts.calendar ?? defaultCalendar(locale)), {
-    timeZone: opts.timeZone ?? defaultTimeZone,
-    ...fields,
-  });
+  const calendar = opts.calendar ?? defaultCalendar(locale);
+  const timeZone = opts.timeZone ?? defaultTimeZone;
+  const key = `${locale}|${calendar}|${timeZone}|${JSON.stringify(fields)}`;
+  let f = formatters.get(key);
+  if (!f) {
+    f = new Intl.DateTimeFormat(tag(locale, calendar), { timeZone, ...fields });
+    formatters.set(key, f);
+  }
+  return f;
 }
 
 /** "۲۳ مهر ۱۴۰۵، ۱۸:۴۰" / "Oct 15, 2026, 18:40" */
