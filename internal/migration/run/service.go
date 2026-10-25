@@ -32,6 +32,9 @@ var (
 	ErrBadPassword = errors.New("the admin password does not meet the policy")
 	ErrNoRollback  = errors.New("only a failed or interrupted job can be rolled back")
 	ErrBadReload   = errors.New("unknown reload method")
+	// ErrLocked means another job or another Karvan writes to the
+	// destination now.
+	ErrLocked = paneldb.ErrLocked
 	// ErrNoPanelControl means Karvan cannot stop and start the panel, so
 	// it cannot put a whole backup back.
 	ErrNoPanelControl = errors.New("cannot stop and start this panel")

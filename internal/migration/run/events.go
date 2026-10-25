@@ -29,7 +29,7 @@ const (
 // Event types.
 const (
 	EventStage    = "stage"    // a stage started or ended: {"state": "start"|"done"|"failed"}
-	EventProgress = "progress" // {"done": n, "total": n, "etaSeconds": n}; a compare's read: {"done": n, "total": n, "pass": n}
+	EventProgress = "progress" // {"done": n, "total": n, "etaSeconds": n}; a compare's read: {"done": n, "total": n, "pass": n}; an undo: {"done": n, "total": n}
 	EventLog      = "log"      // {"code": "...", ...}: the UI words it
 	EventDone     = "done"     // {"state": final job state}
 )

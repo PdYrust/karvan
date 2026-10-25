@@ -156,23 +156,26 @@ func (a *API) CancelMigration(w http.ResponseWriter, r *http.Request) {
 	respond.NoContent(w)
 }
 
-// RollbackMigration undoes a failed or interrupted job (D39).
+// RollbackMigration starts undoing a failed or interrupted job (D39, B5);
+// the outcome follows on the job's event stream.
 func (a *API) RollbackMigration(w http.ResponseWriter, r *http.Request) {
-	rep, err := a.Runs.Rollback(r.Context(), r.PathValue("id"))
-	if errors.Is(err, run.ErrNoRollback) {
-		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeBusy})
+	id := r.PathValue("id")
+	err := a.Runs.Rollback(r.Context(), id)
+	switch {
+	case errors.Is(err, run.ErrNoRollback):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeNotRollbackable})
+		return
+	case errors.Is(err, run.ErrLocked):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeDestLocked})
 		return
 	}
-	outcome := audit.Success
-	if err != nil || rep.State != run.StateRolledBack {
-		outcome = audit.Failure
-	}
-	a.record(r, audit.ActionMigrationUndo, outcome, map[string]string{"job": r.PathValue("id")})
 	if err != nil {
+		a.record(r, audit.ActionMigrationUndo, audit.Failure, map[string]string{"job": id})
 		writeRunError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, rep)
+	a.record(r, audit.ActionMigrationUndo, audit.Success, map[string]string{"job": id})
+	respond.JSON(w, http.StatusAccepted, map[string]any{"id": id})
 }
 
 // Templates lists saved templates.

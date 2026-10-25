@@ -47,7 +47,7 @@ func TestMigrationErrors(t *testing.T) {
 		status       int
 		code         string
 	}{
-		{http.MethodPost, "/rollback", nil, http.StatusConflict, "busy"},
+		{http.MethodPost, "/rollback", nil, http.StatusConflict, "not_rollbackable"},
 		{http.MethodGet, "/report", nil, http.StatusNotFound, "not_found"},
 		{http.MethodPost, "/passwords.csv", nil, http.StatusGone, "gone"},
 		{http.MethodPut, "/plan", map[string]any{}, http.StatusPreconditionRequired, "stale_plan"},

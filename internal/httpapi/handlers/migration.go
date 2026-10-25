@@ -34,6 +34,10 @@ const (
 	codeConfirm       = "confirm_required"
 	codeNothingLeft   = "gone"
 	codePanelControl  = "panel_control_unavailable"
+	// A rollback on request: the job is not failed or interrupted, or
+	// another job holds its destination.
+	codeNotRollbackable = "not_rollbackable"
+	codeDestLocked      = "destination_locked"
 )
 
 // controlReason says why Karvan cannot stop and start a panel, as a code.

@@ -67,10 +67,18 @@ func (s *Service) compensate(ctx context.Context, j *Job, p *prepared, rep *Repo
 	}
 	slices.Sort(order)
 	slices.Reverse(order)
+	// Progress counts user rows handled: removed, or found gone already.
+	total, handled := len(rows), 0
+	if admin != nil {
+		total--
+	}
+	s.emit(j, StageUndo, EventProgress, map[string]any{"done": 0, "total": total})
 	for _, n := range order {
 		if err := s.removeBatch(ctx, p, batches[n], rep); err != nil {
 			return err
 		}
+		handled += len(batches[n])
+		s.emit(j, StageUndo, EventProgress, map[string]any{"done": handled, "total": total})
 	}
 	if admin != nil {
 		return s.removeAdmin(ctx, p, *admin)

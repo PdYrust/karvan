@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -270,25 +271,25 @@ func TestAdminKeepsTheResellersPassword(t *testing.T) {
 	}
 }
 
+// A rollback on request runs in the background: its undo reports rows
+// handled of the total, the stream ends with done, and the stored report
+// counts the undo next to what the run moved.
 func TestRollbackOfAFailedJobOnRequest(t *testing.T) {
-	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/marzbandb/testdata/" + marzbandb.Revision + ".sqlite.sql"})
-	h := newHarness(t, panel.PasarGuard, panel.Marzban, tg, 12)
-	h.fault = func(s string, n int) error {
-		if s == "batch" && n == 3 {
-			return errors.New("injected")
-		}
-		return nil
+	h, rep := failedJob(t)
+	before := len(trail(t, h, rep.JobID))
+	h.rollBackOnRequest(rep.JobID)
+	back, err := h.svc.Report(rep.JobID)
+	if err != nil || back.State != StateRolledBack || back.Counts.Undone != 10 || back.Counts.Moved != 10 || h.count("users") != 0 || h.count("admins") != 0 {
+		t.Fatalf("rollback: %v %+v users %d", err, back, h.count("users"))
 	}
-	rep := h.run(h.job(nil), false)
-	if rep.State != StateFailed || h.count("users") != 10 {
-		t.Fatalf("state %s users %d", rep.State, h.count("users"))
+	want := []string{"undo stage start", "undo progress 0/10 pass <nil>", "undo progress 5/10 pass <nil>", "undo progress 10/10 pass <nil>",
+		"undo stage done", " done rolled_back"}
+	if got := trail(t, h, rep.JobID)[before:]; !slices.Equal(got, want) {
+		t.Fatalf("events %q", got)
 	}
-	back, err := h.svc.Rollback(context.Background(), rep.JobID)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if back.State != StateRolledBack || back.Counts.Undone != 10 || h.count("users") != 0 || h.count("admins") != 0 {
-		t.Fatalf("rollback: %+v users %d", back, h.count("users"))
+	checkStoredRollback(t, h.svc, rep.JobID, 10)
+	if err := h.svc.Rollback(context.Background(), rep.JobID); !errors.Is(err, ErrNoRollback) {
+		t.Fatalf("second rollback: %v", err)
 	}
 }
 
