@@ -6,7 +6,9 @@ import { shellMessages } from './messages';
 
 /**
  * Sidebar as a sheet on small screens. A native <dialog> gives focus
- * trapping, Escape, backdrop dismiss and an inert page behind it.
+ * trapping, Escape, backdrop dismiss and an inert page behind it. The sheet's
+ * content mounts only while it is open, so a phone does not build the
+ * navigation twice on every page load.
  */
 export function MobileNav({
   open,
@@ -48,7 +50,7 @@ export function MobileNav({
             <XIcon size={20} aria-hidden="true" />
           </button>
         </div>
-        {children}
+        {open ? children : null}
       </div>
     </dialog>
   );

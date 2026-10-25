@@ -20,6 +20,7 @@ import { useActivity } from './use-activity';
 import { useModHotkey } from './use-hotkey';
 import { useRecordRecents } from './use-record-recents';
 import { useShortcuts } from './use-shortcuts';
+import { useWide } from './use-wide';
 
 /** Dashboard layout: sidebar (a sheet on small screens), top bar, the page and the footer. */
 export function AppShell() {
@@ -33,6 +34,8 @@ export function AppShell() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
   const [collapsed, setCollapsed] = useState(readSidebarCollapsed);
+  // The column is hidden under lg anyway; not building it keeps phones quick.
+  const wide = useWide();
   // What had focus when the palette opened: a search field, a button or the page itself.
   const opener = useRef<HTMLElement | null>(null);
   const openSearch = useCallback(() => {
@@ -65,7 +68,9 @@ export function AppShell() {
             {t('skipToContent')}
           </a>
 
-          <Sidebar collapsed={collapsed} onToggle={toggleSidebar} onSearch={openSearch} />
+          {wide ? (
+            <Sidebar collapsed={collapsed} onToggle={toggleSidebar} onSearch={openSearch} />
+          ) : null}
 
           <MobileNav open={menuOpen} onClose={() => setMenuOpen(false)}>
             <SidebarBody
