@@ -13,7 +13,6 @@ const en = {
   stepStart: 'Start',
   intro:
     'Choose where the users go, then sign in to the old panel. Nothing changes on either panel until you start.',
-  stepSoon: 'This step opens here soon.',
   jobFailed: "This migration didn't load.",
   back: 'Back',
   continue: 'Continue',
@@ -57,7 +56,6 @@ const fa: Messages<WizardKey>['fa'] = {
   stepStart: 'شروع',
   intro:
     'پنل مقصد را انتخاب کنید و وارد پنل قدیمی شوید. تا وقتی شروع نکنید، در هیچ کدام از دو پنل چیزی تغییر نمیکند.',
-  stepSoon: 'این مرحله به زودی همینجا باز میشود.',
   jobFailed: 'این انتقال بارگذاری نشد.',
   back: 'قبلی',
   continue: 'ادامه',

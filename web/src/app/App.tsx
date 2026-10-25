@@ -70,6 +70,9 @@ const CheckReportPage = lazy(() =>
     default: m.CheckReportPage,
   })),
 );
+const LivePage = lazy(() =>
+  import('../features/live/LivePage').then((m) => ({ default: m.LivePage })),
+);
 /**
  * A request that finds no session means it ended (timeout or sign-out
  * elsewhere); the server shows the sign-in page at the same address. A write
@@ -147,6 +150,7 @@ export function App() {
                         <Route path="preview" element={<PreviewStep />} />
                         <Route path="start" element={<StartStep />} />
                       </Route>
+                      <Route path="migrations/:id/live" element={<LivePage />} />
                       <Route path="panels" element={<PanelsPage />} />
                       <Route path="panels/:id" element={<PanelPage />} />
                       <Route path="settings" element={<SettingsPage />}>
