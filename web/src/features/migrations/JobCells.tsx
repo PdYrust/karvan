@@ -7,7 +7,7 @@ import { JobMove, JobOutcomeText } from './JobLabels';
 import { listMessages } from './list-messages';
 
 /** The move's logos, then the admin as the link to the job and the old panel's host under it. */
-export function JobName({ job, to }: { job: JobRow; to: string }) {
+export function JobName({ job, to }: { job: Pick<JobRow, 'source' | 'panel'>; to: string }) {
   const host = originHost(job.source.origin);
   return (
     <span className="flex min-w-0 items-center gap-3">
