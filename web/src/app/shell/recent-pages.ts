@@ -8,6 +8,7 @@ export type RecentPage =
   | { section: 'reports'; jobId?: string }
   | { section: 'templates' }
   | { section: 'links'; page?: 'new' }
+  | { section: 'backups' }
   | { section: 'settings'; tab: SettingsTab };
 
 function withPanel(section: 'analytics' | 'panels', id: string | undefined) {
@@ -28,6 +29,7 @@ const routes: [RegExp, (m: RegExpExecArray) => RecentPage | undefined][] = [
   [/^\/templates$/, () => ({ section: 'templates' })],
   [/^\/links$/, () => ({ section: 'links' })],
   [/^\/links\/new$/, () => ({ section: 'links', page: 'new' })],
+  [/^\/backups$/, () => ({ section: 'backups' })],
   [/^\/settings$/, () => ({ section: 'settings', tab: 'general' })],
   [/^\/settings\/safe-mode$/, () => ({ section: 'settings', tab: 'safe-mode' })],
 ];

@@ -17,6 +17,7 @@ describe('recentPage', () => {
     expect(recentPage('/templates')).toEqual({ section: 'templates' });
     expect(recentPage('/links')).toEqual({ section: 'links' });
     expect(recentPage('/links/new')).toEqual({ section: 'links', page: 'new' });
+    expect(recentPage('/backups')).toEqual({ section: 'backups' });
     expect(recentPage('/settings')).toEqual({ section: 'settings', tab: 'general' });
     expect(recentPage('/settings/safe-mode')).toEqual({ section: 'settings', tab: 'safe-mode' });
   });

@@ -46,7 +46,7 @@ export const nav: NavGroup[] = [
     label: 'groupServer',
     items: [
       { label: 'navPanels', icon: HardDrivesIcon, to: '/panels', key: 'KeyP' },
-      { label: 'navBackups', icon: ArchiveIcon, key: 'KeyB' },
+      { label: 'navBackups', icon: ArchiveIcon, to: '/backups', key: 'KeyB' },
     ],
   },
 ];

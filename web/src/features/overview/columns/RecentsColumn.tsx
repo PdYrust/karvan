@@ -17,6 +17,7 @@ const sections = {
   reports: 'navReports',
   templates: 'navTemplates',
   links: 'navLinks',
+  backups: 'navBackups',
   settings: 'settings',
 } as const;
 

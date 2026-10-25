@@ -20,7 +20,11 @@ function BackupsValue({ backups, failed }: { backups: Backup[] | undefined; fail
   if (!backups) return failed ? '-' : <Bone className="h-4 w-24" />;
   if (backups.length === 0) return t('backupsNone');
   const size = backups.reduce((n, b) => n + b.size, 0);
-  return t('backupsValue', { count: backups.length, size: fmt.bytes(size) });
+  return (
+    <Link to="/backups" className="text-(--color-kumo-brand) hover:underline">
+      {t('backupsValue', { count: backups.length, size: fmt.bytes(size) })}
+    </Link>
+  );
 }
 
 function Facts({ safe }: { safe: SafeMode }) {
