@@ -44,6 +44,13 @@ func BasePath(base string, next http.Handler) http.Handler {
 	})
 }
 
+// UnderBase reports whether p is "/<base>" or below it, comparing the
+// prefix in constant time like BasePath does.
+func UnderBase(p, base string) bool {
+	prefix := "/" + base
+	return hasPrefix(p, prefix) && (len(p) == len(prefix) || p[len(prefix)] == '/')
+}
+
 // hasPrefix compares in constant time over the prefix, so response timing
 // does not reveal how much of a guessed path was right.
 func hasPrefix(p, prefix string) bool {
