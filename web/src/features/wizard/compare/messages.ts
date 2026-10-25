@@ -105,6 +105,13 @@ const en = {
   preset_disabled: 'Disabled',
   'preset_on-hold': 'On hold',
   'preset_has-note': 'With a note',
+  targetsNoGroups:
+    'The destination has no groups. Add one in PasarGuard, then start a new migration.',
+  targetsNoInbounds:
+    'The destination has no inbounds. Add one in Marzban, then start a new migration.',
+  targetHosts: { one: '{count} host', other: '{count} hosts' },
+  targetNoHosts: 'No hosts, so no links',
+  targetDisabled: 'Disabled',
 };
 
 export type CompareKey = keyof typeof en;
@@ -214,6 +221,12 @@ const fa: Messages<CompareKey>['fa'] = {
   preset_disabled: 'غیرفعال',
   'preset_on-hold': 'در انتظار شروع',
   'preset_has-note': 'با یادداشت',
+  targetsNoGroups: 'پنل مقصد گروهی ندارد. در پاسارگاد یک گروه بسازید و بعد انتقال جدیدی شروع کنید.',
+  targetsNoInbounds:
+    'پنل مقصد اینباندی ندارد. در مرزبان یک اینباند بسازید و بعد انتقال جدیدی شروع کنید.',
+  targetHosts: { one: '{count} هاست', other: '{count} هاست' },
+  targetNoHosts: 'بدون هاست، پس بدون لینک',
+  targetDisabled: 'غیرفعال',
 };
 
 export const compareMessages: Messages<CompareKey> = { en, fa };

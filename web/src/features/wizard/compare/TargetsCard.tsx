@@ -7,7 +7,6 @@ import { useT } from '../../../i18n/locale';
 import type { Conflict, JobSummary } from '../../../lib/api/migrations';
 import { setTargets } from '../../../lib/plan/plan';
 import { protocolName } from '../protocols';
-import { summaryMessages } from '../summary/messages';
 import { useWizard } from '../wizard-context';
 import { conflictMessages } from './conflict-messages';
 import { compareMessages } from './messages';
@@ -21,7 +20,6 @@ export function TargetsCard({
   conflicts: readonly Conflict[];
 }) {
   const t = useT(compareMessages);
-  const ts = useT(summaryMessages);
   const tc = useT(conflictMessages);
   const { plan } = useWizard();
   const own = plan.plan?.targets ?? null;
@@ -53,7 +51,7 @@ export function TargetsCard({
           <InlineAlert>{tc('job_C09')}</InlineAlert>
         ) : null}
         {(summary.targets ?? []).length === 0 ? (
-          <p className="text-kumo-subtle">{ts(pg ? 'noGroups' : 'noInbounds')}</p>
+          <p className="text-kumo-subtle">{t(pg ? 'targetsNoGroups' : 'targetsNoInbounds')}</p>
         ) : (
           <ul className="flex flex-col rounded-lg ring ring-kumo-hairline">
             {(summary.targets ?? []).map((g) => (
@@ -70,12 +68,12 @@ export function TargetsCard({
                       <span className="text-sm text-kumo-subtle">
                         <bdi dir="ltr">{(g.protocols ?? []).map(protocolName).join(', ')}</bdi>
                       </span>
-                      {g.disabled ? <Badge variant="outline">{ts('disabled')}</Badge> : null}
+                      {g.disabled ? <Badge variant="outline">{t('targetDisabled')}</Badge> : null}
                     </span>
                   }
                 />
                 <span className="ms-auto shrink-0 text-sm text-kumo-subtle">
-                  {g.hosts === 0 ? ts('noHosts') : ts('hosts', { count: g.hosts })}
+                  {g.hosts === 0 ? t('targetNoHosts') : t('targetHosts', { count: g.hosts })}
                 </span>
               </li>
             ))}
