@@ -249,6 +249,33 @@ describe('log sentences', () => {
     });
   });
 
+  it('never says the panel reloaded when the operator restarts it or users missed it', () => {
+    const reload = (data: MigrationEvent['data']) => eventSentence(ev('reload', 'stage', data));
+    expect(reload({ state: 'start', method: 'manual' })).toBeNull();
+    expect(reload({ state: 'done', method: 'manual', complete: false })).toEqual({
+      from: 'live',
+      key: 'done_reload_manual',
+    });
+    expect(reload({ state: 'done', method: 'touch', complete: false })).toEqual({
+      from: 'live',
+      key: 'done_reload_partial',
+    });
+    expect(reload({ state: 'start', method: 'touch' })).toEqual({
+      from: 'live',
+      key: 'start_reload',
+    });
+    expect(reload({ state: 'done', method: 'core_restart', complete: true })).toEqual({
+      from: 'live',
+      key: 'done_reload',
+    });
+    // A history from before the stage named its method.
+    expect(reload({ state: 'done' })).toEqual({ from: 'live', key: 'done_reload' });
+    expect(reload({ state: 'failed', method: 'manual' })).toEqual({
+      from: 'live',
+      key: 'failed_reload',
+    });
+  });
+
   it('leaves out progress and what it does not know', () => {
     expect(eventSentence(ev('execute', 'progress', { done: 1, total: 2 }))).toBeNull();
     expect(eventSentence(stage('teleport', 'start'))).toBeNull();

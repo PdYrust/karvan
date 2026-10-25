@@ -60,10 +60,27 @@ export function codeSentence(
   return { from: 'error', key: errorKey(code, detail) };
 }
 
+/**
+ * A manual reload is the operator's to do, and a reload that missed users
+ * did not reload the panel, so neither says it did. Undefined leaves the
+ * stage's usual sentence (also for histories from before the stage named
+ * its method).
+ */
+function reloadSentence(state: string, data: MigrationEvent['data']): Sentence | null | undefined {
+  if (data.method === 'manual' && state === 'start') return null;
+  if (data.method === 'manual' && state === 'done')
+    return { from: 'live', key: 'done_reload_manual' };
+  if (state === 'done' && data.complete === false)
+    return { from: 'live', key: 'done_reload_partial' };
+  return undefined;
+}
+
 /** One plain sentence for an event of the log; null for events the log leaves out. */
 export function eventSentence(e: MigrationEvent): Sentence | null {
   const state = typeof e.data.state === 'string' ? e.data.state : '';
   if (e.type === 'stage') {
+    const reload = e.stage === 'reload' ? reloadSentence(state, e.data) : undefined;
+    if (reload !== undefined) return reload;
     const key = own(stageSentences, e.stage);
     const sentence = key && own(key, state);
     return sentence ? { from: 'live', key: sentence } : null;
