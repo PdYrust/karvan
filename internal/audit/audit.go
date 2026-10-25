@@ -44,8 +44,10 @@ const (
 	ActionSiteTokens       = "legacy_site.tokens"
 	ActionPasswordsTaken   = "migration.passwords_download"
 
-	ActionSessionsEnd = "sessions.end"
-	ActionLoginRenew  = "account.credentials"
+	ActionSessionsEnd   = "sessions.end"
+	ActionLoginRenew    = "account.credentials"
+	ActionAddressStart  = "settings.address_start"
+	ActionAddressChange = "settings.address"
 )
 
 // ActorCLI is the actor for actions taken from the command line.

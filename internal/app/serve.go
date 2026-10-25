@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/fs"
 	"log/slog"
@@ -13,12 +12,11 @@ import (
 	"github.com/PdYrust/karvan/internal/buildinfo"
 	"github.com/PdYrust/karvan/internal/hoststats"
 	"github.com/PdYrust/karvan/internal/httpapi"
+	"github.com/PdYrust/karvan/internal/httpapi/address"
+	"github.com/PdYrust/karvan/internal/settings"
 )
 
-const (
-	shutdownTimeout = 10 * time.Second
-	janitorInterval = 10 * time.Minute
-)
+const janitorInterval = 10 * time.Minute
 
 // Serve runs the web panel until ctx ends, then shuts down gracefully.
 func (a *App) Serve(ctx context.Context, web fs.FS) error {
@@ -35,8 +33,7 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 	closing := make(chan struct{})
 	svc := a.startServices(ctx)
 	defer func() { cancel(); svc.stop() }()
-	handler, err := httpapi.New(httpapi.Deps{
-		BasePath:       h.BasePath,
+	deps := httpapi.Deps{
 		TrustedProxies: a.Config.Proxies(),
 		Auth:           a.Auth,
 		Audit:          a.Audit,
@@ -52,22 +49,39 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 		HostStore:      svc.hostStore,
 		HostReader:     hoststats.System,
 		DBStats:        svc.dbstats,
-	})
-	if err != nil {
-		return err
+	}
+	srv := a.addressServer(h.Bind, func() { close(closing) })
+	deps.Address = srv
+	srv.Handler = func(base string) (http.Handler, error) {
+		d := deps
+		d.BasePath = base
+		return httpapi.New(d)
 	}
 	ln, err := net.Listen("tcp", h.Addr())
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", h.Addr(), err)
 	}
-	return a.serveOn(ctx, ln, handler, func() { close(closing) })
+	return a.serveOn(ctx, srv, address.Site{Port: h.Port, BasePath: h.BasePath}, ln)
 }
 
-// serveOn serves handler on ln until ctx ends. onShutdown, if set, runs
-// when the shutdown starts.
-func (a *App) serveOn(ctx context.Context, ln net.Listener, handler http.Handler, onShutdown func()) error {
-	srv := &http.Server{
-		Handler:           handler,
+// addressServer serves the panel on bind and saves a confirmed change of
+// address in the settings.
+func (a *App) addressServer(bind string, onShutdown func()) *address.Server {
+	return &address.Server{
+		Bind: bind,
+		Save: func(ctx context.Context, s address.Site) error {
+			return a.Settings.SetHTTP(ctx, settings.HTTP{Bind: bind, Port: s.Port, BasePath: s.BasePath})
+		},
+		HTTP:       a.httpServer,
+		OnShutdown: onShutdown,
+		Log:        a.Logger,
+	}
+}
+
+// httpServer is the server of each listener.
+func (a *App) httpServer(h http.Handler) *http.Server {
+	return &http.Server{
+		Handler:           h,
 		ReadHeaderTimeout: 10 * time.Second,
 		ReadTimeout:       30 * time.Second,
 		WriteTimeout:      60 * time.Second,
@@ -78,29 +92,15 @@ func (a *App) serveOn(ctx context.Context, ln net.Listener, handler http.Handler
 		// scanner something is here.
 		DisableGeneralOptionsHandler: true,
 	}
-	if onShutdown != nil {
-		srv.RegisterOnShutdown(onShutdown)
-	}
-	go a.janitor(ctx)
+}
 
-	errc := make(chan error, 1)
-	go func() { errc <- srv.Serve(ln) }()
+// serveOn serves site on ln through srv until ctx ends.
+func (a *App) serveOn(ctx context.Context, srv *address.Server, site address.Site, ln net.Listener) error {
+	go a.janitor(ctx)
 	// The address is logged; the hidden path never is.
 	a.Logger.Info("karvan is listening", "addr", ln.Addr().String(), "version", buildinfo.Version)
-
-	select {
-	case err := <-errc:
-		return fmt.Errorf("serve: %w", err)
-	case <-ctx.Done():
-	}
-	shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownTimeout)
-	defer cancel()
-	if err := srv.Shutdown(shutdownCtx); err != nil {
-		_ = srv.Close()
-		return fmt.Errorf("shut down: %w", err)
-	}
-	if err := <-errc; err != nil && !errors.Is(err, http.ErrServerClosed) {
-		return fmt.Errorf("serve: %w", err)
+	if err := srv.Serve(ctx, site, ln); err != nil {
+		return err
 	}
 	a.Logger.Info("karvan stopped")
 	return nil

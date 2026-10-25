@@ -13,6 +13,7 @@ import (
 	"github.com/PdYrust/karvan/internal/bridge"
 	"github.com/PdYrust/karvan/internal/dbstats"
 	"github.com/PdYrust/karvan/internal/hoststats"
+	"github.com/PdYrust/karvan/internal/httpapi/address"
 	"github.com/PdYrust/karvan/internal/httpapi/handlers"
 	"github.com/PdYrust/karvan/internal/httpapi/middleware"
 	"github.com/PdYrust/karvan/internal/migration/run"
@@ -49,6 +50,9 @@ type Deps struct {
 	HostStore  *hoststats.Store
 	HostReader hoststats.Reader
 	DBStats    *dbstats.Sampler
+
+	// Address serves the panel; with it the address can be changed.
+	Address *address.Server
 }
 
 // New builds the root handler.
@@ -60,7 +64,7 @@ func New(d Deps) (http.Handler, error) {
 	cookies := middleware.Cookies{Path: "/" + d.BasePath + "/"}
 	api := &handlers.API{Auth: d.Auth, Audit: d.Audit, Cookies: cookies, Version: d.Version,
 		Runs: d.Runs, Bridge: d.Bridge, Settings: d.Settings, ScanRoots: d.ScanRoots, Closing: d.Closing,
-		Host: d.Host, HostStore: d.HostStore, HostReader: d.HostReader, DBStats: d.DBStats}
+		Host: d.Host, HostStore: d.HostStore, HostReader: d.HostReader, DBStats: d.DBStats, Address: d.Address}
 	signedIn := func(h http.HandlerFunc) http.Handler { return middleware.RequireSession(h) }
 
 	rt := middleware.NewRouter()
@@ -78,7 +82,7 @@ func New(d Deps) (http.Handler, error) {
 	rt.HandleFunc("POST /api/v1/session", api.CreateSession)
 	rt.Handle("DELETE /api/v1/session", signedIn(api.DeleteSession))
 	rt.Handle("GET /api/v1/overview", signedIn(api.Overview))
-	accountRoutes(rt, api, signedIn)
+	accountRoutes(rt, api, signedIn, d.Address != nil)
 	if d.Runs != nil {
 		migrationRoutes(rt, api, signedIn)
 		rt.Handle("GET /api/v1/analytics/server", signedIn(api.ServerAnalytics))
@@ -96,8 +100,9 @@ func New(d Deps) (http.Handler, error) {
 	return middleware.BasePath(d.BasePath, h), nil
 }
 
-// accountRoutes are the operator's login, sessions and audit log.
-func accountRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.HandlerFunc) http.Handler) {
+// accountRoutes are the operator's login, sessions, audit log and, when the
+// server can change it, the panel's address.
+func accountRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.HandlerFunc) http.Handler, address bool) {
 	routes := map[string]http.HandlerFunc{
 		"POST /api/v1/account/totp":            api.BeginTOTP,
 		"POST /api/v1/account/totp/confirm":    api.ConfirmTOTP,
@@ -107,6 +112,11 @@ func accountRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.
 		"DELETE /api/v1/account/sessions/{id}": api.EndSession,
 		"POST /api/v1/account/credentials":     api.RenewLogin,
 		"GET /api/v1/audit":                    api.AuditLog,
+	}
+	if address {
+		routes["GET /api/v1/settings/address"] = api.GetAddress
+		routes["POST /api/v1/settings/address"] = api.StartAddress
+		routes["POST /api/v1/settings/address/confirm"] = api.ConfirmAddress
 	}
 	for pattern, h := range routes {
 		rt.Handle(pattern, signedIn(h))

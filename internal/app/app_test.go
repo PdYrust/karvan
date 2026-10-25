@@ -18,6 +18,7 @@ import (
 
 	"github.com/PdYrust/karvan/internal/auth"
 	"github.com/PdYrust/karvan/internal/config"
+	"github.com/PdYrust/karvan/internal/httpapi/address"
 	"github.com/PdYrust/karvan/internal/secret"
 	"github.com/PdYrust/karvan/internal/settings"
 	"github.com/PdYrust/karvan/internal/store"
@@ -209,10 +210,14 @@ func TestServeStopsWhenContextEnds(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan error, 1)
-	go func() {
-		done <- a.serveOn(ctx, ln, http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusTeapot) }), nil)
-	}()
-	res, err := http.Get("http://" + ln.Addr().String() + "/")
+	closed := make(chan struct{})
+	srv := a.addressServer("127.0.0.1", func() { close(closed) })
+	srv.Handler = func(string) (http.Handler, error) {
+		return http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(http.StatusTeapot) }), nil
+	}
+	site := address.Site{Port: ln.Addr().(*net.TCPAddr).Port, BasePath: "hiddenPath1234"}
+	go func() { done <- a.serveOn(ctx, srv, site, ln) }()
+	res, err := http.Get("http://" + ln.Addr().String() + "/hiddenPath1234/")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -221,7 +226,7 @@ func TestServeStopsWhenContextEnds(t *testing.T) {
 		t.Fatalf("status %d", res.StatusCode)
 	}
 
-	// "OPTIONS *" must reach the handler, not net/http's built-in answer.
+	// "OPTIONS *" must get Karvan's plain 404, not net/http's built-in answer.
 	conn, err := net.Dial("tcp", ln.Addr().String())
 	if err != nil {
 		t.Fatal(err)
@@ -229,10 +234,15 @@ func TestServeStopsWhenContextEnds(t *testing.T) {
 	fmt.Fprint(conn, "OPTIONS * HTTP/1.1\r\nHost: x\r\nConnection: close\r\n\r\n")
 	line, _ := bufio.NewReader(conn).ReadString('\n')
 	conn.Close()
-	if !strings.Contains(line, "418") {
-		t.Fatalf("OPTIONS * got %q, want the handler's 418", line)
+	if !strings.Contains(line, "404") {
+		t.Fatalf("OPTIONS * got %q, want the plain 404", line)
 	}
 	cancel()
+	select {
+	case <-closed:
+	case <-time.After(5 * time.Second):
+		t.Fatal("the shutdown hook did not run")
+	}
 	select {
 	case err := <-done:
 		if err != nil {

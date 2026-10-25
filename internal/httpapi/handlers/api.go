@@ -11,6 +11,7 @@ import (
 	"github.com/PdYrust/karvan/internal/bridge"
 	"github.com/PdYrust/karvan/internal/dbstats"
 	"github.com/PdYrust/karvan/internal/hoststats"
+	"github.com/PdYrust/karvan/internal/httpapi/address"
 	"github.com/PdYrust/karvan/internal/httpapi/middleware"
 	"github.com/PdYrust/karvan/internal/migration/run"
 	"github.com/PdYrust/karvan/internal/settings"
@@ -46,6 +47,9 @@ type API struct {
 	HostStore  *hoststats.Store
 	HostReader hoststats.Reader
 	DBStats    *dbstats.Sampler
+
+	// Address serves the panel and changes its address.
+	Address *address.Server
 }
 
 // record audits an operator action. A failed audit write is logged, not
