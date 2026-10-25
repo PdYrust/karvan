@@ -1,0 +1,86 @@
+import { useQuery } from '@tanstack/react-query';
+import { useNavigate } from 'react-router';
+import { FileTextIcon, StackIcon } from '@phosphor-icons/react';
+import { PanelMark } from '../../components/panels/PanelLabel';
+import { panelSearchNames } from '../../components/panels/PanelLogo';
+import { useT } from '../../i18n/locale';
+import { reportPath, reportStates } from '../../features/migrations/job-place';
+import { listJobs, originHost, type JobRow } from '../../lib/api/migrations';
+import { listTemplates, templateKeys } from '../../lib/api/templates';
+import type { CommandGroup } from './commands';
+import { shellMessages } from './messages';
+
+/** How many of the latest jobs the palette searches. */
+const paletteJobs = 100;
+
+/** The admin, the old panel's address and both panels' names, in both languages. */
+function keywordsOf(j: JobRow): string {
+  const kinds = [j.source.kind, j.panel.kind].map((k) => (k ? panelSearchNames[k] : ''));
+  return [j.source.admin, j.source.origin, j.panel.name, ...kinds].join(' ');
+}
+
+/**
+ * The latest migrations and their reports in the palette, found by admin
+ * and address, and the saved templates by name. They are read only while
+ * the palette is open.
+ */
+export function useJobCommands(open: boolean): CommandGroup[] {
+  const t = useT(shellMessages);
+  const navigate = useNavigate();
+  const jobs = useQuery({
+    queryKey: ['migrations', 'palette', paletteJobs],
+    queryFn: () => listJobs({ limit: paletteJobs }),
+    enabled: open,
+  });
+  const templates = useQuery({
+    queryKey: templateKeys.all,
+    queryFn: listTemplates,
+    enabled: open,
+  });
+  const rows = jobs.data?.jobs ?? [];
+  const name = (j: JobRow) => ({
+    admin: j.source.admin || originHost(j.source.origin),
+    host: originHost(j.source.origin),
+  });
+  return [
+    {
+      id: 'migrations',
+      label: t('navMigrations'),
+      searchOnly: true,
+      items: rows.map((j) => ({
+        id: `job:${j.id}`,
+        title: t('actionJob', name(j)),
+        keywords: keywordsOf(j),
+        // The old panel's logo: the palette's icon slot holds one mark.
+        icon: <PanelMark kind={j.source.kind} size={18} />,
+        run: () => void navigate(`/migrations/${encodeURIComponent(j.id)}`),
+      })),
+    },
+    {
+      id: 'reports',
+      label: t('navReports'),
+      searchOnly: true,
+      items: rows
+        .filter((j) => reportStates.includes(j.state))
+        .map((j) => ({
+          id: `report:${j.id}`,
+          title: t('actionReport', name(j)),
+          keywords: keywordsOf(j),
+          icon: <FileTextIcon className="size-[18px]" />,
+          run: () => void navigate(reportPath(j.id)),
+        })),
+    },
+    {
+      id: 'templates',
+      label: t('navTemplates'),
+      searchOnly: true,
+      items: (templates.data ?? []).map((x) => ({
+        id: `template:${String(x.id)}`,
+        title: x.template.name,
+        keywords: 'template الگو',
+        icon: <StackIcon className="size-[18px]" />,
+        run: () => void navigate('/templates'),
+      })),
+    },
+  ];
+}

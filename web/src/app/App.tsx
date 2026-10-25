@@ -3,7 +3,7 @@ import { CSPProvider } from '@cloudflare/kumo/primitives/csp-provider';
 import { DirectionProvider } from '@cloudflare/kumo/primitives/direction-provider';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { lazy, Suspense } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { BrowserRouter, Route, Routes } from 'react-router';
 import { OverviewPage } from '../features/overview/OverviewPage';
 import { returnToSignIn } from '../features/session/use-session';
 import { LocaleProvider, useLocale } from '../i18n/locale';
@@ -70,6 +70,24 @@ const CheckReportPage = lazy(() =>
     default: m.CheckReportPage,
   })),
 );
+const MigrationsPage = lazy(() =>
+  import('../features/migrations/MigrationsPage').then((m) => ({ default: m.MigrationsPage })),
+);
+const JobRedirect = lazy(() =>
+  import('../features/migrations/JobRedirect').then((m) => ({ default: m.JobRedirect })),
+);
+const ReportsPage = lazy(() =>
+  import('../features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })),
+);
+const ReportPage = lazy(() =>
+  import('../features/reports/ReportPage').then((m) => ({ default: m.ReportPage })),
+);
+const ReportPrint = lazy(() =>
+  import('../features/reports/ReportPrint').then((m) => ({ default: m.ReportPrint })),
+);
+const TemplatesPage = lazy(() =>
+  import('../features/templates/TemplatesPage').then((m) => ({ default: m.TemplatesPage })),
+);
 const LivePage = lazy(() =>
   import('../features/live/LivePage').then((m) => ({ default: m.LivePage })),
 );
@@ -134,6 +152,14 @@ export function App() {
                         </Suspense>
                       }
                     />
+                    <Route
+                      path="reports/:id/print"
+                      element={
+                        <Suspense>
+                          <ReportPrint />
+                        </Suspense>
+                      }
+                    />
                     <Route element={<AppShell />}>
                       <Route index element={<OverviewPage />} />
                       <Route path="analytics" element={<AnalyticsPage />}>
@@ -141,16 +167,22 @@ export function App() {
                         <Route path="server" element={<ServerTab />} />
                         <Route path="panels/:id" element={<PanelTab />} />
                       </Route>
+                      <Route path="migrations" element={<MigrationsPage />} />
                       <Route path="migrations/new" element={<ConnectStep />} />
-                      <Route path="migrations/:id" element={<JobWizard />}>
-                        <Route index element={<Navigate to="summary" replace />} />
-                        <Route path="summary" element={<SummaryStep />} />
-                        <Route path="compare" element={<CompareStep />} />
-                        <Route path="changes" element={<ChangesStep />} />
-                        <Route path="preview" element={<PreviewStep />} />
-                        <Route path="start" element={<StartStep />} />
+                      <Route path="migrations/:id">
+                        <Route index element={<JobRedirect />} />
+                        <Route element={<JobWizard />}>
+                          <Route path="summary" element={<SummaryStep />} />
+                          <Route path="compare" element={<CompareStep />} />
+                          <Route path="changes" element={<ChangesStep />} />
+                          <Route path="preview" element={<PreviewStep />} />
+                          <Route path="start" element={<StartStep />} />
+                        </Route>
+                        <Route path="live" element={<LivePage />} />
                       </Route>
-                      <Route path="migrations/:id/live" element={<LivePage />} />
+                      <Route path="reports" element={<ReportsPage />} />
+                      <Route path="reports/:id" element={<ReportPage />} />
+                      <Route path="templates" element={<TemplatesPage />} />
                       <Route path="panels" element={<PanelsPage />} />
                       <Route path="panels/:id" element={<PanelPage />} />
                       <Route path="settings" element={<SettingsPage />}>

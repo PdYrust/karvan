@@ -26,6 +26,7 @@ import { panelKind, panelRelease } from '../../lib/api/panels';
 import { useTheme } from '../../lib/preferences/theme';
 import { shellMessages } from './messages';
 import { settingsPath } from './nav';
+import { useJobCommands } from './job-commands';
 import { builtPages } from './routes-built';
 
 export interface Command {
@@ -41,12 +42,14 @@ export interface CommandGroup {
   id: string;
   label: string;
   items: Command[];
+  /** Listed only once something is typed, such as the latest migrations. */
+  searchOnly?: boolean;
 }
 
 const icon = 'size-[18px]';
 
 /** Everything the Ctrl+K palette can do. Only built pages are listed. */
-export function useCommands(onShortcuts: () => void): CommandGroup[] {
+export function useCommands(onShortcuts: () => void, open: boolean): CommandGroup[] {
   const t = useT(shellMessages);
   const navigate = useNavigate();
   const { scan } = useScanPanels();
@@ -55,6 +58,7 @@ export function useCommands(onShortcuts: () => void): CommandGroup[] {
   const { setPref } = useTheme();
   const { locale, setLocale } = useLocale();
   const signOut = useSignOut();
+  const jobs = useJobCommands(open);
 
   const pages: Command[] = builtPages().map((item) => {
     const Icon = item.icon;
@@ -170,6 +174,7 @@ export function useCommands(onShortcuts: () => void): CommandGroup[] {
   return [
     { id: 'pages', label: t('groupPages'), items: pages },
     { id: 'panels', label: t('groupPanels'), items: panelItems },
+    ...jobs,
     { id: 'settings', label: t('groupSettings'), items: settings },
     { id: 'actions', label: t('groupActions'), items: actions },
     { id: 'preferences', label: t('groupPreferences'), items: preferences },
@@ -179,7 +184,7 @@ export function useCommands(onShortcuts: () => void): CommandGroup[] {
 /** Case-insensitive match on title and keywords; empty groups are dropped. */
 export function filterCommands(groups: CommandGroup[], query: string): CommandGroup[] {
   const q = query.trim().toLocaleLowerCase();
-  if (!q) return groups;
+  if (!q) return groups.filter((g) => !g.searchOnly);
   return groups
     .map((g) => ({
       ...g,

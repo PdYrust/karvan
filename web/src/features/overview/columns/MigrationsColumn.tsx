@@ -13,7 +13,7 @@ function JobItem({ job, now }: { job: JobRow; now: Date }) {
   const fmt = useFormat();
   const at = new Date(job.endedAt ?? job.updatedAt);
   return (
-    <HomeRow>
+    <HomeRow to={`/migrations/${encodeURIComponent(job.id)}`}>
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="flex min-w-0 items-center gap-2">
           <JobMove job={job} />
@@ -60,5 +60,9 @@ export function MigrationsColumn({ now }: { now: Date }) {
   } else {
     body = <HomeRowsSkeleton label={t('migrationsTitle')} />;
   }
-  return <HomeColumn title={t('migrationsTitle')}>{body}</HomeColumn>;
+  return (
+    <HomeColumn title={t('migrationsTitle')} to="/migrations">
+      {body}
+    </HomeColumn>
+  );
 }

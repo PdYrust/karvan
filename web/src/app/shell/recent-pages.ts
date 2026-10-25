@@ -4,7 +4,9 @@ export type SettingsTab = 'general' | 'safe-mode';
 export type RecentPage =
   | { section: 'analytics'; panelId?: number }
   | { section: 'panels'; panelId?: number }
-  | { section: 'migrations'; page: 'new' }
+  | { section: 'migrations'; page?: 'new' }
+  | { section: 'reports'; jobId?: string }
+  | { section: 'templates' }
   | { section: 'settings'; tab: SettingsTab };
 
 function withPanel(section: 'analytics' | 'panels', id: string | undefined) {
@@ -18,7 +20,11 @@ const routes: [RegExp, (m: RegExpExecArray) => RecentPage | undefined][] = [
   [/^\/analytics\/panels\/(\d+)$/, (m) => withPanel('analytics', m[1])],
   [/^\/panels$/, () => ({ section: 'panels' })],
   [/^\/panels\/(\d+)$/, (m) => withPanel('panels', m[1])],
+  [/^\/migrations$/, () => ({ section: 'migrations' })],
   [/^\/migrations\/new$/, () => ({ section: 'migrations', page: 'new' })],
+  [/^\/reports$/, () => ({ section: 'reports' })],
+  [/^\/reports\/([0-9a-f]{24})$/, (m) => ({ section: 'reports', jobId: m[1] })],
+  [/^\/templates$/, () => ({ section: 'templates' })],
   [/^\/settings$/, () => ({ section: 'settings', tab: 'general' })],
   [/^\/settings\/safe-mode$/, () => ({ section: 'settings', tab: 'safe-mode' })],
 ];

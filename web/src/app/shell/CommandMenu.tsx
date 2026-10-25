@@ -20,7 +20,7 @@ export function CommandMenu({
 }) {
   const t = useT(shellMessages);
   const [query, setQuery] = useState('');
-  const groups = filterCommands(useCommands(onShortcuts), query);
+  const groups = filterCommands(useCommands(onShortcuts, open), query);
 
   // A chosen command decides where focus goes (a new page, a dialog), so only a dismissal returns it.
   function run(c: Command) {

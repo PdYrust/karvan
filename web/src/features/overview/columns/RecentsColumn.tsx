@@ -14,11 +14,13 @@ const sections = {
   analytics: 'navAnalytics',
   panels: 'navPanels',
   migrations: 'navMigrations',
+  reports: 'navReports',
+  templates: 'navTemplates',
   settings: 'settings',
 } as const;
 
 const panelOf = (page: RecentPage) =>
-  page.section === 'settings' || page.section === 'migrations' ? undefined : page.panelId;
+  page.section === 'analytics' || page.section === 'panels' ? page.panelId : undefined;
 
 /** "Panels / logo name": the section in a quiet color, then the page. */
 function RecentName({ page, panel }: { page: RecentPage; panel: Panel | undefined }) {
@@ -29,7 +31,14 @@ function RecentName({ page, panel }: { page: RecentPage; panel: Panel | undefine
   if (page.section === 'settings') {
     name = t(page.tab === 'general' ? 'recentGeneral' : 'recentSafeMode');
   } else if (page.section === 'migrations') {
-    name = t('newMigration');
+    name = page.page ? t('newMigration') : undefined;
+  } else if (page.section === 'reports') {
+    // A job has no name of its own; its id's start tells two reports apart.
+    name = page.jobId ? (
+      <bdi dir="ltr" className="font-mono text-sm">
+        {page.jobId.slice(0, 8)}
+      </bdi>
+    ) : undefined;
   } else if (panel) {
     name = (
       <span className="inline-flex max-w-full items-center gap-1.5">
