@@ -47,6 +47,11 @@ const en = {
   totp_not_started: 'Start the two-step setup again.',
   totp_already_on: 'Two-step sign-in is already on.',
   totp_not_on: 'Two-step sign-in is already off.',
+  port_unavailable:
+    "Karvan can't open this port. It may be in use, or need rights Karvan doesn't have. Pick another one.",
+  no_address_change:
+    'No new address is waiting. It may have expired after 10 minutes. Start the change again.',
+  not_new_address: 'Confirm only works from the new address. Open it and confirm there.',
   site_invalid: "A field of this site has a value Karvan can't use. Check the fields.",
   site_overlap: 'Another site already serves this domain and port.',
   plain_http_off: 'Plain HTTP is off for old links. Turn it on or use HTTPS.',
@@ -119,6 +124,11 @@ const fa: Messages<ErrorKey>['fa'] = {
   totp_not_started: 'راه اندازی ورود دو مرحله ای را دوباره شروع کنید.',
   totp_already_on: 'ورود دو مرحله ای از قبل روشن است.',
   totp_not_on: 'ورود دو مرحله ای از قبل خاموش است.',
+  port_unavailable:
+    'کاروان نمیتواند این پورت را باز کند. شاید در حال استفاده باشد یا دسترسی لازم را نداشته باشد. پورت دیگری انتخاب کنید.',
+  no_address_change:
+    'آدرس جدیدی در انتظار نیست. شاید بعد از ۱۰ دقیقه منقضی شده باشد. تغییر را دوباره شروع کنید.',
+  not_new_address: 'تایید فقط از آدرس جدید انجام میشود. آن را باز کنید و همانجا تایید کنید.',
   site_invalid:
     'یکی از فیلدهای این سایت مقداری دارد که کاروان نمیتواند استفاده کند. فیلدها را بررسی کنید.',
   site_overlap: 'سایت دیگری همین دامنه و پورت را دارد.',
