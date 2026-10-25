@@ -42,12 +42,17 @@ export interface SitePrefill {
 
 /** The new site form, prefilled from a migration: `/links/new?panel=2&kind=marzban&from=...`. */
 export function newSitePath(p: SitePrefill): string {
+  const query = prefillQuery(p);
+  return query ? `/links/new?${query}` : '/links/new';
+}
+
+/** The prefill as a query string; Connect reads the same one to start a migration again. */
+export function prefillQuery(p: SitePrefill): string {
   const q = new URLSearchParams();
   if (p.panelId) q.set('panel', String(p.panelId));
   if (p.sourceKind) q.set('kind', p.sourceKind);
   if (p.sourceUrl) q.set('from', p.sourceUrl);
-  const query = q.toString();
-  return query ? `/links/new?${query}` : '/links/new';
+  return q.toString();
 }
 
 /** Reads the prefill back from the address, keeping only values the form can use. */

@@ -2,6 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { compareStatus, useJobEvents } from '../../../lib/api/events';
+import { sitePrefill } from '../../../lib/api/links';
 import {
   cancelJob,
   compareJob,
@@ -25,6 +26,16 @@ import {
 } from './form';
 
 const jobIdPattern = /^[0-9a-f]{24}$/;
+
+function prefilled(params: URLSearchParams): ConnectValues {
+  const p = sitePrefill(params);
+  return {
+    ...emptyValues,
+    panelId: p.panelId ?? 0,
+    url: p.sourceUrl ?? '',
+    kind: p.sourceKind ?? 'auto',
+  };
+}
 
 /** The field each missing value focuses. */
 const fieldIds: Partial<Record<MissingField, string>> = {
@@ -50,7 +61,8 @@ export function useConnect() {
   const { stream, lost } = useJobEvents(jobId);
   const status = compareStatus(stream);
 
-  const [typed, setTyped] = useState<ConnectValues>(emptyValues);
+  // "Start again with the same address" fills in the destination, the address and the kind.
+  const [typed, setTyped] = useState<ConnectValues>(() => prefilled(params));
   const values: ConnectValues = {
     ...typed,
     panelId: typed.panelId || defaultDestination(panels, current),
