@@ -68,6 +68,8 @@ describe('reduceStream', () => {
     ]);
     expect(s.log).toEqual([]);
     expect(s.stages).toHaveLength(1);
+    // The last compare began with the fourth event, so a page can tell it from an older one.
+    expect(s.startSeq).toBe(4);
     expect(compareStatus(s)).toBe('reading');
   });
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatShortDate, zoneLabel } from './date';
+import { formatDate, formatShortDate, zoneLabel } from './date';
 import { makeFormat } from './format';
 
 // 2026-10-15 15:10 UTC is 18:40 in Tehran.
@@ -27,6 +27,8 @@ describe('makeFormat', () => {
   it('writes short dates for axes', () => {
     expect(formatShortDate(moment, 'en')).toBe('Oct 15');
     expect(formatShortDate(moment, 'fa')).toBe('۲۳ مهر');
+    expect(formatDate(moment, 'en')).toBe('Oct 15, 2026');
+    expect(formatDate(moment, 'fa')).toBe('۲۳ مهر ۱۴۰۵');
   });
 
   it('names zones', () => {

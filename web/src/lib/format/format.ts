@@ -2,6 +2,7 @@ import type { Locale } from '../../i18n/core';
 import type { CalendarPref } from '../preferences/preferences';
 import {
   defaultCalendar,
+  formatDate,
   formatDateTime,
   formatLongDate,
   formatRelative,
@@ -47,6 +48,7 @@ export function makeFormat(locale: Locale, region: Region) {
     duration: (seconds: number, parts?: number) => formatDuration(seconds, locale, parts),
     dateTime: (d: Date) => formatDateTime(d, locale, opts),
     longDate: (d: Date) => formatLongDate(d, locale, opts),
+    date: (d: Date) => formatDate(d, locale, opts),
     shortDate: (d: Date) => formatShortDate(d, locale, opts),
     time: (d: Date) => formatTime(d, locale, opts),
     relative: (d: Date, now: Date) => formatRelative(d, now, locale),

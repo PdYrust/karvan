@@ -11,7 +11,7 @@ import { getUsers, migrationKeys, usersPerPage, type UserRow } from '../../lib/a
 import { wizardMessages } from './messages';
 
 /** A search term that settles after the operator stops typing for a moment. */
-function useSettled(value: string, ms = 300): string {
+export function useSettled(value: string, ms = 300): string {
   const [settled, setSettled] = useState(value);
   useEffect(() => {
     const id = setTimeout(() => setSettled(value), ms);

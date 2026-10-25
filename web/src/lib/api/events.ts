@@ -50,6 +50,8 @@ export interface LogLine {
 /** What the stream says about the job's latest compare or run. */
 export interface JobStream {
   lastSeq: number;
+  /** The seq of the event that began the latest compare or run; 0 before one. */
+  startSeq: number;
   kind: 'none' | 'compare' | 'run';
   /** In the order they started. */
   stages: StageInfo[];
@@ -63,6 +65,7 @@ export interface JobStream {
 
 export const emptyStream: JobStream = {
   lastSeq: 0,
+  startSeq: 0,
   kind: 'none',
   stages: [],
   progress: null,
@@ -78,7 +81,12 @@ function onStage(s: JobStream, e: MigrationEvent): JobStream {
   if (typeof state !== 'string' || !stageStates.includes(state)) return s;
   // One stream carries every compare and run; a new one starts afresh.
   if (state === 'start' && (e.stage === 'read' || e.stage === 'check')) {
-    s = { ...emptyStream, lastSeq: s.lastSeq, kind: e.stage === 'read' ? 'compare' : 'run' };
+    s = {
+      ...emptyStream,
+      lastSeq: s.lastSeq,
+      startSeq: e.seq,
+      kind: e.stage === 'read' ? 'compare' : 'run',
+    };
   }
   const i = s.stages.findIndex((x) => x.stage === e.stage);
   const next: StageInfo =

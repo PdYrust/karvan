@@ -65,6 +65,10 @@ export function formatTime(date: Date, locale: Locale, opts: DateOptions = {}): 
   );
 }
 
+/** "۲۷ اسفند ۱۴۰۸" / "Mar 17, 2030": a day that may be in another year, such as an expiry. */
+export function formatDate(date: Date, locale: Locale, opts: DateOptions = {}): string {
+  return formatter(locale, opts, { year: 'numeric', month: 'short', day: 'numeric' }).format(date);
+}
 /** "۲۳ مهر" / "Oct 15": axis labels and short lists. */
 export function formatShortDate(date: Date, locale: Locale, opts: DateOptions = {}): string {
   return formatter(locale, opts, { month: 'short', day: 'numeric' }).format(date);
