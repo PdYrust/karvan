@@ -4,6 +4,7 @@ import {
   compareJob,
   createJob,
   getJob,
+  getJobRow,
   jobOutcome,
   listJobs,
   originHost,
@@ -48,6 +49,16 @@ describe('listJobs', () => {
       state: 'done,failed',
       cursor: 'mvc694g0.ab',
     });
+  });
+});
+
+describe('getJobRow', () => {
+  it("reads one job's row by its id, and null for an id Karvan does not know", async () => {
+    const f = reply({ jobs: [{ id: 'ab', state: 'running' }] });
+    await expect(getJobRow('ab')).resolves.toMatchObject({ id: 'ab', state: 'running' });
+    expect((f.mock.calls.at(-1) as unknown as [string])[0]).toMatch(/migrations\?id=ab$/);
+    reply({ jobs: [] });
+    await expect(getJobRow('cd')).resolves.toBeNull();
   });
 });
 

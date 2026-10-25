@@ -31,6 +31,9 @@ const en = {
   confirm_required: 'Type the name to confirm.',
   gone: 'This file was already downloaded. Karvan keeps it only until then.',
   cancelled: 'This was stopped before it finished.',
+  not_rollbackable: 'Only a failed or interrupted migration can be rolled back, and only once.',
+  destination_locked:
+    'Another migration or rollback is writing to this panel. Wait for it to finish, then try again.',
   weak_password: "This admin password doesn't meet the panel's rules.",
   weak_password_short: 'The admin password needs at least 12 characters.',
   weak_password_long: 'The admin password is too long. Use a shorter one.',
@@ -98,6 +101,9 @@ const fa: Messages<ErrorKey>['fa'] = {
   confirm_required: 'برای تایید، نام را بنویسید.',
   gone: 'این فایل قبلا دانلود شده است. کاروان آن را فقط تا همان موقع نگه میدارد.',
   cancelled: 'این کار پیش از تمام شدن متوقف شد.',
+  not_rollbackable: 'فقط انتقال ناموفق یا نیمه تمام را میشود برگرداند، آن هم یک بار.',
+  destination_locked:
+    'انتقال یا برگرداندن دیگری روی این پنل مینویسد. صبر کنید تمام شود و بعد دوباره امتحان کنید.',
   weak_password: 'این رمز ادمین با قوانین پنل جور نیست.',
   weak_password_short: 'رمز ادمین باید دست کم ۱۲ نویسه باشد.',
   weak_password_long: 'رمز ادمین خیلی بلند است. رمز کوتاهتری بگذارید.',

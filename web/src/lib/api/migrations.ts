@@ -47,6 +47,8 @@ export interface JobFilter {
   panel?: number;
   states?: readonly JobState[];
   cursor?: string;
+  /** One job's row. */
+  id?: string;
 }
 
 /** Jobs newest first, a page at a time. */
@@ -55,9 +57,19 @@ export function listJobs(f: JobFilter = {}): Promise<JobPage> {
   if (f.limit) q.set('limit', String(f.limit));
   if (f.panel) q.set('panel', String(f.panel));
   if (f.states?.length) q.set('state', f.states.join(','));
+  if (f.id) q.set('id', f.id);
   if (f.cursor) q.set('cursor', f.cursor);
   const query = q.toString();
   return api<JobPage>('GET', query ? `migrations?${query}` : 'migrations');
+}
+
+/**
+ * One job as the list shows it, read from the database: it answers while
+ * the job runs and after a restart, when the job's own reads cannot. Null
+ * for an id Karvan does not know.
+ */
+export async function getJobRow(id: string): Promise<JobRow | null> {
+  return (await listJobs({ id })).jobs[0] ?? null;
 }
 
 /** Query keys of everything about migrations, so one invalidation reaches them all (D2). */
@@ -70,6 +82,8 @@ export const migrationKeys = {
   users: (id: string, q: UserQuery) => ['migrations', 'job', id, 'users', q] as const,
   plan: (id: string) => ['migrations', 'job', id, 'plan'] as const,
   roles: (id: string) => ['migrations', 'job', id, 'roles'] as const,
+  row: (id: string) => ['migrations', 'job', id, 'row'] as const,
+  report: (id: string) => ['migrations', 'job', id, 'report'] as const,
 };
 
 const jobPath = (id: string, rest = '') => `migrations/${encodeURIComponent(id)}${rest}`;
