@@ -25,6 +25,9 @@ var ErrDataDirInUse = errors.New("another Karvan process is using the data direc
 // credentialSweep is how often idle migration logins are dropped.
 const credentialSweep = 10 * time.Minute
 
+// eventTrim is how often the events of long ended jobs are trimmed (B17).
+const eventTrim = 24 * time.Hour
+
 // lockDataDir takes the data directory for this process (D30).
 func (a *App) lockDataDir() (func(), error) {
 	unlock, err := paneldb.LockFile(filepath.Join(a.Config.DataDir, "karvan.lock"))
@@ -73,6 +76,7 @@ func (a *App) startServices(ctx context.Context) *services {
 	})
 	s.wg.Go(func() { s.host.Run(ctx) })
 	s.wg.Go(func() { s.dbstats.Run(ctx) })
+	s.wg.Go(func() { a.trimEvents(ctx, s.runs) })
 	go func() {
 		t := time.NewTicker(credentialSweep)
 		defer t.Stop()
@@ -86,6 +90,25 @@ func (a *App) startServices(ctx context.Context) *services {
 		}
 	}()
 	return s
+}
+
+// trimEvents trims the events of long ended jobs at start and then daily
+// until ctx ends.
+func (a *App) trimEvents(ctx context.Context, runs *run.Service) {
+	t := time.NewTicker(eventTrim)
+	defer t.Stop()
+	for {
+		if n, err := runs.TrimEvents(ctx); err != nil && ctx.Err() == nil {
+			a.Logger.Warn("trim job events", "err", err)
+		} else if n > 0 {
+			a.Logger.Info("trimmed job events", "events", n)
+		}
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+		}
+	}
 }
 
 // stop ends running jobs (Safe Mode undoes them) and waits for the bridge
