@@ -15,7 +15,6 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/engine"
 	"github.com/PdYrust/karvan/internal/migration/plan"
 	"github.com/PdYrust/karvan/internal/panel"
-	"github.com/PdYrust/karvan/internal/panel/paneldb"
 	"github.com/PdYrust/karvan/internal/safemode"
 )
 
@@ -342,52 +341,6 @@ func (s *Service) runningBackup(id string) bool {
 // ErrPanelChanged means the panel a backup was taken from now points at
 // another database, so the backup must not be put there.
 var ErrPanelChanged = errors.New("the panel's database is not the one this backup was taken from")
-
-// RestoreBackup puts a Safe Mode backup back into the panel it came from
-// and retires the job's ledger rows. With stopped false, Karvan stops the
-// panel, restores and starts it again (the web panel); with stopped true
-// the caller has stopped it (the command line). The destination's lock is
-// held throughout, so no job writes meanwhile.
-func (s *Service) RestoreBackup(ctx context.Context, id string, stopped bool) error {
-	b, jobID, env, d, err := s.backupTarget(ctx, id)
-	if err != nil {
-		return err
-	}
-	var ctl PanelControl
-	if !stopped {
-		if ctl, err = s.control(ctx, env); err != nil {
-			return err
-		}
-	}
-	w, err := paneldb.OpenWriter(ctx, d.Target)
-	if err != nil {
-		return err
-	}
-	defer w.Close()
-	unlock, err := w.Lock(ctx, d.Target)
-	if err != nil {
-		return err
-	}
-	defer unlock()
-	put := func() error { return safemode.Restorer{Key: s.Key, Run: s.Tools}.Restore(ctx, d.Target, w.Server(), b) }
-	if ctl != nil {
-		err = restoreStopped(ctx, ctl, put)
-	} else {
-		err = put()
-	}
-	if err != nil {
-		return err
-	}
-	if err := s.markRestored(ctx, jobID); err != nil {
-		return err
-	}
-	_, err = s.db.ExecContext(ctx, "UPDATE jobs SET state = ?, updated_at = ? WHERE id = ?", StateRolledBack, s.now().UnixMilli(), jobID)
-	if j, jerr := s.job(jobID); jerr == nil && j.lockIdle() {
-		j.state = StateRolledBack
-		j.mu.Unlock()
-	}
-	return err
-}
 
 // backupTarget finds a backup, its job and the panel it goes back into,
 // and refuses one whose panel now points at another database.

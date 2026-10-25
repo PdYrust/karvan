@@ -157,7 +157,7 @@ func (s *Service) restore(ctx context.Context, j *Job, p *prepared, rep *Report)
 		}
 		return restoreStopped(ctx, ctl, func() error {
 			return safemode.Restorer{Key: s.Key, Run: s.Tools}.Restore(ctx, p.target, p.db.Server(), b)
-		})
+		}, s.noter(j, StageRestore))
 	})
 	if err != nil {
 		return false
@@ -171,17 +171,33 @@ func (s *Service) restore(ctx context.Context, j *Job, p *prepared, rep *Report)
 	return true
 }
 
+// Log codes of a restore's steps (B12), so the live view can show the
+// panel going offline and coming back.
+const (
+	codePanelStopped = "panel_stopped"
+	codeBackupBack   = "backup_put_back"
+	codePanelStarted = "panel_started"
+)
+
 // restoreStopped runs put with the panel stopped, and always starts the
-// panel again once it was stopped.
-func restoreStopped(ctx context.Context, ctl PanelControl, put func() error) error {
+// panel again once it was stopped. note hears each step that went well.
+func restoreStopped(ctx context.Context, ctl PanelControl, put func() error, note func(code string)) error {
 	if err := ctl.Stop(ctx); err != nil {
 		return err
 	}
+	note(codePanelStopped)
 	putErr := put()
-	if err := ctl.Start(ctx); err != nil && putErr == nil {
-		return err
+	if putErr == nil {
+		note(codeBackupBack)
 	}
-	return putErr
+	err := ctl.Start(ctx)
+	if err == nil {
+		note(codePanelStarted)
+	}
+	if putErr != nil {
+		return putErr
+	}
+	return err
 }
 
 // markRestored retires a job's written rows after its backup went back.

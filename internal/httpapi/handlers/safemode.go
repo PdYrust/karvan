@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 	"strconv"
 
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/httpapi/respond"
+	"github.com/PdYrust/karvan/internal/migration/run"
 	"github.com/PdYrust/karvan/internal/settings"
 )
 
@@ -105,9 +107,12 @@ func (a *API) DeleteBackup(w http.ResponseWriter, r *http.Request) {
 	respond.NoContent(w)
 }
 
-// RestoreBackup puts a Safe Mode backup back: Karvan stops the panel,
-// restores and starts it again. The operator types the backup id to
-// confirm, because this also takes back everything written since.
+// RestoreBackup puts a Safe Mode backup back in the background (B12):
+// Karvan stops the panel, restores and starts it again, and the job's
+// event stream follows it. The operator types the backup id to confirm,
+// because this also takes back everything written since. 202 once the
+// destination is locked, with the job and its last event before the
+// restore.
 func (a *API) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
 	var b struct {
@@ -121,11 +126,15 @@ func (a *API) RestoreBackup(w http.ResponseWriter, r *http.Request) {
 		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: codeConfirm, Extra: map[string]any{"confirm": id}})
 		return
 	}
-	err := a.Runs.RestoreBackup(r.Context(), id, false)
+	res, err := a.Runs.StartRestore(r.Context(), id)
 	a.record(r, audit.ActionBackupRestoreWeb, outcomeOf(err), map[string]string{"backup": id})
+	if errors.Is(err, run.ErrLocked) {
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeDestLocked})
+		return
+	}
 	if err != nil {
 		writeRunError(w, r, err)
 		return
 	}
-	respond.NoContent(w)
+	respond.JSON(w, http.StatusAccepted, res)
 }

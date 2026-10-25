@@ -60,12 +60,8 @@ func newBus(db *sql.DB, now func() time.Time) *bus {
 func (b *bus) emit(ctx context.Context, job, stage, typ string, data map[string]any) error {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	if _, ok := b.seq[job]; !ok {
-		var last sql.NullInt64
-		if err := b.db.QueryRowContext(ctx, "SELECT MAX(seq) FROM job_events WHERE job_id = ?", job).Scan(&last); err != nil {
-			return err
-		}
-		b.seq[job] = last.Int64
+	if err := b.load(ctx, job); err != nil {
+		return err
 	}
 	b.seq[job]++
 	e := Event{Seq: b.seq[job], At: b.now().UTC(), Stage: stage, Type: typ, Data: data}
@@ -88,6 +84,29 @@ func (b *bus) emit(ctx context.Context, job, stage, typ string, data map[string]
 			close(ch)
 		}
 	}
+	return nil
+}
+
+// last is the seq of the job's latest event; 0 before any.
+func (b *bus) last(ctx context.Context, job string) (int64, error) {
+	b.mu.Lock()
+	defer b.mu.Unlock()
+	if err := b.load(ctx, job); err != nil {
+		return 0, err
+	}
+	return b.seq[job], nil
+}
+
+// load reads the job's latest seq once. The caller holds mu.
+func (b *bus) load(ctx context.Context, job string) error {
+	if _, ok := b.seq[job]; ok {
+		return nil
+	}
+	var last sql.NullInt64
+	if err := b.db.QueryRowContext(ctx, "SELECT MAX(seq) FROM job_events WHERE job_id = ?", job).Scan(&last); err != nil {
+		return err
+	}
+	b.seq[job] = last.Int64
 	return nil
 }
 

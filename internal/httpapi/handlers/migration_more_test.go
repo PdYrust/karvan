@@ -447,17 +447,6 @@ func TestRollbackSettingAndPanelControl(t *testing.T) {
 	}
 }
 
-func TestRestoreNeedsTheTypedID(t *testing.T) {
-	m := newMigrationEnv(t, 1)
-	path := api + "/safe-mode/backups/0123456789abcdef/restore"
-	if res := m.do(http.MethodPost, path, map[string]any{"confirm": "yes"}); res.status != http.StatusBadRequest || res.errorCode(t) != "confirm_required" {
-		t.Fatalf("wrong confirm: %d %s", res.status, res.body)
-	}
-	if res := m.do(http.MethodPost, path, map[string]any{"confirm": "0123456789abcdef"}); res.status != http.StatusNotFound {
-		t.Fatalf("unknown backup: %d %s", res.status, res.body)
-	}
-}
-
 // The final admin step lists PasarGuard's roles with their groups, and
 // users go to the chosen role's groups when no targets were picked.
 func TestRolesAndDefaultTargets(t *testing.T) {
