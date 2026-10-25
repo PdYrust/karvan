@@ -195,6 +195,30 @@ describe('endsStream', () => {
     expect(endsStream(ev('', 'done', { state: 'failed' }))).toBe(false);
     expect(endsStream(ev('execute', 'progress', { done: 1, total: 2 }))).toBe(false);
   });
+
+  it('stays open past an end from before a backup restore began', () => {
+    fresh();
+    const runEnd = ev('', 'done', { state: 'done' });
+    expect(endsStream(runEnd, runEnd.seq)).toBe(false);
+    const restoreEnd = ev('', 'done', { state: 'rolled_back' });
+    expect(endsStream(restoreEnd, runEnd.seq)).toBe(true);
+  });
+});
+
+describe('a backup restore on a done job', () => {
+  it('runs again from its restore stage until its own end', () => {
+    fresh();
+    const s = reduceEvents([
+      ev('check', 'stage', { state: 'start' }),
+      ev('check', 'stage', { state: 'done' }),
+      ev('', 'done', { state: 'done' }),
+      ev('restore', 'stage', { state: 'start' }),
+      ev('restore', 'log', { code: 'panel_stopped' }),
+    ]);
+    expect(s.kind).toBe('run');
+    expect(s.done).toBeNull();
+    expect(s.stages.at(-1)).toMatchObject({ stage: 'restore', state: 'start' });
+  });
 });
 
 describe('follow', () => {

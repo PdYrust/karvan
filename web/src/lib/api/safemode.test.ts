@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { getBackups, getSafeMode, putSafeMode, turnOffConfirm } from './safemode';
+import {
+  backupDatabase,
+  deleteBackup,
+  getBackups,
+  getSafeMode,
+  putSafeMode,
+  restoreBackup,
+  turnOffConfirm,
+} from './safemode';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -10,6 +18,35 @@ describe('backups', () => {
     vi.stubGlobal('fetch', f);
     await expect(getBackups()).resolves.toEqual([backup]);
     expect((f.mock.calls.at(-1) as unknown as [string])[0]).toMatch(/safe-mode\/backups$/);
+  });
+
+  it('puts one back with the typed id and reads where its stream starts', async () => {
+    const f = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify({ jobId: 'j1', after: 41 }), { status: 202 })),
+    );
+    vi.stubGlobal('fetch', f);
+    await expect(restoreBackup('9f2c4e1ab37d0c55', '9f2c4e1ab37d0c55')).resolves.toEqual({
+      jobId: 'j1',
+      after: 41,
+    });
+    const call = f.mock.calls.at(-1) as unknown as [string, RequestInit];
+    expect(call[0]).toMatch(/safe-mode\/backups\/9f2c4e1ab37d0c55\/restore$/);
+    expect(call[1].method).toBe('POST');
+    expect(JSON.parse(call[1].body as string)).toEqual({ confirm: '9f2c4e1ab37d0c55' });
+  });
+
+  it('deletes one', async () => {
+    const f = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+    vi.stubGlobal('fetch', f);
+    await deleteBackup('9f2c4e1ab37d0c55');
+    const call = f.mock.calls.at(-1) as unknown as [string, RequestInit];
+    expect(call[0]).toMatch(/safe-mode\/backups\/9f2c4e1ab37d0c55$/);
+    expect(call[1].method).toBe('DELETE');
+  });
+
+  it('names the database from how it was made', () => {
+    expect(backupDatabase['vacuum-into']).toBe('SQLite');
+    expect(backupDatabase.pg_dump).toBe('PostgreSQL');
   });
 });
 

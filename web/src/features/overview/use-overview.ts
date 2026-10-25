@@ -2,7 +2,7 @@ import { useQuery } from '@tanstack/react-query';
 import { getLinkSites, linkKeys } from '../../lib/api/links';
 import { listJobs } from '../../lib/api/migrations';
 import { getOverview } from '../../lib/api/overview';
-import { getBackups } from '../../lib/api/safemode';
+import { backupKeys, getBackups } from '../../lib/api/safemode';
 
 export const overviewKey = ['overview'] as const;
 
@@ -22,7 +22,7 @@ export function useRecentJobs() {
 }
 
 export function useBackups() {
-  return useQuery({ queryKey: ['safe-mode', 'backups'], queryFn: getBackups });
+  return useQuery({ queryKey: backupKeys.all, queryFn: getBackups });
 }
 
 export function useLinkSites() {
