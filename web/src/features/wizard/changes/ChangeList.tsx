@@ -1,47 +1,16 @@
 import { Badge } from '@cloudflare/kumo/components/badge';
 import { Button } from '@cloudflare/kumo/components/button';
 import { TrashIcon } from '@phosphor-icons/react';
-import type { ReactNode } from 'react';
 import { Section } from '../../../components/layout/Section';
 import { CodeText } from '../../../components/text/CodeText';
 import { useT } from '../../../i18n/locale';
 import type { JobSummary } from '../../../lib/api/migrations';
-import { filterOf, isChangeNode, opFlags, removeChange } from '../../../lib/plan/changes';
-import type { PlanNode } from '../../../lib/plan/plan';
+import { opFlags, removeChange } from '../../../lib/plan/changes';
 import { useFormat } from '../../../lib/preferences/region';
 import { useWizard } from '../wizard-context';
-import { changesMessages, type ChangesKey } from './messages';
+import { useCategoryTitle } from './category-title';
+import { changesMessages } from './messages';
 import { opWords } from './words';
-
-/**
- * A category's title as text (for its label) and as shown. The ones the
- * changes made read in the page's language; a filter's value is a machine
- * value kept left to right inside a Persian title.
- */
-function useTitle() {
-  const t = useT(changesMessages);
-  return (n: PlanNode): { label: string; shown: ReactNode } => {
-    const plain = (label: string) => ({ label, shown: <bdi>{label}</bdi> });
-    if (!isChangeNode(n)) return plain(n.name);
-    if (n.id === 'change-all') return plain(t('whoAll'));
-    const f = filterOf(n);
-    if (f) {
-      const filter = t(`filter_${f.key}` as ChangesKey);
-      const word = f.key === 'status';
-      const value = word ? t(f.value as ChangesKey) : f.value;
-      return {
-        label: t('filterName', { filter, value }),
-        shown: (
-          <>
-            {filter}: {word ? value : <bdi dir="ltr">{value}</bdi>}
-          </>
-        ),
-      };
-    }
-    const users = n.conditions?.find((c) => c.field === 'users')?.list;
-    return plain(users ? t('pickedName', { count: users.length }) : n.name);
-  };
-}
 
 /** The changes already in the plan, by the category they reach, each with Remove. */
 export function ChangeList({
@@ -54,7 +23,7 @@ export function ChangeList({
   const t = useT(changesMessages);
   const fmt = useFormat();
   const { plan } = useWizard();
-  const title = useTitle();
+  const title = useCategoryTitle();
   const p = plan.plan;
   const nodes = (p?.tree ?? []).filter((n) => n.ops?.length);
   const names = new Map((summary.targets ?? []).map((g) => [g.id, g.name]));

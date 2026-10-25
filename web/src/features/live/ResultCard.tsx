@@ -53,7 +53,7 @@ function useMeaning(state: EndState, report: Report | undefined): string[] {
   }
 }
 
-function ReloadLine({ report, t }: { report: Report; t: Translate<LiveKey> }) {
+export function ReloadLine({ report, t }: { report: Report; t: Translate<LiveKey> }) {
   const r = reloadOutcome(report.reload, report.destination.kind);
   if (r.kind === 'none') return null;
   const text =
