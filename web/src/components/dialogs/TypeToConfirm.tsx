@@ -63,6 +63,7 @@ export function TypeToConfirm({
                   variant="ghost"
                   shape="square"
                   size="sm"
+                  className="pointer-coarse:size-11"
                   aria-label={t('close')}
                   disabled={pending}
                   icon={<XIcon size={18} />}
@@ -101,7 +102,12 @@ export function TypeToConfirm({
           <div className="flex justify-end gap-2 border-t border-kumo-hairline px-6 py-4">
             <Dialog.Close
               render={(props) => (
-                <Button {...props} variant="secondary" disabled={pending}>
+                <Button
+                  {...props}
+                  variant="secondary"
+                  className="pointer-coarse:h-11"
+                  disabled={pending}
+                >
                   {t('cancel')}
                 </Button>
               )}
@@ -109,6 +115,7 @@ export function TypeToConfirm({
             <Button
               type="submit"
               variant="destructive"
+              className="pointer-coarse:h-11"
               disabled={!matches || pending}
               loading={pending}
             >
