@@ -47,13 +47,12 @@ The Lighthouse numbers are the "good" band of Core Web Vitals; accessibility is 
 ## Reviewed by a person, every page
 - Tested at 360 px and 1440 px, in fa and en, dark and light, keyboard only.
 - Follows `DESIGN.md`. If `DESIGN.md` is wrong, it is fixed first.
-- Lighthouse mobile on the sign-in page and the overview: performance 90 or more, accessibility 100, best practices 95 or more. It needs a running install and Chrome, so it runs by hand (`lighthouse <url> --form-factor=mobile`) until CI can start one. On a slow machine, set `--throttling.cpuSlowdownMultiplier` so the host plus the multiplier matches a mid-range phone.
+- Lighthouse mobile on the sign-in page and the overview: performance 90 or more, accessibility 100, best practices 95 or more. It needs a running install and Chrome, so it runs by hand (`lighthouse <url> --form-factor=mobile`) until CI can start one. On a slow machine, set `--throttling.cpuSlowdownMultiplier` so the host plus the multiplier matches a mid-range phone: Lighthouse's own guide gives 1 under a benchmark index of 800, which this machine is. Take the median of 5 runs.
 
 ## Measured, not yet meeting the bar
 | Metric | Today | Target | Direction |
 |---|---|---|---|
-| Lighthouse mobile performance, sign-in | 89 (2026-10-16, after the restyle; load average about 4.5, CPU multiplier 1) | 90 | must not fall |
-| Lighthouse mobile performance, overview | 74 (same run) | 90 | must not fall |
+| Lighthouse mobile performance, overview | median 86 of 5 runs, best 97 (2026-10-25, Lighthouse 13.5.0, CPU multiplier 1 for a benchmark index of 320 to 660; load average 12 on 2 cores from other processes, so runs spread from 82 to 97). Sign-in now meets the bar: median 97 of 5, accessibility 100 and best practices 100 on both | 90 | must not fall |
 
 ## Exceptions
 | ID | Rule | Path | Reason | Owner | Expires |
