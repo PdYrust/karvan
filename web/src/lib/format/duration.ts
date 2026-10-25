@@ -27,6 +27,18 @@ const names: Record<Locale, Record<Unit, [string, string]>> = {
 
 const joiner: Record<Locale, string> = { en: ' ', fa: ' و ' };
 
+/** A running timer: "0:14", "12:05", "1:02:09"; Persian digits in Persian. */
+export function formatClock(totalSeconds: number, locale: Locale): string {
+  const s = Math.max(0, Math.floor(totalSeconds));
+  const two = (n: number) => formatNumber(n, locale).padStart(2, formatNumber(0, locale));
+  const hours = Math.floor(s / 3600);
+  const minutes = Math.floor((s % 3600) / 60);
+  const rest = `${two(s % 60)}`;
+  return hours > 0
+    ? `${formatNumber(hours, locale)}:${two(minutes)}:${rest}`
+    : `${formatNumber(minutes, locale)}:${rest}`;
+}
+
 /**
  * The two largest units of a duration: "3 days 4 hours" / "۳ روز و ۴ ساعت",
  * "45 seconds". Rounds down, so a countdown never promises less than it has.

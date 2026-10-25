@@ -6,12 +6,13 @@ import {
   formatDateTime,
   formatLongDate,
   formatRelative,
+  formatSeconds,
   formatShortDate,
   formatTime,
   zoneInSentence,
   type DateOptions,
 } from './date';
-import { formatDuration } from './duration';
+import { formatClock, formatDuration } from './duration';
 import {
   bytesParts,
   formatBytes,
@@ -46,11 +47,15 @@ export function makeFormat(locale: Locale, region: Region) {
     bytesParts: (b: number) => bytesParts(b, locale),
     rate: (bytesPerSecond: number) => formatRate(bytesPerSecond, locale),
     duration: (seconds: number, parts?: number) => formatDuration(seconds, locale, parts),
+    /** A running timer, "0:14". */
+    clock: (seconds: number) => formatClock(seconds, locale),
     dateTime: (d: Date) => formatDateTime(d, locale, opts),
     longDate: (d: Date) => formatLongDate(d, locale, opts),
     date: (d: Date) => formatDate(d, locale, opts),
     shortDate: (d: Date) => formatShortDate(d, locale, opts),
     time: (d: Date) => formatTime(d, locale, opts),
+    /** The time to the second, for log lines. */
+    seconds: (d: Date) => formatSeconds(d, locale, opts),
     relative: (d: Date, now: Date) => formatRelative(d, now, locale),
   };
 }

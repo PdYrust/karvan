@@ -65,6 +65,16 @@ export function formatTime(date: Date, locale: Locale, opts: DateOptions = {}): 
   );
 }
 
+/** "۱۸:۴۰:۰۵" / "18:40:05": a log line, where seconds tell events apart. */
+export function formatSeconds(date: Date, locale: Locale, opts: DateOptions = {}): string {
+  return formatter(locale, opts, {
+    hour: '2-digit',
+    minute: '2-digit',
+    second: '2-digit',
+    hourCycle: 'h23',
+  }).format(date);
+}
+
 /** "۲۷ اسفند ۱۴۰۸" / "Mar 17, 2030": a day that may be in another year, such as an expiry. */
 export function formatDate(date: Date, locale: Locale, opts: DateOptions = {}): string {
   return formatter(locale, opts, { year: 'numeric', month: 'short', day: 'numeric' }).format(date);

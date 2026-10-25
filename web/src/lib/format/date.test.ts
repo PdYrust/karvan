@@ -6,6 +6,7 @@ import {
   formatDateTime,
   formatLongDate,
   formatRelative,
+  formatSeconds,
   formatTime,
   startOfDay,
 } from './date';
@@ -27,6 +28,12 @@ describe('dates in Tehran time', () => {
   it('can switch calendar and zone', () => {
     expect(formatLongDate(moment, 'en', { calendar: 'persian' })).toContain('1405');
     expect(formatTime(moment, 'en', { timeZone: 'UTC' })).toBe('15:10');
+  });
+
+  it('gives log lines their seconds', () => {
+    const later = new Date(moment.getTime() + 5000);
+    expect(formatSeconds(later, 'en')).toBe('18:40:05');
+    expect(formatSeconds(later, 'fa')).toBe('۱۸:۴۰:۰۵');
   });
 
   it('picks the calendar from the language', () => {

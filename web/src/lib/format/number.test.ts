@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { formatDuration } from './duration';
+import { formatClock, formatDuration } from './duration';
 import {
   bytesParts,
   formatBytes,
@@ -70,5 +70,19 @@ describe('durations', () => {
     expect(formatDuration(45.9, 'en')).toBe('45 seconds');
     expect(formatDuration(-5, 'en')).toBe('0 seconds');
     expect(formatDuration(90061, 'en', 3)).toBe('1 day 1 hour 1 minute');
+  });
+});
+
+describe('clocks', () => {
+  it('reads minutes and two-digit seconds, and hours once there are any', () => {
+    expect(formatClock(14, 'en')).toBe('0:14');
+    expect(formatClock(725.8, 'en')).toBe('12:05');
+    expect(formatClock(3729, 'en')).toBe('1:02:09');
+    expect(formatClock(-3, 'en')).toBe('0:00');
+  });
+
+  it('uses Persian digits in Persian', () => {
+    expect(formatClock(14, 'fa')).toBe('۰:۱۴');
+    expect(formatClock(65, 'fa')).toBe('۱:۰۵');
   });
 });
