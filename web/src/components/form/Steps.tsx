@@ -63,7 +63,7 @@ export function Steps({
               <span
                 className={cn(
                   isCurrent
-                    ? 'font-medium text-(--color-kumo-brand)'
+                    ? 'font-medium text-kumo-link'
                     : done
                       ? 'text-kumo-default'
                       : 'text-kumo-subtle',

@@ -100,7 +100,7 @@ function Drill({ tree, counts, open, onOpen }: Omit<TreeProps, 'total'>) {
                 <button
                   type="button"
                   onClick={() => onOpen(n?.id)}
-                  className="min-h-11 rounded-md px-1 text-(--color-kumo-brand) underline"
+                  className="min-h-11 rounded-md px-1 text-kumo-link underline"
                 >
                   <bdi>{n?.name ?? t('allUsers')}</bdi>
                 </button>

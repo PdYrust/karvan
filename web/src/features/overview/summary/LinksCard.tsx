@@ -76,7 +76,7 @@ export function LinksCard() {
       {body}
       <Link
         to="/links"
-        className="mt-auto inline-flex items-center gap-1 self-start text-sm text-(--color-kumo-brand) hover:underline pointer-coarse:min-h-11"
+        className="mt-auto inline-flex items-center gap-1 self-start text-sm text-kumo-link hover:underline pointer-coarse:min-h-11"
       >
         {t('linksOpen')}
         <CaretRightIcon size={12} aria-hidden="true" className="rtl:-scale-x-100" />

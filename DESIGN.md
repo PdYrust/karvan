@@ -22,7 +22,7 @@ Only one place per screen gets the memorable treatment:
 
 ## 2. Color
 
-Karvan uses Kumo's palette as it ships: neutral greys for surfaces and text, Kumo blue as the brand, Kumo's status colors. Components use Kumo semantic classes (`bg-kumo-base`, `bg-kumo-tint`, `text-kumo-subtle`, `border-kumo-hairline`, `bg-kumo-brand`, ...).
+Karvan uses Kumo's palette as it ships, with one change (subtle text one step darker in light mode, `#6b6b6b`, because Kumo's `#737373` reads under 4.5:1 on its own tinted surfaces): neutral greys for surfaces and text, Kumo blue as the brand, Kumo's status colors. Components use Kumo semantic classes (`bg-kumo-base`, `bg-kumo-tint`, `text-kumo-subtle`, `border-kumo-hairline`, `bg-kumo-brand`, ...).
 
 `web/src/styles/tokens.css` holds the only color Karvan adds:
 
@@ -36,7 +36,7 @@ Karvan uses Kumo's palette as it ships: neutral greys for surfaces and text, Kum
 Kumo's sixth chart color is an orange; Karvan never uses it (no Cloudflare orange). A chart never needs more than five series; more become "Other".
 The chart tokens sit in a `@theme static` block: charts pick a color by number at run time (`var(--color-chart-3)`), which Tailwind's class scan cannot see, so the variables are always emitted.
 
-- `text-kumo-brand` is Cloudflare orange in Kumo. For blue text use `text-(--color-kumo-brand)`.
+- `text-kumo-brand` is Cloudflare orange in Kumo. Blue text (links, the current step) uses `text-kumo-link`, Kumo's link color, which reads 4.5:1 in both themes; `text-(--color-kumo-brand)` is for icons and marks only (it reads 3.3:1 on the dark page).
 - Status is never shown by color alone. It always comes with an icon and a word.
 - **Contrast:** body text at least 4.5:1 on its surface in both themes; large text and icons at least 3:1. Check new pairs before adding a token.
 

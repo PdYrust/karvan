@@ -1,10 +1,17 @@
 /*
  * Karvan color tokens. The only file in web/src allowed to hold color values.
  * Karvan uses Kumo's own palette as it ships (neutral surfaces, Kumo blue as
- * the brand); this file only adds what Kumo does not have. DESIGN.md section 2.
+ * the brand); this file only adds what Kumo does not have, and darkens one
+ * Kumo color. DESIGN.md section 2.
  */
 
 @theme {
+  /*
+   * Kumo's light subtle grey (neutral-500, #737373) reads 4.35:1 on its tint
+   * and 4.46:1 on its elevated surface, under the 4.5:1 floor. One step darker
+   * reads 4.9:1 on the tint; dark mode keeps Kumo's own value.
+   */
+  --text-color-kumo-subtle: light-dark(#6b6b6b, oklch(70.8% 0 0));
   /* Text and marks drawn on top of the brand color. */
   --color-on-brand: oklch(100% 0 0);
   /* A QR code stays dark on light in both themes, so every camera reads it. */

@@ -14,7 +14,7 @@ export function SearchButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="flex h-9 w-full items-center gap-2 rounded-lg bg-kumo-base px-3 text-sm text-kumo-placeholder ring ring-kumo-line hover:text-kumo-subtle pointer-coarse:h-11"
+      className="flex h-9 w-full items-center gap-2 rounded-lg bg-kumo-base px-3 text-sm text-kumo-subtle ring ring-kumo-line hover:text-kumo-default pointer-coarse:h-11"
     >
       <MagnifyingGlassIcon size={16} aria-hidden="true" className="text-kumo-subtle" />
       <span className="flex-1 text-start">{t('quickSearch')}</span>

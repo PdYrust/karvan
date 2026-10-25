@@ -21,7 +21,10 @@ function BackupsValue({ backups, failed }: { backups: Backup[] | undefined; fail
   if (backups.length === 0) return t('backupsNone');
   const size = backups.reduce((n, b) => n + b.size, 0);
   return (
-    <Link to="/backups" className="text-(--color-kumo-brand) hover:underline">
+    <Link
+      to="/backups"
+      className="inline-flex min-h-6 items-center text-kumo-link hover:underline pointer-coarse:min-h-11"
+    >
       {t('backupsValue', { count: backups.length, size: fmt.bytes(size) })}
     </Link>
   );
@@ -43,7 +46,7 @@ function Facts({ safe }: { safe: SafeMode }) {
       />
       <Link
         to="/settings/safe-mode"
-        className="mt-auto inline-flex items-center gap-1 self-start text-sm text-(--color-kumo-brand) hover:underline pointer-coarse:min-h-11"
+        className="mt-auto inline-flex items-center gap-1 self-start text-sm text-kumo-link hover:underline pointer-coarse:min-h-11"
       >
         {t('safeModeSettings')}
         <CaretRightIcon size={12} aria-hidden="true" className="rtl:-scale-x-100" />
