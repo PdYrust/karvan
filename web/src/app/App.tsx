@@ -2,7 +2,7 @@ import { Toasty } from '@cloudflare/kumo/components/toast';
 import { CSPProvider } from '@cloudflare/kumo/primitives/csp-provider';
 import { DirectionProvider } from '@cloudflare/kumo/primitives/direction-provider';
 import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { lazy } from 'react';
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import { OverviewPage } from '../features/overview/OverviewPage';
 import { returnToSignIn } from '../features/session/use-session';
@@ -65,6 +65,11 @@ const PreviewStep = lazy(() =>
 const StartStep = lazy(() =>
   import('../features/wizard/start/StartStep').then((m) => ({ default: m.StartStep })),
 );
+const CheckReportPage = lazy(() =>
+  import('../features/wizard/preview/CheckReportPage').then((m) => ({
+    default: m.CheckReportPage,
+  })),
+);
 /**
  * A request that finds no session means it ended (timeout or sign-out
  * elsewhere); the server shows the sign-in page at the same address. A write
@@ -117,6 +122,15 @@ export function App() {
               <Toasty>
                 <BrowserRouter basename={basename}>
                   <Routes>
+                    {/* A printable page has no shell around it (DESIGN.md). */}
+                    <Route
+                      path="migrations/:id/preview/print"
+                      element={
+                        <Suspense>
+                          <CheckReportPage />
+                        </Suspense>
+                      }
+                    />
                     <Route element={<AppShell />}>
                       <Route index element={<OverviewPage />} />
                       <Route path="analytics" element={<AnalyticsPage />}>

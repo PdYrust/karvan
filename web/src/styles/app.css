@@ -38,6 +38,13 @@
     display: none;
   }
 
+  /* Printed pages are dark text on white whatever the theme (DESIGN.md). */
+  @media print {
+    [data-mode='dark'] {
+      color-scheme: light;
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     *,
     *::before,
