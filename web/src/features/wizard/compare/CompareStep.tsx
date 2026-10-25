@@ -12,7 +12,7 @@ import { useWizard } from '../wizard-context';
 import { AdminCard } from './AdminCard';
 import { Categories } from './Categories';
 import { conflictMessages } from './conflict-messages';
-import { ImpactBar } from './ImpactBar';
+import { ImpactBar } from '../ImpactBar';
 import { compareMessages } from './messages';
 import { ProblemList } from './ProblemList';
 import { TargetsCard } from './TargetsCard';

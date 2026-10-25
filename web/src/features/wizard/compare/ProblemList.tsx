@@ -13,7 +13,7 @@ import { FixForAll } from './FixForAll';
 import { compareMessages } from './messages';
 import { byRelevance, severityOf, typeWords, userFixes } from './problems';
 import { UserFix } from './UserFix';
-import { UserList } from './UserList';
+import { UserList } from '../UserList';
 
 function GroupState({ group }: { group: ProblemGroup }) {
   const t = useT(compareMessages);

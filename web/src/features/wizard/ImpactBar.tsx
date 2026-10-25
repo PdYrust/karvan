@@ -1,10 +1,10 @@
 import { CheckCircleIcon, WarningCircleIcon } from '@phosphor-icons/react';
-import { useT } from '../../../i18n/locale';
-import type { Impact } from '../../../lib/api/migrations';
-import { useFormat } from '../../../lib/preferences/region';
-import { compareMessages, type CompareKey } from './messages';
+import { useT } from '../../i18n/locale';
+import type { Impact } from '../../lib/api/migrations';
+import { useFormat } from '../../lib/preferences/region';
+import { wizardMessages, type WizardKey } from './messages';
 
-const counts: readonly (keyof Impact & CompareKey)[] = [
+const counts: readonly (keyof Impact & WizardKey)[] = [
   'moving',
   'skipped',
   'renamed',
@@ -21,7 +21,7 @@ export function ImpactBar({
   blockers: number;
   saving: boolean;
 }) {
-  const t = useT(compareMessages);
+  const t = useT(wizardMessages);
   const fmt = useFormat();
   return (
     <section

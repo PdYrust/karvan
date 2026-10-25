@@ -2,13 +2,13 @@ import { Badge } from '@cloudflare/kumo/components/badge';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ArrowRightIcon } from '@phosphor-icons/react';
 import { useEffect, useState, type ReactNode } from 'react';
-import { Pager } from '../../../components/data/Pager';
-import { SearchField } from '../../../components/data/SearchField';
-import { ErrorState } from '../../../components/feedback/ErrorState';
-import { Bone } from '../../../components/feedback/PageSkeleton';
-import { useT } from '../../../i18n/locale';
-import { getUsers, migrationKeys, usersPerPage, type UserRow } from '../../../lib/api/migrations';
-import { compareMessages } from './messages';
+import { Pager } from '../../components/data/Pager';
+import { SearchField } from '../../components/data/SearchField';
+import { ErrorState } from '../../components/feedback/ErrorState';
+import { Bone } from '../../components/feedback/PageSkeleton';
+import { useT } from '../../i18n/locale';
+import { getUsers, migrationKeys, usersPerPage, type UserRow } from '../../lib/api/migrations';
+import { wizardMessages } from './messages';
 
 /** A search term that settles after the operator stops typing for a moment. */
 function useSettled(value: string, ms = 300): string {
@@ -22,7 +22,7 @@ function useSettled(value: string, ms = 300): string {
 
 /** The name a user has now and, when the plan renames them, the new one. */
 function UserName({ row }: { row: UserRow }) {
-  const t = useT(compareMessages);
+  const t = useT(wizardMessages);
   return (
     <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5">
       <bdi dir="ltr" className="truncate font-medium text-kumo-strong">
@@ -64,7 +64,7 @@ export function UserList({
   empty: string;
   end?: (row: UserRow) => ReactNode;
 }) {
-  const t = useT(compareMessages);
+  const t = useT(wizardMessages);
   const [term, setTerm] = useState('');
   const [offset, setOffset] = useState(0);
   const q = useSettled(term.trim());

@@ -3,17 +3,6 @@ import type { Messages } from '../../../i18n/locale';
 const en = {
   loading: 'Loading the comparison',
   failed: "The comparison didn't load.",
-  impactLabel: 'What this plan does',
-  moving: 'Move',
-  skipped: 'Left out',
-  renamed: 'Renamed',
-  configChanged: 'Configs change',
-  saving: 'Saving',
-  blockers: {
-    one: '{count} problem needs a fix before you start.',
-    other: '{count} problems need a fix before you start.',
-  },
-  noBlockers: 'Nothing stands in the way.',
   adminTitle: 'Admin',
   adminIntro: 'The users move under this admin on the destination.',
   adminTaken:
@@ -89,10 +78,7 @@ const en = {
   followAll: 'Same as the rest',
   newName: 'New name',
   userFix: 'Fix for {name}',
-  search: 'Search users',
-  usersFailed: "The users didn't load.",
   noMatch: 'No user matches this search.',
-  leftOut: 'Left out',
   categoriesTitle: 'Categories',
   categoriesIntro:
     "Group users to change them together in the next step. Categories don't decide who moves.",
@@ -126,17 +112,6 @@ export type CompareKey = keyof typeof en;
 const fa: Messages<CompareKey>['fa'] = {
   loading: 'در حال بارگذاری مقایسه',
   failed: 'مقایسه بارگذاری نشد.',
-  impactLabel: 'نتیجه این برنامه',
-  moving: 'منتقل میشوند',
-  skipped: 'منتقل نمیشوند',
-  renamed: 'تغییر نام',
-  configChanged: 'تغییر کانفیگ',
-  saving: 'در حال ذخیره',
-  blockers: {
-    one: '{count} مشکل پیش از شروع باید رفع شود.',
-    other: '{count} مشکل پیش از شروع باید رفع شوند.',
-  },
-  noBlockers: 'مانعی برای شروع نیست.',
   adminTitle: 'ادمین',
   adminIntro: 'کاربرها زیر این ادمین به پنل مقصد منتقل میشوند.',
   adminTaken:
@@ -212,10 +187,7 @@ const fa: Messages<CompareKey>['fa'] = {
   followAll: 'مثل بقیه',
   newName: 'نام جدید',
   userFix: 'راه حل برای {name}',
-  search: 'جستجوی کاربرها',
-  usersFailed: 'کاربرها بارگذاری نشدند.',
   noMatch: 'هیچ کاربری با این جستجو پیدا نشد.',
-  leftOut: 'منتقل نمیشود',
   categoriesTitle: 'دسته ها',
   categoriesIntro:
     'کاربرها را دسته بندی کنید تا در مرحله بعد با هم تغییرشان دهید. دسته ها تعیین نمیکنند چه کسی منتقل شود.',

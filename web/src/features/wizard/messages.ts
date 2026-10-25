@@ -25,6 +25,21 @@ const en = {
   conflictReplay: 'Apply my change again',
   conflictKeep: 'Keep the saved plan',
   saveFailed: "Your last change wasn't saved.",
+  search: 'Search users',
+  usersFailed: "The users didn't load.",
+  noMatch: 'No user matches this search.',
+  leftOut: 'Left out',
+  impactLabel: 'What this plan does',
+  moving: 'Move',
+  skipped: 'Left out',
+  renamed: 'Renamed',
+  configChanged: 'Configs change',
+  saving: 'Saving',
+  blockers: {
+    one: '{count} problem needs a fix before you start.',
+    other: '{count} problems need a fix before you start.',
+  },
+  noBlockers: 'Nothing stands in the way.',
 };
 
 export type WizardKey = keyof typeof en;
@@ -54,6 +69,21 @@ const fa: Messages<WizardKey>['fa'] = {
   conflictReplay: 'تغییر من دوباره اعمال شود',
   conflictKeep: 'برنامه ذخیره شده بماند',
   saveFailed: 'آخرین تغییر شما ذخیره نشد.',
+  search: 'جستجوی کاربرها',
+  usersFailed: 'کاربرها بارگذاری نشدند.',
+  noMatch: 'هیچ کاربری با این جستجو پیدا نشد.',
+  leftOut: 'منتقل نمیشود',
+  impactLabel: 'نتیجه این برنامه',
+  moving: 'منتقل میشوند',
+  skipped: 'منتقل نمیشوند',
+  renamed: 'تغییر نام',
+  configChanged: 'تغییر کانفیگ',
+  saving: 'در حال ذخیره',
+  blockers: {
+    one: '{count} مشکل پیش از شروع باید رفع شود.',
+    other: '{count} مشکل پیش از شروع باید رفع شوند.',
+  },
+  noBlockers: 'مانعی برای شروع نیست.',
 };
 
 export const wizardMessages: Messages<WizardKey> = { en, fa };

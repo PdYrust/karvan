@@ -8,7 +8,7 @@ import { useFormat } from '../../../lib/preferences/region';
 import { useWizard } from '../wizard-context';
 import { AddCategory, CategoryMenu } from './CategoryMenus';
 import { compareMessages } from './messages';
-import { UserList } from './UserList';
+import { UserList } from '../UserList';
 
 interface TreeProps {
   tree: readonly PlanNode[];
