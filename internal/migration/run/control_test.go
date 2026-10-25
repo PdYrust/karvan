@@ -32,3 +32,24 @@ func TestPanelControlProbeIsReusedForAMinute(t *testing.T) {
 		t.Fatalf("probed %d times, want 4 (fresh, expired, another panel)", calls)
 	}
 }
+
+// A probe its request cut short is not kept: the next look probes again
+// instead of showing "no Docker access" for a minute.
+func TestPanelControlProbeCutShortIsNotKept(t *testing.T) {
+	calls := 0
+	svc := New(Deps{Control: func(ctx context.Context, _ string) (PanelControl, error) {
+		calls++
+		if err := ctx.Err(); err != nil {
+			return nil, err
+		}
+		return nil, nil
+	}})
+	gone, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := svc.PanelControlStatus(gone, "/opt/p/.env", false); err == nil {
+		t.Fatal("a probe cut short reported the panel controllable")
+	}
+	if err := svc.PanelControlStatus(context.Background(), "/opt/p/.env", false); err != nil || calls != 2 {
+		t.Fatalf("after a cut-short probe: %v, %d probes, want nil and 2", err, calls)
+	}
+}

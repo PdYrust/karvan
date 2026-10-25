@@ -437,6 +437,11 @@ func (s *Service) PanelControlStatus(ctx context.Context, envPath string, fresh 
 		return p.err
 	}
 	_, err := s.control(ctx, envPath)
+	// A probe its request cut short (the page was left) says nothing about
+	// the panel; kept, it would show a wrong reason for a minute.
+	if ctx.Err() != nil {
+		return err
+	}
 	s.mu.Lock()
 	s.probes[envPath] = controlProbe{err: err, at: s.now()}
 	s.mu.Unlock()
