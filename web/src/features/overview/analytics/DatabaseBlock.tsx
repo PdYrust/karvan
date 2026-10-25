@@ -15,7 +15,16 @@ import { BlockHeading, TilesSkeleton } from './BlockHeading';
 import { DatabaseTiles } from './DatabaseTiles';
 
 /** Tiles, users by status and traffic per hour, once the database has been read. */
-function Numbers({ stats, range }: { stats: PanelAnalytics; range: RangeKey }) {
+function Numbers({
+  stats,
+  range,
+  of,
+}: {
+  stats: PanelAnalytics;
+  range: RangeKey;
+  /** The block heading's id. */
+  of: string;
+}) {
   const t = useT(analyticsMessages);
   const { panel, detail, detailProblem } = stats;
   if (panel.problem) return <DatabaseProblem code={panel.problem.code} />;
@@ -31,7 +40,7 @@ function Numbers({ stats, range }: { stats: PanelAnalytics; range: RangeKey }) {
     <>
       <DatabaseTiles panel={panel} data={panel.data} step={step} domain={domain} />
       <div className="grid gap-4 lg:grid-cols-2">
-        <CardHeadings level={4}>
+        <CardHeadings level={4} of={of}>
           <StatusCard data={panel.data} />
           <TrafficCard detail={detail} missing={missing} end={end} range={range} />
         </CardHeadings>
@@ -59,7 +68,7 @@ export function DatabaseBlock({
   const q = usePanelStats(panelId, range);
   let body;
   if (q.data) {
-    body = <Numbers stats={q.data} range={range} />;
+    body = <Numbers stats={q.data} range={range} of={id} />;
   } else if (q.isError) {
     body = <LoadFailed error={q.error} onRetry={() => void q.refetch()} />;
   } else {

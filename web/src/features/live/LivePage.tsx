@@ -185,9 +185,9 @@ export function LivePage() {
           <LiveBody id={id} live={live} />
         </div>
         {withLog ? (
-          <aside className="border-t border-kumo-hairline p-4 sm:p-8 lg:border-s lg:border-t-0">
+          <div className="border-t border-kumo-hairline p-4 sm:p-8 lg:border-s lg:border-t-0">
             <LiveLog events={live.stream.events} />
-          </aside>
+          </div>
         ) : null}
       </div>
     </div>

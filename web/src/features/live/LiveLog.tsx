@@ -29,19 +29,21 @@ export function LiveLog({ events }: { events: readonly MigrationEvent[] }) {
       {lines.length === 0 ? (
         <p className="text-kumo-subtle">{t('logEmpty')}</p>
       ) : (
-        <ol role="log" className="flex flex-col">
-          {lines.map((l) => (
-            <li
-              key={l.seq}
-              className="flex items-baseline gap-3 border-b border-kumo-hairline py-2.5 last:border-b-0"
-            >
-              <time dateTime={l.at} className="shrink-0 text-sm text-kumo-subtle tabular">
-                {fmt.seconds(new Date(l.at))}
-              </time>
-              <span className="min-w-0 text-kumo-default">{l.text}</span>
-            </li>
-          ))}
-        </ol>
+        <div role="log">
+          <ol className="flex flex-col">
+            {lines.map((l) => (
+              <li
+                key={l.seq}
+                className="flex items-baseline gap-3 border-b border-kumo-hairline py-2.5 last:border-b-0"
+              >
+                <time dateTime={l.at} className="shrink-0 text-sm text-kumo-subtle tabular">
+                  {fmt.seconds(new Date(l.at))}
+                </time>
+                <span className="min-w-0 text-kumo-default">{l.text}</span>
+              </li>
+            ))}
+          </ol>
+        </div>
       )}
     </section>
   );

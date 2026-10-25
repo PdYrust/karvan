@@ -1,5 +1,7 @@
 import { cn } from '@cloudflare/kumo/utils';
-import { useId, type ReactNode } from 'react';
+import { createContext, use, useId, type ReactNode } from 'react';
+// A row's title sits under the card's heading; a card without one puts it right under the page's.
+const Titled = createContext(false);
 
 /** A card of settings, each row split from the next by a hairline. */
 export function SettingsCard({
@@ -22,7 +24,9 @@ export function SettingsCard({
           {title}
         </h2>
       ) : null}
-      <div className="flex flex-col">{children}</div>
+      <div className="flex flex-col">
+        <Titled value={Boolean(title)}>{children}</Titled>
+      </div>
     </section>
   );
 }
@@ -47,12 +51,13 @@ export function SettingRow({
   /** Id for the title, so the control can be labelled by it. */
   labelId?: string;
 }) {
+  const Heading = use(Titled) ? 'h3' : 'h2';
   return (
     <div className="flex flex-col gap-3 border-b border-kumo-hairline py-5 last:border-b-0 sm:flex-row sm:items-start sm:justify-between sm:gap-8">
       <div className="flex min-w-0 flex-col gap-1">
-        <h3 id={labelId} className="text-base font-medium text-kumo-strong">
+        <Heading id={labelId} className="text-base font-medium text-kumo-strong">
           {title}
-        </h3>
+        </Heading>
         {description ? <p className="max-w-prose text-sm text-kumo-subtle">{description}</p> : null}
         {children}
       </div>
