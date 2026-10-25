@@ -203,6 +203,14 @@ Laid out like the dashboard's account home, top to bottom:
 - **Form** (`/links/new`, `/links/:id`): one column at most 720 wide. Name; the destination as radio cards (as in Connect); the old panel (kind, address, the address Karvan reaches it by, certificate fingerprint); what the site answers (old path, domains one per line, port); the certificate as radio cards (files on this server, upload files, paste, none) with the chosen way's fields and "Check certificate", which shows the same certificate facts before saving; None says the links go over plain HTTP. Lazy checks and "The old panel is plain HTTP" are switches. A field the server refuses gets its sentence under it. Cancel, then Save. A finished migration's "Set up old links" fills in the destination, the kind and the address. A pasted key is never shown again: on edit its field is empty and an empty field keeps the saved key.
 - Delete asks for the site's name typed.
 
+### Backups
+- `/backups` follows Tables, without a search or a pager (backups are few and the server does not page them): refresh at the end of the header, one sentence under the title on what Safe Mode keeps.
+- **Row:** the move (`MoveLabel`) with the admin as the link to the job's page, the panel with its logo, the database kind (from how it was made) with the backup id in mono under it, the size, when it was taken, the job's state, and a "..." menu (Put back, Delete). Phones get cards with the move first.
+- **Panel control:** a panel Karvan cannot stop and start gets one warning above the table: its name, why (the reason's sentence) and how to allow it (the fix). Put back stays in the menu for its backups but is disabled, with the reason's short label next to it. A running job's backup can be neither put back nor deleted.
+- **Put back** asks for the backup id typed and says what goes: everything written to the panel since the backup, by Karvan and by anyone else. Once the server holds the panel the live view opens (`/migrations/:id/live?after=<seq>`), showing the rewind scene, its log and its result; a restore that failed says so above the result.
+- **Delete** asks for the backup id typed and says the backup cannot come back.
+- **Empty:** an icon, "No backups yet", that Safe Mode takes one before each migration writes, and a way to its settings.
+
 ### Sign-in
 - Two halves on large screens. Start side on `bg-kumo-base`: wordmark at the top, then a centered form (title, username, password, one blue button) and the recovery hint with the `karvan reset -password` command.
 - End side on `bg-kumo-brand`: language and theme buttons at the top, the "Marzban ⇄ PasarGuard" line, and one short line, then a spinning dotted globe.
