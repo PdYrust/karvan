@@ -1,0 +1,49 @@
+import { describe, expect, it } from 'vitest';
+import { actionMessages, auditActions, isAuditAction, isAuditReason } from './words';
+
+// The actions api-resources.md 8.3 lists from internal/audit/audit.go.
+const serverActions = [
+  'login',
+  'logout',
+  'lockout',
+  'totp.enable',
+  'totp.disable',
+  'cli.init',
+  'cli.reset',
+  'panels.scan',
+  'migration.run',
+  'migration.rollback',
+  'migration.cancel',
+  'migration.passwords_download',
+  'safe_mode.on',
+  'safe_mode.off',
+  'safe_mode.rollback',
+  'safe_mode.backup_delete',
+  'safe_mode.backup_restore',
+  'cli.safe_mode_restore',
+  'legacy_site.save',
+  'legacy_site.delete',
+  'legacy_site.tokens',
+  'sessions.end',
+  'account.credentials',
+  'settings.address_start',
+  'settings.address',
+];
+
+describe('audit words', () => {
+  it('names every action the server records, in both languages', () => {
+    expect([...auditActions].sort()).toEqual([...serverActions].sort());
+    for (const a of auditActions) {
+      expect(actionMessages.en[a], a).toBeTruthy();
+      expect(actionMessages.fa[a], a).toBeTruthy();
+    }
+  });
+
+  it('does not take inherited keys or new actions for known ones', () => {
+    expect(isAuditAction('constructor')).toBe(false);
+    expect(isAuditAction('panels.delete')).toBe(false);
+    expect(isAuditReason('toString')).toBe(false);
+    expect(isAuditReason(undefined)).toBe(false);
+    expect(isAuditReason('bad_totp')).toBe(true);
+  });
+});
