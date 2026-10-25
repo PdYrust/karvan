@@ -15,23 +15,27 @@ import (
 
 const bom = "\ufeff"
 
-// WriteUsers writes one row per user: what happened to them and why.
+// WriteUsers writes one row per user: what happened to them and why. In a
+// rolled back run every moved user was taken back again (taken_back), as
+// the report page says.
 func WriteUsers(w io.Writer, r *run.Report) error {
 	if _, err := io.WriteString(w, bom); err != nil {
 		return err
 	}
 	c := csv.NewWriter(w)
 	if err := c.Write([]string{"key", "source_username", "username", "moved", "destination_id",
-		"config_changed", "link_changed", "fixes", "operations"}); err != nil {
+		"config_changed", "link_changed", "fixes", "operations", "taken_back"}); err != nil {
 		return err
 	}
+	rolledBack := r.State == run.StateRolledBack
 	for _, u := range r.Users {
 		id := ""
 		if u.DestID > 0 {
 			id = strconv.FormatInt(u.DestID, 10)
 		}
 		if err := c.Write([]string{safe(u.Key), safe(u.SourceUsername), safe(u.Username), yes(u.Moved), id,
-			yes(u.ChangesConfig), yes(u.ChangesLink), strings.Join(u.Fixed, " "), strings.Join(u.Applied, " ")}); err != nil {
+			yes(u.ChangesConfig), yes(u.ChangesLink), strings.Join(u.Fixed, " "), strings.Join(u.Applied, " "),
+			yes(u.Moved && rolledBack)}); err != nil {
 			return err
 		}
 	}

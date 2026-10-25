@@ -37,6 +37,33 @@ func TestCSVFiles(t *testing.T) {
 	}
 }
 
+// A rolled back run's users were moved and then taken back; the file says
+// so, as the report page does, instead of leaving them as moved.
+func TestUsersCSVSaysWhoARollbackTookBack(t *testing.T) {
+	for _, c := range []struct {
+		state string
+		want  [2]string // taken_back of the moved user, then of the one left out
+	}{
+		{run.StateRolledBack, [2]string{"yes", "no"}},
+		{run.StateDone, [2]string{"no", "no"}},
+		{run.StateFailed, [2]string{"no", "no"}},
+	} {
+		r := &run.Report{State: c.state, Users: []run.UserLine{
+			{Key: "1", SourceUsername: "ali", Username: "ali", Moved: true, DestID: 7},
+			{Key: "2", SourceUsername: "sara", Username: "sara"},
+		}}
+		var out bytes.Buffer
+		if err := WriteUsers(&out, r); err != nil {
+			t.Fatal(err)
+		}
+		rows, err := csv.NewReader(strings.NewReader(strings.TrimPrefix(out.String(), bom))).ReadAll()
+		if err != nil || len(rows) != 3 || len(rows[0]) != 10 || rows[0][9] != "taken_back" || rows[1][3] != "yes" ||
+			rows[1][9] != c.want[0] || rows[2][9] != c.want[1] {
+			t.Fatalf("%s: %v %v", c.state, rows, err)
+		}
+	}
+}
+
 func TestCheckCSV(t *testing.T) {
 	r := &run.CheckReport{Users: []run.CheckLine{
 		{Key: "1", SourceUsername: "علی", Username: "ali_2", Moving: true, Targets: []string{"3", "5"}, ChangesLink: true,
