@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getLinkSites } from '../../lib/api/links';
+import { getLinkSites, linkKeys } from '../../lib/api/links';
 import { listJobs } from '../../lib/api/migrations';
 import { getOverview } from '../../lib/api/overview';
 import { getBackups } from '../../lib/api/safemode';
@@ -26,5 +26,5 @@ export function useBackups() {
 }
 
 export function useLinkSites() {
-  return useQuery({ queryKey: ['legacy-sites'], queryFn: getLinkSites });
+  return useQuery({ queryKey: linkKeys.all, queryFn: getLinkSites });
 }
