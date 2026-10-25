@@ -17,9 +17,11 @@ import { RecentsColumn } from './columns/RecentsColumn';
 import { HomeSearch } from './HomeSearch';
 import { overviewMessages } from './messages';
 import { Summary } from './summary/Summary';
+import { useNear } from './use-near';
 import { useNow } from './use-now';
 
-// The charts load after the rest of the page, so the columns and the summary come first.
+// The charts load after the rest of the page, so the columns and the summary come first,
+// and only once the reader nears them (far below the first screen on a phone).
 const OverviewAnalytics = lazy(() =>
   import('./analytics/OverviewAnalytics').then((m) => ({ default: m.OverviewAnalytics })),
 );
@@ -60,6 +62,7 @@ export function OverviewPage() {
   const now = useNow();
   const panels = usePanels();
   const { scan, scanning } = useScanPanels();
+  const [analyticsRef, nearAnalytics] = useNear<HTMLDivElement>();
   const noPanels = panels.data !== undefined && !panels.data.some((p) => p.id > 0);
 
   return (
@@ -83,9 +86,15 @@ export function OverviewPage() {
             <Summary />
           </>
         )}
-        <Suspense fallback={<AnalyticsSkeleton label={t('analyticsTitle')} />}>
-          <OverviewAnalytics />
-        </Suspense>
+        <div ref={analyticsRef}>
+          {nearAnalytics ? (
+            <Suspense fallback={<AnalyticsSkeleton label={t('analyticsTitle')} />}>
+              <OverviewAnalytics />
+            </Suspense>
+          ) : (
+            <AnalyticsSkeleton label={t('analyticsTitle')} />
+          )}
+        </div>
       </div>
     </div>
   );

@@ -10,7 +10,10 @@ export function Summary() {
   const t = useT(overviewMessages);
   const id = useId();
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-4">
+    <section
+      aria-labelledby={id}
+      className="flex flex-col gap-4 [contain-intrinsic-size:auto_640px] [content-visibility:auto]"
+    >
       <h2 id={id} className="text-heading font-semibold text-kumo-strong">
         {t('summaryTitle')}
       </h2>
