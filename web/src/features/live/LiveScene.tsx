@@ -4,7 +4,7 @@ import { useT } from '../../i18n/locale';
 import type { JobStream } from '../../lib/api/events';
 import { useFormat } from '../../lib/preferences/region';
 import { FlowScene, type SceneEnds } from './FlowScene';
-import type { Counter, Phase } from './live';
+import { panelBack, type Counter, type Phase } from './live';
 import { eventSentence } from './log';
 import { liveMessages } from './messages';
 import { RewindScene } from './RewindScene';
@@ -57,12 +57,15 @@ export function LiveScene(p: SceneProps) {
   const calm = useCalm();
   const restoring = p.phase === 'restore';
   const restore = p.stream.stages.findLast((s) => s.stage === 'restore');
-  const offline = useSince(restore?.startedAt, restoring);
+  const online = restoring && panelBack(p.stream);
+  const offline = useSince(restore?.startedAt, restoring && !online);
   const c = p.counter;
   const now = p.stream.events.findLast((e) => e.type === 'stage' && e.data.state === 'start');
   const said = now ? eventSentence(now) : null;
   const line = restoring
-    ? t('offlineFor', { time: fmt.clock(offline) })
+    ? online
+      ? t('start_restore')
+      : t('offlineFor', { time: fmt.clock(offline) })
     : c
       ? t(c.kind === 'move' ? 'moving' : 'removing', { done: c.done, total: c.total })
       : said?.from === 'live'
@@ -88,7 +91,7 @@ export function LiveScene(p: SceneProps) {
       {calm ? (
         <CalmNumbers counter={c} skipped={p.skipped} />
       ) : restoring ? (
-        <RewindScene ends={p.ends} backupId={p.backupId} />
+        <RewindScene ends={p.ends} backupId={p.backupId} online={online} />
       ) : (
         <FlowScene
           mode={p.phase === 'undo' ? 'undo' : 'move'}

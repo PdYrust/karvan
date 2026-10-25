@@ -1,6 +1,6 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { MagnifyingGlassIcon, PlayIcon } from '@phosphor-icons/react';
-import { useNavigate, useParams } from 'react-router';
+import { useNavigate, useParams, useSearchParams } from 'react-router';
 import { EmptyState } from '../../components/feedback/EmptyState';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
@@ -9,10 +9,13 @@ import { PageHeader } from '../../components/layout/PageHeader';
 import { usePageTitle } from '../../components/layout/use-page-title';
 import { Machine } from '../../components/text/Machine';
 import { useT } from '../../i18n/locale';
+import type { JobStream } from '../../lib/api/events';
 import { originHost, type JobRow, type JobState } from '../../lib/api/migrations';
+import { errorMessages } from '../../lib/errors/errors';
 import { JobMove, JobStateLabel } from '../migrations/JobLabels';
 import { stepPath } from '../wizard/steps';
-import type { Phase } from './live';
+import { restoreFailed, type Phase } from './live';
+import { codeSentence } from './log';
 import { LiveLog } from './LiveLog';
 import { LiveScene } from './LiveScene';
 import { liveMessages, type LiveKey } from './messages';
@@ -46,6 +49,14 @@ function JobLine({ row }: { row: JobRow }) {
   );
 }
 
+/** A backup restore that failed: the job stays as its result says, and why the backup did not go back. */
+function RestoreFailed({ failure }: { failure: JobStream['failure'] }) {
+  const t = useT(liveMessages);
+  const te = useT(errorMessages);
+  const s = failure ? codeSentence(failure.code, failure.detail) : null;
+  const why = s ? (s.from === 'live' ? t(s.key, s.params) : te(s.key)) : '';
+  return <InlineAlert>{`${t('failed_restore')} ${why}`.trim()}</InlineAlert>;
+}
 /** The job's state for the header: running while anything runs, else how it ended. */
 function stateOf(live: Live): JobState | null {
   const r = live.row.data;
@@ -116,6 +127,9 @@ function LiveBody({ id, live }: { id: string; live: Live }) {
           {t('lost')}
         </InlineAlert>
       ) : null}
+      {phase === 'ended' && restoreFailed(live.stream) ? (
+        <RestoreFailed failure={live.stream.failure} />
+      ) : null}
       {phase === 'ended' ? (
         <ResultCard
           jobId={id}
@@ -146,8 +160,9 @@ function LiveBody({ id, live }: { id: string; live: Live }) {
 /** Where Start leads (4.6): the stage rail, the live scene, the log, and the result once it ends. */
 export function LivePage() {
   const { id = '' } = useParams();
+  const [params] = useSearchParams();
   const t = useT(liveMessages);
-  const live = useLive(id);
+  const live = useLive(id, Number(params.get('after')) || 0);
   const r = live.row.data;
   const title = t(live.phase ? titles[live.phase] : 'titleLive');
   usePageTitle(title);

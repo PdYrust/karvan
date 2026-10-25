@@ -19,8 +19,17 @@ const lanes: Readonly<Record<Lane, string>> = {
  * A backup going back (4.6): the backup's tile, the panel offline at the
  * other end, and dots flowing into it while the restore runs. A restore has
  * no batches, so the dots say only that it is under way; the timer is text.
+ * The panel reads Online again once it started.
  */
-export function RewindScene({ ends, backupId }: { ends: SceneEnds; backupId: string }) {
+export function RewindScene({
+  ends,
+  backupId,
+  online,
+}: {
+  ends: SceneEnds;
+  backupId: string;
+  online: boolean;
+}) {
   const t = useT(liveMessages);
   const [measure, width] = useWidth<HTMLDivElement>();
   const curves = useMemo(() => (width > 0 ? curvesFor(width, sceneHeight, false) : null), [width]);
@@ -37,11 +46,11 @@ export function RewindScene({ ends, backupId }: { ends: SceneEnds; backupId: str
       />
       <ArcLayer measure={measure} width={width} curves={curves} circle={dots.circle} />
       <SceneTile
-        dim
+        dim={!online}
         mark={<Mark kind={ends.to.kind} />}
         name={ends.to.kind ? panelNames[ends.to.kind] : ends.to.name}
         detail={ends.to.name}
-        value={t('offline')}
+        value={t(online ? 'online' : 'offline')}
       />
     </div>
   );

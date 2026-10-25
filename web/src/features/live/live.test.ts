@@ -7,8 +7,10 @@ import {
   counterOf,
   endStateOf,
   mayRollBack,
+  panelBack,
   phaseOf,
   railOf,
+  restoreFailed,
   shownCounts,
   stagesOfReport,
   type LiveRow,
@@ -266,5 +268,51 @@ describe('log sentences', () => {
       key: 'destination_locked',
     });
     expect(codeSentence('brand_new')).toEqual({ from: 'error', key: 'unknown' });
+  });
+});
+
+describe('a backup restore on request (B12)', () => {
+  const ranDone = () => [
+    stage('check', 'start'),
+    stage('check', 'done'),
+    ev('', 'done', { state: 'done' }),
+  ];
+  it('follows the restore of a done job and sees the panel come back', () => {
+    seq = 0;
+    const s = reduceEvents([
+      ...ranDone(),
+      stage('restore', 'start'),
+      ev('restore', 'log', { code: 'panel_stopped' }),
+    ]);
+    expect(phaseOf(s, row({ state: 'done' }))).toBe('restore');
+    expect(panelBack(s)).toBe(false);
+    const back = reduceEvents([ev('restore', 'log', { code: 'panel_started' })], s);
+    expect(panelBack(back)).toBe(true);
+    expect(eventSentence(ev('restore', 'log', { code: 'backup_put_back' }))).toEqual({
+      from: 'live',
+      key: 'code_backup_put_back',
+    });
+  });
+  it('says when the restore failed and the job stayed as it was', () => {
+    seq = 0;
+    const failed = reduceEvents([
+      ...ranDone(),
+      stage('restore', 'start'),
+      ev('restore', 'log', { code: 'restore_failed' }),
+      stage('restore', 'failed'),
+      ev('', 'done', { state: 'done' }),
+    ]);
+    expect(restoreFailed(failed)).toBe(true);
+    expect(failed.failure?.code).toBe('restore_failed');
+    expect(endStateOf(failed, row({ state: 'done' }))).toBe('done');
+    seq = 0;
+    const ok = reduceEvents([
+      ...ranDone(),
+      stage('restore', 'start'),
+      stage('restore', 'done'),
+      ev('', 'done', { state: 'rolled_back' }),
+    ]);
+    expect(restoreFailed(ok)).toBe(false);
+    expect(restoreFailed(reduceEvents(ranDone()))).toBe(false);
   });
 });

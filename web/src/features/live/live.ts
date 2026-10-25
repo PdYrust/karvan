@@ -109,6 +109,24 @@ export function counterOf(stream: JobStream, phase: Phase): Counter | null {
   return null;
 }
 
+/** The restore running now, or the last one: its stage on the stream. */
+const lastRestore = (stream: JobStream) => stream.stages.findLast((s) => s.stage === 'restore');
+/** Whether the panel came online again during the restore that runs now (B12). */
+export function panelBack(stream: JobStream): boolean {
+  const r = lastRestore(stream);
+  if (!r) return false;
+  const since = Date.parse(r.startedAt);
+  return stream.log.some((l) => l.code === 'panel_started' && Date.parse(l.at) >= since);
+}
+/**
+ * Whether the stream ended on a backup restore that failed and left the
+ * job's state as it was, so the result alone would not say so.
+ */
+export function restoreFailed(stream: JobStream): boolean {
+  if (stream.kind !== 'run' || stream.done === null || stream.done === 'rolled_back') return false;
+  const last = stream.stages.at(-1);
+  return last?.stage === 'restore' && last.state === 'failed';
+}
 /** Stop works between batches, until the users are written; after that the run is nearly done. */
 export function canStop(stream: JobStream, row: LiveRow, phase: Phase): boolean {
   if (phase !== 'run') return false;
