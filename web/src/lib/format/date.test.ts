@@ -1,11 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  dayIn,
   defaultCalendar,
   formatCountdown,
   formatDateTime,
   formatLongDate,
   formatRelative,
   formatTime,
+  startOfDay,
 } from './date';
 
 // 2026-10-15 15:10 UTC is 18:40 in Tehran (UTC+3:30, no DST since 2022).
@@ -60,5 +62,40 @@ describe('formatCountdown', () => {
     expect(formatCountdown(65, 'en')).toBe('1:05');
     expect(formatCountdown(-3, 'en')).toBe('0:00');
     expect(formatCountdown(65, 'fa')).toBe('۱:۰۵');
+  });
+});
+describe('days in a time zone', () => {
+  it('reads the day it is in the zone', () => {
+    // 21:00 UTC is already the next day in Tehran.
+    expect(dayIn(new Date(Date.UTC(2026, 2, 20, 21)), 'Asia/Tehran')).toEqual({
+      year: 2026,
+      month: 3,
+      day: 21,
+    });
+    expect(dayIn(new Date(Date.UTC(2026, 2, 20, 21)), 'UTC')).toEqual({
+      year: 2026,
+      month: 3,
+      day: 20,
+    });
+  });
+  it('finds when a day starts in the zone', () => {
+    expect(startOfDay({ year: 2026, month: 3, day: 21 }, 'Asia/Tehran').toISOString()).toBe(
+      '2026-03-20T20:30:00.000Z',
+    );
+    expect(startOfDay({ year: 2026, month: 7, day: 1 }, 'Europe/Berlin').toISOString()).toBe(
+      '2026-06-30T22:00:00.000Z',
+    );
+    expect(startOfDay({ year: 2026, month: 1, day: 1 }, 'Europe/Berlin').toISOString()).toBe(
+      '2025-12-31T23:00:00.000Z',
+    );
+  });
+  it('starts a day a clock change falls on at its real midnight', () => {
+    // Clocks went forward at 2:00 on 29 March 2026 in Berlin; midnight was still +1.
+    expect(startOfDay({ year: 2026, month: 3, day: 29 }, 'Europe/Berlin').toISOString()).toBe(
+      '2026-03-28T23:00:00.000Z',
+    );
+    expect(startOfDay({ year: 2026, month: 3, day: 30 }, 'Europe/Berlin').toISOString()).toBe(
+      '2026-03-29T22:00:00.000Z',
+    );
   });
 });

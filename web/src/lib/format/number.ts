@@ -63,3 +63,12 @@ export function formatBytes(bytes: number, locale: Locale): string {
 export function formatRate(bytesPerSecond: number, locale: Locale): string {
   return `${formatBytes(bytesPerSecond, locale)}/s`;
 }
+const nativeDigits: Record<string, string> = Object.fromEntries([
+  ...[...'۰۱۲۳۴۵۶۷۸۹'].map((d, i) => [d, String(i)]),
+  ...[...'٠١٢٣٤٥٦٧٨٩'].map((d, i) => [d, String(i)]),
+  ['٫', '.'],
+]);
+/** Latin digits and point for the Persian and Arabic ones a phone keyboard types, trimmed. */
+export function latinDigits(text: string): string {
+  return [...text.trim()].map((c) => nativeDigits[c] ?? c).join('');
+}

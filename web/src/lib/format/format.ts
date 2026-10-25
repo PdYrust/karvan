@@ -34,6 +34,8 @@ export function makeFormat(locale: Locale, region: Region) {
   return {
     locale,
     timeZone: region.timeZone,
+    /** The calendar dates are shown and typed in. */
+    calendar: opts.calendar ?? defaultCalendar(locale),
     /** For sentences: "16:39 in {zone}", "ساعت ۱۶:۳۹ به وقت {zone}". */
     zone: zoneInSentence(region.timeZone, locale),
     number: (n: number, maxFraction?: number) => formatNumber(n, locale, maxFraction),

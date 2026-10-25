@@ -119,3 +119,40 @@ export function formatCountdown(totalSeconds: number, locale: Locale): string {
   const minutes = new Intl.NumberFormat(intlLocale(locale)).format(Math.floor(s / 60));
   return `${minutes}:${nf.format(s % 60)}`;
 }
+/** A day on the Gregorian calendar, as numbers. */
+export interface Day {
+  year: number;
+  month: number;
+  day: number;
+}
+const civilFormat = (timeZone: string) =>
+  new Intl.DateTimeFormat('en-u-ca-gregory-nu-latn', {
+    timeZone,
+    year: 'numeric',
+    month: 'numeric',
+    day: 'numeric',
+    hour: 'numeric',
+    minute: 'numeric',
+    second: 'numeric',
+    hourCycle: 'h23',
+  });
+/** The wall clock of timeZone at date, read as if it were UTC. */
+function wallClock(date: Date, timeZone: string): number {
+  const parts = civilFormat(timeZone).formatToParts(date);
+  const n = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return Date.UTC(n('year'), n('month') - 1, n('day'), n('hour'), n('minute'), n('second'));
+}
+/** The day it is in timeZone at date. */
+export function dayIn(date: Date, timeZone: string): Day {
+  const d = new Date(wallClock(date, timeZone));
+  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
+}
+/** The moment day starts in timeZone. */
+export function startOfDay(day: Day, timeZone: string): Date {
+  const local = Date.UTC(day.year, day.month - 1, day.day);
+  // The zone's offset at a first guess, then once more at the result, for days a clock change starts.
+  let at = local - (wallClock(new Date(local), timeZone) - local);
+  at = local - (wallClock(new Date(at), timeZone) - at);
+  return new Date(at);
+}
