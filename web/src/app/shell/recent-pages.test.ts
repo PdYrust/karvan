@@ -20,6 +20,8 @@ describe('recentPage', () => {
     expect(recentPage('/backups')).toEqual({ section: 'backups' });
     expect(recentPage('/settings')).toEqual({ section: 'settings', tab: 'general' });
     expect(recentPage('/settings/safe-mode')).toEqual({ section: 'settings', tab: 'safe-mode' });
+    expect(recentPage('/settings/access')).toEqual({ section: 'settings', tab: 'access' });
+    expect(recentPage('/settings/audit-log')).toEqual({ section: 'settings', tab: 'audit-log' });
   });
 
   it('reads a trailing slash as the same page', () => {
@@ -36,7 +38,7 @@ describe('recentPage', () => {
       '/panels/0',
       '/panels/x',
       '/panels/2/more',
-      '/settings/access',
+      '/settings/billing',
       '/migrations/9f1c2b3a4d5e6f7081920a1b',
       '/reports/x',
       '/links/3',

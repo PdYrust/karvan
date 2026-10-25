@@ -20,10 +20,10 @@ export function SettingsPage() {
             tabs={[
               { to: '/settings', label: t('tabGeneral'), end: true },
               { to: '/settings/safe-mode', label: t('tabSafeMode') },
-              { to: '/settings/access', label: t('tabAccess'), soon: true },
-              { to: '/settings/two-step', label: t('tabTwoStep'), soon: true },
-              { to: '/settings/sessions', label: t('tabSessions'), soon: true },
-              { to: '/settings/audit-log', label: t('tabAudit'), soon: true },
+              { to: '/settings/access', label: t('tabAccess') },
+              { to: '/settings/two-step', label: t('tabTwoStep') },
+              { to: '/settings/sessions', label: t('tabSessions') },
+              { to: '/settings/audit-log', label: t('tabAudit') },
             ]}
           />
         }

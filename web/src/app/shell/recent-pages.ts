@@ -1,4 +1,5 @@
-export type SettingsTab = 'general' | 'safe-mode';
+export type SettingsTab =
+  'general' | 'safe-mode' | 'access' | 'two-step' | 'sessions' | 'audit-log';
 
 /** A page the overview can list under Recents; its words come from the page's language at show time. */
 export type RecentPage =
@@ -31,7 +32,10 @@ const routes: [RegExp, (m: RegExpExecArray) => RecentPage | undefined][] = [
   [/^\/links\/new$/, () => ({ section: 'links', page: 'new' })],
   [/^\/backups$/, () => ({ section: 'backups' })],
   [/^\/settings$/, () => ({ section: 'settings', tab: 'general' })],
-  [/^\/settings\/safe-mode$/, () => ({ section: 'settings', tab: 'safe-mode' })],
+  [
+    /^\/settings\/(safe-mode|access|two-step|sessions|audit-log)$/,
+    (m) => ({ section: 'settings', tab: m[1] as SettingsTab }),
+  ],
 ];
 
 const trim = (path: string) => path.replace(/(.)\/+$/, '$1');

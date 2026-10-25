@@ -1,15 +1,18 @@
 import {
   ArrowsClockwiseIcon,
   DesktopIcon,
+  FileTextIcon,
   GearSixIcon,
   HardDrivesIcon,
   KeyboardIcon,
   MoonIcon,
+  PasswordIcon,
   PlusIcon,
   ShieldCheckIcon,
   SignOutIcon,
   SunIcon,
   TranslateIcon,
+  UserCircleIcon,
 } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router';
@@ -110,6 +113,34 @@ export function useCommands(onShortcuts: () => void, open: boolean): CommandGrou
       keywords: 'safe mode backup rollback حالت امن',
       icon: <ShieldCheckIcon className={icon} />,
       run: () => void navigate(`${settingsPath}/safe-mode`),
+    },
+    {
+      id: 'settings:access',
+      title: t('accessSettings'),
+      keywords: 'address path port username password login آدرس مسیر پورت رمز',
+      icon: <UserCircleIcon className={icon} />,
+      run: () => void navigate(`${settingsPath}/access`),
+    },
+    {
+      id: 'settings:two-step',
+      title: t('twoStepSettings'),
+      keywords: '2fa totp code authenticator two-step دومرحله ای کد',
+      icon: <PasswordIcon className={icon} />,
+      run: () => void navigate(`${settingsPath}/two-step`),
+    },
+    {
+      id: 'settings:sessions',
+      title: t('sessionsSettings'),
+      keywords: 'sessions browsers sign out نشست خروج',
+      icon: <DesktopIcon className={icon} />,
+      run: () => void navigate(`${settingsPath}/sessions`),
+    },
+    {
+      id: 'settings:audit-log',
+      title: t('auditSettings'),
+      keywords: 'audit log events history رویداد گزارش',
+      icon: <FileTextIcon className={icon} />,
+      run: () => void navigate(`${settingsPath}/audit-log`),
     },
   ];
 

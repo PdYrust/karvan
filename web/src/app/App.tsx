@@ -22,6 +22,18 @@ const GeneralTab = lazy(() =>
 const SafeModeTab = lazy(() =>
   import('../features/settings/SafeModeTab').then((m) => ({ default: m.SafeModeTab })),
 );
+const AccessTab = lazy(() =>
+  import('../features/settings/access/AccessTab').then((m) => ({ default: m.AccessTab })),
+);
+const TwoStepTab = lazy(() =>
+  import('../features/settings/two-step/TwoStepTab').then((m) => ({ default: m.TwoStepTab })),
+);
+const SessionsTab = lazy(() =>
+  import('../features/settings/sessions/SessionsTab').then((m) => ({ default: m.SessionsTab })),
+);
+const AuditTab = lazy(() =>
+  import('../features/settings/audit/AuditTab').then((m) => ({ default: m.AuditTab })),
+);
 const NotFoundPage = lazy(() =>
   import('../features/not-found/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
 );
@@ -201,6 +213,10 @@ export function App() {
                       <Route path="settings" element={<SettingsPage />}>
                         <Route index element={<GeneralTab />} />
                         <Route path="safe-mode" element={<SafeModeTab />} />
+                        <Route path="access" element={<AccessTab />} />
+                        <Route path="two-step" element={<TwoStepTab />} />
+                        <Route path="sessions" element={<SessionsTab />} />
+                        <Route path="audit-log" element={<AuditTab />} />
                       </Route>
                       <Route path="*" element={<NotFoundPage />} />
                     </Route>

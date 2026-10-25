@@ -14,6 +14,10 @@ const en = {
   recentServer: 'Server',
   recentGeneral: 'General',
   recentSafeMode: 'Safe Mode',
+  recentAccess: 'Access',
+  recentTwoStep: 'Two-step sign-in',
+  recentSessions: 'Sessions',
+  recentAudit: 'Audit log',
 
   summaryTitle: 'Summary',
   movedTitle: 'Users moved',
@@ -64,6 +68,10 @@ const fa: Messages<OverviewKey>['fa'] = {
   recentServer: 'سرور',
   recentGeneral: 'عمومی',
   recentSafeMode: 'حالت امن',
+  recentAccess: 'دسترسی',
+  recentTwoStep: 'ورود دومرحله ای',
+  recentSessions: 'نشست ها',
+  recentAudit: 'گزارش رویدادها',
 
   summaryTitle: 'خلاصه',
   movedTitle: 'کاربرهای منتقل شده',

@@ -21,6 +21,14 @@ const sections = {
   settings: 'settings',
 } as const;
 
+const recentTab = {
+  general: 'recentGeneral',
+  'safe-mode': 'recentSafeMode',
+  access: 'recentAccess',
+  'two-step': 'recentTwoStep',
+  sessions: 'recentSessions',
+  'audit-log': 'recentAudit',
+} as const;
 const panelOf = (page: RecentPage) =>
   page.section === 'analytics' || page.section === 'panels' ? page.panelId : undefined;
 
@@ -31,7 +39,7 @@ function RecentName({ page, panel }: { page: RecentPage; panel: Panel | undefine
   const kind = panel ? panelKind(panel) : undefined;
   let name;
   if (page.section === 'settings') {
-    name = t(page.tab === 'general' ? 'recentGeneral' : 'recentSafeMode');
+    name = t(recentTab[page.tab]);
   } else if (page.section === 'migrations') {
     name = page.page ? t('newMigration') : undefined;
   } else if (page.section === 'links') {
