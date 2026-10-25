@@ -8,7 +8,7 @@ import { summaryMessages, type SummaryKey } from './messages';
 
 /** Statuses both panels use, in the order an operator reads them. */
 const statuses = ['active', 'on_hold', 'limited', 'expired', 'disabled'] as const;
-const expiries = ['expired', 'week', 'month', 'later', 'never'] as const;
+const expiries = ['expired', 'week', 'month', 'later', 'onHold', 'never'] as const;
 
 function useItems() {
   const fmt = useFormat();

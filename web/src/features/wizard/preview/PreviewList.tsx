@@ -16,6 +16,7 @@ import {
 } from '../../../lib/api/preflight';
 import { useFormat } from '../../../lib/preferences/region';
 import { wizardMessages } from '../messages';
+import { expiryOf } from './expiry';
 import { previewMessages } from './messages';
 import { Pager } from '../../../components/data/Pager';
 import { useSettled } from '../UserList';
@@ -23,12 +24,16 @@ import { useSettled } from '../UserList';
 function Facts({ row }: { row: UserRow }) {
   const t = useT(previewMessages);
   const fmt = useFormat();
-  const expiry = row.expire ? t('expires', { date: fmt.date(new Date(row.expire)) }) : null;
+  const expiry = expiryOf(row);
   return (
     <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-kumo-subtle">
       <span className="text-kumo-default">{t(`status_${row.status}`)}</span>
       <span className="tabular">{row.dataLimit > 0 ? fmt.bytes(row.dataLimit) : t('noLimit')}</span>
-      <span className="tabular">{expiry ?? t('noExpiry')}</span>
+      <span className="tabular">
+        {expiry.kind === 'date'
+          ? t('expires', { date: fmt.date(expiry.date) })
+          : t(expiry.kind === 'onHold' ? 'onHoldExpiry' : 'noExpiry')}
+      </span>
     </span>
   );
 }

@@ -126,6 +126,8 @@ export interface Expiries {
   /** Within 30 days, after the first 7. */
   month: number;
   later: number;
+  /** On hold without an end date: the time starts at the first connection. */
+  onHold: number;
   never: number;
 }
 
