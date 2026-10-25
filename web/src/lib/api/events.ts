@@ -59,8 +59,10 @@ export interface JobStream {
   log: LogLine[];
   /** The log line before the stage that failed. */
   failure: { code: string; detail: Readonly<Record<string, unknown>> } | null;
-  /** The state a run ended in; null until it ends. */
+  /** The state a run ended in; null until it ends, and again while a rollback on request runs. */
   done: string | null;
+  /** The stage, log and done events, in order; progress only moves the counter. */
+  events: MigrationEvent[];
 }
 
 export const emptyStream: JobStream = {
@@ -72,6 +74,7 @@ export const emptyStream: JobStream = {
   log: [],
   failure: null,
   done: null,
+  events: [],
 };
 
 const stageStates: readonly string[] = ['start', 'done', 'failed'];
@@ -106,13 +109,19 @@ function onStage(s: JobStream, e: MigrationEvent): JobStream {
         ? { code: last.code, detail: last.detail }
         : { code: 'internal', detail: {} }
       : s.failure;
-  return { ...s, stages, failure };
+  // A stage after the end is a rollback on request: the job runs again until its own done.
+  const done = state === 'start' ? null : s.done;
+  return { ...s, stages, failure, done, events: [...s.events, e] };
 }
 
 function onLog(s: JobStream, e: MigrationEvent): JobStream {
   const { code, ...detail } = e.data;
   if (typeof code !== 'string') return s;
-  return { ...s, log: [...s.log, { seq: e.seq, at: e.at, stage: e.stage, code, detail }] };
+  return {
+    ...s,
+    log: [...s.log, { seq: e.seq, at: e.at, stage: e.stage, code, detail }],
+    events: [...s.events, e],
+  };
 }
 
 /** Folds one event into the stream. Events already seen (a reconnect replays some) change nothing. */
@@ -136,10 +145,18 @@ export function reduceStream(s: JobStream, e: MigrationEvent): JobStream {
     case 'log':
       return onLog(s, e);
     case 'done':
-      return { ...s, done: e.data.state ?? 'done' };
+      return { ...s, done: e.data.state ?? 'done', events: [...s.events, e] };
     default:
       return s;
   }
+}
+
+/**
+ * Whether nothing can follow this event on the job's stream. A run that
+ * failed can still be rolled back on request, so its stream stays open.
+ */
+export function endsStream(e: MigrationEvent): boolean {
+  return e.type === 'done' && e.data.state !== 'failed';
 }
 
 export function reduceEvents(events: readonly MigrationEvent[], from = emptyStream): JobStream {
@@ -178,8 +195,8 @@ const eventTypes = ['stage', 'progress', 'log', 'done'] as const;
 
 /**
  * Follows a job's event stream (D3). EventSource resumes with Last-Event-ID
- * by itself after a dropped connection; the stream is closed once a run is
- * done. `lost` is true when the browser gave up on the stream.
+ * by itself after a dropped connection; the stream is closed once nothing
+ * more can come (endsStream). `lost` is true when the browser gave up on it.
  */
 export function useJobEvents(id: string | undefined): { stream: JobStream; lost: boolean } {
   const [state, dispatch] = useReducer(follow, { id: '', stream: emptyStream, lost: false });
@@ -194,7 +211,7 @@ export function useJobEvents(id: string | undefined): { stream: JobStream; lost:
         return;
       }
       dispatch({ id, event });
-      if (event.type === 'done') source.close();
+      if (endsStream(event)) source.close();
     };
     for (const type of eventTypes) source.addEventListener(type, onEvent);
     source.onerror = () => {

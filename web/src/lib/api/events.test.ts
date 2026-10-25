@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   compareStatus,
   emptyStream,
+  endsStream,
   follow,
   reduceEvents,
   reduceStream,
@@ -139,6 +140,60 @@ describe('reduceStream', () => {
   it('starts empty', () => {
     expect(compareStatus(emptyStream)).toBe('idle');
     expect(emptyStream.lastSeq).toBe(0);
+  });
+
+  it('keeps every stage, log and done event in order, and no progress', () => {
+    fresh();
+    const s = reduceEvents([
+      ev('check', 'stage', { state: 'start' }),
+      ev('check', 'stage', { state: 'done' }),
+      ev('execute', 'stage', { state: 'start' }),
+      ev('execute', 'progress', { done: 50, total: 100, etaSeconds: 3 }),
+      ev('execute', 'log', { code: 'cancelled' }),
+      ev('', 'done', { state: 'failed' }),
+    ]);
+    expect(s.events.map((e) => e.seq)).toEqual([1, 2, 3, 5, 6]);
+  });
+
+  it('follows a rollback on request after a failed run until its own done', () => {
+    fresh();
+    const run = reduceEvents([
+      ev('check', 'stage', { state: 'start' }),
+      ev('check', 'stage', { state: 'done' }),
+      ev('execute', 'stage', { state: 'start' }),
+      ev('execute', 'progress', { done: 10, total: 10, etaSeconds: 0 }),
+      ev('execute', 'stage', { state: 'failed' }),
+      ev('', 'done', { state: 'failed' }),
+    ]);
+    expect(run.done).toBe('failed');
+    const undoing = reduceEvents(
+      [ev('undo', 'stage', { state: 'start' }), ev('undo', 'progress', { done: 0, total: 10 })],
+      run,
+    );
+    expect(undoing.done).toBeNull();
+    expect(undoing.kind).toBe('run');
+    expect(undoing.progress).toMatchObject({ stage: 'undo', done: 0, total: 10 });
+    const s = reduceEvents(
+      [ev('undo', 'stage', { state: 'done' }), ev('', 'done', { state: 'rolled_back' })],
+      undoing,
+    );
+    expect(s.done).toBe('rolled_back');
+    expect(s.stages.map((x) => [x.stage, x.state])).toEqual([
+      ['check', 'done'],
+      ['execute', 'failed'],
+      ['undo', 'done'],
+    ]);
+  });
+});
+
+describe('endsStream', () => {
+  it('closes on an end nothing can follow, and stays open after a failed run', () => {
+    fresh();
+    for (const state of ['done', 'rolled_back', 'checked']) {
+      expect(endsStream(ev('', 'done', { state })), state).toBe(true);
+    }
+    expect(endsStream(ev('', 'done', { state: 'failed' }))).toBe(false);
+    expect(endsStream(ev('execute', 'progress', { done: 1, total: 2 }))).toBe(false);
   });
 });
 
