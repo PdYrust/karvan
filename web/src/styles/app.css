@@ -80,3 +80,13 @@
     height: 2rem;
   }
 }
+
+/* Kumo pins a toast's close button with right-2, over the start of Persian text. Pin it to
+   the end edge in both directions and keep the text clear of it. */
+[data-kumo-part='close'] {
+  right: auto;
+  inset-inline-end: 0.5rem;
+}
+[style*='--toast-index'] :has(> [data-kumo-part='close']) {
+  padding-inline-end: 1.75rem;
+}
