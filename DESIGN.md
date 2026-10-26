@@ -107,7 +107,7 @@ The Cloudflare dashboard's frame, built from Karvan's own components with logica
 - **Account menu:** like the dashboard's: who is signed in, Settings, Appearance (light, dark, same as system), Language (فارسی, English), Keyboard shortcuts, then Sign out. Language and theme have no buttons of their own in the app.
 - **Mobile:** the sidebar opens as a sheet from the start edge, with focus inside it and Escape to close.
 - **Footer:** one quiet row at the end of the content: version, source code, report a security issue.
-- **Command palette:** every page, panel, setting, preference and action is reachable from Ctrl K. Migrations and their reports (by admin, address and panel), templates and old link sites (by name, address, domain and port) are listed once something is typed, and read only while the palette is open. `?` opens the shortcut sheet, which lists every page with its `g` letter.
+- **Command palette:** every page, panel, setting, preference and action is reachable from Ctrl K. Migrations and their reports (by admin, address and panel), templates and old link sites (by name, address, domain and port) are listed once something is typed, and read only while the palette is open. `?` opens the shortcut sheet, which lists every page with its `g` letter. The palette and the sheet are the one exception to Kumo's always rendered dialogs: each builds all its rows on every shell render, so it mounts when it first opens and opens one frame later (so it still animates in), then stays rendered.
 
 ### Page
 - **Page header:** a small label above the title when the page sits inside another (the dashboard's breadcrumb), the title, one line of context under it, actions at the end, a bottom hairline across the full width.
