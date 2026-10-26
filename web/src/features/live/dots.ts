@@ -43,11 +43,6 @@ export function launch(now: number, n: number, lane: Lane): Dot[] {
   return Array.from({ length: n }, (_, i) => ({ lane, born: now + i * staggerMs }));
 }
 
-/** Dots still on their way at now; ones not born yet stay. */
-export function flying(dots: readonly Dot[], now: number): Dot[] {
-  return dots.filter((d) => now - d.born < travelMs);
-}
-
 /** How far a dot has come, 0 to 1, eased in and out; below 0 before it leaves. */
 export function progressOf(d: Dot, now: number): number {
   const t = (now - d.born) / travelMs;

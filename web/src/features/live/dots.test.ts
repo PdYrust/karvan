@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
   batchDots,
   curvesFor,
-  flying,
   launch,
   maxDots,
   minBatchDots,
@@ -56,11 +55,9 @@ describe('sinkDots', () => {
 });
 
 describe('dots in flight', () => {
-  it('leave one after another and land after the travel time', () => {
+  it('leave one after another', () => {
     const dots = launch(1000, 3, 'forward');
     expect(dots.map((d) => d.born)).toEqual([1000, 1000 + staggerMs, 1000 + 2 * staggerMs]);
-    expect(flying(dots, 1000 + travelMs)).toHaveLength(2);
-    expect(flying(dots, 1000 + 2 * staggerMs + travelMs)).toHaveLength(0);
   });
 
   it('ease in and out from 0 to 1', () => {

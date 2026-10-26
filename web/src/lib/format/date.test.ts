@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  dayIn,
   defaultCalendar,
   formatCountdown,
   formatDateTime,
@@ -80,19 +79,6 @@ describe('formatCountdown', () => {
   });
 });
 describe('days in a time zone', () => {
-  it('reads the day it is in the zone', () => {
-    // 21:00 UTC is already the next day in Tehran.
-    expect(dayIn(new Date(Date.UTC(2026, 2, 20, 21)), 'Asia/Tehran')).toEqual({
-      year: 2026,
-      month: 3,
-      day: 21,
-    });
-    expect(dayIn(new Date(Date.UTC(2026, 2, 20, 21)), 'UTC')).toEqual({
-      year: 2026,
-      month: 3,
-      day: 20,
-    });
-  });
   it('finds when a day starts in the zone', () => {
     expect(startOfDay({ year: 2026, month: 3, day: 21 }, 'Asia/Tehran').toISOString()).toBe(
       '2026-03-20T20:30:00.000Z',

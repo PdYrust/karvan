@@ -35,18 +35,6 @@ export function useServerStats(range: RangeKey) {
   });
 }
 
-const panelsKey = (r: RangeKey) => [...analyticsKey, 'panels', r] as const;
-
-/** Every panel database's last reading and its minutes over the range. */
-export function usePanelsStats(range: RangeKey) {
-  const r = databaseRange(range);
-  return useQuery({
-    queryKey: panelsKey(r),
-    queryFn: () => getPanelsStats(r),
-    refetchInterval: databasesEvery,
-  });
-}
-
 /** One panel database in full: reading, minutes, tables, hourly traffic, sign-ups, apps. */
 export function usePanelStats(id: number, range: RangeKey) {
   const r = databaseRange(range);
@@ -63,9 +51,8 @@ export function usePanelStats(id: number, range: RangeKey) {
  * while the panel list looks at every panel first and can take seconds.
  */
 export function usePanelTabs() {
-  // Shares its cache with the live databases list, so a page showing both asks once.
   return useQuery({
-    queryKey: panelsKey('1h'),
+    queryKey: [...analyticsKey, 'panels'],
     queryFn: () => getPanelsStats('1h'),
     staleTime: 60_000,
     select: (d) => d.panels,

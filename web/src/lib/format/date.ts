@@ -165,11 +165,6 @@ function wallClock(date: Date, timeZone: string): number {
     Number(parts.find((p) => p.type === type)?.value ?? 0);
   return Date.UTC(n('year'), n('month') - 1, n('day'), n('hour'), n('minute'), n('second'));
 }
-/** The day it is in timeZone at date. */
-export function dayIn(date: Date, timeZone: string): Day {
-  const d = new Date(wallClock(date, timeZone));
-  return { year: d.getUTCFullYear(), month: d.getUTCMonth() + 1, day: d.getUTCDate() };
-}
 /** The moment day starts in timeZone. */
 export function startOfDay(day: Day, timeZone: string): Date {
   const local = Date.UTC(day.year, day.month - 1, day.day);
