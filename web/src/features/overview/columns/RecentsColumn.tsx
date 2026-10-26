@@ -7,6 +7,7 @@ import { PanelMark } from '../../../components/panels/PanelLabel';
 import { useT } from '../../../i18n/locale';
 import { panelKind, type Panel } from '../../../lib/api/panels';
 import { readRecents } from '../../../lib/preferences/recents';
+import { homeRowsMax } from '../use-overview';
 import { HomeColumn, HomeNote, HomeRow, HomeRows, HomeRowsSkeleton } from './HomeColumn';
 import { overviewMessages } from '../messages';
 import { Reveal } from '../../../components/feedback/Reveal';
@@ -87,13 +88,15 @@ export function RecentsColumn({ panels }: { panels: UseQueryResult<Panel[]> }) {
   const load = useFirstLoad(paths.length > 0 ? panels.data : []);
   // Without the panel list (it failed), pages of one panel cannot be named and drop out.
   const listed = load.data ?? [];
-  const items = paths.flatMap((path) => {
-    const page = recentPage(path);
-    if (!page) return [];
-    const id = panelOf(page);
-    const panel = listed.find((p) => p.id === id);
-    return id === undefined || panel ? [{ path, page, panel }] : [];
-  });
+  const items = paths
+    .flatMap((path) => {
+      const page = recentPage(path);
+      if (!page) return [];
+      const id = panelOf(page);
+      const panel = listed.find((p) => p.id === id);
+      return id === undefined || panel ? [{ path, page, panel }] : [];
+    })
+    .slice(0, homeRowsMax);
 
   let body;
   if (paths.length > 0 && !load.data && !panels.isError) {

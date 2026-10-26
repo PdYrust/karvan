@@ -1,7 +1,4 @@
-import { Button } from '@cloudflare/kumo/components/button';
-import { PlusIcon } from '@phosphor-icons/react';
 import { lazy, Suspense } from 'react';
-import { useNavigate } from 'react-router';
 import { StatTileSkeleton } from '../../components/charts/StatTile';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { PageHeader } from '../../components/layout/PageHeader';
@@ -10,7 +7,6 @@ import { useT } from '../../i18n/locale';
 import { useFormat } from '../../lib/preferences/region';
 import { NoPanels } from '../panels/NoPanels';
 import { usePanels, useScanPanels } from '../panels/use-panels';
-import { newMigrationPath } from '../wizard/steps';
 import { MigrationsColumn } from './columns/MigrationsColumn';
 import { PanelsColumn } from './columns/PanelsColumn';
 import { RecentsColumn } from './columns/RecentsColumn';
@@ -25,21 +21,6 @@ import { useNow } from './use-now';
 const OverviewAnalytics = lazy(() =>
   import('./analytics/OverviewAnalytics').then((m) => ({ default: m.OverviewAnalytics })),
 );
-
-function NewMigration() {
-  const t = useT(overviewMessages);
-  const navigate = useNavigate();
-  return (
-    <Button
-      variant="primary"
-      icon={<PlusIcon size={16} />}
-      onClick={() => void navigate(newMigrationPath)}
-      className="pointer-coarse:h-11"
-    >
-      {t('newMigration')}
-    </Button>
-  );
-}
 
 function AnalyticsSkeleton({ label }: { label: string }) {
   return (
@@ -70,7 +51,6 @@ export function OverviewPage() {
       <PageHeader
         title={t('title')}
         description={t('today', { date: fmt.longDate(now), time: fmt.time(now), zone: fmt.zone })}
-        actions={<NewMigration />}
       />
       <div className="flex max-w-[1400px] flex-col gap-10 p-4 sm:p-8">
         <HomeSearch />

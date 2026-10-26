@@ -56,15 +56,13 @@ export function DatabaseBlock({
   panelId,
   name,
   kind,
-  range,
-  search,
 }: {
   panelId: number;
   name: string;
   kind: PanelKind | undefined;
-  range: RangeKey;
-  search: string;
 }) {
+  // The overview is always live; ranges live on the analytics page.
+  const range: RangeKey = 'live';
   const t = useT(analyticsMessages);
   const id = useId();
   const q = usePanelStats(panelId, range);
@@ -79,7 +77,7 @@ export function DatabaseBlock({
   }
   return (
     <section aria-labelledby={id} className="flex flex-col gap-3">
-      <BlockHeading id={id} to={`/analytics/panels/${String(panelId)}${search}`}>
+      <BlockHeading id={id} to={`/analytics/panels/${String(panelId)}`}>
         {kind ? <PanelMark kind={kind} size={18} /> : null}
         <bdi className="truncate">{name}</bdi>
       </BlockHeading>

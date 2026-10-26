@@ -7,6 +7,7 @@ import { PanelStatus } from '../../panels/PanelStatus';
 import { PartFailed } from '../PartFailed';
 import { HomeColumn, HomeRow, HomeRows, HomeRowsSkeleton } from './HomeColumn';
 import { overviewMessages } from '../messages';
+import { homePanels } from '../use-overview';
 import { Reveal } from '../../../components/feedback/Reveal';
 import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
@@ -35,11 +36,9 @@ export function PanelsColumn({ panels }: { panels: UseQueryResult<Panel[]> }) {
   if (load.data) {
     body = (
       <HomeRows>
-        {load.data
-          .filter((p) => p.id > 0)
-          .map((p) => (
-            <PanelRow key={p.id} panel={p} />
-          ))}
+        {homePanels(load.data).map((p) => (
+          <PanelRow key={p.id} panel={p} />
+        ))}
       </HomeRows>
     );
   } else if (panels.isError) {
