@@ -1,4 +1,3 @@
-import { RefreshButton } from '@cloudflare/kumo/components/button';
 import { Button } from '@cloudflare/kumo/components/button';
 import { useKumoToastManager } from '@cloudflare/kumo/components/toast';
 import { ArchiveIcon, ShieldCheckIcon } from '@phosphor-icons/react';
@@ -153,23 +152,7 @@ export function BackupsPage() {
   const r = a.restoring;
   return (
     <div className="flex flex-col">
-      <PageHeader
-        title={t('title')}
-        description={t('description')}
-        actions={
-          <RefreshButton
-            variant="secondary"
-            aria-label={t('refresh')}
-            title={t('refresh')}
-            loading={backups.isFetching || panels.isFetching}
-            onClick={() => {
-              void backups.refetch();
-              void panels.refetch();
-            }}
-            className="pointer-coarse:size-11"
-          />
-        }
-      />
+      <PageHeader title={t('title')} description={t('description')} />
       <div className="flex max-w-[1400px] flex-col gap-4 p-4 sm:p-8">
         <Reveal on={load.reveal}>{body}</Reveal>
       </div>

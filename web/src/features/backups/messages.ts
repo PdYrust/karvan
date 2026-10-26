@@ -5,7 +5,6 @@ const en = {
   description:
     'Safe Mode backs up the new panel before a migration writes to it. Karvan keeps every backup until you delete it.',
   list: 'Safe Mode backups',
-  refresh: 'Refresh',
   loadFailed: "Karvan couldn't load the backups.",
   colMigration: 'Migration',
   colPanel: 'Panel',
@@ -41,7 +40,6 @@ const fa: Messages<BackupsKey>['fa'] = {
   description:
     'حالت امن پیش از اینکه انتقال در پنل جدید بنویسد از آن پشتیبان میگیرد. کاروان هر پشتیبان را تا وقتی حذفش نکنید نگه میدارد.',
   list: 'پشتیبان های حالت امن',
-  refresh: 'به روزرسانی',
   loadFailed: 'کاروان نتوانست پشتیبان ها را بخواند.',
   colMigration: 'انتقال',
   colPanel: 'پنل',
