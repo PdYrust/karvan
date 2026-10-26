@@ -35,13 +35,15 @@ Last reviewed: 2026-10-15.
 | Web lint and format | zero errors | `eslint`, `prettier --check` | `make check` |
 | Component size | 250 lines or less per `.tsx` (aim for 200) | ESLint `max-lines` | `make check` |
 | Web tests and coverage | all pass; 80% or more lines in `web/src/lib` and `web/src/i18n` | `vitest run --coverage` | `make check` |
-| Bundle (gzip, fonts excluded) | sign-in JS 145 KB or less; sign-in globe (lazy) 15 KB or less; app JS 260 KB or less; largest lazy page 62 KB or less; stylesheet 35 KB or less | `web/scripts/bundle-size.mjs` (follows the Vite manifest) | `make web` |
+| Bundle (gzip, fonts excluded) | sign-in JS 145 KB or less; sign-in globe (lazy) 15 KB or less; app JS 260 KB or less; largest lazy page 63 KB or less; stylesheet 35 KB or less | `web/scripts/bundle-size.mjs` (follows the Vite manifest) | `make web` |
 | Web dependencies | nothing at high or above | `pnpm audit --audit-level high` | `make check-full` |
 
 The coverage floor (80%) is high enough that new logic needs a test, and low enough to leave room for wiring code.
 The bundle numbers keep the sign-in page usable on a slow mobile connection. They were first guessed at 110 KB for the sign-in page; measured, React 19 alone is about 60 KB and Kumo's Button and Input about 55 KB, so the budget is today's 132 KB plus a little room. Fonts are left out because they cache across visits.
 A lazy page is one feature folder, except that each migration wizard step is a page of its own (its chunks plus the wizard frame), because each step is its own lazy route and loads alone; the report prints every step's size.
 The largest lazy page went from 60 to 62 KB in Phase 4 (P4-13): the Templates page and the reports share the problem and fix words and the Pager with the wizard's compare step, and those shared chunks add about 1 KB of split overhead to that step; its own code did not grow.
+
+It went from 62 to 63 KB on 2026-10-26 (owner choice): every Copy button now shares one helper that also copies over plain HTTP and says so in a toast, which put Settings at 62.6 KB after trimming duplicate strings.
 The Lighthouse numbers are the "good" band of Core Web Vitals; accessibility is 100 because the panel must work with a keyboard and a screen reader.
 Measured 2026-10-25 with Lighthouse 13.5.0, CPU multiplier 1 (benchmark index 400 to 640, load average 6 to 9 on 2 cores from other processes, so single runs spread about 15 points): the overview has a median of 92 of 5 in English light and 95 of 5 in Persian dark, the sign-in page 98 of 5; accessibility 100 and best practices 100 on both.
 
