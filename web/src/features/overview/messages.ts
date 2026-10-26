@@ -2,7 +2,7 @@ import type { Messages } from '../../i18n/locale';
 
 const en = {
   title: 'Overview',
-  today: '{date}, {time} in {zone}',
+  heading: 'What are we moving today?',
   newMigration: 'New migration',
 
   panelsTitle: 'Panels',
@@ -56,7 +56,7 @@ export type OverviewKey = keyof typeof en;
 
 const fa: Messages<OverviewKey>['fa'] = {
   title: 'نمای کلی',
-  today: '{date}، ساعت {time} به وقت {zone}',
+  heading: 'امروز چه چیزی را منتقل کنیم؟',
   newMigration: 'انتقال جدید',
 
   panelsTitle: 'پنل ها',

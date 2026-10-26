@@ -1,10 +1,8 @@
 import { lazy, Suspense } from 'react';
 import { StatTileSkeleton } from '../../components/charts/StatTile';
 import { Bone } from '../../components/feedback/PageSkeleton';
-import { PageHeader } from '../../components/layout/PageHeader';
 import { usePageTitle } from '../../components/layout/use-page-title';
 import { useT } from '../../i18n/locale';
-import { useFormat } from '../../lib/preferences/region';
 import { NoPanels } from '../panels/NoPanels';
 import { usePanels, useScanPanels } from '../panels/use-panels';
 import { MigrationsColumn } from './columns/MigrationsColumn';
@@ -39,7 +37,6 @@ function AnalyticsSkeleton({ label }: { label: string }) {
 export function OverviewPage() {
   const t = useT(overviewMessages);
   usePageTitle(t('title'));
-  const fmt = useFormat();
   const now = useNow();
   const panels = usePanels();
   const { scan, scanning } = useScanPanels();
@@ -48,12 +45,14 @@ export function OverviewPage() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader
-        title={t('title')}
-        description={t('today', { date: fmt.longDate(now), time: fmt.time(now), zone: fmt.zone })}
-      />
-      <div className="flex max-w-[1400px] flex-col gap-10 p-4 sm:p-8">
-        <HomeSearch />
+      {/* Like the dashboard home: a question, then the search; the title is for screen readers. */}
+      <h1 className="sr-only">{t('title')}</h1>
+      {/* Spaced like the dashboard home: 48 px (56 on desktop) under the top bar, 32 to the search, 32 to the lists. */}
+      <div className="flex max-w-[1400px] flex-col gap-8 p-4 sm:p-8">
+        <div className="flex flex-col gap-8 pt-8 sm:pt-6">
+          <p className="text-center text-display font-semibold text-kumo-strong">{t('heading')}</p>
+          <HomeSearch />
+        </div>
         {noPanels ? (
           <NoPanels onScan={scan} scanning={scanning} />
         ) : (
