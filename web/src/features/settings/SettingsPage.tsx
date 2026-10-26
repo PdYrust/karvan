@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { RouteTabs } from '../../components/layout/RouteTabs';
 import { usePageTitle } from '../../components/layout/use-page-title';
@@ -9,6 +9,7 @@ import { settingsMessages } from './messages';
 export function SettingsPage() {
   const t = useT(settingsMessages);
   usePageTitle(t('title'));
+  const { pathname } = useLocation();
   return (
     <div className="flex flex-col">
       <PageHeader
@@ -29,7 +30,10 @@ export function SettingsPage() {
         }
       />
       <div className="flex max-w-[1400px] flex-col gap-6 p-4 sm:p-8">
-        <Outlet />
+        {/* Keyed by tab, so a new tab's content fades in. */}
+        <div key={pathname} className="k-reveal">
+          <Outlet />
+        </div>
       </div>
     </div>
   );

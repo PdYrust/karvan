@@ -31,9 +31,11 @@ export function StatusBadge({ tone, children }: { tone: StatusTone; children: Re
   const Glyph = look.icon;
   return (
     // Kumo's warning, error and info text on their own tints is under 4.5:1, so those words stay in the default color.
+    // Keyed by tone, so a badge that changes state fades into the new one.
     <Badge
+      key={tone}
       variant={look.badge}
-      className={tone === 'success' || tone === 'neutral' ? undefined : 'text-kumo-default'}
+      className={cn('k-fade', tone !== 'success' && tone !== 'neutral' && 'text-kumo-default')}
       icon={<Glyph size={14} weight="bold" aria-hidden="true" className={look.color} />}
     >
       {children}
@@ -46,7 +48,7 @@ export function StatusLabel({ tone, children }: { tone: StatusTone; children: Re
   const look = tones[tone];
   const Glyph = look.icon;
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span key={tone} className="k-fade inline-flex items-center gap-1.5">
       <Glyph size={16} weight="bold" aria-hidden="true" className={cn('shrink-0', look.color)} />
       <span>{children}</span>
     </span>

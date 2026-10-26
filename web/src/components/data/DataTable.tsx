@@ -53,7 +53,7 @@ export function DataTable<T>({
           </thead>
           <tbody>
             {rows.map((r) => (
-              <tr key={rowKey(r)} className="border-t border-kumo-hairline">
+              <tr key={rowKey(r)} className="k-fade border-t border-kumo-hairline">
                 {columns.map((c) => (
                   <td key={c.key} className={cn('px-4 py-3 align-middle', c.className)}>
                     {c.cell(r)}
@@ -66,7 +66,9 @@ export function DataTable<T>({
       </div>
       <ul aria-label={caption} className="flex flex-col gap-3 sm:hidden">
         {rows.map((r) => (
-          <li key={rowKey(r)}>{card(r)}</li>
+          <li key={rowKey(r)} className="k-fade">
+            {card(r)}
+          </li>
         ))}
       </ul>
     </>

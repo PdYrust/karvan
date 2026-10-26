@@ -18,7 +18,7 @@ function SubRows({ onNavigate }: { onNavigate?: () => void }) {
   const panels = (usePanels().data ?? []).filter((p) => p.id > 0);
   return (
     // The guide line sits under the parent's icon; sub-labels line up with its label.
-    <ul className="ms-5 mt-0.5 flex flex-col gap-0.5 border-s border-kumo-hairline ps-2">
+    <ul className="k-drop ms-5 mt-0.5 flex flex-col gap-0.5 border-s border-kumo-hairline ps-2">
       <li>
         <NavLink to="/analytics/server" onClick={onNavigate} className={row}>
           {t('navServer')}

@@ -64,7 +64,7 @@ function ProblemCard({ group, kind }: { group: ProblemGroup; kind: PanelKind }) 
           {t(open ? 'hideUsers' : 'oneByOne')}
         </Button>
       </div>
-      <div id={usersId} hidden={!open}>
+      <div id={usersId} hidden={!open} className="k-drop">
         {open ? (
           <UserList
             jobId={jobId}

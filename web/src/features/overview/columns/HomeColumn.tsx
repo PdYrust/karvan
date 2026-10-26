@@ -45,7 +45,7 @@ export function HomeRows({ children }: { children: ReactNode }) {
 export function HomeRow({ to, children }: { to?: string; children: ReactNode }) {
   const body = <span className="flex min-w-0 flex-1 items-center gap-3">{children}</span>;
   return (
-    <li className="border-b border-kumo-hairline last:border-b-0">
+    <li className="k-fade border-b border-kumo-hairline last:border-b-0">
       {to ? (
         // The tint reaches a little past the text, so the words keep the column's edge.
         <Link

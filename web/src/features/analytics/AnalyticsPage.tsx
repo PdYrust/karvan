@@ -19,7 +19,7 @@ export function AnalyticsPage() {
   usePageTitle(t('title'));
   const [range, setRange] = useRange();
   const { refresh, fetching } = useRefreshAnalytics();
-  const { search } = useLocation();
+  const { search, pathname } = useLocation();
   const known = usePanels().data ?? [];
   const panels = usePanelTabs().data ?? [];
 
@@ -56,7 +56,10 @@ export function AnalyticsPage() {
       <div className="flex max-w-[1400px] flex-col gap-4 p-4 sm:p-8">
         {/* A tab's code loads under the header, so the header stays put. */}
         <Suspense fallback={<TabSkeleton label={t('title')} />}>
-          <Outlet />
+          {/* Keyed by tab, so a new tab's content fades in. */}
+          <div key={pathname} className="k-reveal">
+            <Outlet />
+          </div>
         </Suspense>
       </div>
     </div>

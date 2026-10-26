@@ -49,7 +49,10 @@ export function JobWizard() {
         // The step's own chunk loads under the header and the steps.
         <WizardProvider jobId={id}>
           <Suspense fallback={<Bone className="h-24 w-full max-w-[720px]" />}>
-            <Outlet />
+            {/* Keyed by step, so a new step's content fades in. */}
+            <div key={pathname} className="k-reveal">
+              <Outlet />
+            </div>
           </Suspense>
         </WizardProvider>
       )}

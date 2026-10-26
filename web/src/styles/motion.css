@@ -1,0 +1,118 @@
+/* Shared motion (DESIGN.md section 5): short, ease-out, transform and opacity
+   only. The reduced motion rule in app.css shortens all of it to 1 ms. */
+
+@keyframes k-fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes k-drop-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes k-pop-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+/* Content that replaces its skeleton (components/feedback/Reveal). */
+.k-reveal {
+  display: contents;
+}
+
+.k-reveal > * {
+  animation: k-fade-in 200ms ease-out;
+}
+
+/* Rows that appear, a badge that changes state, a tab's new content. */
+.k-fade {
+  animation: k-fade-in 150ms ease-out;
+}
+
+/* A section or sub-rows that open. */
+.k-drop {
+  animation: k-drop-in 150ms ease-out;
+}
+
+/* Menus, selects, popovers and tooltips: the popup inside Base UI's
+   positioner. Base UI marks its first and last frame; closing with Escape
+   (Base UI's data-instant) fades too, so nothing vanishes at once. */
+:where([data-side]) > [data-side] {
+  transform-origin: var(--transform-origin);
+  transition:
+    opacity 150ms ease-out,
+    transform 150ms ease-out;
+}
+
+:where([data-side]) > [data-side]:is([data-starting-style], [data-ending-style]) {
+  opacity: 0;
+  transform: scale(0.96);
+}
+
+/* A radio's dot or a checkbox's mark grows in when it is chosen. */
+:is([role='radio'], [role='checkbox']) > [data-checked] {
+  animation: k-pop-in 150ms ease-out;
+}
+
+/* Toasts: Kumo's half-second slide, shortened. Base UI sets --toast-index on each. */
+[style*='--toast-index'] {
+  transition:
+    transform 220ms ease-out,
+    opacity 220ms ease-out,
+    height 150ms ease-out;
+}
+
+/* The mobile sheet slides in from the start edge while its backdrop fades. */
+.k-sheet,
+.k-sheet::backdrop {
+  transition:
+    transform 220ms ease-out,
+    opacity 220ms ease-out,
+    overlay 220ms ease-out allow-discrete,
+    display 220ms ease-out allow-discrete;
+}
+
+.k-sheet {
+  --k-sheet-out: -100%;
+  transform: translateX(var(--k-sheet-out));
+}
+
+[dir='rtl'] .k-sheet {
+  --k-sheet-out: 100%;
+}
+
+.k-sheet[open] {
+  transform: none;
+}
+
+.k-sheet::backdrop {
+  opacity: 0;
+}
+
+.k-sheet[open]::backdrop {
+  opacity: 1;
+}
+
+@starting-style {
+  .k-sheet[open] {
+    transform: translateX(var(--k-sheet-out));
+  }
+
+  .k-sheet[open]::backdrop {
+    opacity: 0;
+  }
+}
+
+/* The theme crossfade (lib/preferences/theme-transition). */
+::view-transition-group(root),
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: 200ms;
+  animation-timing-function: ease-out;
+}

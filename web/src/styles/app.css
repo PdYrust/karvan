@@ -5,6 +5,7 @@
 @import 'tailwindcss';
 @import './tokens.css';
 @import './type.css';
+@import './motion.css';
 
 @custom-variant rtl (&:where([dir='rtl'], [dir='rtl'] *));
 @custom-variant ltr (&:where([dir='ltr'], [dir='ltr'] *));
