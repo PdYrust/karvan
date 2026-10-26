@@ -33,6 +33,10 @@ export function AppShell() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  // The palette builds every command and the sheet its rows on each render, so
+  // neither mounts before it first opens; after that each stays for its close.
+  const [searchUsed, setSearchUsed] = useState(false);
+  const [helpUsed, setHelpUsed] = useState(false);
   const [collapsed, setCollapsed] = useState(readSidebarCollapsed);
   // The column is hidden under lg anyway; not building it keeps phones quick.
   const wide = useWide();
@@ -40,9 +44,14 @@ export function AppShell() {
   const opener = useRef<HTMLElement | null>(null);
   const openSearch = useCallback(() => {
     opener.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    setSearchOpen(true);
+    setSearchUsed(true);
+    // One frame later, so a palette mounting now still opens with its animation.
+    requestAnimationFrame(() => setSearchOpen(true));
   }, []);
-  const openHelp = useCallback(() => setHelpOpen(true), []);
+  const openHelp = useCallback(() => {
+    setHelpUsed(true);
+    requestAnimationFrame(() => setHelpOpen(true));
+  }, []);
   const outlet = useMemo<ShellOutlet>(() => ({ openSearch }), [openSearch]);
   useModHotkey('KeyK', openSearch);
   useShortcuts(openHelp);
@@ -94,13 +103,15 @@ export function AppShell() {
             <Footer />
           </div>
 
-          <CommandMenu
-            open={searchOpen}
-            onOpenChange={setSearchOpen}
-            onShortcuts={openHelp}
-            opener={opener}
-          />
-          <ShortcutSheet open={helpOpen} onOpenChange={setHelpOpen} />
+          {searchUsed ? (
+            <CommandMenu
+              open={searchOpen}
+              onOpenChange={setSearchOpen}
+              onShortcuts={openHelp}
+              opener={opener}
+            />
+          ) : null}
+          {helpUsed ? <ShortcutSheet open={helpOpen} onOpenChange={setHelpOpen} /> : null}
         </div>
       </TooltipProvider>
     </CurrentPanelProvider>
