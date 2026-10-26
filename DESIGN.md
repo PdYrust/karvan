@@ -69,21 +69,25 @@ The chart tokens sit in a `@theme static` block: charts pick a color by number a
 
 ## 5. Motion
 
-- Everything that changes state moves a little, so nothing appears or vanishes at once: 150 ms for small things, 220 ms for the mobile sheet, always ease-out, only `transform` and `opacity` (cheap on weak phones). Nothing bounces. The shared rules live in `styles/motion.css`.
-  - Switches, checkboxes and radios: the thumb or the mark moves and fades in.
-  - Menus, selects and popovers: fade and scale up from where they open (from 96 %), and back when they close. Dialogs do the same.
+- Everything that changes state moves a little, so nothing appears or vanishes at once: 150 ms for small things, 200 ms for the desktop sidebar, 220 ms for the mobile sheet, 800 ms for charts drawing in, always ease-out, `transform` and `opacity` wherever they can do it (cheap on weak phones). Nothing bounces. The shared rules live in `styles/motion.css`.
+  - Switches: the thumb slides with a transform (Kumo moves it by its edge, which `motion.css` replaces), both ways. Checkboxes and radios: the mark grows and fades in.
+  - Menus, selects, popovers and the account menu: fade and scale up from where they open (from 96 %), and back when they close. Dialogs, the palette and the shortcut sheet fade and scale from 90 % and back.
   - The mobile sheet slides in from the start edge (from the right in Persian) while its backdrop fades, and slides back out when it closes.
-  - Collapsing sections and sidebar sub-rows: the content fades in and drops 4 px when it opens; it closes at once.
+  - The desktop sidebar collapses and expands by its width over 200 ms; its content fades into the new shape. With the content laid out at full width and clipped, labels never wrap on the way.
+  - Collapsing sections and sidebar sub-rows (`components/layout/Collapse`): open and close both ways, height through grid rows (0fr to 1fr) with a fade, 150 ms. Height and the sidebar's width are the only layout properties that move; both are short and run only on a press.
   - Tabs: the new tab's content fades in.
   - Toasts slide up and fade in, and fade out.
   - Rows appearing in tables and lists fade in. A badge that changes state fades into the new one.
+- **Charts draw in** every time a page shows them (a visit, a reload): a time series line draws from its first sample to its last with a stroke dash (a dashed line and lone points fade in instead), the area under it and bar charts grow up from the baseline, sparklines in tiles draw the same way, and the meters of bar lists and data cards fill from the start edge, 800 ms ease-out. Samples that arrive later (polls, live charts) are drawn in place, without replaying the draw or tweening. Progress meters (wizard steps, read progress, the live view) do not fill in; they show real progress only.
+- **Motion runs to its end** even when the work is instant (`lib/motion/use-min-duration`): a refresh icon turns at least once and stops only at the end of a turn; a switch that saves moves to its new place at once and stays busy until its slide is done (it slides back if the save fails); a skeleton stays its 400 ms. Dialogs open only on a press and close only on the operator's choice or a finished action, so their opening always plays out.
 - **Loading:** a page or card that has no data yet shows its skeleton for at least 400 ms, then the content fades in over 200 ms, so the change reads as data arriving, not as a flash (`lib/motion/use-first-load`). Refetches and polls never bring the skeleton back; the content updates in place.
+- **Skeletons** are flat recessed shapes with a soft light that sweeps across them from the start edge, slow (2 s a sweep, a pause included) and low contrast in both themes (`--color-shimmer` in `styles/tokens.css`), drawn by a transform.
 - **Theme change:** the page crossfades from the old theme to the new one over 200 ms with the View Transitions API (`lib/preferences/theme-transition`). Where the browser has no View Transitions, it changes at once.
 - Hover colors change at once, never with a transition (Kumo's rule: fading hovers feel slow).
 - Motion answers an action (open, expand, confirm, switch) or data arriving. Headers, cards and the shell never slide in on their own.
-- Live charts redraw in place when a sample arrives; they do not slide or tween. The live migration view moves dots only in step with real batches, and while a backup restore runs, which has no batches (section 8, Live progress).
+- The live migration view moves dots only in step with real batches, and while a backup restore runs, which has no batches (section 8, Live progress).
 - The one exception is the globe on the sign-in page: it turns slowly (about one turn a minute) and acts out what Karvan does (section 8, Sign-in). It draws at about 30 frames a second and stops when it is off screen.
-- `prefers-reduced-motion: reduce`: no transforms, fades or autoplay; transitions and animations shorten to 1 ms. Skeletons have no minimum time, the theme changes at once, and the globe shows one still frame.
+- `prefers-reduced-motion: reduce`: no transforms, fades or autoplay; transitions and animations shorten to 1 ms. Skeletons have no minimum time and no light, charts appear drawn, nothing is held to a minimum, the theme changes at once, and the globe shows one still frame.
 
 ## 6. Icons
 
