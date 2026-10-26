@@ -347,6 +347,11 @@ export function cancelJob(id: string): Promise<void> {
   return api('POST', jobPath(id, '/cancel'));
 }
 
+/** Deletes a draft that never ran; the server refuses any other job with 409 not_deletable. */
+export function deleteJob(id: string): Promise<void> {
+  return api('DELETE', jobPath(id));
+}
+
 /**
  * The users a job moved that are still there and the users it left out,
  * counted the way the overview's totals count them. Null before a run ends,

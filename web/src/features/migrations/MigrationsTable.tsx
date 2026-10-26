@@ -5,6 +5,7 @@ import { DataTable, type Column } from '../../components/data/DataTable';
 import { useT } from '../../i18n/locale';
 import type { JobRow } from '../../lib/api/migrations';
 import { JobDestination, JobName, JobUsers, JobWhen } from './JobCells';
+import { JobMenu, type DraftJob } from './DeleteDraft';
 import { JobStateLabel } from './JobLabels';
 import { againPath, loginDropped } from './job-place';
 import { listMessages } from './list-messages';
@@ -41,11 +42,16 @@ function StartAgain({ job }: { job: JobRow }) {
   );
 }
 
+type OnDelete = (job: DraftJob) => void;
+
 /** On a phone a job is a card: the move and admin first, then the panel, the state and the users. */
-function JobCard({ job, now }: { job: JobRow; now: Date }) {
+function JobCard({ job, now, onDelete }: { job: JobRow; now: Date; onDelete: OnDelete }) {
   return (
     <article className="flex flex-col gap-2 rounded-lg bg-kumo-base px-4 py-3 ring ring-kumo-hairline">
-      <JobName job={job} to={jobPath(job)} />
+      <div className="flex items-start justify-between gap-2">
+        <JobName job={job} to={jobPath(job)} />
+        <JobMenu job={job} onDelete={onDelete} />
+      </div>
       <div className="text-sm">
         <JobDestination job={job} />
       </div>
@@ -61,8 +67,16 @@ function JobCard({ job, now }: { job: JobRow; now: Date }) {
   );
 }
 
-/** Jobs newest first: the move, the new panel, the state, the users and when. */
-export function MigrationsTable({ jobs, now }: { jobs: readonly JobRow[]; now: Date }) {
+/** Jobs newest first: the move, the new panel, the state, the users and when; a draft's menu deletes it. */
+export function MigrationsTable({
+  jobs,
+  now,
+  onDelete,
+}: {
+  jobs: readonly JobRow[];
+  now: Date;
+  onDelete: OnDelete;
+}) {
   const t = useT(listMessages);
   const columns: Column<JobRow>[] = [
     {
@@ -84,7 +98,12 @@ export function MigrationsTable({ jobs, now }: { jobs: readonly JobRow[]; now: D
       key: 'actions',
       header: t('colActions'),
       hideHeader: true,
-      cell: (j) => <StartAgain job={j} />,
+      cell: (j) => (
+        <span className="flex items-center justify-end gap-2">
+          <StartAgain job={j} />
+          <JobMenu job={j} onDelete={onDelete} />
+        </span>
+      ),
       className: 'py-1.5 text-end',
     },
   ];
@@ -94,7 +113,7 @@ export function MigrationsTable({ jobs, now }: { jobs: readonly JobRow[]; now: D
       rows={jobs}
       rowKey={(j) => j.id}
       columns={columns}
-      card={(j) => <JobCard job={j} now={now} />}
+      card={(j) => <JobCard job={j} now={now} onDelete={onDelete} />}
     />
   );
 }

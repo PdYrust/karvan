@@ -3,6 +3,7 @@ import {
   cancelJob,
   compareJob,
   createJob,
+  deleteJob,
   getJob,
   getJobRow,
   jobOutcome,
@@ -119,5 +120,14 @@ describe('job calls', () => {
     expect((f.mock.calls.at(-1) as unknown as [string])[0]).toMatch(/migrations\/abc\/cancel$/);
     await getJob('abc');
     expect((f.mock.calls.at(-1) as unknown as [string])[0]).toMatch(/migrations\/abc$/);
+  });
+
+  it('deletes a draft with DELETE on the job path', async () => {
+    const f = vi.fn(() => Promise.resolve(new Response(null, { status: 204 })));
+    vi.stubGlobal('fetch', f);
+    await deleteJob('a/b');
+    const [url, init] = f.mock.calls.at(-1) as unknown as [string, RequestInit];
+    expect(url).toMatch(/migrations\/a%2Fb$/);
+    expect(init.method).toBe('DELETE');
   });
 });

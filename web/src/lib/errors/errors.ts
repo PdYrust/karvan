@@ -32,6 +32,7 @@ const en = {
   gone: 'This file was already downloaded. Karvan keeps it only until then.',
   cancelled: 'This was stopped before it finished.',
   not_rollbackable: 'Only a failed or interrupted migration can be rolled back, and only once.',
+  not_deletable: 'This migration has run, so its record stays. Only a draft can be deleted.',
   destination_locked:
     'Another migration or rollback is writing to this panel. Wait for it to finish, then try again.',
   weak_password: "This admin password doesn't meet the panel's rules.",
@@ -110,6 +111,7 @@ const fa: Messages<ErrorKey>['fa'] = {
   gone: 'این فایل قبلا دانلود شده است. کاروان آن را فقط تا همان موقع نگه میدارد.',
   cancelled: 'این کار پیش از تمام شدن متوقف شد.',
   not_rollbackable: 'فقط انتقال ناموفق یا نیمه تمام را میشود برگرداند، آن هم یک بار.',
+  not_deletable: 'این انتقال اجرا شده است و سابقه اش میماند. فقط پیش نویس حذف میشود.',
   destination_locked:
     'انتقال یا برگرداندن دیگری روی این پنل مینویسد. صبر کنید تمام شود و بعد دوباره امتحان کنید.',
   weak_password: 'این رمز ادمین با قوانین پنل جور نیست.',

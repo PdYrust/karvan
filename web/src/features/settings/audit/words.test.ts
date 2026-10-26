@@ -14,6 +14,7 @@ const serverActions = [
   'migration.run',
   'migration.rollback',
   'migration.cancel',
+  'migration.delete',
   'migration.passwords_download',
   'safe_mode.on',
   'safe_mode.off',

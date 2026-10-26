@@ -9,6 +9,7 @@ import { useT } from '../../i18n/locale';
 import { useNow } from '../overview/use-now';
 import { useCurrentPanel } from '../panels/current-panel';
 import { newMigrationPath } from '../wizard/steps';
+import { useDeleteDraft } from './DeleteDraft';
 import { stateFilters, statesOf } from './job-place';
 import { JobsToolbar } from './JobsToolbar';
 import { ListBody, ListSkeleton } from './ListBody';
@@ -26,6 +27,7 @@ export function MigrationsPage() {
   const [state, setState] = useStateFilter(stateFilters);
   const { panel, settled } = useCurrentPanel();
   const list = useJobList(statesOf(state), panel?.id, search.trim() !== '', settled);
+  const deleteDraft = useDeleteDraft();
   return (
     <div className="flex flex-col">
       <PageHeader title={t('title')} description={t('description')} />
@@ -77,11 +79,12 @@ export function MigrationsPage() {
                 </EmptyState>
               }
             >
-              {(shown) => <MigrationsTable jobs={shown} now={now} />}
+              {(shown) => <MigrationsTable jobs={shown} now={now} onDelete={deleteDraft.ask} />}
             </ListBody>
           </>
         )}
       </div>
+      {deleteDraft.dialog}
     </div>
   );
 }
