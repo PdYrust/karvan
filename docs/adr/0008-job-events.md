@@ -24,6 +24,6 @@ A migration of many users takes minutes. The web panel must show each stage live
 - **Polling the job.** Misses short stages and costs a request per second per open page.
 - **A compare that answers when it is done, with a longer timeout.** The page would wait with no counter, and a proxy in front of Karvan may cut the request.
 ## Consequences
-- `job_events` grows with every job; trimming old jobs comes with job history in the web panel (Phase 4). Each compare adds two progress events for every 500 users of the old panel.
+- `job_events` grows with every job. Each compare adds two progress events for every 500 users of the old panel. The events of a job that ended more than 90 days ago are trimmed daily down to its last one, and deleting a draft deletes its events.
 - A client that replays a whole stream sees every compare before the run. Each compare starts with its `read` stage, so a client keeps the last one only.
 - A job that was rolled back on request has two `done` events: the run's, then the rollback's. A client that replays the stream takes the last one.
