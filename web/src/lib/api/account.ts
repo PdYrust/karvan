@@ -41,9 +41,16 @@ export const accountKeys = {
   audit: ['audit'] as const,
 };
 
-/** Live sessions of the operator, most recently used first. */
+/**
+ * Live sessions of the operator, most recently used first. Read in the
+ * background: the list refreshes itself, and that must not keep this
+ * session alive.
+ */
 export async function getSessions(): Promise<AccountSession[]> {
-  return (await api<{ sessions: AccountSession[] }>('GET', 'account/sessions')).sessions;
+  const res = await api<{ sessions: AccountSession[] }>('GET', 'account/sessions', undefined, {
+    background: true,
+  });
+  return res.sessions;
 }
 
 /** Signs out every other session; answers how many ended. */

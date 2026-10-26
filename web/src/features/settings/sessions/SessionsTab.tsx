@@ -60,6 +60,8 @@ function When({ at, now }: { at: string; now?: Date }) {
   );
 }
 
+const sessionsEvery = 30_000;
+
 /** Every browser signed in now, the current one first; sign out one or all the others. */
 export function SessionsTab() {
   const t = useT(sessionsMessages);
@@ -69,7 +71,13 @@ export function SessionsTab() {
   const now = useNow();
   const toasts = useKumoToastManager();
   const queryClient = useQueryClient();
-  const sessions = useQuery({ queryKey: accountKeys.sessions, queryFn: getSessions });
+  // A session that ends elsewhere (signed out, timed out) leaves the list on its own.
+  const sessions = useQuery({
+    queryKey: accountKeys.sessions,
+    queryFn: getSessions,
+    refetchInterval: sessionsEvery,
+    refetchOnWindowFocus: true,
+  });
   const refresh = () => queryClient.invalidateQueries({ queryKey: accountKeys.sessions });
   const failed = (err: unknown) => toasts.add({ title: errorText(err), variant: 'error' });
   const endOne = useMutation({
