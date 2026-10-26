@@ -267,7 +267,7 @@ const fa: Messages<LiveKey>['fa'] = {
   end_checked: 'چیزی نوشته نشد.',
   code_plan_stale: 'پنل ها از بررسی شما تغییر کرده اند، پس کاروان چیزی ننوشت.',
   code_verify_failed: 'بعضی کاربرها با آنچه کاروان نوشت فرق دارند.',
-  code_backup_tool_missing: 'ابزار پشتیبان گیری این پایگاه داده نصب نیست.',
+  code_backup_tool_missing: 'ابزار پشتیبان گیری این دیتابیس نصب نیست.',
   code_backup_no_space: 'فضای دیسک برای پشتیبان کافی نیست.',
   code_run_failed: 'کاروان نتوانست در پنل جدید بنویسد.',
   code_links_unavailable:
@@ -284,7 +284,7 @@ const fa: Messages<LiveKey>['fa'] = {
   code_ledger_not_updated: 'پشتیبان برگشت، اما کاروان نتوانست آن را ثبت کند. پنل را بررسی کنید.',
   code_report_not_stored: 'کاروان نتوانست گزارش این برگرداندن را ذخیره کند.',
   code_panel_stopped: 'پنل متوقف شد.',
-  code_backup_put_back: 'پایگاه داده با پشتیبان جایگزین شد.',
+  code_backup_put_back: 'دیتابیس با پشتیبان جایگزین شد.',
   code_panel_started: 'پنل دوباره روشن شد.',
   code_restore_failed: 'دلیل آن در لاگ سرور کاروان ثبت شده است.',
 
@@ -338,11 +338,11 @@ const fa: Messages<LiveKey>['fa'] = {
   next: 'قدم بعدی',
   oldLinks: 'راه اندازی لینک های قدیمی',
   oldLinksHint: 'لینک های اشتراک قدیمی کاربرهای منتقل شده را فعال نگه میدارد.',
-  saveTemplate: 'ذخیره به عنوان قالب',
+  saveTemplate: 'ذخیره به عنوان الگو',
   templateBody:
-    'قالب، دسته های این انتقال را با تغییرات و راه حل های آنها برای انتقال بعدی نگه میدارد.',
+    'الگو، دسته های این انتقال را با تغییرات و راه حل های آنها برای انتقال بعدی نگه میدارد.',
   templateName: 'نام',
-  templateSave: 'ذخیره قالب',
+  templateSave: 'ذخیره الگو',
   templateSaved: 'با نام {name} ذخیره شد.',
   templateTooLong: 'نام کوتاه تری بنویسید.',
   templateGone: 'کاروان بعد از این انتقال دوباره راه اندازی شده است، پس انتخاب های آن دیگر نیستند.',

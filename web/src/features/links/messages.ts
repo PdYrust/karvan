@@ -13,7 +13,7 @@ const en = {
   moreFor: 'More for {name}',
   edit: 'Edit',
   delete: 'Delete',
-  deleteTitle: 'Delete this site',
+  deleteTitle: 'Delete this site?',
   deleteBody:
     'Its old links stop working. Proven links are forgotten; users closed for good stay closed.',
   deleteFailed: "Couldn't delete the site.",
@@ -90,7 +90,7 @@ const fa: Messages<LinksKey>['fa'] = {
   moreFor: 'گزینه های بیشتر برای {name}',
   edit: 'ویرایش',
   delete: 'حذف',
-  deleteTitle: 'حذف این سایت',
+  deleteTitle: 'این سایت حذف شود؟',
   deleteBody:
     'لینک های قدیمی این سایت دیگر کار نمیکنند. لینک های تایید شده فراموش میشوند و کاربرهای بسته شده بسته میمانند.',
   deleteFailed: 'سایت حذف نشد.',

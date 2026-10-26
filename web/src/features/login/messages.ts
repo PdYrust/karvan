@@ -33,7 +33,7 @@ const fa: Record<Key, string> = {
   hidePassword: 'پنهان کردن رمز',
   submit: 'ورود',
   submitting: 'در حال ورود...',
-  totpTitle: 'کد ورود دو مرحله ای',
+  totpTitle: 'کد ورود دومرحله ای',
   totpHint: 'کد ۶ رقمی برنامه احراز هویت را وارد کنید.',
   totpCode: 'کد',
   totpSubmit: 'ورود',

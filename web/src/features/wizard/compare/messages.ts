@@ -202,7 +202,7 @@ const fa: Messages<CompareKey>['fa'] = {
   addCategory: 'افزودن دسته',
   addInside: 'افزودن داخل {name}',
   categoryList: 'دسته ها',
-  categoryMenu: 'گزینه های {name}',
+  categoryMenu: 'گزینه های بیشتر برای {name}',
   rename: 'تغییر نام',
   remove: 'حذف',
   renameTitle: 'تغییر نام دسته',
@@ -221,7 +221,8 @@ const fa: Messages<CompareKey>['fa'] = {
   preset_disabled: 'غیرفعال',
   'preset_on-hold': 'در انتظار شروع',
   'preset_has-note': 'با یادداشت',
-  targetsNoGroups: 'پنل مقصد گروهی ندارد. در پاسارگاد یک گروه بسازید و بعد انتقال جدیدی شروع کنید.',
+  targetsNoGroups:
+    'پنل مقصد گروهی ندارد. در پاسارگارد یک گروه بسازید و بعد انتقال جدیدی شروع کنید.',
   targetsNoInbounds:
     'پنل مقصد اینباندی ندارد. در مرزبان یک اینباند بسازید و بعد انتقال جدیدی شروع کنید.',
   targetHosts: { one: '{count} هاست', other: '{count} هاست' },

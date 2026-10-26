@@ -82,7 +82,7 @@ const fa: Messages<PanelsKey>['fa'] = {
   emptyBody: 'کاروان مرزبان و پاسارگارد را در پوشه های زیر `/opt` پیدا میکند.',
   supported: 'پنل هایی که کاروان با آنها کار میکند',
   loadFailed: 'پنل ها بارگذاری نشد.',
-  moreFor: 'کارهای بیشتر برای {name}',
+  moreFor: 'گزینه های بیشتر برای {name}',
   open: 'باز کردن',
   workOn: 'کار روی این پنل',
   analytics: 'آمار',
@@ -107,7 +107,7 @@ const fa: Messages<PanelsKey>['fa'] = {
   factDatabase: 'دیتابیس',
   factEnv: 'فایل ENV',
   unknownTitle: 'این پنل ثبت نشده است',
-  unknownBody: 'کاروان پنلی با این نشانی ندارد. یکی را از فهرست انتخاب کنید.',
+  unknownBody: 'کاروان پنلی با این آدرس ندارد. یکی را از فهرست انتخاب کنید.',
   allPanels: 'همه پنل ها',
 };
 

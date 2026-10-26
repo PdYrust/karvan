@@ -157,7 +157,7 @@ const fa: Record<Key, string> = {
   shortcutsThen: 'سپس',
   close: 'بستن',
   notFoundTitle: 'این صفحه پیدا نشد',
-  notFoundBody: 'نشانی را بررسی کنید یا صفحه دیگری را از منو باز کنید.',
+  notFoundBody: 'آدرس را بررسی کنید یا صفحه دیگری را از منو باز کنید.',
   notFoundAction: 'رفتن به نمای کلی',
   loadingPage: 'در حال بارگذاری صفحه',
   pageFailed: 'این صفحه بارگذاری نشد. صفحه را دوباره بارگذاری کنید.',

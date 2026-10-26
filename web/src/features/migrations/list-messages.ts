@@ -47,7 +47,7 @@ const fa: Messages<ListKey>['fa'] = {
   stateLabel: 'وضعیت',
   panelLabel: 'پنل',
   allPanels: 'همه پنل ها',
-  refresh: 'به روز کردن فهرست',
+  refresh: 'به روزرسانی فهرست',
   filter_all: 'همه وضعیت ها',
   filter_draft: 'پیش نویس ها',
   filter_running: 'در حال اجرا',

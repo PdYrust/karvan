@@ -12,7 +12,7 @@ const en = {
   reset_restart: 'Next traffic reset: counted again from the move',
   delete: 'Delete',
   deleteNamed: 'Delete {name}',
-  deleteTitle: 'Delete this template',
+  deleteTitle: 'Delete this template?',
   deleteBody: 'Migrations that used it keep their plans. The template itself is gone for good.',
   deleteFailed: "Couldn't delete the template.",
   deleted: 'Template deleted',
@@ -37,7 +37,7 @@ const fa: Messages<TemplatesKey>['fa'] = {
   reset_restart: 'ریست بعدی حجم: شمارش دوباره از زمان انتقال',
   delete: 'حذف',
   deleteNamed: 'حذف {name}',
-  deleteTitle: 'حذف این الگو',
+  deleteTitle: 'این الگو حذف شود؟',
   deleteBody:
     'انتقال هایی که از آن استفاده کردند برنامه خود را نگه میدارند. خود الگو برای همیشه حذف میشود.',
   deleteFailed: 'الگو حذف نشد.',
