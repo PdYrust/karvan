@@ -77,7 +77,7 @@ The chart tokens sit in a `@theme static` block: charts pick a color by number a
 
 ## 6. Icons
 
-- Phosphor, `regular` weight: 18 px in navigation, 20 px in buttons, 16 px inline.
+- Phosphor, `regular` weight: 16 px in sidebar rows and inline, 18 px in the top bar, 20 px in buttons. Where Phosphor has no match, a small SVG in the same stroke (`app/shell/MenuIcon.tsx`, the phone menu button: three lines, the bottom one shorter at the start edge, mirrored in RTL).
 - Icons never stand in for words in primary actions. Icon-only buttons have an `aria-label` and a title or tooltip.
 - No emoji in the UI.
 
@@ -101,11 +101,13 @@ The chart tokens sit in a `@theme static` block: charts pick a color by number a
 ### Shell
 The Cloudflare dashboard's frame, built from Karvan's own components with logical properties (Kumo's Sidebar uses physical classes):
 - **Sidebar header (56 high):** the mark, then the panel switcher where the dashboard has its account switcher: the current panel's logo and name, an up and down chevron. Its menu lists the panels with a status dot, then "All panels", "Scan this server" and "Manage panels".
-- **Sidebar body:** a "Search... Ctrl K" field that opens the palette, then grouped rows: icon, label, a chevron for rows with sub-pages, 36 high (44 on touch), the current row on `bg-kumo-tint`. Group labels are small and quiet. No Settings or Security rows: they live in the account menu.
+- **Sidebar body:** a "Search... Ctrl K" field that opens the palette, then grouped rows as dense as the dashboard's: 32 high and 34 apart (44 high on touch), `base` text, 16 px icons in `text-kumo-subtle`, the current row on `bg-kumo-tint` with radius 6. Group labels are `small` and quiet, 16 above them. No Settings or Security rows: they live in the account menu.
+  - Sub-pages: a row with sub-pages has a chevron at the end (pointing to the end, down while open) and opens while one of its pages is shown. Its sub-rows indent under its label with a 1 px hairline guide at the start, as in the dashboard's DNS rows; the current sub-row is tinted, not its parent. Analytics has them: Server, then one row per panel. The collapsed sidebar shows only the parent.
 - **Sidebar footer:** one button that collapses the sidebar to icons with tooltips; remembered per browser.
-- **Top bar (56 high):** at the end, the Safe Mode status (a small badge that opens Settings, like the dashboard's plan badge) and the account button. On phones: menu button, mark, search, account button.
-- **Account menu:** like the dashboard's: who is signed in, Settings, Appearance (light, dark, same as system), Language (فارسی, English), Keyboard shortcuts, then Sign out. Language and theme have no buttons of their own in the app.
-- **Mobile:** the sidebar opens as a sheet from the start edge, with focus inside it and Escape to close.
+- **Top bar (56 high):** at the end, the Safe Mode status (a small badge that opens Settings, like the dashboard's plan badge), a GitHub link (Phosphor's GitHub logo, icon only, opens the repository in a new tab) and the account button. On phones (under 1024) only the menu button at the start and the GitHub link and the account button at the end: the mark and search live in the sheet, and Safe Mode is not shown on phones at all.
+- **Account menu:** like the dashboard's, about 224 wide so it fits a 360 phone with room: the username alone at the top (no "Signed in as"), Settings, Appearance (light, dark, same as system), Language (فارسی, English), Time zone (the zones of Settings General, the current one checked; a choice saves as there), Keyboard shortcuts, then Sign out. Language and theme have no buttons of their own in the app.
+- **Language change:** wherever it is chosen (account menu, Settings General, the palette, the sign-in page), the choice is saved and the page reloads, so every part of the page, dates and direction included, comes back in the new language at once.
+- **Mobile:** the sidebar opens as a sheet from the start edge, with focus inside it and Escape to close. Its header, like the dashboard's phone sheet: the mark, the panel switcher beside it, and close (X) at the end; under it the search field, then the rows. Menus opened inside the sheet render inside it (the sheet is a modal `<dialog>` in the top layer, so a menu outside it would sit under it and ignore taps).
 - **Footer:** one quiet row at the end of the content: version, source code, report a security issue.
 - **Command palette:** every page, panel, setting, preference and action is reachable from Ctrl K. Migrations and their reports (by admin, address and panel), templates and old link sites (by name, address, domain and port) are listed once something is typed, and read only while the palette is open. `?` opens the shortcut sheet, which lists every page with its `g` letter. The palette and the sheet are the one exception to Kumo's always rendered dialogs: each builds all its rows on every shell render, so it mounts when it first opens and opens one frame later (so it still animates in), then stays rendered.
 
@@ -118,7 +120,7 @@ The Cloudflare dashboard's frame, built from Karvan's own components with logica
   - The first column names the row with its logo and links to its page, underlined as in the dashboard. Status cells are an icon in the status color and a word in the default color, like the dashboard's "Active".
   - A short list the server does not page ends with "Showing 2 of 2" and no pager.
 - **Detail pages:** title with status badges, underline tabs, content cards, an aside for facts and quick actions.
-- **Settings pages:** one page with underline tabs, one route per tab. Each setting is a row: title and one line of description at the start, the control at the end, rows split by hairlines.
+- **Settings pages:** one page with underline tabs, one route per tab. Each setting is a row: title and one line of description at the start, the control at the end, rows split by hairlines. Under 640 a wide control (a select) drops below the text, and a switch stays at the end of the title line, as in the dashboard's settings on a phone; when the title is too long to share the line, the switch moves under the title, before the description.
 - **Aside:** short status blocks, each a heading, a status badge and one sentence, divided by hairlines.
 - **Facts** (`FactList`): label at the start, value at the end, rows split by hairlines. A value too long for the rest of its row (a path on a phone) moves under its label.
 - **Panel names:** always with their logo (`PanelLabel`). A move between panels is shown as the source logo, an arrow and the destination logo (`MoveLabel`), in lists, the wizard, the live view, reports, old links and backups.
