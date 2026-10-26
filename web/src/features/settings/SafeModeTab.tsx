@@ -72,11 +72,14 @@ export function SafeModeTab() {
           title={t('safeModeTitle')}
           labelId="safe-mode-title"
           description={t('safeModeHint')}
+          inline
           control={
             <Switch
               aria-labelledby="safe-mode-title"
               checked={s.enabled}
               disabled={set.isPending}
+              // The switch is 18 px high; the hit area reaches 44 px on touch screens.
+              className="relative pointer-coarse:before:absolute pointer-coarse:before:-inset-x-[9px] pointer-coarse:before:-inset-y-[13px] pointer-coarse:before:content-['']"
               onCheckedChange={(on) =>
                 on ? save({ ...s, enabled: true }, t('turnedOn')) : setConfirming(true)
               }
