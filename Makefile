@@ -30,8 +30,10 @@ web: web-deps
 	$(PNPM) run build
 	$(PNPM) run size
 
+# The run tests write SQLite through modernc, which takes about 9 minutes under
+# the race detector on a 2-core host; the default 10 minute limit is too close.
 test:
-	go test -race ./...
+	go test -race -timeout 30m ./...
 
 lint:
 	$(GOLANGCI) run ./...

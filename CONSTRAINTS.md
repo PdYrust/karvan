@@ -27,7 +27,7 @@ Last reviewed: 2026-10-15.
 | Go function size | 60 lines or less, 40 statements or less | `funlen` | `make check` |
 | Go complexity | cyclomatic 15 or less | `gocyclo` | `make check` |
 | Go tests | all pass | `go test -cover ./...` (inside `scripts/check-coverage.sh`) | `make check` |
-| Go races | none found | `go test -race ./...` | `make check-full` |
+| Go races | none found | `go test -race -timeout 30m ./...` | `make check-full` |
 | Go coverage | 80% or more statements in `config`, `secret`, `store`, `settings`, `auth`, `audit`, `httpapi` and its subpackages | `scripts/check-coverage.sh` | `make check` |
 | Go vulnerabilities | no findings | `govulncheck ./...` | `make check-full` |
 | TypeScript | zero errors, `strict` on | `tsc --noEmit` | `make check` |
