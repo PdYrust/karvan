@@ -175,3 +175,15 @@ func TestRates(t *testing.T) {
 		t.Fatal("hit rate without cache reads")
 	}
 }
+
+func TestTickTrimsMinutesPastRetention(t *testing.T) {
+	r := newRig(t)
+	ctx := context.Background()
+	r.s.Tick(ctx)
+	r.now = r.now.Add(Retention + time.Hour)
+	r.s.Tick(ctx)
+	mins, err := r.s.Store.Range(ctx, 7, 0, r.now.Unix()+60, 60)
+	if err != nil || len(mins) != 1 || mins[0].TS < r.now.Add(-Retention).Unix() {
+		t.Fatalf("minutes %+v %v", mins, err)
+	}
+}
