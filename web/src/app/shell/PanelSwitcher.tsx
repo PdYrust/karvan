@@ -1,36 +1,29 @@
 import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
 import { cn } from '@cloudflare/kumo/utils';
 import {
-  ArrowsClockwiseIcon,
   CaretUpDownIcon,
-  GearSixIcon,
   HardDrivesIcon,
   StackIcon,
   WarningCircleIcon,
 } from '@phosphor-icons/react';
-import { useNavigate } from 'react-router';
 import { PanelMark } from '../../components/panels/PanelLabel';
 import { useCurrentPanel } from '../../features/panels/current-panel';
-import { usePanels, useScanPanels } from '../../features/panels/use-panels';
+import { usePanels } from '../../features/panels/use-panels';
 import { useT } from '../../i18n/locale';
 import { panelKind } from '../../lib/api/panels';
 import { shellMessages } from './messages';
-import { pathOf } from './routes-built';
 
 /**
- * Chooses the panel the pages work on, in the place of the dashboard's
+ * Chooses the panel the pages work on, or all of them, in the place of the dashboard's
  * account switcher: the wizard's default destination and a filter on lists.
  */
 export function PanelSwitcher({ collapsed = false }: { collapsed?: boolean }) {
   const t = useT(shellMessages);
-  const navigate = useNavigate();
   const panels = usePanels();
   const { panel, select } = useCurrentPanel();
-  const { scan } = useScanPanels();
   const list = (panels.data ?? []).filter((p) => p.id > 0);
   const kind = panel ? panelKind(panel) : undefined;
   const label = panel ? panel.name : list.length > 0 ? t('allPanels') : t('noPanel');
-  const managePath = pathOf('navPanels');
   const loading = panels.isPending;
 
   const icon = loading ? (
@@ -118,17 +111,6 @@ export function PanelSwitcher({ collapsed = false }: { collapsed?: boolean }) {
             <DropdownMenu.Item disabled>{t('noPanel')}</DropdownMenu.Item>
           ) : null}
         </DropdownMenu.Group>
-        <DropdownMenu.Separator />
-        <DropdownMenu.Item className="gap-2" onClick={scan}>
-          <ArrowsClockwiseIcon size={16} aria-hidden="true" />
-          {t('scanServer')}
-        </DropdownMenu.Item>
-        {managePath ? (
-          <DropdownMenu.Item className="gap-2" onClick={() => void navigate(managePath)}>
-            <GearSixIcon size={16} aria-hidden="true" />
-            {t('managePanels')}
-          </DropdownMenu.Item>
-        ) : null}
       </DropdownMenu.Content>
     </DropdownMenu>
   );
