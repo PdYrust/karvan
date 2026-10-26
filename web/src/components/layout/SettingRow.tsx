@@ -43,10 +43,13 @@ export function SettingRow({
   description,
   control,
   inline = false,
+  badge,
   children,
   labelId,
 }: {
   title: string;
+  /** A status badge after the title, such as On or Off. */
+  badge?: ReactNode;
   description?: ReactNode;
   control?: ReactNode;
   /** The control is small (a switch) and shares the title's line on phones. */
@@ -57,10 +60,18 @@ export function SettingRow({
   labelId?: string;
 }) {
   const Heading = use(Titled) ? 'h3' : 'h2';
-  const heading = (
+  const name = (
     <Heading id={labelId} className="text-base font-medium text-kumo-strong">
       {title}
     </Heading>
+  );
+  const heading = badge ? (
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+      {name}
+      {badge}
+    </div>
+  ) : (
+    name
   );
   const text = (
     <>

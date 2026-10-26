@@ -14,7 +14,7 @@ import { useErrorText } from '../../../lib/errors/errors';
 import { sessionKey, useSession } from '../../session/use-session';
 import { ReauthDialog } from '../security/ReauthDialog';
 import { twoStepMessages } from './messages';
-import { TotpSetupCard } from './TotpSetupCard';
+import { loadQr, TotpSetupCard } from './TotpSetupCard';
 import { Reveal } from '../../../components/feedback/Reveal';
 import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
@@ -63,6 +63,9 @@ export function TwoStepTab() {
       <SettingsCard>
         <SettingRow
           title={t('title')}
+          badge={
+            <StatusBadge tone={on ? 'success' : 'neutral'}>{t(on ? 'on' : 'off')}</StatusBadge>
+          }
           description={t(on ? 'hintOn' : 'hintOff')}
           control={
             on ? (
@@ -74,34 +77,34 @@ export function TwoStepTab() {
                 variant="primary"
                 className="pointer-coarse:h-11"
                 loading={begin.isPending}
-                onClick={() => begin.mutate()}
+                onClick={() => {
+                  void loadQr();
+                  begin.mutate();
+                }}
               >
                 {t('setUp')}
               </Button>
             )
           }
         >
-          <div className="mt-1 flex flex-col items-start gap-2">
-            <StatusBadge tone={on ? 'success' : 'neutral'}>{t(on ? 'on' : 'off')}</StatusBadge>
-            {on ? (
-              <p className="text-sm text-kumo-subtle">
-                <CodeText text={t('lostApp')} />
-              </p>
-            ) : null}
-          </div>
+          {on ? (
+            <p className="text-sm text-kumo-subtle">
+              <CodeText text={t('lostApp')} />
+            </p>
+          ) : null}
         </SettingRow>
+        {setup && !on ? (
+          <TotpSetupCard
+            setup={setup}
+            onDone={() => {
+              setSetup(null);
+              toasts.add({ title: t('turnedOn') });
+              void queryClient.invalidateQueries({ queryKey: sessionKey });
+            }}
+            onCancel={() => setSetup(null)}
+          />
+        ) : null}
       </SettingsCard>
-      {setup && !on ? (
-        <TotpSetupCard
-          setup={setup}
-          onDone={() => {
-            setSetup(null);
-            toasts.add({ title: t('turnedOn') });
-            void queryClient.invalidateQueries({ queryKey: sessionKey });
-          }}
-          onCancel={() => setSetup(null)}
-        />
-      ) : null}
       {begin.isError ? <InlineAlert>{errorText(begin.error)}</InlineAlert> : null}
       <ReauthDialog
         open={turningOff}
