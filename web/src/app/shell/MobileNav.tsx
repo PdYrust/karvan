@@ -1,14 +1,19 @@
+import { KumoPortalProvider } from '@cloudflare/kumo/utils';
 import { XIcon } from '@phosphor-icons/react';
 import { useEffect, useRef, type ReactNode } from 'react';
-import { Wordmark } from '../../components/brand/Wordmark';
+import { Mark } from '../../components/brand/Mark';
 import { useT } from '../../i18n/locale';
+import { sharedMessages } from '../../i18n/shared';
 import { shellMessages } from './messages';
+import { PanelSwitcher } from './PanelSwitcher';
 
 /**
  * Sidebar as a sheet on small screens. A native <dialog> gives focus
  * trapping, Escape, backdrop dismiss and an inert page behind it. The sheet's
  * content mounts only while it is open, so a phone does not build the
- * navigation twice on every page load.
+ * navigation twice on every page load. A modal dialog sits in the top layer
+ * and makes the rest of the page inert, so menus opened inside it (the panel
+ * switcher) portal into the dialog, or they would sit under it and ignore taps.
  */
 export function MobileNav({
   open,
@@ -20,6 +25,7 @@ export function MobileNav({
   children: ReactNode;
 }) {
   const t = useT(shellMessages);
+  const ts = useT(sharedMessages);
   const ref = useRef<HTMLDialogElement>(null);
 
   useEffect(() => {
@@ -38,20 +44,23 @@ export function MobileNav({
       aria-label={t('mainNav')}
       className="m-0 h-dvh max-h-none w-[min(20rem,86vw)] max-w-none bg-kumo-canvas p-0 text-kumo-default shadow-xl backdrop:bg-kumo-contrast/40 me-auto lg:hidden"
     >
-      <div className="flex h-full flex-col overflow-y-auto">
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-kumo-hairline ps-5 pe-2">
-          <Wordmark />
-          <button
-            type="button"
-            aria-label={t('closeMenu')}
-            className="grid size-11 place-items-center rounded-md text-kumo-default hover:bg-kumo-tint"
-            onClick={onClose}
-          >
-            <XIcon size={20} aria-hidden="true" />
-          </button>
+      <KumoPortalProvider container={ref}>
+        <div className="flex h-full flex-col overflow-y-auto">
+          <div className="flex h-14 shrink-0 items-center gap-2 border-b border-kumo-hairline ps-3 pe-2">
+            <Mark size={28} title={ts('brand')} />
+            {open ? <PanelSwitcher /> : <span className="flex-1" />}
+            <button
+              type="button"
+              aria-label={t('closeMenu')}
+              className="grid size-11 shrink-0 place-items-center rounded-md text-kumo-default hover:bg-kumo-tint"
+              onClick={onClose}
+            >
+              <XIcon size={20} aria-hidden="true" />
+            </button>
+          </div>
+          {open ? children : null}
         </div>
-        {open ? children : null}
-      </div>
+      </KumoPortalProvider>
     </dialog>
   );
 }

@@ -12,7 +12,7 @@ import { SidebarNav } from './SidebarNav';
 const iconButton =
   'grid size-10 place-items-center rounded-md text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default pointer-coarse:size-11';
 
-/** The sidebar body: switcher row, search and navigation. Shared by the desktop column and the phone sheet. */
+/** The phone sheet's body: search and navigation (the switcher sits in the sheet's header). */
 export function SidebarBody({
   onSearch,
   onNavigate,
@@ -22,9 +22,6 @@ export function SidebarBody({
 }) {
   return (
     <div className="flex flex-col gap-3 p-3">
-      <div className="flex">
-        <PanelSwitcher />
-      </div>
       <SearchButton onClick={onSearch} />
       <SidebarNav onNavigate={onNavigate} />
     </div>
