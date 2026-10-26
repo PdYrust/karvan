@@ -1,4 +1,5 @@
 import { CommandPalette } from '@cloudflare/kumo/components/command-palette';
+import { cn } from '@cloudflare/kumo/utils';
 import { useState, type RefObject } from 'react';
 import { useT } from '../../i18n/locale';
 import { filterCommands, useCommands, type Command, type CommandGroup } from './commands';
@@ -49,7 +50,15 @@ export function CommandMenu({
       getSelectableItems={(gs: CommandGroup[]) => gs.flatMap((g) => g.items)}
       onSelect={(c: Command) => run(c)}
     >
-      <CommandPalette.Input placeholder={t('searchPlaceholder')} aria-label={t('search')} />
+      <CommandPalette.Input
+        placeholder={t('searchPlaceholder')}
+        aria-label={t('search')}
+        trailing={
+          <kbd title={t('paletteClose')} className={cn(kbd, 'shrink-0 text-kumo-subtle')}>
+            Esc
+          </kbd>
+        }
+      />
       <CommandPalette.List>
         <CommandPalette.Results>
           {(g: CommandGroup) => (
@@ -81,10 +90,6 @@ export function CommandMenu({
         <span className="flex items-center gap-2">
           <kbd className={kbd}>Enter</kbd>
           <span>{t('paletteSelect')}</span>
-        </span>
-        <span className="flex items-center gap-2">
-          <kbd className={kbd}>Esc</kbd>
-          <span>{t('paletteClose')}</span>
         </span>
       </CommandPalette.Footer>
     </CommandPalette.Root>
