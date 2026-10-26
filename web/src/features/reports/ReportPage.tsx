@@ -1,13 +1,11 @@
 import { buttonVariants } from '@cloudflare/kumo/components/button';
 import { cn } from '@cloudflare/kumo/utils';
-import { PlayIcon, PrinterIcon } from '@phosphor-icons/react';
+import { ArrowRightIcon, PlayIcon, PrinterIcon } from '@phosphor-icons/react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { EmptyState } from '../../components/feedback/EmptyState';
-import { StatusLabel } from '../../components/feedback/StatusBadge';
 import { Bone } from '../../components/feedback/PageSkeleton';
-import { FactList } from '../../components/layout/FactList';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { Section } from '../../components/layout/Section';
 import { usePageTitle } from '../../components/layout/use-page-title';
@@ -19,77 +17,91 @@ import { errorOf } from '../../lib/errors/errors';
 import { getReport, type Report } from '../../lib/api/report';
 import { getJobRow, migrationKeys, type JobState } from '../../lib/api/migrations';
 import { useFormat } from '../../lib/preferences/region';
-import { Files } from '../live/Files';
-import { mayRollBack, shownCounts } from '../live/live';
+import { mayRollBack } from '../live/live';
 import { liveMessages } from '../live/messages';
-import { ReloadLine } from '../live/ResultCard';
-import { jobStates } from '../migrations/job-state';
+import { JobStateBadge } from '../migrations/JobLabels';
 import { migrationsMessages } from '../migrations/messages';
 import { reportsMessages } from './messages';
-import { Stages, UndoCard, useReportFacts } from './ReportParts';
+import { ReportAside } from './ReportAside';
+import { Stages, UndoCard } from './ReportParts';
+import { ReportResult } from './ReportResult';
 import { ReportUsers } from './ReportUsers';
 import { Reveal } from '../../components/feedback/Reveal';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 const linkButton = cn(buttonVariants({ variant: 'secondary' }), 'gap-2 pointer-coarse:h-11');
 
-/** The state, the counts, the reload and the files. */
-function Result({ id, state, report }: { id: string; state: JobState; report: Report }) {
+/**
+ * The detail page's body: the result, the stages, what cannot be undone and
+ * every user in the main column, the admin, Safe Mode, the reload and the
+ * details in the aside. On phones the aside follows the result.
+ */
+function Body({ id, state, report }: { id: string; state: JobState; report: Report }) {
   const t = useT(reportsMessages);
-  const tl = useT(liveMessages);
-  const tm = useT(migrationsMessages);
-  const fmt = useFormat();
-  const moved = report.counts.moved - report.counts.undone;
-  const password =
-    report.admin.password === 'generated' && (state === 'done' || state === 'failed')
-      ? report.admin.username
-      : null;
   return (
-    <Section title={t('result')}>
-      <div className="flex flex-col gap-5 px-4 pb-4">
-        <StatusLabel tone={jobStates[state].tone}>{tm(jobStates[state].word)}</StatusLabel>
-        <dl aria-label={tl('counts')} className="flex flex-wrap gap-x-8 gap-y-3">
-          {shownCounts(report.counts).map(([k, n]) => (
-            <div key={k} className="flex flex-col">
-              <dt className="text-sm text-kumo-subtle">{tl(`count_${k}`)}</dt>
-              <dd className="text-title font-semibold text-kumo-strong tabular">{fmt.number(n)}</dd>
-            </div>
-          ))}
-        </dl>
-        {state === 'done' ? <ReloadLine report={report} t={tl} /> : null}
-        <Files jobId={id} links={state === 'done' && moved > 0} password={password} />
+    <div className="grid max-w-[1400px] lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr]">
+      <div className="p-4 sm:p-8 lg:pb-0">
+        <ReportResult id={id} state={state} report={report} />
       </div>
-    </Section>
+      <aside
+        aria-label={t('facts')}
+        className="border-y border-kumo-hairline p-4 sm:p-8 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:border-s lg:border-y-0"
+      >
+        <ReportAside state={state} report={report} />
+      </aside>
+      <div className="flex min-w-0 flex-col gap-6 p-4 sm:p-8 lg:pt-6">
+        {report.stages?.length ? (
+          <Section title={t('stages')}>
+            <div className="px-4 pt-2 pb-5">
+              <Stages stages={report.stages} />
+            </div>
+          </Section>
+        ) : null}
+        <UndoCard state={state} report={report} />
+        <ReportUsers users={report.users ?? []} state={state} />
+      </div>
+    </div>
   );
 }
 
-function Body({ id, state, report }: { id: string; state: JobState; report: Report }) {
-  const t = useT(reportsMessages);
-  const facts = useReportFacts(report);
+/** The move, the old panel's address and the new panel, then when it ran and how long it took. */
+function HeaderLine({ report }: { report: Report }) {
+  const tm = useT(migrationsMessages);
+  const tl = useT(liveMessages);
+  const fmt = useFormat();
+  const { source: from, destination: to } = report;
+  const took = (Date.parse(report.endedAt) - Date.parse(report.startedAt)) / 1000;
   return (
-    <div className="flex flex-col gap-6">
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="flex flex-col gap-6">
-          <Result id={id} state={state} report={report} />
-          <UndoCard state={state} report={report} />
-        </div>
-        <div className="flex flex-col gap-6">
-          <Section title={t('facts')}>
-            <div className="px-4 pb-2">
-              <FactList facts={facts} />
-            </div>
-          </Section>
-          {report.stages?.length ? (
-            <Section title={t('stages')}>
-              <div className="px-4 pb-2">
-                <Stages stages={report.stages} />
-              </div>
-            </Section>
-          ) : null}
-        </div>
-      </div>
-      <ReportUsers users={report.users ?? []} state={state} />
-    </div>
+    <span className="flex flex-col gap-1.5">
+      <span className="flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1">
+        {from.kind && to.kind ? (
+          <MoveLabel
+            from={from.kind}
+            to={to.kind}
+            size={20}
+            label={tm('move', { from: panelNames[from.kind], to: panelNames[to.kind] })}
+          />
+        ) : null}
+        <Machine>{from.origin}</Machine>
+        {to.name ? (
+          <>
+            <ArrowRightIcon size={12} aria-hidden="true" className="rtl:-scale-x-100" />
+            <bdi>{to.name}</bdi>
+          </>
+        ) : null}
+      </span>
+      <span className="text-sm">
+        {fmt.dateTime(new Date(report.startedAt))}
+        {took >= 0 ? (
+          <>
+            <span aria-hidden="true" className="px-2">
+              ·
+            </span>
+            {tl('took', { time: took >= 1 ? fmt.duration(took) : tl('underSecond') })}
+          </>
+        ) : null}
+      </span>
+    </span>
   );
 }
 
@@ -97,7 +109,6 @@ function Body({ id, state, report }: { id: string; state: JobState; report: Repo
 export function ReportPage() {
   const { id = '' } = useParams();
   const t = useT(reportsMessages);
-  const tm = useT(migrationsMessages);
   const report = useQuery({ queryKey: migrationKeys.report(id), queryFn: () => getReport(id) });
   const row = useQuery({ queryKey: migrationKeys.row(id), queryFn: () => getJobRow(id) });
   const load = useFirstLoad(report.data);
@@ -122,20 +133,6 @@ export function ReportPage() {
       </a>
     </>
   ) : null;
-  const move =
-    r?.source.kind && r.destination.kind ? (
-      <span className="inline-flex flex-wrap items-center gap-2">
-        <MoveLabel
-          from={r.source.kind}
-          to={r.destination.kind}
-          label={tm('move', {
-            from: panelNames[r.source.kind],
-            to: panelNames[r.destination.kind],
-          })}
-        />
-        <Machine>{r.source.origin}</Machine>
-      </span>
-    ) : null;
   return (
     <div className="flex flex-col">
       <PageHeader
@@ -147,30 +144,41 @@ export function ReportPage() {
             {t('title')}
           </Link>
         }
-        title={r ? <bdi>{t('reportTitle', { name })}</bdi> : t('printTitle')}
-        description={move}
+        title={
+          r ? (
+            <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <bdi className="min-w-0 break-all">{t('reportTitle', { name })}</bdi>
+              <JobStateBadge state={state} />
+            </span>
+          ) : (
+            t('printTitle')
+          )
+        }
+        description={r ? <HeaderLine report={r} /> : null}
         actions={actions}
       />
-      <div className="flex max-w-[1400px] flex-col gap-6 p-4 sm:p-8">
-        {missing ? (
-          <EmptyState icon={<PrinterIcon size={32} aria-hidden="true" />} title={t('noReport')} />
-        ) : report.isError ? (
-          <ErrorState
-            message={t('reportFailed')}
-            error={report.error}
-            onRetry={() => void report.refetch()}
-          />
-        ) : r ? (
-          <Reveal on={load.reveal}>
-            <Body id={id} state={state} report={r} />
-          </Reveal>
-        ) : (
-          <div role="status" aria-label={t('printLoading')} className="flex flex-col gap-4">
-            <Bone className="h-40 w-full" />
-            <Bone className="h-64 w-full" />
-          </div>
-        )}
-      </div>
+      {r && !report.isError ? (
+        <Reveal on={load.reveal}>
+          <Body id={id} state={state} report={r} />
+        </Reveal>
+      ) : (
+        <div className="flex max-w-[1400px] flex-col gap-6 p-4 sm:p-8">
+          {missing ? (
+            <EmptyState icon={<PrinterIcon size={32} aria-hidden="true" />} title={t('noReport')} />
+          ) : report.isError ? (
+            <ErrorState
+              message={t('reportFailed')}
+              error={report.error}
+              onRetry={() => void report.refetch()}
+            />
+          ) : (
+            <div role="status" aria-label={t('printLoading')} className="flex flex-col gap-4">
+              <Bone className="h-40 w-full" />
+              <Bone className="h-64 w-full" />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

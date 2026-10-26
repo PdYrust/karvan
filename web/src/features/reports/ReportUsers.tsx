@@ -2,7 +2,10 @@ import { Badge } from '@cloudflare/kumo/components/badge';
 import { Button } from '@cloudflare/kumo/components/button';
 import { ArrowRightIcon } from '@phosphor-icons/react';
 import { useDeferredValue, useId, useMemo, useState } from 'react';
+import { DataTable, type Column } from '../../components/data/DataTable';
 import { Pager } from '../../components/data/Pager';
+import { RowCard } from '../../components/data/RowCard';
+import { StatusLabel } from '../../components/feedback/StatusBadge';
 import { SearchField } from '../../components/data/SearchField';
 import { useT } from '../../i18n/locale';
 import type { JobState } from '../../lib/api/migrations';
@@ -43,27 +46,56 @@ export function UserName({ user }: { user: ReportUser }) {
   );
 }
 
-function Row({ user, state }: { user: ReportUser; state: JobState }) {
+/** The changes and fixes Karvan made to a user, and whether its config or link changes. */
+function Changes({ user, state }: { user: ReportUser; state: JobState }) {
   const t = useT(reportsMessages);
   const changes = user.applied?.length ?? 0;
   const fixes = user.fixed?.length ?? 0;
+  const flags = user.moved && state !== 'rolled_back';
+  if (!changes && !fixes && !(flags && (user.changesConfig || user.changesLink))) {
+    return <span className="text-kumo-subtle">{t('noChanges')}</span>;
+  }
   return (
-    <li className="flex min-h-12 flex-col gap-1.5 border-t border-kumo-hairline px-3 py-2.5 first:border-0 sm:flex-row sm:items-center sm:gap-4">
-      <span className="min-w-0 sm:w-2/5">
-        <UserName user={user} />
-      </span>
-      <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-kumo-subtle">
-        <span className="text-kumo-default">{t(userOutcome(user, state))}</span>
-        {changes > 0 ? <span>{t('changesCount', { count: changes })}</span> : null}
-        {fixes > 0 ? <span>{t('fixesCount', { count: fixes })}</span> : null}
-      </span>
-      {user.moved && state !== 'rolled_back' && (user.changesConfig || user.changesLink) ? (
-        <span className="flex flex-wrap gap-1.5 sm:ms-auto">
-          {user.changesConfig ? <Badge variant="outline">{t('configFlag')}</Badge> : null}
-          {user.changesLink ? <Badge variant="outline">{t('linkFlag')}</Badge> : null}
-        </span>
-      ) : null}
-    </li>
+    <span className="flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-kumo-subtle">
+      {changes > 0 ? <span>{t('changesCount', { count: changes })}</span> : null}
+      {fixes > 0 ? <span>{t('fixesCount', { count: fixes })}</span> : null}
+      {flags && user.changesConfig ? <Badge variant="outline">{t('configFlag')}</Badge> : null}
+      {flags && user.changesLink ? <Badge variant="outline">{t('linkFlag')}</Badge> : null}
+    </span>
+  );
+}
+
+const outcomeTones = {
+  outcomeMoved: 'success',
+  outcomeLeft: 'neutral',
+  outcomeUndone: 'neutral',
+} as const;
+
+function Outcome({ user, state }: { user: ReportUser; state: JobState }) {
+  const t = useT(reportsMessages);
+  const key = userOutcome(user, state);
+  return <StatusLabel tone={outcomeTones[key]}>{t(key)}</StatusLabel>;
+}
+
+function UsersTable({ users, state }: { users: readonly ReportUser[]; state: JobState }) {
+  const t = useT(reportsMessages);
+  const columns: Column<ReportUser>[] = [
+    { key: 'user', header: t('colUser'), cell: (u) => <UserName user={u} />, className: 'w-2/5' },
+    { key: 'outcome', header: t('colOutcome'), cell: (u) => <Outcome user={u} state={state} /> },
+    { key: 'changes', header: t('colChanges'), cell: (u) => <Changes user={u} state={state} /> },
+  ];
+  return (
+    <DataTable
+      caption={t('usersTable')}
+      rows={users}
+      rowKey={(u) => u.key}
+      columns={columns}
+      card={(u) => (
+        <RowCard lead={<UserName user={u} />} badge={<Outcome user={u} state={state} />}>
+          <Changes user={u} state={state} />
+        </RowCard>
+      )}
+    />
   );
 }
 
@@ -87,7 +119,15 @@ export function ReportUsers({ users, state }: { users: readonly ReportUser[]; st
       <h2 id={titleId} className="text-heading font-semibold text-kumo-strong">
         {t('users')}
       </h2>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex flex-col gap-3">
+        <SearchField
+          label={t('usersSearch')}
+          value={term}
+          onChange={(v) => {
+            setTerm(v);
+            setOffset(0);
+          }}
+        />
         <div role="group" aria-label={t('filtersLabel')} className="flex flex-wrap gap-2">
           {userFilters.map((f) => (
             <Button
@@ -105,27 +145,11 @@ export function ReportUsers({ users, state }: { users: readonly ReportUser[]; st
             </Button>
           ))}
         </div>
-        <SearchField
-          label={t('usersSearch')}
-          value={term}
-          onChange={(v) => {
-            setTerm(v);
-            setOffset(0);
-          }}
-          className="lg:max-w-xs"
-        />
       </div>
       {page.length === 0 ? (
         <p className="rounded-lg bg-kumo-tint px-4 py-3 text-kumo-subtle">{t('noUsers')}</p>
       ) : (
-        <ul
-          aria-label={t('usersTable')}
-          className="flex flex-col rounded-lg bg-kumo-base ring ring-kumo-hairline"
-        >
-          {page.map((u) => (
-            <Row key={u.key} user={u} state={state} />
-          ))}
-        </ul>
+        <UsersTable users={page} state={state} />
       )}
       <Pager
         offset={offset}

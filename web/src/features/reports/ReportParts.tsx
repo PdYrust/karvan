@@ -1,3 +1,4 @@
+import { cn } from '@cloudflare/kumo/utils';
 import { CheckCircleIcon, XCircleIcon } from '@phosphor-icons/react';
 import type { Fact } from '../../components/layout/FactList';
 import { Section } from '../../components/layout/Section';
@@ -61,7 +62,7 @@ const knownStages = new Set(['check', 'backup', 'execute', 'verify', 'reload', '
 const stageName = (tl: (k: LiveKey) => string, s: string) =>
   knownStages.has(s) ? tl(`stage_${s}` as LiveKey) : s;
 
-/** Each stage the run went through, how it ended and how long it took. */
+/** Each stage the run went through as a timeline: how it ended, how long it took and when it started. */
 export function Stages({ stages }: { stages: readonly StageTime[] }) {
   const t = useT(reportsMessages);
   const tl = useT(liveMessages);
@@ -76,20 +77,30 @@ export function Stages({ stages }: { stages: readonly StageTime[] }) {
           <li
             // A stage can run twice (a rollback after a reload); its place keeps it apart.
             key={`${s.stage}-${String(i)}`}
-            className="flex flex-wrap items-center gap-x-3 gap-y-0.5 border-b border-kumo-hairline py-2.5 last:border-0"
+            className="relative flex gap-3 pb-5 last:pb-0"
           >
+            {i < stages.length - 1 ? (
+              // The line from this stage's icon down to the next one's.
+              <span
+                aria-hidden="true"
+                className="absolute start-[9.5px] top-6 bottom-1 w-px bg-kumo-line"
+              />
+            ) : null}
             <Icon
-              size={18}
+              size={20}
+              weight="bold"
               aria-hidden="true"
-              className={s.ok ? 'text-kumo-success' : 'text-kumo-danger'}
+              className={cn('shrink-0', s.ok ? 'text-kumo-success' : 'text-kumo-danger')}
             />
-            <span className="font-medium text-kumo-strong">{stageName(tl, s.stage)}</span>
-            <span className="text-sm text-kumo-subtle">
-              {tl(s.ok ? 'took' : 'failedAfter', { time })}
-            </span>
-            <span className="ms-auto text-sm text-kumo-subtle tabular">
-              {t('stageAt', { time: fmt.time(new Date(s.started)) })}
-            </span>
+            <div className="flex min-w-0 flex-1 flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+              <span className="font-medium text-kumo-strong">{stageName(tl, s.stage)}</span>
+              <span className="text-sm text-kumo-subtle tabular">
+                {t('stageAt', { time: fmt.time(new Date(s.started)) })}
+              </span>
+              <span className="basis-full text-sm text-kumo-subtle">
+                {tl(s.ok ? 'took' : 'failedAfter', { time })}
+              </span>
+            </div>
           </li>
         );
       })}

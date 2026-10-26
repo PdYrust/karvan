@@ -43,6 +43,14 @@ export function StatusBadge({ tone, children }: { tone: StatusTone; children: Re
   );
 }
 
+/** A status's icon alone in its color, next to words that say it, such as a result's heading. */
+export function StatusIcon({ tone, size = 20 }: { tone: StatusTone; size?: number }) {
+  const look = tones[tone];
+  const Glyph = look.icon;
+  return (
+    <Glyph size={size} weight="bold" aria-hidden="true" className={cn('shrink-0', look.color)} />
+  );
+}
 /** A status in a table cell or a line of text: the icon carries the color, the word stays default. */
 export function StatusLabel({ tone, children }: { tone: StatusTone; children: ReactNode }) {
   const look = tones[tone];

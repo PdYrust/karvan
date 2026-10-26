@@ -4,71 +4,29 @@ import { useNavigate } from 'react-router';
 import { StatusLabel } from '../../components/feedback/StatusBadge';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { CodeText } from '../../components/text/CodeText';
-import type { Translate } from '../../i18n/core';
 import { useT } from '../../i18n/locale';
 import { newSitePath } from '../../lib/api/links';
 import type { JobRow } from '../../lib/api/migrations';
-import { reloadOutcome, type Report } from '../../lib/api/report';
-import { errorMessages } from '../../lib/errors/errors';
+import type { Report } from '../../lib/api/report';
 import { useFormat } from '../../lib/preferences/region';
 import { jobStates } from '../migrations/job-state';
 import { stepPath } from '../wizard/steps';
 import { Files } from './Files';
 import { mayRollBack, shownCounts, type EndState } from './live';
-import { codeSentence } from './log';
-import { liveMessages, type LiveKey } from './messages';
+import { resultHeads, useMeaning, useReload } from './meaning';
+import { liveMessages } from './messages';
 import { RollBackButton } from './RollBackButton';
 import { SaveTemplate } from './SaveTemplate';
 
-const heads: Readonly<Record<EndState, LiveKey>> = {
-  created: 'result_checked',
-  checked: 'result_checked',
-  running: 'titleRun',
-  done: 'result_done',
-  failed: 'result_failed',
-  rolled_back: 'result_rolled_back',
-  interrupted: 'result_interrupted',
-};
-
-/** One or two sentences on what the end means for the new panel. */
-function useMeaning(state: EndState, report: Report | undefined): string[] {
+function ReloadLine({ report }: { report: Report }) {
   const t = useT(liveMessages);
-  const te = useT(errorMessages);
-  const c = report?.counts;
-  switch (state) {
-    case 'done':
-      return [t('doneBody', { count: c?.moved ?? 0 })];
-    case 'failed': {
-      const why = report?.error ? codeSentence(report.error) : null;
-      const reason = why ? (why.from === 'live' ? t(why.key, why.params) : te(why.key)) : '';
-      const stays = mayRollBack(state, c, report);
-      return [reason, t(stays ? 'failedStays' : 'failedClean')].filter(Boolean);
-    }
-    case 'rolled_back':
-      return [c?.undone ? t('rolledBackUndo', { count: c.undone }) : t('rolledBackPanel')];
-    case 'interrupted':
-      return [t('interruptedBody')];
-    default:
-      return [t('checkedBody')];
-  }
-}
-
-export function ReloadLine({ report, t }: { report: Report; t: Translate<LiveKey> }) {
-  const r = reloadOutcome(report.reload, report.destination.kind);
-  if (r.kind === 'none') return null;
-  const text =
-    r.kind === 'manual'
-      ? t('reloadManual', { command: r.command })
-      : r.kind === 'error'
-        ? t('reloadError', { command: r.command })
-        : r.kind === 'partial'
-          ? t('reloadPartial', { ok: r.ok, failed: r.failed, command: r.command })
-          : t('reloadOk', { count: r.ok });
+  const r = useReload(report);
+  if (!r) return null;
   return (
     <div className="flex flex-col gap-1">
       <h3 className="font-medium text-kumo-strong">{t('reloadTitle')}</h3>
       <p className="text-kumo-default">
-        <CodeText text={text} />
+        <CodeText text={r.text} />
       </p>
     </div>
   );
@@ -112,7 +70,7 @@ export function ResultCard({
       <div className="flex flex-col gap-2">
         <h2 id="live-result" className="text-heading font-semibold text-kumo-strong">
           <StatusLabel tone={state === 'checked' ? 'warning' : look.tone}>
-            {t(heads[state])}
+            {t(resultHeads[state])}
           </StatusLabel>
         </h2>
         {meaning.map((m) => (
@@ -132,7 +90,7 @@ export function ResultCard({
         </dl>
       ) : null}
       {reportLoading ? <Bone className="h-16 w-full" /> : null}
-      {report && state === 'done' ? <ReloadLine report={report} t={t} /> : null}
+      {report && state === 'done' ? <ReloadLine report={report} /> : null}
       {report ? (
         <Files jobId={jobId} links={state === 'done' && moved > 0} password={password} />
       ) : null}
