@@ -119,3 +119,46 @@ func TestSessionReplaceIsAllOrNothing(t *testing.T) {
 		t.Fatalf("change not applied: %q", got.Username)
 	}
 }
+
+// Only sessions that still sign a browser in are listed: not one signed
+// out or ended from the list, not one past its idle or absolute timeout
+// that the janitor has not purged yet.
+func TestSessionListLeavesOutEndedSessions(t *testing.T) {
+	f := newFixture(t)
+	ctx := context.Background()
+	s := newSessions(f)
+	o := f.createOperator(t, "owner")
+	start := func() (string, Session) {
+		tok, sess, err := s.Create(ctx, o.ID, "198.51.100.1", "ua")
+		if err != nil {
+			t.Fatal(err)
+		}
+		return tok, sess
+	}
+	old, _ := start()
+	start() // never used again: idle
+	for used := time.Duration(0); used < AbsoluteTimeout-20*time.Minute; used += 20 * time.Minute {
+		f.clock.Advance(20 * time.Minute)
+		if _, err := s.Lookup(ctx, old); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f.clock.Advance(25 * time.Minute) // old is past its absolute timeout, used 25 minutes ago
+	signedOut, _ := start()
+	if err := s.Delete(ctx, signedOut); err != nil {
+		t.Fatal(err)
+	}
+	_, ended := start()
+	if ok, err := s.DeleteByID(ctx, o.ID, ended.ID); err != nil || !ok {
+		t.Fatalf("DeleteByID = %v, %v", ok, err)
+	}
+	_, live := start()
+	var rows int
+	if err := f.db.QueryRow("SELECT count(*) FROM sessions").Scan(&rows); err != nil || rows != 3 {
+		t.Fatalf("%d rows, %v; want the old, the idle and the live one", rows, err)
+	}
+	list, err := s.List(ctx, o.ID)
+	if err != nil || len(list) != 1 || list[0].ID != live.ID {
+		t.Fatalf("List = %+v, %v; want only the live session", list, err)
+	}
+}
