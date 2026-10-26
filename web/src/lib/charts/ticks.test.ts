@@ -12,6 +12,10 @@ describe('axisTicks', () => {
     expect(axisTicks('bytes', 300)).toEqual([0, 100, 200, 300]);
     expect(axisTicks('count', 76)).toEqual([0, 20, 40, 60, 80]);
   });
+  it('keeps counts whole, even with nothing counted yet', () => {
+    expect(axisTicks('count', 0)).toEqual([0, 1]);
+    expect(axisTicks('count', 3)).toEqual([0, 1, 2, 3]);
+  });
 });
 
 describe('niceStep', () => {

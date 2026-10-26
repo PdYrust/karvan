@@ -6,7 +6,9 @@ import {
   maxValue,
   nearestIndex,
   runs,
+  splitEdges,
   spreadIndexes,
+  sumValues,
 } from './series';
 
 describe('runs', () => {
@@ -84,5 +86,52 @@ describe('maxValue and spreadIndexes', () => {
     expect(spreadIndexes(3, 5)).toEqual([0, 1, 2]);
     expect(spreadIndexes(101, 5)).toEqual([0, 25, 50, 75, 100]);
     expect(spreadIndexes(10, 1)).toEqual([9]);
+  });
+});
+describe('splitEdges', () => {
+  it('dashes the first and last segment and keeps the middle solid', () => {
+    const run = [1, 2, 3, 4].map((t) => [t, t] as const);
+    expect(splitEdges([run])).toEqual({
+      solid: [
+        [
+          [2, 2],
+          [3, 3],
+        ],
+      ],
+      dashed: [
+        [
+          [1, 1],
+          [2, 2],
+        ],
+        [
+          [3, 3],
+          [4, 4],
+        ],
+      ],
+    });
+  });
+  it('leaves only dashes when a series has two points', () => {
+    const { solid, dashed } = splitEdges([
+      [
+        [1, 1],
+        [2, 2],
+      ],
+    ]);
+    expect(solid).toEqual([]);
+    expect(dashed).toHaveLength(1);
+  });
+  it('has nothing to split without segments', () => {
+    expect(splitEdges([[[1, 1]]])).toEqual({ solid: [], dashed: [] });
+    expect(splitEdges([])).toEqual({ solid: [], dashed: [] });
+  });
+});
+describe('sumValues', () => {
+  it('adds what is there and keeps missing times missing', () => {
+    expect(
+      sumValues([
+        [1, null, null],
+        [2, 3, undefined],
+      ]),
+    ).toEqual([3, 3, null]);
   });
 });

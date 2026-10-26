@@ -52,23 +52,30 @@ afterEach(() => {
 });
 
 describe('ChartPlot draw-in', () => {
-  it('draws a line and grows its area once; a poll keeps the same elements', () => {
+  it('reveals the lines once from the start of time, without an area; a poll keeps the group', () => {
     draw(5);
-    const line = host.querySelector('path.k-draw');
-    const area = host.querySelector('path.k-grow-up');
-    expect(line?.getAttribute('pathLength')).toBe('1');
-    expect(area).toBeTruthy();
+    const sweep = host.querySelector('g.k-sweep');
+    expect(sweep?.querySelectorAll('path')).toHaveLength(2);
+    expect(host.querySelectorAll('path[fill-opacity]')).toHaveLength(0);
     draw(6);
-    // The same nodes with a longer path: the animation, run on mount, does not start again.
-    expect(host.querySelector('path.k-draw')).toBe(line);
-    expect(host.querySelector('path.k-grow-up')).toBe(area);
+    // The same node: the reveal, run on mount, does not start again.
+    expect(host.querySelector('g.k-sweep')).toBe(sweep);
   });
 
-  it('fades a dashed line in, keeping its dashes', () => {
+  it('dashes only the first and last segment of a line', () => {
+    draw(5);
+    const [solid, edges] = host.querySelectorAll('g.k-sweep path');
+    expect(solid?.hasAttribute('stroke-dasharray')).toBe(false);
+    expect(edges?.getAttribute('stroke-dasharray')).toBe('4 3');
+    // Two segments, each a move and a line.
+    expect(edges?.getAttribute('d')?.match(/M/g)).toHaveLength(2);
+  });
+
+  it('dashes a second reading all along', () => {
     draw(5, false, true);
-    const line = host.querySelector('path.k-draw-fade');
-    expect(line?.getAttribute('stroke-dasharray')).toBe('4 3');
-    expect(line?.hasAttribute('pathLength')).toBe(false);
+    const [solid, dashed] = host.querySelectorAll('g.k-sweep path');
+    expect(solid?.getAttribute('d')).toBe('');
+    expect(dashed?.getAttribute('d')?.match(/M/g)).toHaveLength(1);
   });
 
   it('grows bars as one group, so a bar a poll adds does not grow on its own', () => {

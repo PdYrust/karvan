@@ -1,4 +1,4 @@
-import { areaPath, linePath, lonePoints, runs } from '../../lib/charts/series';
+import { linePath, lonePoints, runs, splitEdges } from '../../lib/charts/series';
 import { chartColor, gridColor } from './palette';
 import type { ChartSeries } from './TimeSeries';
 
@@ -62,39 +62,27 @@ function Lines({
   step: number;
 }) {
   const { x, y } = frame;
-  return series.map((s, i) => {
+  return series.map((s) => {
     const parts = runs(times, s.values, step * 1.9);
+    // A second reading (the peak) is dashed all along; others only at their unfinished edges.
+    const { solid, dashed } = s.dashed ? { solid: [], dashed: parts } : splitEdges(parts);
+    const stroke = {
+      fill: 'none',
+      stroke: chartColor(s.color),
+      strokeWidth: 1.5,
+      strokeLinejoin: 'round',
+    } as const;
     return (
       <g key={s.name}>
-        {i === 0 ? (
-          <path
-            d={areaPath(parts, x, y, y(0))}
-            fill={chartColor(s.color)}
-            fillOpacity={0.1}
-            className="k-grow-up"
-          />
-        ) : null}
-        {/* A dashed line keeps its own dashes, so it fades in instead of drawing. */}
-        <path
-          d={linePath(parts, x, y)}
-          fill="none"
-          stroke={chartColor(s.color)}
-          strokeWidth={1.5}
-          strokeLinejoin="round"
-          strokeDasharray={s.dashed ? '4 3' : undefined}
-          pathLength={s.dashed ? undefined : 1}
-          className={s.dashed ? 'k-draw-fade' : 'k-draw'}
-        />
-        <g className="k-draw-fade">
-          {lonePoints(parts).map(([pt, pv]) => (
-            <circle key={pt} cx={x(pt)} cy={y(pv)} r={2} fill={chartColor(s.color)} />
-          ))}
-        </g>
+        <path d={linePath(solid, x, y)} {...stroke} />
+        <path d={linePath(dashed, x, y)} {...stroke} strokeDasharray="4 3" />
+        {lonePoints(parts).map(([pt, pv]) => (
+          <circle key={pt} cx={x(pt)} cy={y(pv)} r={2} fill={chartColor(s.color)} />
+        ))}
       </g>
     );
   });
 }
-
 /** The drawing itself: grid, series and the crosshair at `active`. */
 export function ChartPlot({
   frame,
@@ -143,7 +131,10 @@ export function ChartPlot({
           <Bars frame={frame} times={times} series={series} step={step} active={active} />
         </g>
       ) : (
-        <Lines frame={frame} times={times} series={series} step={step} />
+        // The lines are revealed from the start of time to its end when the chart first shows.
+        <g className="k-sweep">
+          <Lines frame={frame} times={times} series={series} step={step} />
+        </g>
       )}
       {active === null ? null : (
         <g>

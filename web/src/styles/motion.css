@@ -100,11 +100,6 @@
 
 /* Charts draw in once, when they mount (components/charts). Later samples
    change the same elements, so a poll never replays this. */
-@keyframes k-draw {
-  from {
-    stroke-dashoffset: 1;
-  }
-}
 
 @keyframes k-grow-up {
   from {
@@ -118,17 +113,18 @@
   }
 }
 
-/* A line with pathLength 1: one dash as long as the line, drawn from its start. */
-.k-draw {
-  stroke-dasharray: 1;
-  animation: k-draw 800ms ease-out;
+/* A line and its area, revealed from the start of the time axis to its end
+   (components/charts). Time runs left to right in both languages, so this
+   never flips. It ends with no clip at all. */
+@keyframes k-sweep {
+  from {
+    clip-path: inset(0 100% 0 0);
+  }
 }
-
-.k-draw-fade {
-  animation: k-fade-in 800ms ease-out;
+.k-sweep {
+  animation: k-sweep 800ms ease-out;
 }
-
-/* An area or a group of bars, from the baseline at the bottom of its box. */
+/* A group of bars, from the baseline at the bottom of its box. */
 .k-grow-up {
   transform-box: fill-box;
   transform-origin: bottom;

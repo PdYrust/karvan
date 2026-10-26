@@ -13,9 +13,9 @@ export function niceStep(rough: number): number {
 }
 
 /** Round ticks from zero to the first one at or above max: 0, 25, 50, 75, 100. */
-export function niceTicks(max: number, count = 4): number[] {
+export function niceTicks(max: number, count = 4, minStep = 0): number[] {
   const top = max > 0 && Number.isFinite(max) ? max : 1;
-  const step = niceStep(top / count);
+  const step = Math.max(minStep, niceStep(top / count));
   const n = Math.max(1, Math.ceil(clean(top / step)));
   return Array.from({ length: n + 1 }, (_, i) => clean(i * step));
 }
@@ -46,6 +46,9 @@ export function axisTicks(kind: AxisKind, max: number): number[] {
     case 'bytes':
     case 'rate':
       return byteTicks(max);
+    case 'count':
+      // Users and connections come whole: no 0.5 user on the axis.
+      return niceTicks(max, 4, 1);
     default:
       return niceTicks(max);
   }
