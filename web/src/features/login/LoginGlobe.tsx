@@ -165,7 +165,7 @@ export default function LoginGlobe() {
           style={{ left: 0, top: 0, opacity: 0 }}
         >
           <span className="grid size-14 place-items-center rounded-xl bg-on-brand text-(--color-kumo-brand) ring-4 ring-on-brand/25">
-            <PanelLogo kind={kind} size={36} />
+            <PanelLogo kind={kind} size={36} onLight />
           </span>
           <span className="rounded-md bg-kumo-brand px-2 text-sm font-medium text-on-brand">
             {panelNames[kind]}

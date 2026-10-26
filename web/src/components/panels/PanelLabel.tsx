@@ -7,7 +7,7 @@ import { PanelLogo, panelNames } from './PanelLogo';
 export function PanelMark({ kind, size = 16 }: { kind: PanelKind; size?: number }) {
   if (kind === 'pasarguard') {
     return (
-      <span className="inline-grid shrink-0 place-items-center rounded-sm bg-on-brand">
+      <span className="inline-grid shrink-0 place-items-center">
         <PanelLogo kind="pasarguard" size={size} />
       </span>
     );

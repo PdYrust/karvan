@@ -9,6 +9,7 @@
 
 @custom-variant rtl (&:where([dir='rtl'], [dir='rtl'] *));
 @custom-variant ltr (&:where([dir='ltr'], [dir='ltr'] *));
+@custom-variant dark (&:where([data-mode='dark'], [data-mode='dark'] *));
 
 @layer base {
   html,
