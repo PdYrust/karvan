@@ -17,7 +17,6 @@ const en = {
   key: 'Or enter this key',
   enterCode: 'Then enter the code the app shows',
   turnOn: 'Turn on',
-  cancel: 'Cancel',
   turnedOn: 'Two-step sign-in is on.',
   turnOffTitle: 'Turn off two-step sign-in?',
   turnOffBody:
@@ -44,7 +43,6 @@ const fa: Messages<Key>['fa'] = {
   key: 'یا این کلید را وارد کنید',
   enterCode: 'بعد کدی را که برنامه نشان میدهد وارد کنید',
   turnOn: 'روشن کردن',
-  cancel: 'انصراف',
   turnedOn: 'ورود دومرحله ای روشن شد.',
   turnOffTitle: 'ورود دومرحله ای خاموش شود؟',
   turnOffBody: 'ورود فقط رمز را میخواهد. رمز خود و یک کد از برنامه را وارد کنید.',

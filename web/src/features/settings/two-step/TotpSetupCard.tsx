@@ -1,6 +1,7 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { useMutation } from '@tanstack/react-query';
 import { useId, useMemo, useState, type FormEvent } from 'react';
+import { dialogMessages } from '../../../components/dialogs/messages';
 import { InlineAlert } from '../../../components/feedback/InlineAlert';
 import { useT } from '../../../i18n/locale';
 import { confirmTotp, type TotpSetup } from '../../../lib/api/account';
@@ -38,6 +39,7 @@ export function TotpSetupCard({
   onCancel: () => void;
 }) {
   const t = useT(twoStepMessages);
+  const td = useT(dialogMessages);
   const errorText = useErrorText();
   const id = useId();
   const [code, setCode] = useState('');
@@ -79,7 +81,7 @@ export function TotpSetupCard({
             disabled={confirm.isPending}
             onClick={onCancel}
           >
-            {t('cancel')}
+            {td('cancel')}
           </Button>
           <Button
             type="submit"

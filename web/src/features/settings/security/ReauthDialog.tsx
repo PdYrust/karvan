@@ -5,6 +5,7 @@ import { useId, useState, type FormEvent, type ReactNode } from 'react';
 import { InlineAlert } from '../../../components/feedback/InlineAlert';
 import { FormField } from '../../../components/form/FormField';
 import { PasswordInput } from '../../../components/form/PasswordInput';
+import { dialogMessages } from '../../../components/dialogs/messages';
 import { useT } from '../../../i18n/locale';
 import { ApiError } from '../../../lib/api/client';
 import type { Reauth } from '../../../lib/api/account';
@@ -50,6 +51,7 @@ export function ReauthDialog({
   children?: ReactNode;
 }) {
   const t = useT(securityMessages);
+  const td = useT(dialogMessages);
   const errorText = useErrorText();
   const session = useSession();
   const id = useId();
@@ -93,7 +95,7 @@ export function ReauthDialog({
                   shape="square"
                   size="sm"
                   className="pointer-coarse:size-11"
-                  aria-label={t('close')}
+                  aria-label={td('close')}
                   disabled={pending}
                   icon={<XIcon size={18} />}
                 />
@@ -136,7 +138,7 @@ export function ReauthDialog({
                   className="pointer-coarse:h-11"
                   disabled={pending}
                 >
-                  {t('cancel')}
+                  {td('cancel')}
                 </Button>
               )}
             />
