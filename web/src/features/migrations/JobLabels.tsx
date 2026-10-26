@@ -1,4 +1,4 @@
-import { StatusLabel } from '../../components/feedback/StatusBadge';
+import { StatusBadge, StatusLabel } from '../../components/feedback/StatusBadge';
 import { MoveLabel } from '../../components/panels/PanelLabel';
 import { panelNames } from '../../components/panels/PanelLogo';
 import { useT } from '../../i18n/locale';
@@ -21,6 +21,13 @@ export function JobStateLabel({ state }: { state: JobState }) {
   const t = useT(migrationsMessages);
   const look = jobStates[state];
   return <StatusLabel tone={look.tone}>{t(look.word)}</StatusLabel>;
+}
+
+/** A job's state as a badge, for card tops and page titles. */
+export function JobStateBadge({ state }: { state: JobState }) {
+  const t = useT(migrationsMessages);
+  const look = jobStates[state];
+  return <StatusBadge tone={look.tone}>{t(look.word)}</StatusBadge>;
 }
 
 /** The old panel's logo, an arrow and the new panel's logo, read out as "Marzban to PasarGuard". */

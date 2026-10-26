@@ -2,11 +2,12 @@ import { Button } from '@cloudflare/kumo/components/button';
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router';
 import { DataTable, type Column } from '../../components/data/DataTable';
+import { RowCard } from '../../components/data/RowCard';
 import { useT } from '../../i18n/locale';
 import type { JobRow } from '../../lib/api/migrations';
-import { JobDestination, JobName, JobUsers, JobWhen } from './JobCells';
+import { JobCardName, JobDestination, JobName, JobUsers, JobWhen } from './JobCells';
 import { JobMenu, type DraftJob } from './DeleteDraft';
-import { JobStateLabel } from './JobLabels';
+import { JobMove, JobStateBadge, JobStateLabel } from './JobLabels';
 import { againPath, loginDropped } from './job-place';
 import { listMessages } from './list-messages';
 
@@ -44,26 +45,32 @@ function StartAgain({ job }: { job: JobRow }) {
 
 type OnDelete = (job: DraftJob) => void;
 
-/** On a phone a job is a card: the move and admin first, then the panel, the state and the users. */
+/** On a phone a job is a card: the move and its state, the admin, then the users and when. */
 function JobCard({ job, now, onDelete }: { job: JobRow; now: Date; onDelete: OnDelete }) {
+  const t = useT(listMessages);
+  const dropped = loginDropped(job);
   return (
-    <article className="flex flex-col gap-2 rounded-lg bg-kumo-base px-4 py-3 ring ring-kumo-hairline">
-      <div className="flex items-start justify-between gap-2">
-        <JobName job={job} to={jobPath(job)} />
-        <JobMenu job={job} onDelete={onDelete} />
-      </div>
-      <div className="text-sm">
-        <JobDestination job={job} />
-      </div>
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 border-t border-kumo-hairline pt-2 text-sm">
-        <JobState job={job} />
-        <span className="flex flex-col items-end text-kumo-subtle">
+    <RowCard
+      lead={<JobMove job={job} size={20} />}
+      badge={<JobStateBadge state={job.state} />}
+      menu={<JobMenu job={job} onDelete={onDelete} />}
+      footer={
+        <>
           <JobUsers job={job} />
           <JobWhen job={job} now={now} />
-        </span>
-      </div>
-      <StartAgain job={job} />
-    </article>
+        </>
+      }
+    >
+      <JobCardName job={job} to={jobPath(job)} />
+      {dropped ? (
+        <div className="flex flex-col items-start gap-2">
+          <p className="text-sm text-kumo-subtle">{t('loginDropped')}</p>
+          <span className="relative z-10">
+            <StartAgain job={job} />
+          </span>
+        </div>
+      ) : null}
+    </RowCard>
   );
 }
 
