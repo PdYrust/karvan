@@ -8,13 +8,12 @@ import {
   WarningIcon,
   type Icon,
 } from '@phosphor-icons/react';
-import { BarList } from '../../../components/charts/BarList';
 import { Machine } from '../../../components/text/Machine';
 import { useT } from '../../../i18n/locale';
 import type { PanelData, PanelDetail, RangeKey } from '../../../lib/api/analytics';
 import type { PanelKind } from '../../../lib/api/panels';
 import { useFormat } from '../../../lib/preferences/region';
-import { ChartCard } from '../ChartCard';
+import { TopListCard } from '../TopListCard';
 import { analyticsMessages, type AnalyticsKey } from '../messages';
 import { databaseRange } from '../range';
 
@@ -33,45 +32,42 @@ export function TablesCard({
   const t = useT(analyticsMessages);
   const fmt = useFormat();
   return (
-    <ChartCard title={t('tablesTitle')}>
-      {missing || !detail ? (
-        <Quiet>{missing ?? ''}</Quiet>
-      ) : (
-        <BarList
-          label={t('tablesTitle')}
-          items={detail.tables.map((x) => ({
-            key: x.name,
-            label: <Machine>{x.name}</Machine>,
-            hint: t('tableRows', { count: x.rows }),
-            value: x.bytes,
-            display: fmt.bytes(x.bytes),
-          }))}
-        />
-      )}
-    </ChartCard>
+    <TopListCard
+      title={t('tablesTitle')}
+      empty={<Quiet>{missing ?? ''}</Quiet>}
+      items={
+        missing || !detail
+          ? []
+          : detail.tables.map((x) => ({
+              key: x.name,
+              name: x.name,
+              label: <Machine>{x.name}</Machine>,
+              hint: t('tableRows', { count: x.rows }),
+              value: x.bytes,
+              display: fmt.bytes(x.bytes),
+            }))
+      }
+    />
   );
 }
-
 /** Admins (resellers) by how many users they own. */
 export function AdminsCard({ data }: { data: PanelData }) {
   const t = useT(analyticsMessages);
   const fmt = useFormat();
   return (
-    <ChartCard title={t('adminsTitle')} aside={fmt.number(data.admins)}>
-      <BarList
-        label={t('adminsTitle')}
-        items={data.topAdmins.map((a) => ({
-          key: a.username,
-          label: <Machine>{a.username}</Machine>,
-          hint: t('adminHint', { active: a.active, traffic: fmt.bytes(a.usedTraffic) }),
-          value: a.users,
-          display: t('adminUsers', { count: a.users }),
-        }))}
-      />
-    </ChartCard>
+    <TopListCard
+      title={t('adminsTitle')}
+      items={data.topAdmins.map((a) => ({
+        key: a.username,
+        name: a.username,
+        label: <Machine>{a.username}</Machine>,
+        hint: t('adminHint', { active: a.active, traffic: fmt.bytes(a.usedTraffic) }),
+        value: a.users,
+        display: t('adminUsers', { count: a.users }),
+      }))}
+    />
   );
 }
-
 /** Node states both panels report; status is an icon and a word, never a color alone. */
 const nodeStates: Record<string, { icon: Icon; tone: string }> = {
   connected: { icon: CheckCircleIcon, tone: 'text-kumo-success' },
@@ -103,25 +99,20 @@ export function NodesCard({ data }: { data: PanelData }) {
   const t = useT(analyticsMessages);
   const fmt = useFormat();
   return (
-    <ChartCard title={t('nodesTitle')} aside={fmt.number(data.nodes.length)}>
-      {data.nodes.length === 0 ? (
-        <Quiet>{t('noNodes')}</Quiet>
-      ) : (
-        <BarList
-          label={t('nodesTitle')}
-          items={data.nodes.map((n) => ({
-            key: n.name,
-            label: <bdi>{n.name}</bdi>,
-            hint: <NodeState status={n.status} />,
-            value: n.uplink + n.downlink,
-            display: t('nodeTraffic', { traffic: fmt.bytes(n.uplink + n.downlink) }),
-          }))}
-        />
-      )}
-    </ChartCard>
+    <TopListCard
+      title={t('nodesTitle')}
+      empty={<Quiet>{t('noNodes')}</Quiet>}
+      items={data.nodes.map((n) => ({
+        key: n.name,
+        name: n.name,
+        label: <bdi>{n.name}</bdi>,
+        hint: <NodeState status={n.status} />,
+        value: n.uplink + n.downlink,
+        display: t('nodeTraffic', { traffic: fmt.bytes(n.uplink + n.downlink) }),
+      }))}
+    />
   );
 }
-
 /** Apps that fetch subscriptions: by update for PasarGuard, by user for Marzban. */
 export function ClientsCard({
   detail,
@@ -138,26 +129,27 @@ export function ClientsCard({
   const r = databaseRange(range);
   const within = t(r === '1h' ? 'in_24h' : `in_${r}`);
   const unit = kind === 'pasarguard' ? 'clientUpdates' : 'clientUsers';
-  const name = (n: string) =>
-    n === 'other' || n === 'Browser' ? t(`client_${n}`) : <bdi dir="ltr">{n}</bdi>;
+  const named = (n: string) => n === 'other' || n === 'Browser';
   const clients = detail?.clients ?? [];
   return (
-    <ChartCard title={t('clientsTitle')}>
-      {missing ? (
-        <Quiet>{missing}</Quiet>
-      ) : clients.length === 0 ? (
-        <Quiet>{t('noClients', { range: within })}</Quiet>
-      ) : (
-        <BarList
-          label={t('clientsTitle')}
-          items={clients.map((c) => ({
-            key: c.name,
-            label: name(c.name),
-            value: c.count,
-            display: t(unit, { count: c.count }),
-          }))}
-        />
-      )}
-    </ChartCard>
+    <TopListCard
+      title={t('clientsTitle')}
+      empty={<Quiet>{missing ?? t('noClients', { range: within })}</Quiet>}
+      items={
+        missing
+          ? []
+          : clients.map((c) => ({
+              key: c.name,
+              name: named(c.name) ? t(`client_${c.name as 'other' | 'Browser'}`) : c.name,
+              label: named(c.name) ? (
+                t(`client_${c.name as 'other' | 'Browser'}`)
+              ) : (
+                <bdi dir="ltr">{c.name}</bdi>
+              ),
+              value: c.count,
+              display: t(unit, { count: c.count }),
+            }))
+      }
+    />
   );
 }

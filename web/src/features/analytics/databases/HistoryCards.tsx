@@ -6,6 +6,7 @@ import type { PanelDetail, RangeKey } from '../../../lib/api/analytics';
 import type { AxisKind } from '../../../lib/charts/ticks';
 import { useFormat } from '../../../lib/preferences/region';
 import { ChartCard } from '../ChartCard';
+import { GroupBy, useGrouping } from '../GroupBy';
 import { analyticsMessages } from '../messages';
 import { databaseRange, rangeSpan } from '../range';
 import { bucketSize, day, hour, sumBuckets, type Buckets } from './history';
@@ -27,29 +28,41 @@ function BarsCard({
   format,
   within,
   missing,
+  total,
 }: {
   title: string;
   buckets: Buckets;
   series: BarSeries[];
+  /** The one series the parts add up to, for "Group by: None". */
+  total?: BarSeries;
   kind: AxisKind;
   format: (n: number) => string;
   within: string;
   missing: string | undefined;
 }) {
   const t = useT(analyticsMessages);
-  const drawn = series.map((s) => ({
+  const [grouped, setGrouped] = useGrouping();
+  const shown = total && !grouped ? [total] : series;
+  const drawn = shown.map((s) => ({
     ...s,
     values: s.values.every((v) => v === 0) ? s.values.map(() => null) : s.values,
   }));
   const first = buckets.times[0] ?? 0;
   const last = buckets.times.at(-1) ?? first;
   return (
-    <ChartCard title={title}>
+    <ChartCard
+      title={title}
+      aside={
+        total && !missing ? (
+          <GroupBy by="groupDirection" grouped={grouped} onChange={setGrouped} />
+        ) : undefined
+      }
+    >
       {missing ? (
         <p className="text-sm text-kumo-subtle">{missing}</p>
       ) : (
         <>
-          <Legend items={series} />
+          <Legend items={shown} />
           <TimeSeries
             label={t('chartLabel', { chart: title, range: within })}
             times={buckets.times}
@@ -111,6 +124,12 @@ export function TrafficCard({ detail, missing, end, range }: HistoryProps) {
         { name: t('seriesDownload'), color: 1, values: down, value: fmt.bytes(sum(down)) },
         { name: t('seriesUpload'), color: 2, values: up, value: fmt.bytes(sum(up)) },
       ]}
+      total={{
+        name: t('seriesTotal'),
+        color: 1,
+        values: down.map((d, i) => d + (up[i] ?? 0)),
+        value: fmt.bytes(sum(down) + sum(up)),
+      }}
       kind="bytes"
       format={fmt.bytes}
       within={within}

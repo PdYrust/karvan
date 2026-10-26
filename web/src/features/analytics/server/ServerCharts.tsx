@@ -4,9 +4,46 @@ import { useT } from '../../../i18n/locale';
 import type { RangeKey, Sample } from '../../../lib/api/analytics';
 import { useFormat } from '../../../lib/preferences/region';
 import { ChartCard } from '../ChartCard';
+import { GroupBy, useGrouping } from '../GroupBy';
 import { analyticsMessages } from '../messages';
 import type { ServerView } from '../server-view';
-import { serverCharts } from './charts';
+import { serverCharts, type ChartSpec } from './charts';
+
+function ServerChart({
+  spec,
+  view,
+  within,
+}: {
+  spec: ChartSpec;
+  view: ServerView;
+  within: string;
+}) {
+  const t = useT(analyticsMessages);
+  const [grouped, setGrouped] = useGrouping();
+  const series = spec.groups && !grouped ? spec.groups.total : spec.series;
+  return (
+    <ChartCard
+      title={spec.title}
+      aside={
+        spec.groups ? (
+          <GroupBy by={spec.groups.by} grouped={grouped} onChange={setGrouped} />
+        ) : undefined
+      }
+    >
+      <Legend items={series} />
+      <TimeSeries
+        label={t('chartLabel', { chart: spec.title, range: within })}
+        times={view.times}
+        series={series}
+        domain={view.domain}
+        step={view.step}
+        kind={spec.kind}
+        format={spec.format}
+        empty={t('noData', { range: within })}
+      />
+    </ChartCard>
+  );
+}
 
 /** CPU, load, memory, network, disk activity and connections over the range. */
 export function ServerCharts({
@@ -24,19 +61,7 @@ export function ServerCharts({
   return (
     <div className="grid gap-4 lg:grid-cols-2">
       {serverCharts(view, now, t, fmt).map((c) => (
-        <ChartCard key={c.key} title={c.title}>
-          <Legend items={c.series} />
-          <TimeSeries
-            label={t('chartLabel', { chart: c.title, range: within })}
-            times={view.times}
-            series={c.series}
-            domain={view.domain}
-            step={view.step}
-            kind={c.kind}
-            format={c.format}
-            empty={t('noData', { range: within })}
-          />
-        </ChartCard>
+        <ServerChart key={c.key} spec={c} view={view} within={within} />
       ))}
     </div>
   );

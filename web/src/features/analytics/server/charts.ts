@@ -2,7 +2,7 @@ import type { SeriesColor } from '../../../components/charts/palette';
 import type { ChartSeries } from '../../../components/charts/TimeSeries';
 import type { Translate } from '../../../i18n/core';
 import type { Sample } from '../../../lib/api/analytics';
-import { maxValue, type Value } from '../../../lib/charts/series';
+import { maxValue, sumValues, type Value } from '../../../lib/charts/series';
 import type { AxisKind } from '../../../lib/charts/ticks';
 import type { Format } from '../../../lib/format/format';
 import type { AnalyticsKey } from '../messages';
@@ -17,6 +17,8 @@ export interface ChartSpec {
   kind: AxisKind;
   format: (v: number) => string;
   series: LegendSeries[];
+  /** A chart that can be split: what it is split by, and the one line it shows when it is not. */
+  groups?: { by: 'groupCore' | 'groupDirection'; total: LegendSeries[] };
 }
 
 export function mean(values: readonly Value[]): number | undefined {
@@ -115,12 +117,41 @@ export function serverCharts(
         ),
       ];
 
+  const sum = (a: readonly Value[], b: readonly Value[], live: number) => {
+    const values = sumValues([a, b]);
+    return [s(t('seriesTotal'), 1, values, v.live ? fmt.rate(live) : moved(values))];
+  };
+  const byCore = v.live && cpu.length > 1;
   return [
-    { key: 'cpu', title: t('cpu'), kind: 'percent', format: pct, series: cpu },
+    {
+      key: 'cpu',
+      title: t('cpu'),
+      kind: 'percent',
+      format: pct,
+      series: cpu,
+      groups: byCore ? { by: 'groupCore', total: cpu.slice(0, 1) } : undefined,
+    },
     { key: 'load', title: t('chartLoad'), kind: 'number', format: load2, series: load },
     { key: 'memory', title: t('memory'), kind: 'bytes', format: fmt.bytes, series: memory },
-    { key: 'network', title: t('network'), kind: 'rate', format: fmt.rate, series: network },
-    { key: 'disk', title: t('chartDisk'), kind: 'rate', format: fmt.rate, series: disk },
+    {
+      key: 'network',
+      title: t('network'),
+      kind: 'rate',
+      format: fmt.rate,
+      series: network,
+      groups: { by: 'groupDirection', total: sum(v.netRx, v.netTx, now.netRx + now.netTx) },
+    },
+    {
+      key: 'disk',
+      title: t('chartDisk'),
+      kind: 'rate',
+      format: fmt.rate,
+      series: disk,
+      groups: {
+        by: 'groupDirection',
+        total: sum(v.diskRead, v.diskWrite, now.diskRead + now.diskWrite),
+      },
+    },
     { key: 'tcp', title: t('chartTcp'), kind: 'count', format: count, series: tcp },
   ];
 }
