@@ -18,6 +18,8 @@ export interface NavItem {
   to: string;
   /** The `g` shortcut letter, as a physical key code. */
   key: string;
+  /** Sub-pages under the row: this server, then one per panel. */
+  perPanel?: boolean;
 }
 
 export interface NavGroup {
@@ -30,7 +32,7 @@ export const nav: NavGroup[] = [
   {
     items: [
       { label: 'navOverview', icon: SquaresFourIcon, to: '/', key: 'KeyO' },
-      { label: 'navAnalytics', icon: ChartLineIcon, to: '/analytics', key: 'KeyA' },
+      { label: 'navAnalytics', icon: ChartLineIcon, to: '/analytics', key: 'KeyA', perPanel: true },
     ],
   },
   {
