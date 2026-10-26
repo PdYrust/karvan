@@ -1,5 +1,4 @@
 dist
 coverage
 pnpm-lock.yaml
-src/features/login/globe-land.ts
 public/favicon.svg

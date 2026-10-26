@@ -4,26 +4,29 @@ import { ThemeToggle } from '../../components/preferences/ThemeToggle';
 import { useT } from '../../i18n/locale';
 import { loginMessages } from './messages';
 
-// Loaded after the form, so the globe never slows down signing in.
-const LoginGlobe = lazy(() => import('./LoginGlobe'));
+// Loaded after the form, so the wall never slows down signing in.
+const LoginWall = lazy(() => import('./LoginWall'));
 
 const onBrandButton = 'text-on-brand hover:bg-on-brand/15';
 
-/** The brand side of the sign-in page: a spinning globe moving users between panels. */
+/**
+ * The brand side of the sign-in page, the firewall as a wall of hexagonal
+ * columns. On small screens it is a band under the form, with nothing on it.
+ */
 export function LoginShowcase() {
   const t = useT(loginMessages);
   return (
-    <section className="relative hidden min-h-dvh flex-col overflow-hidden bg-kumo-brand text-on-brand lg:flex">
+    <section className="relative flex h-[22dvh] max-h-44 min-h-28 flex-col overflow-hidden bg-kumo-brand text-on-brand lg:h-auto lg:max-h-none lg:min-h-dvh">
       <Suspense fallback={null}>
-        <LoginGlobe />
+        <LoginWall />
       </Suspense>
 
-      <div className="relative flex justify-end gap-1 p-6">
+      <div className="relative hidden justify-end gap-1 p-6 lg:flex">
         <LanguageSwitch className={onBrandButton} />
         <ThemeToggle className={onBrandButton} />
       </div>
 
-      <div className="relative flex max-w-lg flex-col px-14 pt-4">
+      <div className="relative hidden max-w-lg flex-col px-14 pt-4 lg:flex">
         <p dir="ltr" className="self-start font-mono text-sm text-on-brand/80">
           Marzban ⇄ PasarGuard
         </p>

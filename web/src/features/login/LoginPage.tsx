@@ -15,8 +15,8 @@ export function LoginPage() {
   }, [t]);
 
   return (
-    <div className="grid min-h-dvh lg:grid-cols-2">
-      <main className="flex min-h-dvh flex-col bg-kumo-base px-5 py-5 sm:px-8">
+    <div className="flex min-h-dvh flex-col lg:grid lg:grid-cols-2">
+      <main className="flex flex-1 flex-col bg-kumo-base px-5 py-5 sm:px-8 lg:min-h-dvh">
         <header className="flex items-center justify-between gap-3">
           <Wordmark />
           {/* On wide screens these sit on the blue side instead. */}

@@ -21,8 +21,10 @@
   --color-shimmer: light-dark(oklch(100% 0 0 / 60%), oklch(100% 0 0 / 8%));
 }
 
-/* Static: charts pick their colors by number at run time, which a class scan cannot see. */
+/* Static: charts and the sign-in wall read their colors at run time, which a class scan cannot see. */
 @theme static {
+  /* The sign-in wall's shaded sides and gaps: Tailwind's blue-900, as in Kumo's dark info banner. */
+  --color-wall-shade: oklch(37.9% 0.146 265.522);
   /* Chart series: Kumo's ChartPalette.categorical, light and dark. */
   --color-chart-1: light-dark(#4290f0, #4290f0);
   --color-chart-2: light-dark(#f5b647, #eeb720);
