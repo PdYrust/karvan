@@ -1,7 +1,8 @@
 import { Suspense } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
-import { PageHeader } from '../../components/layout/PageHeader';
-import { RouteTabs, type RouteTab } from '../../components/layout/RouteTabs';
+import type { RouteTab } from '../../components/layout/RouteTabs';
+import { SegmentTabs } from '../../components/layout/SegmentTabs';
+import { PageMenu } from './PageMenu';
 import { usePageTitle } from '../../components/layout/use-page-title';
 import { PanelMark } from '../../components/panels/PanelLabel';
 import { useT } from '../../i18n/locale';
@@ -11,14 +12,13 @@ import { analyticsMessages } from './messages';
 import { RangeControl } from './RangeControl';
 import { useRange } from './range';
 import { TabSkeleton } from './states';
-import { usePanelTabs, useRefreshAnalytics } from './use-analytics';
+import { usePanelTabs } from './use-analytics';
 
 /** Analytics with a tab for this server and one per panel database, like the dashboard's analytics. */
 export function AnalyticsPage() {
   const t = useT(analyticsMessages);
   usePageTitle(t('title'));
   const [range, setRange] = useRange();
-  const { refresh, fetching } = useRefreshAnalytics();
   const { search, pathname } = useLocation();
   const known = usePanels().data ?? [];
   const panels = usePanelTabs().data ?? [];
@@ -40,19 +40,22 @@ export function AnalyticsPage() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader
-        title={t('title')}
-        description={t('description')}
-        actions={
-          <RangeControl
-            range={range}
-            onRange={setRange}
-            onRefresh={refresh}
-            refreshing={fetching}
-          />
-        }
-        tabs={<RouteTabs label={t('tabs')} tabs={tabs} />}
-      />
+      {/* Like the dashboard's zone analytics: no title block, one sticky row of tabs and controls. */}
+      <h1 className="sr-only">{t('title')}</h1>
+      <div className="sticky top-14 z-[5] flex items-center gap-3 border-b border-kumo-hairline bg-kumo-canvas px-4 py-2 sm:px-8">
+        <div className="min-w-0 flex-1">
+          <div className="flex">
+            <SegmentTabs
+              label={t('tabs')}
+              tabs={tabs}
+              scrollStart={t('tabsBack')}
+              scrollEnd={t('tabsMore')}
+            />
+          </div>
+        </div>
+        <RangeControl range={range} onRange={setRange} />
+        <PageMenu />
+      </div>
       <div className="flex max-w-[1400px] flex-col gap-4 p-4 sm:p-8">
         {/* A tab's code loads under the header, so the header stays put. */}
         <Suspense fallback={<TabSkeleton label={t('title')} />}>

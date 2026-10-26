@@ -1,6 +1,6 @@
 /* Only the Kumo components Karvan uses are scanned, which keeps the stylesheet
    small. Add a component's chunk name here when you start using it. */
-@source '../../node_modules/@cloudflare/kumo/dist/chunks/{badge,button,button-group,checkbox,command-palette,dialog,dropdown,field,input,layer-card,loader,radio,select,switch,toast,tooltip}-*.js';
+@source '../../node_modules/@cloudflare/kumo/dist/chunks/{badge,button,checkbox,command-palette,dialog,dropdown,field,input,layer-card,loader,radio,select,switch,toast,tooltip}-*.js';
 @import '@cloudflare/kumo/styles';
 @import 'tailwindcss';
 @import './tokens.css';

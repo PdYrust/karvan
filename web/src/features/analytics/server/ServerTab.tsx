@@ -38,7 +38,7 @@ export function ServerTab() {
   const view = serverView(stats, rangeSpan[range]);
   return (
     <Reveal on={load.reveal}>
-      <ServerTiles stats={stats} now={stats.now} view={view} />
+      <ServerTiles stats={stats} now={stats.now} view={view} range={range} />
       <ServerCharts now={stats.now} view={view} range={range} />
       <div className="grid items-start gap-4 lg:grid-cols-2">
         <div className="flex flex-col gap-4">

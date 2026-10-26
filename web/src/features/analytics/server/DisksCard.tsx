@@ -19,7 +19,9 @@ export function DisksCard({ disks }: { disks: readonly Disk[] }) {
                 <bdi dir="ltr" className="truncate font-mono text-sm text-kumo-default">
                   {d.mount}
                 </bdi>
-                <span className="text-sm text-kumo-subtle">{d.type}</span>
+                <bdi dir="ltr" className="text-sm text-kumo-subtle">
+                  {d.type}
+                </bdi>
               </span>
               <span className="shrink-0 text-sm font-medium text-kumo-strong tabular">
                 {fmt.percent(d.used / (d.total || 1), 0)}

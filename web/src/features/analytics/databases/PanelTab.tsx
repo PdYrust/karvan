@@ -69,7 +69,7 @@ export function PanelTab() {
       : t(detailProblem === 'pending' ? 'pending' : 'detailUnreachable');
   return (
     <Reveal on={load.reveal}>
-      <PanelTiles panel={panel} data={panel.data} step={step} domain={domain} />
+      <PanelTiles panel={panel} data={panel.data} step={step} domain={domain} range={range} />
       {/* Pairs of about the same height share a row; the lists below vary, so they stack in two columns. */}
       <div className="grid gap-4 lg:grid-cols-2">
         <StatusCard data={panel.data} />

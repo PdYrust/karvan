@@ -1,5 +1,4 @@
 import { lazy, Suspense } from 'react';
-import { StatTileSkeleton } from '../../components/charts/StatTile';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { usePageTitle } from '../../components/layout/use-page-title';
 import { useT } from '../../i18n/locale';
@@ -24,9 +23,9 @@ function AnalyticsSkeleton({ label }: { label: string }) {
   return (
     <div role="status" aria-label={label} className="flex flex-col gap-4">
       <Bone className="h-6 w-28" />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <StatTileSkeleton key={i} />
+      <div className="grid gap-4 lg:grid-cols-2">
+        {[0, 1].map((i) => (
+          <Bone key={i} className="h-80 w-full rounded-lg" />
         ))}
       </div>
     </div>

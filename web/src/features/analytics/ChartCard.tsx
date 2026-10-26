@@ -35,7 +35,7 @@ export function ChartCard({
   return (
     <LayerCard render={<section aria-labelledby={of ? `${id} ${of}` : id} />} className={className}>
       <LayerCard.Secondary className="justify-between gap-3">
-        <Heading id={id} className="truncate">
+        <Heading id={id} className="line-clamp-2 min-w-0">
           {title}
         </Heading>
         {aside ? <span className="shrink-0 text-sm font-normal">{aside}</span> : null}

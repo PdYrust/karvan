@@ -1,7 +1,7 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { WarningCircleIcon } from '@phosphor-icons/react';
 import type { ReactNode } from 'react';
-import { StatTileSkeleton } from '../../components/charts/StatTile';
+import { CompactCardSkeleton } from '../../components/charts/CompactCard';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { CodeText } from '../../components/text/CodeText';
@@ -14,13 +14,13 @@ import { analyticsMessages } from './messages';
 /** The icon of a notice: large and light, as in an empty state. */
 export const noticeIcon = { size: 40, weight: 'light', 'aria-hidden': true } as const;
 
-/** A tab while its first numbers load: tiles and two cards, the shape it will take. */
+/** A tab while its first numbers load: compact cards and two charts, the shape it will take. */
 export function TabSkeleton({ label }: { label: string }) {
   return (
     <div role="status" aria-label={label} className="flex flex-col gap-4">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {[0, 1, 2, 3].map((i) => (
-          <StatTileSkeleton key={i} />
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {[0, 1, 2, 3, 4].map((i) => (
+          <CompactCardSkeleton key={i} />
         ))}
       </div>
       <div className="grid gap-4 lg:grid-cols-2">

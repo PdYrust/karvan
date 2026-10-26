@@ -1,5 +1,4 @@
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
 import {
   getPanelStats,
   getPanelsStats,
@@ -7,7 +6,6 @@ import {
   type RangeKey,
   type ServerStats,
 } from '../../lib/api/analytics';
-import { getSession } from '../../lib/api/session';
 import { databaseRange } from './range';
 import { mergeLive } from './server-view';
 
@@ -57,20 +55,4 @@ export function usePanelTabs() {
     staleTime: 60_000,
     select: (d) => d.panels,
   });
-}
-
-/**
- * The refresh button. Polls do not count as activity, but the operator
- * pressing refresh does, so the session hears about it first.
- */
-export function useRefreshAnalytics() {
-  const qc = useQueryClient();
-  // Only a refresh the operator asked for spins the icon, not every poll.
-  const [fetching, setFetching] = useState(false);
-  const refresh = () => {
-    setFetching(true);
-    void getSession().catch(() => undefined);
-    void qc.invalidateQueries({ queryKey: analyticsKey }).finally(() => setFetching(false));
-  };
-  return { refresh, fetching };
 }

@@ -46,10 +46,10 @@ const en = {
   cardFailed: "Couldn't load this.",
 
   analyticsTitle: 'Analytics',
-  allAnalytics: 'All analytics',
-  thisServer: 'This server',
-  cacheHits: '{rate} from cache',
-  journalMode: 'Journal mode `{mode}`',
+  detailLine: 'Trend and leading contributors for the selected time',
+  trendTitle: 'Over time',
+  contributorsTitle: 'Leading contributors',
+  memAvailable: 'Available',
 };
 
 export type OverviewKey = keyof typeof en;
@@ -100,10 +100,10 @@ const fa: Messages<OverviewKey>['fa'] = {
   cardFailed: 'بارگذاری نشد.',
 
   analyticsTitle: 'آمار',
-  allAnalytics: 'همه آمار',
-  thisServer: 'این سرور',
-  cacheHits: '{rate} از کش',
-  journalMode: 'حالت ژورنال `{mode}`',
+  detailLine: 'روند و بیشترین سهم ها در بازه انتخاب شده',
+  trendTitle: 'در طول زمان',
+  contributorsTitle: 'بیشترین سهم ها',
+  memAvailable: 'آزاد',
 };
 
 export const overviewMessages: Messages<OverviewKey> = { en, fa };
