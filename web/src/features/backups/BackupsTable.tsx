@@ -1,15 +1,21 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
-import { ArrowCounterClockwiseIcon, DotsThreeIcon, TrashIcon } from '@phosphor-icons/react';
+import {
+  ArrowCounterClockwiseIcon,
+  DotsThreeIcon,
+  LockSimpleIcon,
+  TrashIcon,
+} from '@phosphor-icons/react';
 import { DataTable, type Column } from '../../components/data/DataTable';
+import { CardFacts, RowCard } from '../../components/data/RowCard';
 import { PanelLabel } from '../../components/panels/PanelLabel';
 import { Machine } from '../../components/text/Machine';
 import { useT } from '../../i18n/locale';
 import { panelKind } from '../../lib/api/panels';
 import { backupDatabase } from '../../lib/api/safemode';
 import { useFormat } from '../../lib/preferences/region';
-import { JobName } from '../migrations/JobCells';
-import { JobStateLabel } from '../migrations/JobLabels';
+import { JobCardName, JobName } from '../migrations/JobCells';
+import { JobMove, JobStateBadge, JobStateLabel } from '../migrations/JobLabels';
 import { controlMessages, controlText } from '../panels/control';
 import type { BackupRow } from './backup-rows';
 import { backupsMessages } from './messages';
@@ -110,27 +116,41 @@ function State({ row }: { row: BackupRow }) {
   return row.backup.jobState ? <JobStateLabel state={row.backup.jobState} /> : null;
 }
 
-/** On a phone a backup is a card: the move first, then the panel and the backup's facts. */
+/** On a phone a backup is a card: the move and the job's state, the admin, the facts, then the id. */
 function BackupCard({ row, now, actions }: { row: BackupRow; now: Date; actions: BackupActions }) {
+  const t = useT(backupsMessages);
   const fmt = useFormat();
+  const why = useBlockWords()(row);
   return (
-    <article className="flex flex-col gap-2 rounded-lg bg-kumo-base px-4 py-3 ring ring-kumo-hairline">
-      <div className="flex items-start justify-between gap-2">
-        <JobName job={row.job} to={jobPath(row)} />
-        <BackupMenu row={row} actions={actions} />
-      </div>
-      <div className="text-sm">
-        <Panel row={row} />
-      </div>
-      <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1 border-t border-kumo-hairline pt-2 text-sm">
-        <Database row={row} />
-        <span className="flex flex-col items-end text-kumo-subtle">
-          <span className="tabular">{fmt.bytes(row.backup.size)}</span>
-          <Taken row={row} now={now} />
-        </span>
-      </div>
-      <State row={row} />
-    </article>
+    <RowCard
+      lead={<JobMove job={row.job} size={20} />}
+      badge={row.backup.jobState ? <JobStateBadge state={row.backup.jobState} /> : null}
+      menu={<BackupMenu row={row} actions={actions} />}
+      footer={
+        <>
+          <Machine>{row.backup.id}</Machine>
+          {why ? (
+            <span className="inline-flex min-w-0 items-center gap-1.5">
+              <LockSimpleIcon size={14} aria-hidden="true" className="shrink-0" />
+              {why}
+            </span>
+          ) : null}
+        </>
+      }
+    >
+      <JobCardName job={row.job} to={jobPath(row)} destination={false} />
+      <CardFacts
+        facts={[
+          { label: t('colPanel'), value: <Panel row={row} />, wide: true },
+          { label: t('colDatabase'), value: backupDatabase[row.backup.method] },
+          {
+            label: t('colSize'),
+            value: <span className="tabular">{fmt.bytes(row.backup.size)}</span>,
+          },
+          { label: t('colTaken'), value: <Taken row={row} now={now} /> },
+        ]}
+      />
+    </RowCard>
   );
 }
 
