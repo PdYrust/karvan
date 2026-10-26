@@ -1,10 +1,8 @@
 import { ArchiveIcon } from '@phosphor-icons/react';
-import { useMemo } from 'react';
-import { useWidth } from '../../components/charts/use-width';
 import { panelNames } from '../../components/panels/PanelLogo';
 import { useT } from '../../i18n/locale';
-import { curvesFor, type Lane } from './dots';
-import { ArcLayer, Mark, sceneHeight, type SceneEnds } from './FlowScene';
+import type { Lane } from './dots';
+import { ArcLayer, Mark, sceneLayout, useSceneCurves, type SceneEnds } from './FlowScene';
 import { liveMessages } from './messages';
 import { SceneTile } from './SceneTile';
 import { useDots } from './use-dots';
@@ -31,21 +29,19 @@ export function RewindScene({
   online: boolean;
 }) {
   const t = useT(liveMessages);
-  const [measure, width] = useWidth<HTMLDivElement>();
-  const curves = useMemo(() => (width > 0 ? curvesFor(width, sceneHeight, false) : null), [width]);
-  const [box, dots] = useDots(curves, lanes, 'forward');
+  const scene = useSceneCurves(false);
+  const [box, dots] = useDots(scene.curves, lanes, 'forward');
   return (
-    <div
-      ref={box}
-      className="grid grid-cols-[minmax(0,6.5rem)_1fr_minmax(0,6.5rem)] items-center sm:grid-cols-[10rem_1fr_10rem]"
-    >
+    <div ref={box} className={sceneLayout(scene.stacked)}>
       <SceneTile
+        row={scene.stacked}
         mark={<ArchiveIcon size={28} aria-hidden="true" className="text-kumo-default" />}
         name={t('backup')}
         detail={backupId}
       />
-      <ArcLayer measure={measure} width={width} curves={curves} circle={dots.circle} />
+      <ArcLayer scene={scene} circle={dots.circle} />
       <SceneTile
+        row={scene.stacked}
         dim={!online}
         mark={<Mark kind={ends.to.kind} />}
         name={ends.to.kind ? panelNames[ends.to.kind] : ends.to.name}

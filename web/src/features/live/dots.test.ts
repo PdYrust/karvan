@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   batchDots,
+  curvesDown,
   curvesFor,
   launch,
   maxDots,
@@ -10,6 +11,7 @@ import {
   pointOn,
   progressOf,
   sinkDots,
+  sinkEnd,
   sinkLabel,
   staggerMs,
   travelMs,
@@ -101,5 +103,27 @@ describe('the scene curves', () => {
     expect(placeOf(sunk, travelMs - 1, arc, sink)?.y).toBeGreaterThan(115);
     expect(placeOf(back, travelMs, arc, sink)).toBeNull();
     expect(placeOf(back, -1, arc, sink)).toBeNull();
+  });
+});
+
+describe('the standing scene curves', () => {
+  it('run straight down the middle from the top to the bottom', () => {
+    const { arc, sink } = curvesDown(300, 120, false);
+    expect(sink).toBeNull();
+    expect(pointOn(arc, 0)).toEqual({ x: 150, y: 0 });
+    expect(pointOn(arc, 0.5)).toEqual({ x: 150, y: 60 });
+    expect(pointOn(arc, 1)).toEqual({ x: 150, y: 120 });
+  });
+  it('branch off the line toward the end edge, where the sink sits', () => {
+    const { sink } = curvesDown(300, 120, true);
+    if (!sink) throw new Error('no sink');
+    expect(pointOn(sink, 0)).toEqual({ x: 150, y: 0 });
+    expect(pointOn(sink, 1)).toEqual({ x: 300 * sinkEnd.x, y: 120 * sinkEnd.y });
+  });
+  it('send a dot going back up from the bottom', () => {
+    const { arc } = curvesDown(300, 120, false);
+    const [back] = launch(0, 1, 'back');
+    if (!back) throw new Error('no dot');
+    expect(placeOf(back, 0, arc, null)).toEqual({ x: 150, y: 120 });
   });
 });

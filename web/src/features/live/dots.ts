@@ -108,6 +108,33 @@ export function curvesFor(w: number, h: number, sink: boolean): { arc: Curve; si
   };
 }
 
+/** Where the sink's branch ends in a standing scene, as shares of its width and height. */
+export const sinkEnd = { x: 0.68, y: 0.5 } as const;
+/**
+ * The curves of a standing scene (phones), w by h pixels: a straight line
+ * down the middle from the sending panel above to the receiving one below,
+ * and the sink's branch off it toward the end edge.
+ */
+export function curvesDown(
+  w: number,
+  h: number,
+  sink: boolean,
+): { arc: Curve; sink: Curve | null } {
+  const x = w / 2;
+  const arc: Curve = [
+    { x, y: 0 },
+    { x, y: h / 3 },
+    { x, y: (2 * h) / 3 },
+    { x, y: h },
+  ];
+  if (!sink) return { arc, sink: null };
+  const end = { x: w * sinkEnd.x, y: h * sinkEnd.y };
+  return {
+    arc,
+    sink: [{ x, y: 0 }, { x, y: h * 0.3 }, { x: end.x - w * 0.08, y: end.y }, end],
+  };
+}
+
 /** Where a dot is now, or null when it has not left or has arrived. */
 export function placeOf(d: Dot, now: number, arc: Curve, sink: Curve | null): Point | null {
   const t = progressOf(d, now);
