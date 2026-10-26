@@ -1,6 +1,7 @@
 import { RefreshButton } from '@cloudflare/kumo/components/button';
+import { cn } from '@cloudflare/kumo/utils';
 import { Select } from '@cloudflare/kumo/components/select';
-import { useId } from 'react';
+import { useId, type ReactNode } from 'react';
 import { SearchField } from '../../components/data/SearchField';
 import { useT } from '../../i18n/locale';
 import { PanelMark } from '../../components/panels/PanelLabel';
@@ -35,6 +36,7 @@ export function JobsToolbar({
   onState,
   refreshing,
   onRefresh,
+  children,
 }: {
   search: string;
   onSearch: (q: string) => void;
@@ -44,6 +46,8 @@ export function JobsToolbar({
   onState: (s: StateFilter) => void;
   refreshing: boolean;
   onRefresh: () => void;
+  /** Actions after refresh, such as starting a migration. */
+  children?: ReactNode;
 }) {
   const t = useT(listMessages);
   const id = useId();
@@ -55,7 +59,11 @@ export function JobsToolbar({
         label={searchLabel}
         value={search}
         onChange={onSearch}
-        className="min-w-56 flex-1 basis-full sm:basis-0"
+        // On phones an action (+) shares the search row; filters and refresh go under it.
+        className={cn(
+          'min-w-0 flex-1 max-sm:order-first sm:min-w-56 sm:basis-0',
+          children ? 'basis-[calc(100%-4rem)]' : 'basis-full',
+        )}
       />
       <span id={`${id}-state`} className="sr-only">
         {t('stateLabel')}
@@ -95,6 +103,7 @@ export function JobsToolbar({
         onClick={onRefresh}
         className="pointer-coarse:size-11"
       />
+      {children ? <div className="flex max-sm:-order-1">{children}</div> : null}
     </div>
   );
 }

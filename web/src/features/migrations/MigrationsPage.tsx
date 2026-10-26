@@ -26,19 +26,9 @@ export function MigrationsPage() {
   const [state, setState] = useStateFilter(stateFilters);
   const { panel, settled } = useCurrentPanel();
   const list = useJobList(statesOf(state), panel?.id, search.trim() !== '', settled);
-  const newMigration = (
-    <Button
-      variant="primary"
-      icon={<PlusIcon size={16} />}
-      className="pointer-coarse:h-11"
-      onClick={() => void navigate(newMigrationPath)}
-    >
-      {t('newMigration')}
-    </Button>
-  );
   return (
     <div className="flex flex-col">
-      <PageHeader title={t('title')} description={t('description')} actions={newMigration} />
+      <PageHeader title={t('title')} description={t('description')} />
       <div className="flex max-w-[1400px] flex-col gap-4 p-4 sm:p-8">
         {!settled ? (
           <ListSkeleton label={t('title')} />
@@ -53,7 +43,17 @@ export function MigrationsPage() {
               onState={setState}
               refreshing={list.query.isFetching}
               onRefresh={() => void list.query.refetch()}
-            />
+            >
+              <Button
+                variant="primary"
+                shape="square"
+                aria-label={t('newMigration')}
+                title={t('newMigration')}
+                icon={<PlusIcon size={16} />}
+                className="pointer-coarse:size-11"
+                onClick={() => void navigate(newMigrationPath)}
+              />
+            </JobsToolbar>
             <ListBody
               list={list}
               search={search}

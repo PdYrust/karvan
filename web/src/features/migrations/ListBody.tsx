@@ -14,7 +14,7 @@ import { useFirstLoad } from '../../lib/motion/use-first-load';
 export function ListSkeleton({ label }: { label: string }) {
   return (
     <div role="status" aria-label={label} className="flex flex-col gap-4">
-      <Bone className="h-9 w-full" />
+      <Bone className="h-8 w-full" />
       <Bone className="h-56 w-full rounded-lg" />
     </div>
   );
