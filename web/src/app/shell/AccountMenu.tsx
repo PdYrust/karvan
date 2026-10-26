@@ -3,6 +3,7 @@ import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
 import {
   DesktopIcon,
   GearSixIcon,
+  GlobeHemisphereEastIcon,
   KeyboardIcon,
   MoonIcon,
   SignOutIcon,
@@ -10,13 +11,15 @@ import {
   TranslateIcon,
   UserCircleIcon,
 } from '@phosphor-icons/react';
-import type { ReactNode } from 'react';
+import { useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { useSession, useSignOut } from '../../features/session/use-session';
+import { zoneItems } from '../../features/settings/zones';
 import { locales, type Locale } from '../../i18n/core';
 import { useLocale, useT } from '../../i18n/locale';
 import { languageNames } from '../../i18n/shared';
 import type { ThemePref } from '../../lib/preferences/preferences';
+import { useRegion } from '../../lib/preferences/region';
 import { useTheme } from '../../lib/preferences/theme';
 import { shellMessages } from './messages';
 import { settingsPath } from './nav';
@@ -38,12 +41,14 @@ function Choice({ value, children }: { value: string; children: ReactNode }) {
   );
 }
 
-/** Everything personal, as in the dashboard: who, settings, appearance, language, shortcuts, sign out. */
+/** Everything personal, as in the dashboard: who, settings, appearance, language, time zone, shortcuts, sign out. */
 export function AccountMenu({ onShortcuts }: { onShortcuts: () => void }) {
   const t = useT(shellMessages);
   const navigate = useNavigate();
   const { locale, setLocale } = useLocale();
   const { pref, setPref } = useTheme();
+  const { timeZone, setTimeZone } = useRegion();
+  const zones = useMemo(() => zoneItems(timeZone, locale), [timeZone, locale]);
   const signOut = useSignOut();
   const username = useSession().data?.operator?.username ?? '';
   const themes: { value: ThemePref; label: string; icon: ReactNode }[] = [
@@ -69,13 +74,12 @@ export function AccountMenu({ onShortcuts }: { onShortcuts: () => void }) {
           />
         }
       />
-      <DropdownMenu.Content className="min-w-60">
+      <DropdownMenu.Content className="w-56">
         <DropdownMenu.Group>
           <DropdownMenu.Label>
-            <span className="block text-tiny font-normal text-kumo-subtle">{t('signedInAs')}</span>
-            <bdi dir="ltr" className="font-mono text-sm font-normal text-kumo-default">
-              {username}
-            </bdi>
+            <span className="block truncate font-mono text-sm font-normal text-kumo-default">
+              <bdi dir="ltr">{username}</bdi>
+            </span>
           </DropdownMenu.Label>
         </DropdownMenu.Group>
         <DropdownMenu.Separator />
@@ -109,6 +113,21 @@ export function AccountMenu({ onShortcuts }: { onShortcuts: () => void }) {
               {locales.map((l) => (
                 <Choice key={l} value={l}>
                   <span lang={l}>{languageNames[l]}</span>
+                </Choice>
+              ))}
+            </DropdownMenu.RadioGroup>
+          </DropdownMenu.SubContent>
+        </DropdownMenu.Sub>
+        <DropdownMenu.Sub>
+          <DropdownMenu.SubTrigger className={subTrigger}>
+            <GlobeHemisphereEastIcon size={16} aria-hidden="true" />
+            {t('timeZone')}
+          </DropdownMenu.SubTrigger>
+          <DropdownMenu.SubContent>
+            <DropdownMenu.RadioGroup value={timeZone} onValueChange={(v: string) => setTimeZone(v)}>
+              {zones.map((z) => (
+                <Choice key={z.id} value={z.id}>
+                  {z.label}
                 </Choice>
               ))}
             </DropdownMenu.RadioGroup>

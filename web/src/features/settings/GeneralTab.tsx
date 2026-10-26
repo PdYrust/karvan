@@ -4,13 +4,12 @@ import { SettingRow, SettingsCard } from '../../components/layout/SettingRow';
 import { locales, type Locale } from '../../i18n/core';
 import { useLocale, useT } from '../../i18n/locale';
 import { languageNames } from '../../i18n/shared';
-import { zoneLabel } from '../../lib/format/date';
 import type { CalendarPref, ThemePref } from '../../lib/preferences/preferences';
 import { useFormat, useRegion } from '../../lib/preferences/region';
 import { useTheme } from '../../lib/preferences/theme';
 import { useNow } from '../overview/use-now';
 import { settingsMessages } from './messages';
-import { zoneChoices } from './zones';
+import { zoneItems } from './zones';
 
 const control = 'w-full sm:w-64';
 
@@ -34,10 +33,7 @@ export function GeneralTab() {
     gregory: t('calendarGregory'),
   };
   const zones = useMemo(
-    () =>
-      Object.fromEntries(
-        zoneChoices(timeZone).map((z) => [z.id, `${zoneLabel(z.id, locale)} (${z.offset})`]),
-      ),
+    () => Object.fromEntries(zoneItems(timeZone, locale).map((z) => [z.id, z.label])),
     [timeZone, locale],
   );
 
