@@ -12,7 +12,7 @@ export function GitHubLink() {
       rel="noreferrer"
       aria-label={t('github')}
       title={t('github')}
-      className="grid size-9 place-items-center rounded-md text-kumo-default hover:bg-kumo-tint pointer-coarse:size-11"
+      className="grid size-8 place-items-center rounded-md text-kumo-default hover:bg-kumo-tint pointer-coarse:size-11"
     >
       <GithubLogoIcon size={18} aria-hidden="true" />
     </a>

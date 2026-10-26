@@ -52,7 +52,7 @@ export function SignedAmountField({
           aria-label={negative ? t('takeOff') : t('add')}
           title={negative ? t('takeOff') : t('add')}
           onClick={() => onChange(flip(value))}
-          className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-kumo-base text-lg font-semibold text-kumo-strong ring ring-kumo-line hover:bg-kumo-tint pointer-coarse:size-11"
+          className="flex size-8 shrink-0 items-center justify-center rounded-lg bg-kumo-base text-lg font-semibold text-kumo-strong ring ring-kumo-line hover:bg-kumo-tint pointer-coarse:size-11"
         >
           <span aria-hidden="true">{negative ? '-' : '+'}</span>
         </button>

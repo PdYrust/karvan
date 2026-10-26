@@ -18,7 +18,7 @@ export function LanguageSwitch({ className }: { className?: string }) {
       onClick={() => setLocale(other)}
       aria-label={`${t('languageLabel')}: ${languageNames[other]}`}
       className={cn(
-        'inline-flex min-h-9 items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors pointer-coarse:min-h-11',
+        'inline-flex min-h-8 items-center gap-2 rounded-md px-2 text-sm font-medium transition-colors pointer-coarse:min-h-11',
         className ?? 'text-kumo-default hover:bg-kumo-tint',
       )}
     >

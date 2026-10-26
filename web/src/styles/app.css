@@ -61,3 +61,22 @@
     }
   }
 }
+
+/* Controls draw 32 high with a mouse, a step under Kumo's base of 36 (DESIGN.md, section 4).
+   Touch screens keep their 44 (pointer-coarse classes). Outside a layer so it wins over
+   Kumo's h-9 and size-9; tailwind-merge drops those whenever a page sets its own size. */
+@media not (pointer: coarse) {
+  :is(
+    [data-kumo-component='Button'],
+    [data-kumo-component='LinkButton'],
+    [data-kumo-part='trigger'],
+    input,
+    a
+  ).h-9 {
+    height: 2rem;
+  }
+  :is([data-kumo-component='Button'], [data-kumo-component='LinkButton']).size-9 {
+    width: 2rem;
+    height: 2rem;
+  }
+}
