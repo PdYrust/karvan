@@ -43,10 +43,15 @@ export function Sidebar({
   const { dir } = useLocale();
   const side = dir === 'rtl' ? 'left' : 'right';
   const toggleLabel = collapsed ? t('expandSidebar') : t('collapseSidebar');
+  // Each part fades into its new shape while the column changes width (AppShell). Laid out
+  // at full width and clipped by the column, the open content never wraps on the way.
+  const shape = cn('k-fade', !collapsed && 'min-w-[calc(14rem-1px)]');
   return (
-    <aside className="sticky top-0 hidden h-dvh flex-col border-e border-kumo-hairline bg-kumo-canvas lg:flex">
+    <aside className="sticky top-0 hidden h-dvh flex-col overflow-hidden border-e border-kumo-hairline bg-kumo-canvas lg:flex">
       <div
+        key={`head-${String(collapsed)}`}
         className={cn(
+          shape,
           'flex h-14 shrink-0 items-center gap-2 border-b border-kumo-hairline',
           collapsed ? 'justify-center px-2' : 'px-3',
         )}
@@ -55,7 +60,9 @@ export function Sidebar({
         {collapsed ? null : <PanelSwitcher />}
       </div>
       <div
+        key={`body-${String(collapsed)}`}
         className={cn(
+          shape,
           'flex flex-1 flex-col gap-3 overflow-y-auto p-3',
           collapsed && 'items-center px-2',
         )}
@@ -79,6 +86,7 @@ export function Sidebar({
         )}
         <SidebarNav collapsed={collapsed} />
       </div>
+      {/* Not remounted: the toggle keeps its focus. */}
       <div
         className={cn(
           'flex shrink-0 border-t border-kumo-hairline p-2',

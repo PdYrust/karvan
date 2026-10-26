@@ -3,6 +3,7 @@ import { cn } from '@cloudflare/kumo/utils';
 import { CaretDownIcon, CaretRightIcon } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 import { NavLink, useLocation } from 'react-router';
+import { Collapse } from '../../components/layout/Collapse';
 import { usePanels } from '../../features/panels/use-panels';
 import { useLocale, useT } from '../../i18n/locale';
 import { shellMessages } from './messages';
@@ -16,12 +17,12 @@ const rows = 'flex flex-col gap-0.5 pointer-coarse:gap-1';
 const iconRow =
   'grid size-10 place-items-center rounded-md text-kumo-default hover:bg-kumo-tint aria-[current=page]:bg-kumo-tint pointer-coarse:size-11';
 /** Analytics' sub-pages, as its tabs: this server, then each panel. */
-function SubRows({ id, onNavigate }: { id: string; onNavigate?: () => void }) {
+function SubRows({ onNavigate }: { onNavigate?: () => void }) {
   const t = useT(shellMessages);
   const panels = (usePanels().data ?? []).filter((p) => p.id > 0);
   return (
     // The guide line sits under the parent's icon; sub-labels line up with its label.
-    <ul id={id} className={cn('k-drop ms-5 mt-0.5 border-s border-kumo-hairline ps-2', rows)}>
+    <ul className={cn('ms-5 mt-0.5 border-s border-kumo-hairline ps-2', rows)}>
       <li>
         <NavLink to="/analytics/server" onClick={onNavigate} className={row}>
           {t('navServer')}
@@ -110,7 +111,9 @@ function GroupRow({
         <span>{label}</span>
         <Caret size={14} aria-hidden="true" className="ms-auto text-kumo-subtle rtl:-scale-x-100" />
       </button>
-      {open ? <SubRows id={id} onNavigate={onNavigate} /> : null}
+      <Collapse id={id} open={open}>
+        <SubRows onNavigate={onNavigate} />
+      </Collapse>
     </>
   );
 }

@@ -66,7 +66,7 @@ export function AppShell() {
       <TooltipProvider>
         <div
           className={cn(
-            'min-h-dvh lg:grid',
+            'k-shell min-h-dvh lg:grid',
             collapsed ? 'lg:grid-cols-[4rem_minmax(0,1fr)]' : 'lg:grid-cols-[14rem_minmax(0,1fr)]',
           )}
         >

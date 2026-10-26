@@ -2,6 +2,7 @@ import { Button } from '@cloudflare/kumo/components/button';
 import { CaretDownIcon } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 import { StatusBadge, type StatusTone } from '../../../components/feedback/StatusBadge';
+import { Collapse } from '../../../components/layout/Collapse';
 import { Section } from '../../../components/layout/Section';
 import { CodeText } from '../../../components/text/CodeText';
 import { useT } from '../../../i18n/locale';
@@ -64,17 +65,15 @@ function ProblemCard({ group, kind }: { group: ProblemGroup; kind: PanelKind }) 
           {t(open ? 'hideUsers' : 'oneByOne')}
         </Button>
       </div>
-      <div id={usersId} hidden={!open} className="k-drop">
-        {open ? (
-          <UserList
-            jobId={jobId}
-            group={group.type}
-            label={t('usersOf')}
-            empty={t('noMatch')}
-            end={(row) => <UserFix group={group} row={row} />}
-          />
-        ) : null}
-      </div>
+      <Collapse id={usersId} open={open}>
+        <UserList
+          jobId={jobId}
+          group={group.type}
+          label={t('usersOf')}
+          empty={t('noMatch')}
+          end={(row) => <UserFix group={group} row={row} />}
+        />
+      </Collapse>
     </li>
   );
 }

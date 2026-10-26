@@ -7,13 +7,6 @@
   }
 }
 
-@keyframes k-drop-in {
-  from {
-    opacity: 0;
-    transform: translateY(-4px);
-  }
-}
-
 @keyframes k-pop-in {
   from {
     opacity: 0;
@@ -35,9 +28,121 @@
   animation: k-fade-in 150ms ease-out;
 }
 
-/* A section or sub-rows that open. */
-.k-drop {
-  animation: k-drop-in 150ms ease-out;
+/* A section or sub-rows that open and close (components/layout/Collapse):
+   height through grid rows, so it moves both ways without measuring. */
+.k-collapse {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition:
+    grid-template-rows 150ms ease-out,
+    opacity 150ms ease-out,
+    visibility 150ms allow-discrete;
+}
+
+.k-collapse > * {
+  min-height: 0;
+  overflow: clip;
+  overflow-clip-margin: 4px;
+}
+
+.k-collapse[data-closed] {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  visibility: hidden;
+}
+
+/* The desktop sidebar's width (AppShell); its content fades into the new shape. */
+.k-shell {
+  transition: grid-template-columns 200ms ease-out;
+}
+
+/* Switches: the thumb slides by transform; Kumo moves it by its left edge.
+   Kumo's slide is the thumb's own width, so 100 % lands in the same place. */
+[role='switch'] > div:only-child {
+  left: 0;
+  transition:
+    transform 150ms ease-out,
+    background-color 150ms ease-out;
+}
+
+[role='switch'][data-checked] > div:only-child {
+  transform: translateX(100%);
+}
+
+/* Skeletons: a soft light sweeps across from the start edge, then rests. */
+@keyframes k-shimmer {
+  from {
+    transform: translateX(-100%);
+  }
+  70%,
+  to {
+    transform: translateX(100%);
+  }
+}
+
+.k-bone {
+  position: relative;
+  overflow: hidden;
+}
+
+.k-bone::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, var(--color-shimmer), transparent);
+  transform: translateX(-100%);
+  animation: k-shimmer 2s ease-in-out infinite;
+}
+
+[dir='rtl'] .k-bone::after {
+  animation-direction: reverse;
+}
+
+/* Charts draw in once, when they mount (components/charts). Later samples
+   change the same elements, so a poll never replays this. */
+@keyframes k-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+}
+
+@keyframes k-grow-up {
+  from {
+    transform: scaleY(0);
+  }
+}
+
+@keyframes k-fill {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* A line with pathLength 1: one dash as long as the line, drawn from its start. */
+.k-draw {
+  stroke-dasharray: 1;
+  animation: k-draw 800ms ease-out;
+}
+
+.k-draw-fade {
+  animation: k-fade-in 800ms ease-out;
+}
+
+/* An area or a group of bars, from the baseline at the bottom of its box. */
+.k-grow-up {
+  transform-box: fill-box;
+  transform-origin: bottom;
+  animation: k-grow-up 800ms ease-out;
+}
+
+/* A meter, from the start edge. */
+.k-fill {
+  transform-origin: left;
+  animation: k-fill 800ms ease-out;
+}
+
+[dir='rtl'] .k-fill {
+  transform-origin: right;
 }
 
 /* Menus, selects, popovers and tooltips: the popup inside Base UI's

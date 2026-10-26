@@ -48,6 +48,8 @@ function render(at: string, onNavigate: () => void) {
 
 const group = () => host.querySelector<HTMLButtonElement>('button[aria-expanded]');
 const subLink = () => host.querySelector<HTMLAnchorElement>('a[href="/analytics/server"]');
+// A closed group keeps its rows for the closing motion, inert.
+const shown = () => subLink() !== null && subLink()?.closest('[inert]') === null;
 
 beforeEach(() => {
   localStorage.setItem('karvan.lang', 'en');
@@ -70,11 +72,12 @@ describe('SidebarNav', () => {
     expect(subLink()).toBeNull();
     act(() => group()?.click());
     expect(group()?.getAttribute('aria-expanded')).toBe('true');
-    expect(subLink()).toBeTruthy();
+    expect(shown()).toBe(true);
     expect(path).toBe('/panels');
     expect(onNavigate).not.toHaveBeenCalled();
     act(() => group()?.click());
-    expect(subLink()).toBeNull();
+    expect(shown()).toBe(false);
+    expect(subLink()?.closest('[inert]')).toBeTruthy();
   });
 
   it('starts open on one of its pages, and the reader can close it', () => {

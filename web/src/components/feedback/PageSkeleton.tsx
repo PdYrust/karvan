@@ -1,7 +1,7 @@
 import { cn } from '@cloudflare/kumo/utils';
 
 export function Bone({ className }: { className?: string }) {
-  return <div className={cn('animate-pulse rounded-md bg-kumo-recessed', className)} />;
+  return <div className={cn('k-bone rounded-md bg-kumo-recessed', className)} />;
 }
 
 /** While a page's code loads: a header and two blocks, the shape every page starts with. */

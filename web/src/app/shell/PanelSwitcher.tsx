@@ -27,7 +27,7 @@ export function PanelSwitcher({ collapsed = false }: { collapsed?: boolean }) {
   const loading = panels.isPending;
 
   const icon = loading ? (
-    <span aria-hidden="true" className="size-[18px] animate-pulse rounded bg-kumo-recessed" />
+    <span aria-hidden="true" className="size-[18px] k-bone rounded bg-kumo-recessed" />
   ) : kind ? (
     <PanelMark kind={kind} size={18} />
   ) : list.length > 0 ? (
@@ -54,7 +54,7 @@ export function PanelSwitcher({ collapsed = false }: { collapsed?: boolean }) {
                 {loading ? (
                   <span
                     aria-hidden="true"
-                    className="h-3.5 flex-1 animate-pulse rounded bg-kumo-recessed"
+                    className="h-3.5 flex-1 k-bone rounded bg-kumo-recessed"
                   />
                 ) : (
                   <span className="min-w-0 flex-1 truncate text-base font-medium text-kumo-default">
