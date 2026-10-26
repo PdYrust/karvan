@@ -10,30 +10,9 @@ import { readRecents } from '../../../lib/preferences/recents';
 import { homeRowsMax } from '../use-overview';
 import { HomeColumn, HomeNote, HomeRow, HomeRows, HomeRowsSkeleton } from './HomeColumn';
 import { overviewMessages } from '../messages';
+import { recentPanelOf, recentSections, recentTab } from '../recent-words';
 import { Reveal } from '../../../components/feedback/Reveal';
 import { useFirstLoad } from '../../../lib/motion/use-first-load';
-
-const sections = {
-  analytics: 'navAnalytics',
-  panels: 'navPanels',
-  migrations: 'navMigrations',
-  reports: 'navReports',
-  templates: 'navTemplates',
-  links: 'navLinks',
-  backups: 'navBackups',
-  settings: 'settings',
-} as const;
-
-const recentTab = {
-  general: 'recentGeneral',
-  'safe-mode': 'recentSafeMode',
-  access: 'recentAccess',
-  'two-step': 'recentTwoStep',
-  sessions: 'recentSessions',
-  'audit-log': 'recentAudit',
-} as const;
-const panelOf = (page: RecentPage) =>
-  page.section === 'analytics' || page.section === 'panels' ? page.panelId : undefined;
 
 /** "Panels / logo name": the section in a quiet color, then the page. */
 function RecentName({ page, panel }: { page: RecentPage; panel: Panel | undefined }) {
@@ -66,7 +45,7 @@ function RecentName({ page, panel }: { page: RecentPage; panel: Panel | undefine
   }
   return (
     <span className="flex min-w-0 items-center gap-1.5">
-      <span className="shrink-0 text-kumo-subtle">{ts(sections[page.section])}</span>
+      <span className="shrink-0 text-kumo-subtle">{ts(recentSections[page.section])}</span>
       {name ? (
         <>
           <span aria-hidden="true" className="text-kumo-subtle">
@@ -92,7 +71,7 @@ export function RecentsColumn({ panels }: { panels: UseQueryResult<Panel[]> }) {
     .flatMap((path) => {
       const page = recentPage(path);
       if (!page) return [];
-      const id = panelOf(page);
+      const id = recentPanelOf(page);
       const panel = listed.find((p) => p.id === id);
       return id === undefined || panel ? [{ path, page, panel }] : [];
     })

@@ -160,6 +160,19 @@
   transform: scale(0.96);
 }
 
+/* The overview search's panel (features/overview/search): fades like a menu, both ways. */
+.k-drop {
+  transform-origin: top;
+  transition:
+    opacity 150ms ease-out,
+    transform 150ms ease-out,
+    visibility 150ms allow-discrete;
+}
+.k-drop[data-closed] {
+  opacity: 0;
+  transform: scale(0.98);
+  visibility: hidden;
+}
 /* A radio's dot or a checkbox's mark grows in when it is chosen. */
 :is([role='radio'], [role='checkbox']) > [data-checked] {
   animation: k-pop-in 150ms ease-out;

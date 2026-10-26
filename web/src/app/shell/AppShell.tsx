@@ -52,7 +52,10 @@ export function AppShell() {
     setHelpUsed(true);
     requestAnimationFrame(() => setHelpOpen(true));
   }, []);
-  const outlet = useMemo<ShellOutlet>(() => ({ openSearch }), [openSearch]);
+  const outlet = useMemo<ShellOutlet>(
+    () => ({ openSearch, openShortcuts: openHelp }),
+    [openSearch, openHelp],
+  );
   useModHotkey('KeyK', openSearch);
   useShortcuts(openHelp);
 

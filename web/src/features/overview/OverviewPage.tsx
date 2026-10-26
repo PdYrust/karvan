@@ -10,7 +10,7 @@ import { usePanels, useScanPanels } from '../panels/use-panels';
 import { MigrationsColumn } from './columns/MigrationsColumn';
 import { PanelsColumn } from './columns/PanelsColumn';
 import { RecentsColumn } from './columns/RecentsColumn';
-import { HomeSearch } from './HomeSearch';
+import { HomeSearch } from './search/HomeSearch';
 import { overviewMessages } from './messages';
 import { Summary } from './summary/Summary';
 import { useNear } from './use-near';
