@@ -11,13 +11,13 @@ Karvan moves users from one panel to another, and their configs keep working. Th
 - **Mood:** calm, flat and exact. White and grey surfaces, hairlines, one blue.
 
 ### Panel logos
-The sign-in page and the overview show the Marzban and PasarGuard logos to say which panels Karvan works with. Both projects are AGPL-3.0, like Karvan; the logos are used only to name them, never to suggest they endorse Karvan.
+The overview and every panel name show the Marzban and PasarGuard logos to say which panels Karvan works with. Both projects are AGPL-3.0, like Karvan; the logos are used only to name them, never to suggest they endorse Karvan.
 - Marzban: its logo path, inline in `components/panels/PanelLogo.tsx`, drawn in `currentColor`.
-- PasarGuard: its own transparent logos from its dashboard (`dashboard/public/statics/favicon/`, AGPL-3.0), resized to 128 px: the dark drawing `logo-dark.png` as `components/panels/pasarguard-light.png` for the light theme and on white tiles (the sign-in globe), the light drawing `logo.png` as `pasarguard-dark.png` for the dark theme. No tile behind it, like Marzban's.
+- PasarGuard: its own transparent logos from its dashboard (`dashboard/public/statics/favicon/`, AGPL-3.0), resized to 128 px: the dark drawing `logo-dark.png` as `components/panels/pasarguard-light.png` for the light theme, the light drawing `logo.png` as `pasarguard-dark.png` for the dark theme. No tile behind it, like Marzban's.
 
 ### Where boldness goes
 Only one place per screen gets the memorable treatment:
-- Sign-in: the blue side with the dotted globe.
+- Sign-in: the blue side with the wall of hexagonal columns.
 - Every other page: the content itself. Chrome stays quiet.
 
 ## 2. Color
@@ -31,10 +31,11 @@ Karvan uses Kumo's palette as it ships, with one change (subtle text one step da
 | `on-brand` | white | text, icons and marks drawn on `bg-kumo-brand` |
 | `chart-1` to `chart-5` | Kumo's chart palette: blue, amber, pink, purple, teal (light and dark values from `ChartPalette.categorical`) | chart series, in this order; the first series of every chart is blue |
 | `chart-grid` | Kumo's neutral chart fill (light and dark) | grid lines and axis ticks |
+| `wall-shade` | Tailwind's blue-900, as in Kumo's dark info banner | the shade on the sign-in wall; the wall mixes the brand blue toward it and toward `on-brand` at run time |
 
 **No color literal anywhere else** in `web/src` (the floor check fails the build). If a new color is truly needed, add a token there and a row here.
 Kumo's sixth chart color is an orange; Karvan never uses it (no Cloudflare orange). A chart never needs more than five series; more become "Other".
-The chart tokens sit in a `@theme static` block: charts pick a color by number at run time (`var(--color-chart-3)`), which Tailwind's class scan cannot see, so the variables are always emitted.
+The chart and wall tokens sit in a `@theme static` block: charts pick a color by number at run time (`var(--color-chart-3)`) and the wall reads its colors from script, which Tailwind's class scan cannot see, so the variables are always emitted.
 
 - `text-kumo-brand` is Cloudflare orange in Kumo. Blue text (links, the current step) uses `text-kumo-link`, Kumo's link color, which reads 4.5:1 in both themes; `text-(--color-kumo-brand)` is for icons and marks only (it reads 3.3:1 on the dark page).
 - Status is never shown by color alone. It always comes with an icon and a word.
@@ -86,8 +87,8 @@ The chart tokens sit in a `@theme static` block: charts pick a color by number a
 - Hover colors change at once, never with a transition (Kumo's rule: fading hovers feel slow).
 - Motion answers an action (open, expand, confirm, switch) or data arriving. Headers, cards and the shell never slide in on their own.
 - The live migration view moves dots only in step with real batches, and while a backup restore runs, which has no batches (section 8, Live progress).
-- The one exception is the globe on the sign-in page: it turns slowly (about one turn a minute) and acts out what Karvan does (section 8, Sign-in). It draws at about 30 frames a second and stops when it is off screen.
-- `prefers-reduced-motion: reduce`: no transforms, fades or autoplay; transitions and animations shorten to 1 ms. Skeletons have no minimum time and no light, charts appear drawn (no reveal), nothing is held to a minimum, the theme changes at once, and the globe shows one still frame.
+- The one exception is the wall on the sign-in page: its columns slide slowly in and out on their own, in calm waves (section 8, Sign-in). It draws at about 30 frames a second and stops when it is off screen.
+- `prefers-reduced-motion: reduce`: no transforms, fades or autoplay; transitions and animations shorten to 1 ms. Skeletons have no minimum time and no light, charts appear drawn (no reveal), nothing is held to a minimum, the theme changes at once, and the wall shows one still frame.
 
 ## 6. Icons
 
@@ -99,7 +100,7 @@ The chart tokens sit in a `@theme static` block: charts pick a color by number a
 
 - `<html lang dir>` is set before first paint (`public/boot.js`). Persian is the default.
 - Use logical properties only: `ms-* me-* ps-* pe-* start-* end-* border-s border-e rounded-s rounded-e text-start`. Physical `left/right` classes are a bug. In an RTL flex column `self-start` is already the right edge; do not add `rtl:` overrides to "fix" it.
-- Icons that point a direction (arrows, chevrons, sign out) flip in RTL with `rtl:-scale-x-100`. The logo, the panel logos and the globe never flip.
+- Icons that point a direction (arrows, chevrons, sign out) flip in RTL with `rtl:-scale-x-100`. The logo and the panel logos never flip. The sign-in wall is mirrored, so it recedes toward the form in both languages.
 - Charts keep time running left to right in both languages, like a graph in a school book; only their labels are Persian. A move from one panel to another reads in the page direction ("Marzban, arrow, PasarGuard" runs right to left in Persian).
 - Machine values (UUID, IP, port, path, username, commands) are wrapped in `<bdi dir="ltr">` or `dir="ltr"` and stay in Latin digits.
 - A machine value inside a translated sentence (a file, a setting, a command) is marked with backticks in the message, and the sentence is drawn with `CodeText`: the value keeps left to right in mono at about 0.9 em. Left unmarked, `.env` after Persian words reads `env.`.
@@ -249,10 +250,11 @@ Laid out like the dashboard's account home, top to bottom:
 - **Audit log:** a table newest first with action and outcome filters above it: when, what (the action in words, the outcome as icon and word, the reason under it for a failure), who and IP. "Load more" under the table instead of a pager. Karvan keeps 180 days of the log and deletes older events daily.
 ### Sign-in
 - Two halves on large screens. Start side on `bg-kumo-base`: wordmark at the top, then a centered form (title, username, password, one blue button) and the recovery hint with the `karvan reset -password` command.
-- End side on `bg-kumo-brand`: language and theme buttons at the top, the "Marzban ⇄ PasarGuard" line, and one short line, then a spinning dotted globe.
-- The globe acts out four scenes in turn (`globe-scenes.ts`): a move and a merge in each direction. Two panels appear on land, each as its logo on a white tile with its name under it; users travel as dots along a dashed arc. In a move the sending panel fades out once the last user arrives; in a merge both stay.
-- The globe is drawn on a canvas from a land mask made by `scripts/brand/globe.mjs` (`globe-land.ts`, about 2 KB gzip), so no map code ships. It is a lazy chunk with its own budget, loaded after the form.
-- Under 1024 px only the form side shows; the language and theme buttons move into its top bar.
+- End side on `bg-kumo-brand`: language and theme buttons at the top, the "Marzban ⇄ PasarGuard" line and one short line, over the wall.
+- **The wall** (`features/login/LoginWall`) is the firewall: not bricks, but a wall of hexagonal columns like the channel caps of a reactor floor, stood on end. It is seen from the front at a slight angle, a little from below and from the end side, so it recedes toward the top start corner, where the text sits. It fills the side; its foot and its top are never in the frame. Each cap has a round plug in its middle, drawn in the same perspective. Each column slides slowly out of the wall and back in on its own, in calm waves that cross the wall (cycles of 7 to 20 seconds, never all together, nothing sudden).
+- Its colors are Kumo's: the caps in the brand blue, the shaded sides and the gaps between columns mixed toward a deep blue (`--color-wall-shade`, Tailwind's blue-900, which Kumo's dark info banner uses), thin `on-brand` lines for the cap edges that face the light and for the plugs. Light comes from the top start, so the sides that face down and toward the end are darker; a settled cap sits a little in shade and one that stands out catches a little light. Columns further away sink into a deeper blue with less contrast, so the text over the far corner stays calm and readable.
+- It is drawn on a canvas at about 30 frames a second, and only while it is on screen; with reduced motion it is one still frame. It is a lazy chunk with its own budget, loaded after the form, and it fades in over 700 ms when it arrives instead of popping up.
+- Under 1024 px the form side fills the screen and the language and theme buttons move into its top bar. The wall stands in a blue band along the bottom of the screen, under the form, with nothing on it.
 
 ### Behavior
 - **Kumo's own rules** (kumo-ui.com/skill): content text is 14 (15 in Persian), only headings are larger; sentence case; no letter spacing changes; `font-semibold` for headings and `font-medium` for bold inline text, never `font-bold`; related text sits closer than the block it belongs to; a ring instead of a border next to a shadow; nested corners are concentric (outer radius = inner radius + padding); icons line up with the first line of text; inline mono text at about 0.9 em; a hairline under anything sticky; collapsing content keeps its size while it closes; dialogs are always rendered and opened with `open`, never mounted on demand.
