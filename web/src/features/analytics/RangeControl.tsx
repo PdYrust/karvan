@@ -1,4 +1,5 @@
-import { Button, RefreshButton } from '@cloudflare/kumo/components/button';
+import { Button } from '@cloudflare/kumo/components/button';
+import { RefreshButton } from '../../components/actions/RefreshButton';
 import { ButtonGroup } from '@cloudflare/kumo/components/button-group';
 import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
 import { CaretDownIcon, ClockIcon } from '@phosphor-icons/react';

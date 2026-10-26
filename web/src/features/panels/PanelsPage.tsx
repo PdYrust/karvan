@@ -1,4 +1,4 @@
-import { RefreshButton } from '@cloudflare/kumo/components/button';
+import { RefreshButton } from '../../components/actions/RefreshButton';
 import { useState } from 'react';
 import { SearchField } from '../../components/data/SearchField';
 import { ErrorState } from '../../components/feedback/ErrorState';

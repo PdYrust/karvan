@@ -1,4 +1,4 @@
-import { RefreshButton } from '@cloudflare/kumo/components/button';
+import { RefreshButton } from '../../components/actions/RefreshButton';
 import { cn } from '@cloudflare/kumo/utils';
 import { Select } from '@cloudflare/kumo/components/select';
 import { useId, type ReactNode } from 'react';

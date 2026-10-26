@@ -1,4 +1,5 @@
 import { Button } from '@cloudflare/kumo/components/button';
+import { refreshTurn, useMinDuration } from '../../lib/motion/use-min-duration';
 import { ArrowsClockwiseIcon, ChartLineIcon } from '@phosphor-icons/react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { ErrorState } from '../../components/feedback/ErrorState';
@@ -35,11 +36,12 @@ function Actions({ panel }: { panel: Panel }) {
   const navigate = useNavigate();
   const { panel: current, select } = useCurrentPanel();
   const { refresh, refreshing } = useRefreshPanels();
+  const checking = useMinDuration(refreshing, refreshTurn);
   return (
     <>
       <Button
         icon={<ArrowsClockwiseIcon size={16} />}
-        loading={refreshing}
+        loading={checking}
         onClick={refresh}
         className="pointer-coarse:h-11"
       >

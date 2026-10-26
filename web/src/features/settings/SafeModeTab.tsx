@@ -14,6 +14,7 @@ import { settingsMessages } from './messages';
 import { useSafeMode, useSetSafeMode } from './use-safe-mode';
 import { Reveal } from '../../components/feedback/Reveal';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
+import { switchSlide, useMinDuration } from '../../lib/motion/use-min-duration';
 
 function Choice({ title, hint }: { title: string; hint: string }) {
   return (
@@ -32,6 +33,8 @@ export function SafeModeTab() {
   const panels = usePanels();
   const toasts = useKumoToastManager();
   const [confirming, setConfirming] = useState(false);
+  // Busy until the thumb has slid, however fast the save answers.
+  const saving = useMinDuration(set.isPending, switchSlide);
 
   const load = useFirstLoad(safe.data);
   if (safe.isPending || load.holding) {
@@ -79,8 +82,9 @@ export function SafeModeTab() {
           control={
             <Switch
               aria-labelledby="safe-mode-title"
-              checked={s.enabled}
-              disabled={set.isPending}
+              // The thumb moves on the press; a failed save slides it back.
+              checked={set.isPending ? set.variables.next.enabled : s.enabled}
+              disabled={saving}
               // The switch is 18 px high; the hit area reaches 44 px on touch screens.
               className="relative pointer-coarse:before:absolute pointer-coarse:before:-inset-x-[9px] pointer-coarse:before:-inset-y-[13px] pointer-coarse:before:content-['']"
               onCheckedChange={(on) =>
@@ -104,7 +108,7 @@ export function SafeModeTab() {
             description={t('rollbackHint')}
             appearance="card"
             value={s.rollback}
-            disabled={set.isPending}
+            disabled={saving}
             onValueChange={(v: Rollback) => save({ ...s, rollback: v }, t('rollbackSaved'))}
           >
             <Radio.Item
