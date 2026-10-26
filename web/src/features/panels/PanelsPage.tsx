@@ -1,5 +1,4 @@
-import { Button, RefreshButton } from '@cloudflare/kumo/components/button';
-import { ArrowsClockwiseIcon } from '@phosphor-icons/react';
+import { RefreshButton } from '@cloudflare/kumo/components/button';
 import { useState } from 'react';
 import { SearchField } from '../../components/data/SearchField';
 import { ErrorState } from '../../components/feedback/ErrorState';
@@ -12,7 +11,7 @@ import { NoPanels } from './NoPanels';
 import { PanelsTable } from './PanelsTable';
 import { ScanFinds } from './ScanFinds';
 import { matchesPanel } from './search';
-import { usePanels, useRefreshPanels, useScanFinds, useScanPanels } from './use-panels';
+import { usePanels, useScanFinds, useScanPanels } from './use-panels';
 import { Reveal } from '../../components/feedback/Reveal';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
 
@@ -20,7 +19,7 @@ import { useFirstLoad } from '../../lib/motion/use-first-load';
 function ListSkeleton({ label }: { label: string }) {
   return (
     <div role="status" aria-label={label} className="flex flex-col gap-4">
-      <Bone className="h-9 w-full" />
+      <Bone className="h-8 w-full" />
       <Bone className="h-44 w-full rounded-lg" />
     </div>
   );
@@ -32,7 +31,6 @@ export function PanelsPage() {
   usePageTitle(t('title'));
   const panels = usePanels();
   const { scan, scanning } = useScanPanels();
-  const { refresh, refreshing } = useRefreshPanels();
   const finds = useScanFinds();
   const [query, setQuery] = useState('');
 
@@ -59,10 +57,10 @@ export function PanelsPage() {
           <SearchField label={t('search')} value={query} onChange={setQuery} className="flex-1" />
           <RefreshButton
             variant="secondary"
-            aria-label={t('check')}
-            title={t('check')}
-            loading={refreshing}
-            onClick={refresh}
+            aria-label={t('scanAndRefresh')}
+            title={t('scanAndRefresh')}
+            loading={scanning}
+            onClick={scan}
             className="pointer-coarse:size-11"
           />
         </div>
@@ -82,21 +80,7 @@ export function PanelsPage() {
 
   return (
     <div className="flex flex-col">
-      <PageHeader
-        title={t('title')}
-        description={t('description')}
-        actions={
-          <Button
-            variant="primary"
-            icon={<ArrowsClockwiseIcon size={16} />}
-            loading={scanning}
-            onClick={scan}
-            className="pointer-coarse:h-11"
-          >
-            {t('scan')}
-          </Button>
-        }
-      />
+      <PageHeader title={t('title')} description={t('description')} />
       <div className="flex max-w-[1400px] flex-col gap-6 p-4 sm:p-8">
         <Reveal on={load.reveal}>{body}</Reveal>
         {finds.length > 0 ? <ScanFinds finds={finds} /> : null}
