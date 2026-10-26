@@ -67,7 +67,7 @@ export function AppShell() {
         <div
           className={cn(
             'min-h-dvh lg:grid',
-            collapsed ? 'lg:grid-cols-[4rem_minmax(0,1fr)]' : 'lg:grid-cols-[16rem_minmax(0,1fr)]',
+            collapsed ? 'lg:grid-cols-[4rem_minmax(0,1fr)]' : 'lg:grid-cols-[14rem_minmax(0,1fr)]',
           )}
         >
           <a

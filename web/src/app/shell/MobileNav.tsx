@@ -45,10 +45,10 @@ export function MobileNav({
       // Light dismiss: a click on the backdrop closes the sheet, like Escape.
       {...{ closedby: 'any' }}
       aria-label={t('mainNav')}
-      className="k-sheet m-0 h-dvh max-h-none w-[min(20rem,86vw)] max-w-none bg-kumo-canvas p-0 text-kumo-default shadow-xl backdrop:bg-kumo-contrast/40 me-auto lg:hidden"
+      className="k-sheet m-0 h-dvh max-h-none w-[min(16rem,69vw)] max-w-none bg-kumo-canvas p-0 text-kumo-default shadow-xl backdrop:bg-kumo-contrast/40 me-auto lg:hidden"
     >
       <KumoPortalProvider container={ref}>
-        <div className="flex h-full flex-col overflow-y-auto">
+        <div className="flex h-full flex-col overflow-y-auto overscroll-contain">
           <div className="flex h-14 shrink-0 items-center gap-2 border-b border-kumo-hairline ps-3 pe-2">
             <Mark size={28} title={ts('brand')} />
             {opened ? <PanelSwitcher /> : <span className="flex-1" />}

@@ -24,6 +24,10 @@
     text-rendering: optimizeLegibility;
   }
 
+  /* While the phone sheet is open the page behind it stays still; the sheet scrolls itself. */
+  html:has(.k-sheet[open]) {
+    overflow: hidden;
+  }
   :focus-visible {
     outline: 2px solid var(--color-kumo-focus);
     outline-offset: 2px;
