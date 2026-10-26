@@ -8,6 +8,7 @@ import {
   type Mode,
   type ThemePref,
 } from './preferences';
+import { withThemeTransition } from './theme-transition';
 
 interface ThemeContextValue {
   pref: ThemePref;
@@ -30,10 +31,11 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     () => ({
       pref,
       mode,
-      setPref: (p) => {
-        setPrefState(p);
-        setMode(saveThemePref(p));
-      },
+      setPref: (p) =>
+        withThemeTransition(() => {
+          setPrefState(p);
+          setMode(saveThemePref(p));
+        }),
     }),
     [pref, mode],
   );
