@@ -16,6 +16,7 @@ import { StepActions } from '../StepActions';
 import { summaryMessages } from './messages';
 import { SummaryCards } from './SummaryCards';
 import { TargetList } from './TargetList';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 function Panels({ summary }: { summary: JobSummary }) {
   const t = useT(summaryMessages);
@@ -63,7 +64,8 @@ export function SummaryStep() {
   const t = useT(summaryMessages);
   const tw = useT(wizardMessages);
   const summary = useQuery({ queryKey: migrationKeys.summary(id), queryFn: () => getSummary(id) });
-  if (summary.isPending) {
+  const load = useFirstLoad(summary.data);
+  if (summary.isPending || load.holding) {
     return (
       <div role="status" aria-label={t('loading')} className="flex flex-col gap-4">
         <div className="grid gap-4 lg:grid-cols-2">

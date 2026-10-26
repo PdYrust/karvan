@@ -18,6 +18,8 @@ import { useNow } from '../overview/use-now';
 import { newMigrationPath } from '../wizard/steps';
 import { templatesMessages } from './messages';
 import { TemplateCard } from './TemplateCard';
+import { Reveal } from '../../components/feedback/Reveal';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 /** Saved templates with what each does, and Delete behind the typed name (4.8). */
 export function TemplatesPage() {
@@ -38,6 +40,7 @@ export function TemplatesPage() {
       void qc.invalidateQueries({ queryKey: templateKeys.all });
     },
   });
+  const load = useFirstLoad(list.data);
   let body;
   if (list.isError) {
     body = (
@@ -47,14 +50,14 @@ export function TemplatesPage() {
         onRetry={() => void list.refetch()}
       />
     );
-  } else if (!list.data) {
+  } else if (!load.data) {
     body = (
       <div role="status" aria-label={t('title')} className="flex flex-col gap-4">
         <Bone className="h-32 w-full rounded-lg" />
         <Bone className="h-32 w-full rounded-lg" />
       </div>
     );
-  } else if (list.data.length === 0) {
+  } else if (load.data.length === 0) {
     body = (
       <EmptyState
         icon={<StackIcon size={32} aria-hidden="true" />}
@@ -75,7 +78,7 @@ export function TemplatesPage() {
   } else {
     body = (
       <section aria-label={t('list')} className="flex flex-col gap-4">
-        {list.data.map((x) => (
+        {load.data.map((x) => (
           <TemplateCard
             key={x.id}
             template={x}
@@ -92,7 +95,9 @@ export function TemplatesPage() {
   return (
     <div className="flex flex-col">
       <PageHeader title={t('title')} description={t('description')} />
-      <div className="flex max-w-[1100px] flex-col gap-4 p-4 sm:p-8">{body}</div>
+      <div className="flex max-w-[1100px] flex-col gap-4 p-4 sm:p-8">
+        <Reveal on={load.reveal}>{body}</Reveal>
+      </div>
       <TypeToConfirm
         open={asking !== null}
         onOpenChange={(open) => {

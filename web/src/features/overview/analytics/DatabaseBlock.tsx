@@ -13,6 +13,8 @@ import { DatabaseProblem, LoadFailed, Notice, noticeIcon } from '../../analytics
 import { usePanelStats } from '../../analytics/use-analytics';
 import { BlockHeading, TilesSkeleton } from './BlockHeading';
 import { DatabaseTiles } from './DatabaseTiles';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 /** Tiles, users by status and traffic per hour, once the database has been read. */
 function Numbers({
@@ -66,9 +68,10 @@ export function DatabaseBlock({
   const t = useT(analyticsMessages);
   const id = useId();
   const q = usePanelStats(panelId, range);
+  const load = useFirstLoad(q.data);
   let body;
-  if (q.data) {
-    body = <Numbers stats={q.data} range={range} of={id} />;
+  if (load.data) {
+    body = <Numbers stats={load.data} range={range} of={id} />;
   } else if (q.isError) {
     body = <LoadFailed error={q.error} onRetry={() => void q.refetch()} />;
   } else {
@@ -80,7 +83,7 @@ export function DatabaseBlock({
         {kind ? <PanelMark kind={kind} size={18} /> : null}
         <bdi className="truncate">{name}</bdi>
       </BlockHeading>
-      {body}
+      <Reveal on={load.reveal}>{body}</Reveal>
     </section>
   );
 }

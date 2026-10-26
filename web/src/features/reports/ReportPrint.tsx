@@ -22,6 +22,8 @@ import { reportsMessages } from './messages';
 import { Stages, UndoCard, useReportFacts } from './ReportParts';
 import { userOutcome } from './report-view';
 import { UserName } from './ReportUsers';
+import { Reveal } from '../../components/feedback/Reveal';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 const cell = 'border-b border-kumo-hairline px-2 py-1.5 text-start align-top';
 
@@ -109,6 +111,7 @@ export function ReportPrint() {
   const t = useT(reportsMessages);
   usePageTitle(t('printTitle'));
   const report = useQuery({ queryKey: migrationKeys.report(id), queryFn: () => getReport(id) });
+  const load = useFirstLoad(report.data);
   const row = useQuery({ queryKey: migrationKeys.row(id), queryFn: () => getJobRow(id) });
   return (
     <div className="min-h-dvh bg-kumo-base text-kumo-default">
@@ -122,7 +125,7 @@ export function ReportPrint() {
         <Button
           variant="primary"
           icon={<PrinterIcon size={16} />}
-          disabled={!report.data}
+          disabled={!load.data}
           className="pointer-coarse:h-11"
           onClick={() => window.print()}
         >
@@ -136,8 +139,10 @@ export function ReportPrint() {
             error={report.error}
             onRetry={() => void report.refetch()}
           />
-        ) : report.data ? (
-          <Printed report={report.data} state={row.data?.state ?? report.data.state} />
+        ) : load.data ? (
+          <Reveal on={load.reveal}>
+            <Printed report={load.data} state={row.data?.state ?? load.data.state} />
+          </Reveal>
         ) : (
           <div role="status" aria-label={t('printLoading')} className="flex flex-col gap-4">
             <Bone className="h-8 w-64" />

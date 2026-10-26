@@ -9,6 +9,8 @@ import { overviewMessages } from '../messages';
 import { PartFailed } from '../PartFailed';
 import { useLinkSites } from '../use-overview';
 import { SummaryCard, SummarySkeleton } from './SummaryCard';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 /** Users of every site added up. Sites of one old panel and destination share their users, so they count once. */
 function totals(data: LinkSites) {
@@ -63,9 +65,10 @@ function Sites({ data }: { data: LinkSites }) {
 export function LinksCard() {
   const t = useT(overviewMessages);
   const q = useLinkSites();
+  const load = useFirstLoad(q.data);
   let body;
-  if (q.data) {
-    body = <Sites data={q.data} />;
+  if (load.data) {
+    body = <Sites data={load.data} />;
   } else if (q.isError) {
     body = <PartFailed message={t('cardFailed')} onRetry={() => void q.refetch()} />;
   } else {
@@ -73,7 +76,7 @@ export function LinksCard() {
   }
   return (
     <SummaryCard title={t('linksTitle')}>
-      {body}
+      <Reveal on={load.reveal}>{body}</Reveal>
       <Link
         to="/links"
         className="mt-auto inline-flex items-center gap-1 self-start text-sm text-kumo-link hover:underline pointer-coarse:min-h-11"

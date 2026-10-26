@@ -12,6 +12,8 @@ import { PartFailed } from '../PartFailed';
 import { useBackups } from '../use-overview';
 import { failureFacts } from './safe-mode-facts';
 import { SummaryCard, SummarySkeleton } from './SummaryCard';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 /** "2 backups, 3.4 MB"; a list that failed to load reads as a dash. */
 function BackupsValue({ backups, failed }: { backups: Backup[] | undefined; failed: boolean }) {
@@ -59,14 +61,15 @@ function Facts({ safe }: { safe: SafeMode }) {
 export function SafeModeCard() {
   const t = useT(overviewMessages);
   const q = useSafeMode();
-  const badge = q.data ? (
-    <StatusBadge tone={q.data.enabled ? 'success' : 'warning'}>
-      {t(q.data.enabled ? 'on' : 'off')}
+  const load = useFirstLoad(q.data);
+  const badge = load.data ? (
+    <StatusBadge tone={load.data.enabled ? 'success' : 'warning'}>
+      {t(load.data.enabled ? 'on' : 'off')}
     </StatusBadge>
   ) : undefined;
   let body;
-  if (q.data) {
-    body = <Facts safe={q.data} />;
+  if (load.data) {
+    body = <Facts safe={load.data} />;
   } else if (q.isError) {
     body = <PartFailed message={t('cardFailed')} onRetry={() => void q.refetch()} />;
   } else {
@@ -74,7 +77,7 @@ export function SafeModeCard() {
   }
   return (
     <SummaryCard title={t('safeModeTitle')} badge={badge}>
-      {body}
+      <Reveal on={load.reveal}>{body}</Reveal>
     </SummaryCard>
   );
 }

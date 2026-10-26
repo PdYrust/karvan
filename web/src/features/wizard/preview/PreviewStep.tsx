@@ -12,6 +12,7 @@ import { PreviewList } from './PreviewList';
 import { ReportCard } from './ReportCard';
 import { ImpactBar } from '../ImpactBar';
 import { StepActions } from '../StepActions';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 /**
  * Step 5: what the plan does in numbers, the pre-flight report (B7), and
  * every user as they will land, paged on the server (4.5, D5).
@@ -24,6 +25,7 @@ export function PreviewStep() {
     queryKey: migrationKeys.groups(jobId),
     queryFn: () => getGroups(jobId),
   });
+  const load = useFirstLoad(groups.data && plan.plan ? true : undefined);
   const failed = groups.error ?? plan.query.error;
   if (failed) {
     if (errorOf(failed).code === 'not_checked') {
@@ -35,7 +37,7 @@ export function PreviewStep() {
     };
     return <ErrorState message={t('failed')} error={failed} onRetry={retry} />;
   }
-  if (!groups.data || !plan.plan) {
+  if (!load.data || !groups.data || !plan.plan) {
     return (
       <div role="status" aria-label={t('loading')} className="flex flex-col gap-4">
         <Bone className="h-28 w-full" />

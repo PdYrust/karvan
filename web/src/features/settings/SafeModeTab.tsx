@@ -12,6 +12,8 @@ import { turnOffConfirm, type Rollback, type SafeMode } from '../../lib/api/safe
 import { usePanels } from '../panels/use-panels';
 import { settingsMessages } from './messages';
 import { useSafeMode, useSetSafeMode } from './use-safe-mode';
+import { Reveal } from '../../components/feedback/Reveal';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 function Choice({ title, hint }: { title: string; hint: string }) {
   return (
@@ -31,7 +33,8 @@ export function SafeModeTab() {
   const toasts = useKumoToastManager();
   const [confirming, setConfirming] = useState(false);
 
-  if (safe.isPending) {
+  const load = useFirstLoad(safe.data);
+  if (safe.isPending || load.holding) {
     return (
       <div role="status" aria-label={t('safeModeTitle')} className="flex flex-col gap-6">
         <Bone className="h-28 w-full" />
@@ -66,7 +69,7 @@ export function SafeModeTab() {
   }
 
   return (
-    <>
+    <Reveal on={load.reveal}>
       <SettingsCard>
         <SettingRow
           title={t('safeModeTitle')}
@@ -135,6 +138,6 @@ export function SafeModeTab() {
       >
         {t('turnOffBody')}
       </TypeToConfirm>
-    </>
+    </Reveal>
   );
 }

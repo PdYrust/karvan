@@ -10,6 +10,7 @@ import { reportFiles } from '../../lib/api/report';
 import { useErrorText } from '../../lib/errors/errors';
 import { useFormat } from '../../lib/preferences/region';
 import { linksMessages } from './messages';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 /** Done migrations into the site's panel, the latest 100: the ones from its old panel have its new links. */
 function useSiteJobs(site: LinkSite) {
@@ -36,12 +37,13 @@ export function NewLinks({ site }: { site: LinkSite }) {
     onError: (err) =>
       toasts.add({ title: t('downloadFailed'), description: errorText(err), variant: 'error' }),
   });
+  const load = useFirstLoad(jobs.data);
   if (jobs.isError) return <p className="text-sm text-kumo-subtle">{t('newLinksFailed')}</p>;
-  if (!jobs.data) return <Bone className="h-10 w-full" />;
-  if (jobs.data.length === 0) return <p className="text-sm text-kumo-subtle">{t('noNewLinks')}</p>;
+  if (!load.data) return <Bone className="h-10 w-full" />;
+  if (load.data.length === 0) return <p className="text-sm text-kumo-subtle">{t('noNewLinks')}</p>;
   return (
-    <ul className="flex flex-col">
-      {jobs.data.map((j) => {
+    <ul className="k-fade flex flex-col">
+      {load.data.map((j) => {
         const admin = j.source.admin || originHost(j.source.origin);
         const ended = j.endedAt ? new Date(j.endedAt) : undefined;
         return (

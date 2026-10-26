@@ -9,6 +9,8 @@ import { panelKind, type Panel } from '../../../lib/api/panels';
 import { readRecents } from '../../../lib/preferences/recents';
 import { HomeColumn, HomeNote, HomeRow, HomeRows, HomeRowsSkeleton } from './HomeColumn';
 import { overviewMessages } from '../messages';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 const sections = {
   analytics: 'navAnalytics',
@@ -81,8 +83,10 @@ export function RecentsColumn({ panels }: { panels: UseQueryResult<Panel[]> }) {
   const t = useT(overviewMessages);
   // Read once: the list only changes when the operator leaves this page.
   const [paths] = useState(readRecents);
+  // Only pages to name wait for the panel list, and only they show a skeleton.
+  const load = useFirstLoad(paths.length > 0 ? panels.data : []);
   // Without the panel list (it failed), pages of one panel cannot be named and drop out.
-  const listed = panels.data ?? [];
+  const listed = load.data ?? [];
   const items = paths.flatMap((path) => {
     const page = recentPage(path);
     if (!page) return [];
@@ -92,7 +96,7 @@ export function RecentsColumn({ panels }: { panels: UseQueryResult<Panel[]> }) {
   });
 
   let body;
-  if (paths.length > 0 && panels.isPending) {
+  if (paths.length > 0 && !load.data && !panels.isError) {
     body = <HomeRowsSkeleton label={t('recentsTitle')} />;
   } else if (items.length === 0) {
     body = (
@@ -116,5 +120,9 @@ export function RecentsColumn({ panels }: { panels: UseQueryResult<Panel[]> }) {
       </HomeRows>
     );
   }
-  return <HomeColumn title={t('recentsTitle')}>{body}</HomeColumn>;
+  return (
+    <HomeColumn title={t('recentsTitle')}>
+      <Reveal on={load.reveal}>{body}</Reveal>
+    </HomeColumn>
+  );
 }

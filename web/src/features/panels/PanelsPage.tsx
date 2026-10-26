@@ -13,6 +13,8 @@ import { PanelsTable } from './PanelsTable';
 import { ScanFinds } from './ScanFinds';
 import { matchesPanel } from './search';
 import { usePanels, useRefreshPanels, useScanFinds, useScanPanels } from './use-panels';
+import { Reveal } from '../../components/feedback/Reveal';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 /** The toolbar and a few rows, the shape the list takes. */
 function ListSkeleton({ label }: { label: string }) {
@@ -34,10 +36,11 @@ export function PanelsPage() {
   const finds = useScanFinds();
   const [query, setQuery] = useState('');
 
-  const all = panels.data ?? [];
+  const load = useFirstLoad(panels.data);
+  const all = load.data ?? [];
   const shown = all.filter((p) => matchesPanel(p, query));
   let body;
-  if (!panels.data) {
+  if (!load.data) {
     body = panels.isError ? (
       <ErrorState
         message={t('loadFailed')}
@@ -95,7 +98,7 @@ export function PanelsPage() {
         }
       />
       <div className="flex max-w-[1400px] flex-col gap-6 p-4 sm:p-8">
-        {body}
+        <Reveal on={load.reveal}>{body}</Reveal>
         {finds.length > 0 ? <ScanFinds finds={finds} /> : null}
       </div>
     </div>

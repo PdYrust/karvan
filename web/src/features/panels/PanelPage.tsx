@@ -17,6 +17,8 @@ import { PanelAside } from './PanelAside';
 import { CurrentTag, PanelVersion } from './PanelCells';
 import { PanelEnv } from './PanelEnv';
 import { usePanels, useRefreshPanels } from './use-panels';
+import { Reveal } from '../../components/feedback/Reveal';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 /** The breadcrumb above the title, back to the list. */
 function Crumb() {
@@ -109,12 +111,19 @@ export function PanelPage() {
   const navigate = useNavigate();
   const id = Number(useParams().id);
   const panels = usePanels();
-  const panel = panels.data?.find((p) => p.id === id);
+  const load = useFirstLoad(panels.data);
+  const panel = load.data?.find((p) => p.id === id);
   usePageTitle(panel?.name ?? t('title'));
 
-  if (panel) return <Detail panel={panel} />;
-  if (!panels.data && !panels.isError) return <PageSkeleton label={t('title')} />;
-  if (!panels.data) {
+  if (panel) {
+    return (
+      <Reveal on={load.reveal}>
+        <Detail panel={panel} />
+      </Reveal>
+    );
+  }
+  if (!load.data && !panels.isError) return <PageSkeleton label={t('title')} />;
+  if (!load.data) {
     return (
       <div className="flex flex-col">
         <PageHeader title={t('title')} />

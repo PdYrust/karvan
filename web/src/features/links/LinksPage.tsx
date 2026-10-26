@@ -18,6 +18,8 @@ import { useFormat } from '../../lib/preferences/region';
 import { usePanels } from '../panels/use-panels';
 import { linksMessages } from './messages';
 import { SiteCard } from './SiteCard';
+import { Reveal } from '../../components/feedback/Reveal';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 function AddButton() {
   const t = useT(linksMessages);
@@ -55,6 +57,7 @@ export function LinksPage() {
       void qc.invalidateQueries({ queryKey: linkKeys.all, exact: true });
     },
   });
+  const load = useFirstLoad(list.data);
   let body;
   if (list.isError) {
     body = (
@@ -64,13 +67,13 @@ export function LinksPage() {
         onRetry={() => void list.refetch()}
       />
     );
-  } else if (!list.data) {
+  } else if (!load.data) {
     body = (
       <div role="status" aria-label={t('title')} className="flex flex-col gap-4">
         <Bone className="h-72 w-full rounded-lg" />
       </div>
     );
-  } else if (list.data.sites.length === 0) {
+  } else if (load.data.sites.length === 0) {
     body = (
       <EmptyState
         icon={<LinkSimpleIcon size={32} aria-hidden="true" />}
@@ -81,14 +84,14 @@ export function LinksPage() {
       </EmptyState>
     );
   } else {
-    const ports = Object.keys(list.data.portErrors).map((p) => fmt.number(Number(p)));
+    const ports = Object.keys(load.data.portErrors).map((p) => fmt.number(Number(p)));
     body = (
       <>
         {ports.length > 0 ? (
           <InlineAlert tone="warning">{t('portsFailed', { ports: ports.join(', ') })}</InlineAlert>
         ) : null}
         <section aria-label={t('list')} className="flex flex-col gap-4">
-          {list.data.sites.map((s) => (
+          {load.data.sites.map((s) => (
             <SiteCard
               key={s.id}
               site={s}
@@ -103,7 +106,7 @@ export function LinksPage() {
       </>
     );
   }
-  const hasSites = Boolean(list.data?.sites.length);
+  const hasSites = Boolean(load.data?.sites.length);
   return (
     <div className="flex flex-col">
       <PageHeader
@@ -111,7 +114,9 @@ export function LinksPage() {
         description={t('description')}
         actions={hasSites ? <AddButton /> : undefined}
       />
-      <div className="flex max-w-[1200px] flex-col gap-4 p-4 sm:p-8">{body}</div>
+      <div className="flex max-w-[1200px] flex-col gap-4 p-4 sm:p-8">
+        <Reveal on={load.reveal}>{body}</Reveal>
+      </div>
       <TypeToConfirm
         open={asking !== null}
         onOpenChange={(open) => {

@@ -22,6 +22,8 @@ import { liveMessages, type LiveKey } from './messages';
 import { ResultCard } from './ResultCard';
 import { StageRail } from './StageRail';
 import { useLive } from './use-live';
+import { Reveal } from '../../components/feedback/Reveal';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 const titles: Readonly<Record<Phase, LiveKey>> = {
   idle: 'titleLive',
@@ -68,7 +70,8 @@ function stateOf(live: Live): JobState | null {
 function LiveBody({ id, live }: { id: string; live: Live }) {
   const t = useT(liveMessages);
   const navigate = useNavigate();
-  const r = live.row.data;
+  const load = useFirstLoad(live.row.data);
+  const r = load.data;
   const { phase, ends } = live;
   if (live.row.isError) {
     return (
@@ -121,7 +124,7 @@ function LiveBody({ id, live }: { id: string; live: Live }) {
     );
   }
   return (
-    <>
+    <Reveal on={load.reveal}>
       {live.lost && phase !== 'ended' ? (
         <InlineAlert tone="warning" className="order-first">
           {t('lost')}
@@ -153,7 +156,7 @@ function LiveBody({ id, live }: { id: string; live: Live }) {
       )}
       {/* On a phone what happens now comes first; from 640 px the rail heads the page. */}
       <StageRail steps={live.rail} className="sm:order-first" />
-    </>
+    </Reveal>
   );
 }
 

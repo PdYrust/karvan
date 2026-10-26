@@ -11,6 +11,7 @@ import type { PanelControl } from '../../../lib/api/panels';
 import type { SafeMode } from '../../../lib/api/safemode';
 import { errorMessages } from '../../../lib/errors/errors';
 import { startMessages } from './messages';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 /** Safe Mode as the run will read it, with its rollback and the way to Settings. */
 export function SafeModeCard({
   safe,
@@ -23,7 +24,7 @@ export function SafeModeCard({
   const t = useT(startMessages);
   const te = useT(errorMessages);
   const titleId = useId();
-  const s = safe.data;
+  const s = useFirstLoad(safe.data).data;
   return (
     <section
       aria-labelledby={titleId}
@@ -57,7 +58,7 @@ export function SafeModeCard({
       ) : !s ? (
         <Bone className="h-10 w-full" />
       ) : (
-        <p className="max-w-[720px] text-kumo-default">
+        <p className="k-fade max-w-[720px] text-kumo-default">
           {!s.enabled
             ? t('safeOffBody')
             : s.rollback === 'backup'

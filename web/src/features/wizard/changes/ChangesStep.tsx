@@ -13,6 +13,7 @@ import { AddChange } from './AddChange';
 import { ChangeList } from './ChangeList';
 import { changesMessages } from './messages';
 import { Templates } from './Templates';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 function Loading() {
   const t = useT(changesMessages);
@@ -42,6 +43,7 @@ export function ChangesStep() {
     queryKey: migrationKeys.groups(jobId),
     queryFn: () => getGroups(jobId),
   });
+  const load = useFirstLoad(summary.data && groups.data && plan.plan ? true : undefined);
   const failed = summary.error ?? groups.error ?? plan.query.error;
   if (failed) {
     if (errorOf(failed).code === 'not_checked') {
@@ -54,7 +56,7 @@ export function ChangesStep() {
     };
     return <ErrorState message={t('failed')} error={failed} onRetry={retry} />;
   }
-  if (!summary.data || !groups.data || !plan.plan) return <Loading />;
+  if (!load.data || !summary.data || !groups.data || !plan.plan) return <Loading />;
   const counts = groups.data.categories;
   return (
     <div className="flex flex-col gap-6">

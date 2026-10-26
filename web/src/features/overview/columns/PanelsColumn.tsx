@@ -7,6 +7,8 @@ import { PanelStatus } from '../../panels/PanelStatus';
 import { PartFailed } from '../PartFailed';
 import { HomeColumn, HomeRow, HomeRows, HomeRowsSkeleton } from './HomeColumn';
 import { overviewMessages } from '../messages';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 function PanelRow({ panel }: { panel: Panel }) {
   const kind = panelKind(panel);
@@ -28,11 +30,12 @@ function PanelRow({ panel }: { panel: Panel }) {
 /** Each registered panel and whether Karvan can work with it. */
 export function PanelsColumn({ panels }: { panels: UseQueryResult<Panel[]> }) {
   const t = useT(overviewMessages);
+  const load = useFirstLoad(panels.data);
   let body;
-  if (panels.data) {
+  if (load.data) {
     body = (
       <HomeRows>
-        {panels.data
+        {load.data
           .filter((p) => p.id > 0)
           .map((p) => (
             <PanelRow key={p.id} panel={p} />
@@ -46,7 +49,7 @@ export function PanelsColumn({ panels }: { panels: UseQueryResult<Panel[]> }) {
   }
   return (
     <HomeColumn title={t('panelsTitle')} to="/panels">
-      {body}
+      <Reveal on={load.reveal}>{body}</Reveal>
     </HomeColumn>
   );
 }

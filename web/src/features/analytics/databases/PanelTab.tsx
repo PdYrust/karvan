@@ -13,6 +13,8 @@ import { AdminsCard, ClientsCard, NodesCard, TablesCard } from './ListCards';
 import { PanelTiles } from './PanelTiles';
 import { StatusCard, UsersTrendCard } from './UsersCards';
 import { panelWindow } from './window';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 function UnknownPanel() {
   const t = useT(analyticsMessages);
@@ -44,28 +46,29 @@ export function PanelTab() {
   const valid = Number.isInteger(id) && id > 0;
   const q = usePanelStats(valid ? id : 0, range);
 
-  if (!valid || (q.error instanceof ApiError && q.error.status === 404 && !q.data)) {
+  const load = useFirstLoad(q.data);
+  if (!valid || (q.error instanceof ApiError && q.error.status === 404 && !load.data)) {
     return <UnknownPanel />;
   }
-  if (!q.data) {
+  if (!load.data) {
     return q.isError ? (
       <LoadFailed error={q.error} onRetry={() => void q.refetch()} />
     ) : (
       <TabSkeleton label={t('title')} />
     );
   }
-  const { panel, detail, detailProblem } = q.data;
+  const { panel, detail, detailProblem } = load.data;
   if (panel.problem) return <DatabaseProblem code={panel.problem.code} />;
   if (panel.pending || !panel.data) {
     return <Notice icon={<HourglassIcon {...noticeIcon} />}>{t('pending')}</Notice>;
   }
-  const { end, step, domain } = panelWindow(q.data, range);
+  const { end, step, domain } = panelWindow(load.data, range);
   const missing =
     detailProblem === undefined
       ? undefined
       : t(detailProblem === 'pending' ? 'pending' : 'detailUnreachable');
   return (
-    <>
+    <Reveal on={load.reveal}>
       <PanelTiles panel={panel} data={panel.data} step={step} domain={domain} />
       {/* Pairs of about the same height share a row; the lists below vary, so they stack in two columns. */}
       <div className="grid gap-4 lg:grid-cols-2">
@@ -85,6 +88,6 @@ export function PanelTab() {
           <ClientsCard detail={detail} missing={missing} kind={panel.kind} range={range} />
         </div>
       </div>
-    </>
+    </Reveal>
   );
 }

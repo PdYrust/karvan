@@ -14,6 +14,8 @@ import { useFormat } from '../../../lib/preferences/region';
 import { AuditFilters } from './AuditFilters';
 import { auditMessages } from './messages';
 import { actionMessages, isAuditAction, isAuditReason, reasonMessages } from './words';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 const none: AuditFilter = { action: '', outcome: '' };
 
@@ -73,8 +75,9 @@ export function AuditTab() {
     { key: 'ip', header: t('ip'), cell: (e) => <Machine>{e.ip}</Machine> },
   ];
 
+  const load = useFirstLoad(log.data);
   function body() {
-    if (log.isPending) {
+    if (log.isPending || load.holding) {
       return (
         <div role="status" aria-label={t('caption')}>
           <Bone className="h-64 w-full" />
@@ -155,7 +158,7 @@ export function AuditTab() {
         <p className="max-w-prose text-sm text-kumo-subtle">{t('description')}</p>
       </div>
       <AuditFilters filter={filter} onChange={setFilter} />
-      {body()}
+      <Reveal on={load.reveal}>{body()}</Reveal>
     </section>
   );
 }

@@ -28,6 +28,8 @@ import { migrationsMessages } from '../migrations/messages';
 import { reportsMessages } from './messages';
 import { Stages, UndoCard, useReportFacts } from './ReportParts';
 import { ReportUsers } from './ReportUsers';
+import { Reveal } from '../../components/feedback/Reveal';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 const linkButton = cn(buttonVariants({ variant: 'secondary' }), 'gap-2 pointer-coarse:h-11');
 
@@ -98,7 +100,8 @@ export function ReportPage() {
   const tm = useT(migrationsMessages);
   const report = useQuery({ queryKey: migrationKeys.report(id), queryFn: () => getReport(id) });
   const row = useQuery({ queryKey: migrationKeys.row(id), queryFn: () => getJobRow(id) });
-  const r = report.data;
+  const load = useFirstLoad(report.data);
+  const r = load.data;
   const name = r?.source.admin || r?.source.origin || '';
   usePageTitle(r ? t('reportTitle', { name }) : t('title'));
   // The job's own state wins: a backup restore changes it without a new report.
@@ -158,7 +161,9 @@ export function ReportPage() {
             onRetry={() => void report.refetch()}
           />
         ) : r ? (
-          <Body id={id} state={state} report={r} />
+          <Reveal on={load.reveal}>
+            <Body id={id} state={state} report={r} />
+          </Reveal>
         ) : (
           <div role="status" aria-label={t('printLoading')} className="flex flex-col gap-4">
             <Bone className="h-40 w-full" />

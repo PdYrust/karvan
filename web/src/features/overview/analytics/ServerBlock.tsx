@@ -10,6 +10,8 @@ import { LoadFailed, Notice, noticeIcon } from '../../analytics/states';
 import { useServerStats } from '../../analytics/use-analytics';
 import { overviewMessages } from '../messages';
 import { BlockHeading, TilesSkeleton } from './BlockHeading';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 /** This server's CPU, memory, disk and network, each with its trend over the range. */
 export function ServerBlock({ range, search }: { range: RangeKey; search: string }) {
@@ -17,18 +19,23 @@ export function ServerBlock({ range, search }: { range: RangeKey; search: string
   const ta = useT(analyticsMessages);
   const id = useId();
   const q = useServerStats(range);
+  const load = useFirstLoad(q.data);
   let body;
-  if (!q.data) {
+  if (!load.data) {
     body = q.isError ? (
       <LoadFailed error={q.error} onRetry={() => void q.refetch()} />
     ) : (
       <TilesSkeleton label={t('thisServer')} />
     );
-  } else if (!q.data.now) {
+  } else if (!load.data.now) {
     body = <Notice icon={<HourglassIcon {...noticeIcon} />}>{ta('serverWaiting')}</Notice>;
   } else {
     body = (
-      <ServerTiles stats={q.data} now={q.data.now} view={serverView(q.data, rangeSpan[range])} />
+      <ServerTiles
+        stats={load.data}
+        now={load.data.now}
+        view={serverView(load.data, rangeSpan[range])}
+      />
     );
   }
   return (
@@ -36,7 +43,7 @@ export function ServerBlock({ range, search }: { range: RangeKey; search: string
       <BlockHeading id={id} to={`/analytics/server${search}`}>
         {t('thisServer')}
       </BlockHeading>
-      {body}
+      <Reveal on={load.reveal}>{body}</Reveal>
     </section>
   );
 }

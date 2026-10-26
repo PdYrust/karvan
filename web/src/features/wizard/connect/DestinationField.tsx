@@ -17,6 +17,8 @@ import {
 import { findingMessages, findingText } from '../../panels/findings';
 import { usePanels } from '../../panels/use-panels';
 import { connectMessages } from './messages';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 /** Why a panel cannot take users: its first finding, in words. */
 function NotReady({ panel }: { panel: Panel }) {
@@ -45,7 +47,8 @@ export function DestinationField({
   const t = useT(connectMessages);
   const navigate = useNavigate();
   const panels = usePanels();
-  if (panels.isPending) {
+  const load = useFirstLoad(panels.data);
+  if (panels.isPending || load.holding) {
     return (
       <div role="status" aria-label={t('destTitle')} className="flex flex-col gap-2">
         <Bone className="h-5 w-36" />
@@ -75,34 +78,36 @@ export function DestinationField({
     );
   }
   return (
-    <Radio.Group
-      legend={t('destTitle')}
-      description={t('destHint')}
-      appearance="card"
-      value={String(value)}
-      disabled={disabled}
-      onValueChange={(v: string) => onChange(Number(v))}
-    >
-      {list.map((p) => (
-        <Radio.Item
-          key={p.id}
-          value={String(p.id)}
-          disabled={!p.ready}
-          label={
-            <span className="flex flex-col gap-1">
-              <PanelLabel
-                kind={panelKind(p)}
-                name={p.name}
-                version={panelRelease(p.revision)}
-                className="font-medium text-kumo-strong"
-              />
-              <span className="text-sm text-kumo-subtle">
-                {p.ready ? <Engine panel={p} /> : <NotReady panel={p} />}
+    <Reveal on={load.reveal}>
+      <Radio.Group
+        legend={t('destTitle')}
+        description={t('destHint')}
+        appearance="card"
+        value={String(value)}
+        disabled={disabled}
+        onValueChange={(v: string) => onChange(Number(v))}
+      >
+        {list.map((p) => (
+          <Radio.Item
+            key={p.id}
+            value={String(p.id)}
+            disabled={!p.ready}
+            label={
+              <span className="flex flex-col gap-1">
+                <PanelLabel
+                  kind={panelKind(p)}
+                  name={p.name}
+                  version={panelRelease(p.revision)}
+                  className="font-medium text-kumo-strong"
+                />
+                <span className="text-sm text-kumo-subtle">
+                  {p.ready ? <Engine panel={p} /> : <NotReady panel={p} />}
+                </span>
               </span>
-            </span>
-          }
-        />
-      ))}
-    </Radio.Group>
+            }
+          />
+        ))}
+      </Radio.Group>
+    </Reveal>
   );
 }

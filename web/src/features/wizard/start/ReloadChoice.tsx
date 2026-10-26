@@ -5,6 +5,8 @@ import { CodeText } from '../../../components/text/CodeText';
 import { useT } from '../../../i18n/locale';
 import type { ReloadMethod, ReloadOption } from '../../../lib/api/preflight';
 import { startMessages, type StartKey } from './messages';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 const reasons: readonly string[] = ['not_built_in', 'no_full_admin', 'panel_unreadable'];
 function reasonKey(r: string | undefined): StartKey {
   return r && reasons.includes(r) ? (`reason_${r}` as StartKey) : 'reason_unknown';
@@ -47,6 +49,7 @@ export function ReloadChoice({
   onChange: (m: ReloadMethod) => void;
 }) {
   const t = useT(startMessages);
+  const load = useFirstLoad(options.data);
   if (options.error) {
     return (
       <ErrorState
@@ -56,28 +59,30 @@ export function ReloadChoice({
       />
     );
   }
-  if (!options.data) return <Bone className="h-48 w-full" />;
+  if (!load.data) return <Bone className="h-48 w-full" />;
   return (
-    <Radio.Group
-      legend={t('reloadTitle')}
-      description={t('reloadBody')}
-      appearance="card"
-      value={value ?? ''}
-      onValueChange={(v: string) => onChange(v as ReloadMethod)}
-    >
-      {options.data.map((o) => (
-        <Radio.Item
-          key={o.method}
-          value={o.method}
-          disabled={!o.available}
-          label={
-            <span className="flex flex-col gap-1">
-              <span className="font-medium text-kumo-strong">{t(`method_${o.method}`)}</span>
-              <Effects o={o} />
-            </span>
-          }
-        />
-      ))}
-    </Radio.Group>
+    <Reveal on={load.reveal}>
+      <Radio.Group
+        legend={t('reloadTitle')}
+        description={t('reloadBody')}
+        appearance="card"
+        value={value ?? ''}
+        onValueChange={(v: string) => onChange(v as ReloadMethod)}
+      >
+        {load.data.map((o) => (
+          <Radio.Item
+            key={o.method}
+            value={o.method}
+            disabled={!o.available}
+            label={
+              <span className="flex flex-col gap-1">
+                <span className="font-medium text-kumo-strong">{t(`method_${o.method}`)}</span>
+                <Effects o={o} />
+              </span>
+            }
+          />
+        ))}
+      </Radio.Group>
+    </Reveal>
   );
 }

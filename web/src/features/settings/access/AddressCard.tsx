@@ -25,6 +25,8 @@ import { PortFields } from './PortFields';
 import { useSecondsLeft } from './use-seconds-left';
 import { waitingLink } from './waiting';
 import { WaitingCard } from './WaitingCard';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 type Asking = 'path' | 'port' | null;
 
@@ -64,7 +66,8 @@ export function AddressCard() {
     if (expired) void queryClient.invalidateQueries({ queryKey: accountKeys.address });
   }, [expired, queryClient]);
 
-  if (address.isPending) {
+  const load = useFirstLoad(address.data);
+  if (address.isPending || load.holding) {
     return (
       <div role="status" aria-label={t('addressTitle')}>
         <Bone className="h-44 w-full" />
@@ -89,7 +92,7 @@ export function AddressCard() {
   }
 
   return (
-    <>
+    <Reveal on={load.reveal}>
       {pending && !expired && left !== null ? (
         <WaitingCard
           pending={pending}
@@ -146,6 +149,6 @@ export function AddressCard() {
       >
         <PortFields choice={port} current={current} disabled={start.isPending} onChange={setPort} />
       </ReauthDialog>
-    </>
+    </Reveal>
   );
 }

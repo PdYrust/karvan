@@ -16,6 +16,7 @@ import { ImpactBar } from '../ImpactBar';
 import { compareMessages } from './messages';
 import { ProblemList } from './ProblemList';
 import { TargetsCard } from './TargetsCard';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 function Loading() {
   const t = useT(compareMessages);
@@ -47,6 +48,7 @@ export function CompareStep() {
     queryKey: migrationKeys.groups(jobId),
     queryFn: () => getGroups(jobId),
   });
+  const load = useFirstLoad(summary.data && groups.data && plan.plan ? true : undefined);
   const failed = summary.error ?? groups.error ?? plan.query.error;
   if (failed) {
     if (errorOf(failed).code === 'not_checked') {
@@ -59,7 +61,7 @@ export function CompareStep() {
     };
     return <ErrorState message={t('failed')} error={failed} onRetry={retry} />;
   }
-  if (!summary.data || !groups.data || !plan.plan) return <Loading />;
+  if (!load.data || !summary.data || !groups.data || !plan.plan) return <Loading />;
   const g = groups.data;
   const kind = summary.data.destKind || 'pasarguard';
   return (

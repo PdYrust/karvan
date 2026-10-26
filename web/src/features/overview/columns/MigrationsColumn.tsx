@@ -7,6 +7,8 @@ import { PartFailed } from '../PartFailed';
 import { HomeColumn, HomeNote, HomeRow, HomeRows, HomeRowsSkeleton } from './HomeColumn';
 import { overviewMessages } from '../messages';
 import { useRecentJobs } from '../use-overview';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 /** The move, its admin and state, then what it moved and when. */
 function JobItem({ job, now }: { job: JobRow; now: Date }) {
@@ -41,12 +43,13 @@ function JobItem({ job, now }: { job: JobRow; now: Date }) {
 export function MigrationsColumn({ now }: { now: Date }) {
   const t = useT(overviewMessages);
   const jobs = useRecentJobs();
+  const load = useFirstLoad(jobs.data);
   let body;
-  if (jobs.data) {
+  if (load.data) {
     body =
-      jobs.data.jobs.length > 0 ? (
+      load.data.jobs.length > 0 ? (
         <HomeRows>
-          {jobs.data.jobs.map((j) => (
+          {load.data.jobs.map((j) => (
             <JobItem key={j.id} job={j} now={now} />
           ))}
         </HomeRows>
@@ -62,7 +65,7 @@ export function MigrationsColumn({ now }: { now: Date }) {
   }
   return (
     <HomeColumn title={t('migrationsTitle')} to="/migrations">
-      {body}
+      <Reveal on={load.reveal}>{body}</Reveal>
     </HomeColumn>
   );
 }

@@ -15,6 +15,8 @@ import { sessionKey, useSession } from '../../session/use-session';
 import { ReauthDialog } from '../security/ReauthDialog';
 import { twoStepMessages } from './messages';
 import { TotpSetupCard } from './TotpSetupCard';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 /** Two-step sign-in: set up with a QR code and a first code, or turn off with the password and a code. */
 export function TwoStepTab() {
@@ -37,7 +39,8 @@ export function TwoStepTab() {
     },
   });
 
-  if (session.isPending) {
+  const load = useFirstLoad(session.data);
+  if (session.isPending || load.holding) {
     return (
       <div role="status" aria-label={t('title')}>
         <Bone className="h-28 w-full" />
@@ -56,7 +59,7 @@ export function TwoStepTab() {
   const on = session.data.operator?.totpEnabled ?? false;
 
   return (
-    <>
+    <Reveal on={load.reveal}>
       <SettingsCard>
         <SettingRow
           title={t('title')}
@@ -115,6 +118,6 @@ export function TwoStepTab() {
         error={disable.error}
         onSubmit={(r) => disable.mutate(r)}
       />
-    </>
+    </Reveal>
   );
 }

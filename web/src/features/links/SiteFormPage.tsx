@@ -22,6 +22,8 @@ import { siteFormMessages } from './form-messages';
 import { linksMessages } from './messages';
 import { newValues, valuesOf } from './site-form';
 import { SiteForm } from './SiteForm';
+import { Reveal } from '../../components/feedback/Reveal';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 /** Adds a site (`/links/new`, maybe prefilled from a migration) or changes one (`/links/:id`). */
 export function SiteFormPage() {
@@ -35,7 +37,9 @@ export function SiteFormPage() {
   const toasts = useKumoToastManager();
   const { panel } = useCurrentPanel();
   const list = useQuery({ queryKey: linkKeys.all, queryFn: getLinkSites, enabled: !!siteId });
-  const site: LinkSite | undefined = list.data?.sites.find((s) => s.id === siteId);
+  // A new site reads nothing, so it has no skeleton to hold.
+  const load = useFirstLoad(siteId ? list.data : null);
+  const site: LinkSite | undefined = load.data?.sites.find((s) => s.id === siteId);
   usePageTitle(site ? t('editTitle', { name: site.name }) : t('newTitle'));
   const save = useMutation({
     mutationFn: (input: SiteInput) => saveSite(input, siteId),
@@ -55,7 +59,7 @@ export function SiteFormPage() {
         onRetry={() => void list.refetch()}
       />
     );
-  } else if (siteId && !list.data) {
+  } else if (siteId && !load.data) {
     body = (
       <div role="status" aria-label={t('editTitle', { name: '' })} className="flex flex-col gap-4">
         <Bone className="h-10 w-full max-w-[720px]" />
@@ -107,7 +111,9 @@ export function SiteFormPage() {
         }
         description={t('description')}
       />
-      <div className="p-4 sm:p-8">{body}</div>
+      <div className="p-4 sm:p-8">
+        <Reveal on={load.reveal}>{body}</Reveal>
+      </div>
     </div>
   );
 }

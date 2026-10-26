@@ -7,6 +7,8 @@ import type { JobRow } from '../../lib/api/migrations';
 import { matchesJob } from './job-place';
 import { listMessages } from './list-messages';
 import type { JobList } from './use-job-list';
+import { Reveal } from '../../components/feedback/Reveal';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 /** The toolbar and a few rows, the shape the list takes. */
 export function ListSkeleton({ label }: { label: string }) {
@@ -36,16 +38,17 @@ export function ListBody({
 }) {
   const t = useT(listMessages);
   const { query } = list;
-  if (!query.data) {
+  const load = useFirstLoad(query.data);
+  if (!load.data) {
     return query.isError ? (
       <ErrorState message={failed} error={query.error} onRetry={() => void query.refetch()} />
     ) : (
       <Bone className="h-56 w-full rounded-lg" />
     );
   }
-  const shown = query.data.jobs.filter((j) => matchesJob(j, search));
+  const shown = load.data.jobs.filter((j) => matchesJob(j, search));
   return (
-    <>
+    <Reveal on={load.reveal}>
       {shown.length > 0 ? (
         children(shown)
       ) : list.filtered || search ? (
@@ -57,7 +60,7 @@ export function ListBody({
       )}
       {search.trim() ? (
         <p className="text-sm text-kumo-subtle" aria-live="polite">
-          {list.hasNext ? t('searchDepth', { count: query.data.jobs.length }) : null}
+          {list.hasNext ? t('searchDepth', { count: load.data.jobs.length }) : null}
         </p>
       ) : (
         <CursorPager
@@ -68,6 +71,6 @@ export function ListBody({
           onNext={list.next}
         />
       )}
-    </>
+    </Reveal>
   );
 }

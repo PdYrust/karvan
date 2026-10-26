@@ -12,6 +12,8 @@ import { useErrorText } from '../../../lib/errors/errors';
 import { useWizard } from '../wizard-context';
 import { conflictMessages, type ConflictKey } from './conflict-messages';
 import { compareMessages } from './messages';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 /** The role warnings of the whole job (api-migration.md section 4). */
 const roleConflicts = ['C33', 'C34', 'C35', 'C36', 'C37'];
@@ -84,7 +86,8 @@ export function RoleFields({
   const errorText = useErrorText();
   const { jobId, plan } = useWizard();
   const roles = useQuery({ queryKey: migrationKeys.roles(jobId), queryFn: () => getRoles(jobId) });
-  if (roles.isPending) return <Bone className="h-48 w-full" />;
+  const load = useFirstLoad(roles.data);
+  if (roles.isPending || load.holding) return <Bone className="h-48 w-full" />;
   if (roles.isError) return <InlineAlert>{errorText(roles.error)}</InlineAlert>;
   const current = roleId || roles.data.roleId;
   const role = roles.data.roles.find((r) => r.id === current);
@@ -96,26 +99,28 @@ export function RoleFields({
   );
   const warnings = conflicts.filter((c) => roleConflicts.includes(c.type));
   return (
-    <div className="flex flex-col gap-3">
-      <FormField id="admin-role" label={t('roleLabel')}>
-        <Select
-          id="admin-role"
-          aria-labelledby="admin-role-label"
-          className="w-full sm:w-72 pointer-coarse:h-11"
-          value={String(current)}
-          items={items}
-          onValueChange={(v) => v && plan.edit(setAdmin({ roleId: Number(v) }))}
-        />
-      </FormField>
-      {warnings.map((c) => (
-        <InlineAlert key={c.type} tone={c.severity === 'blocker' ? 'danger' : 'warning'}>
-          {tc(`job_${c.type}` as ConflictKey, {
-            max: fmt.number(Number(c.detail?.max ?? 0)),
-            users: fmt.number(Number(c.detail?.users ?? users)),
-          })}
-        </InlineAlert>
-      ))}
-      {role ? <RoleFacts role={role} /> : null}
-    </div>
+    <Reveal on={load.reveal}>
+      <div className="flex flex-col gap-3">
+        <FormField id="admin-role" label={t('roleLabel')}>
+          <Select
+            id="admin-role"
+            aria-labelledby="admin-role-label"
+            className="w-full sm:w-72 pointer-coarse:h-11"
+            value={String(current)}
+            items={items}
+            onValueChange={(v) => v && plan.edit(setAdmin({ roleId: Number(v) }))}
+          />
+        </FormField>
+        {warnings.map((c) => (
+          <InlineAlert key={c.type} tone={c.severity === 'blocker' ? 'danger' : 'warning'}>
+            {tc(`job_${c.type}` as ConflictKey, {
+              max: fmt.number(Number(c.detail?.max ?? 0)),
+              users: fmt.number(Number(c.detail?.users ?? users)),
+            })}
+          </InlineAlert>
+        ))}
+        {role ? <RoleFacts role={role} /> : null}
+      </div>
+    </Reveal>
   );
 }

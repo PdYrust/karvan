@@ -10,6 +10,8 @@ import { overviewMessages } from '../messages';
 import { PartFailed } from '../PartFailed';
 import { useOverview } from '../use-overview';
 import { SummaryCard, SummarySkeleton } from './SummaryCard';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 /** How runs end. A run cut short by a restart is rare and needs a look, so it shows only when there is one. */
 function outcomesOf(totals: MigrationTotals): JobState[] {
@@ -64,13 +66,18 @@ function Moved({ totals }: { totals: MigrationTotals }) {
 export function MovedCard() {
   const t = useT(overviewMessages);
   const q = useOverview();
+  const load = useFirstLoad(q.data);
   let body;
-  if (q.data) {
-    body = <Moved totals={q.data.migrations} />;
+  if (load.data) {
+    body = <Moved totals={load.data.migrations} />;
   } else if (q.isError) {
     body = <PartFailed message={t('cardFailed')} onRetry={() => void q.refetch()} />;
   } else {
     body = <SummarySkeleton label={t('movedTitle')} />;
   }
-  return <SummaryCard title={t('movedTitle')}>{body}</SummaryCard>;
+  return (
+    <SummaryCard title={t('movedTitle')}>
+      <Reveal on={load.reveal}>{body}</Reveal>
+    </SummaryCard>
+  );
 }

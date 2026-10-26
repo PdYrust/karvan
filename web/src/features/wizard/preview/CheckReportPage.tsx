@@ -18,6 +18,8 @@ import { migrationsMessages } from '../../migrations/messages';
 import { stepPath } from '../steps';
 import { previewMessages, type PreviewKey } from './messages';
 import { ReportTable } from './ReportTable';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 const isKind = (k: string): k is PanelKind => k === 'marzban' || k === 'pasarguard';
 const totals: readonly [keyof CheckReport['totals'], PreviewKey][] = [
   ['users', 'totalUsers'],
@@ -85,6 +87,7 @@ export function CheckReportPage() {
     queryFn: () => getCheckReport(id),
   });
   // Target names; the report holds their ids.
+  const load = useFirstLoad(report.data);
   const summary = useQuery({
     queryKey: migrationKeys.summary(id),
     queryFn: () => getSummary(id),
@@ -102,7 +105,7 @@ export function CheckReportPage() {
         <Button
           variant="primary"
           icon={<PrinterIcon size={16} />}
-          disabled={!report.data}
+          disabled={!load.data}
           className="pointer-coarse:h-11"
           onClick={() => window.print()}
         >
@@ -116,11 +119,11 @@ export function CheckReportPage() {
             error={report.error}
             onRetry={() => void report.refetch()}
           />
-        ) : report.data ? (
-          <>
-            <Head report={report.data} />
-            <ReportTable users={report.data.users} names={names} />
-          </>
+        ) : load.data ? (
+          <Reveal on={load.reveal}>
+            <Head report={load.data} />
+            <ReportTable users={load.data.users} names={names} />
+          </Reveal>
         ) : (
           <div role="status" aria-label={t('printLoading')} className="flex flex-col gap-4">
             <Bone className="h-8 w-64" />

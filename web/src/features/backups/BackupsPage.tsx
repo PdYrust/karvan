@@ -26,6 +26,8 @@ import { usePanels } from '../panels/use-panels';
 import { backupRows, blockedPanels, type BackupRow } from './backup-rows';
 import { BackupsTable } from './BackupsTable';
 import { backupsMessages } from './messages';
+import { Reveal } from '../../components/feedback/Reveal';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 /** A panel Karvan can't stop and start: why, and how to allow it. */
 function ControlNotice({ panel }: { panel: Panel }) {
@@ -104,7 +106,8 @@ export function BackupsPage() {
   const backups = useBackups();
   const panels = usePanels();
   const a = useBackupActions();
-  const rows = backups.data ? backupRows(backups.data, panels.data ?? []) : null;
+  const load = useFirstLoad(backups.data);
+  const rows = load.data ? backupRows(load.data, panels.data ?? []) : null;
   let body;
   if (backups.isError) {
     body = (
@@ -167,7 +170,9 @@ export function BackupsPage() {
           />
         }
       />
-      <div className="flex max-w-[1400px] flex-col gap-4 p-4 sm:p-8">{body}</div>
+      <div className="flex max-w-[1400px] flex-col gap-4 p-4 sm:p-8">
+        <Reveal on={load.reveal}>{body}</Reveal>
+      </div>
       <TypeToConfirm
         open={r !== null}
         onOpenChange={(open) => {

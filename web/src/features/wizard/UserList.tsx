@@ -9,6 +9,7 @@ import { Bone } from '../../components/feedback/PageSkeleton';
 import { useT } from '../../i18n/locale';
 import { getUsers, migrationKeys, usersPerPage, type UserRow } from '../../lib/api/migrations';
 import { wizardMessages } from './messages';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 /** A search term that settles after the operator stops typing for a moment. */
 export function useSettled(value: string, ms = 300): string {
@@ -74,6 +75,7 @@ export function UserList({
     queryFn: () => getUsers(jobId, query),
     placeholderData: keepPreviousData,
   });
+  const load = useFirstLoad(users.data);
   const rows = users.data?.users ?? [];
   return (
     <div className="flex flex-col gap-3">
@@ -86,7 +88,7 @@ export function UserList({
         }}
         className="sm:max-w-sm"
       />
-      {users.isPending ? (
+      {users.isPending || load.holding ? (
         <div role="status" aria-label={label} className="flex flex-col gap-2">
           <Bone className="h-12 w-full" />
           <Bone className="h-12 w-full" />

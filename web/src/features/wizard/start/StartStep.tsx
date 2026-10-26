@@ -23,6 +23,7 @@ import { useCheck } from './use-check';
 import { startGate, useStart } from './use-start';
 import { adminLine, UserEffects } from './UserEffects';
 import { ImpactBar } from '../ImpactBar';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 /**
  * Step 6: check again, the reload method, Safe Mode, what changes for
  * users, then Start (4.5, B3). Nothing is written before Start.
@@ -50,6 +51,7 @@ export function StartStep() {
   const check = useCheck(jobId);
   const start = useStart(jobId, check.reset);
   const [method, setMethod] = useState<ReloadMethod>();
+  const load = useFirstLoad(summary.data && groups.data ? true : undefined);
   const failed = summary.error ?? groups.error;
   if (failed) {
     if (errorOf(failed).code === 'not_checked') {
@@ -61,7 +63,7 @@ export function StartStep() {
     };
     return <ErrorState message={t('failed')} error={failed} onRetry={retry} />;
   }
-  if (!summary.data || !groups.data) {
+  if (!load.data || !summary.data || !groups.data) {
     return (
       <div role="status" aria-label={t('loading')} className="flex flex-col gap-4">
         <Bone className="h-28 w-full" />

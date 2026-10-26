@@ -20,6 +20,7 @@ import { expiryOf } from './expiry';
 import { previewMessages } from './messages';
 import { Pager } from '../../../components/data/Pager';
 import { useSettled } from '../UserList';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 /** Final status, data limit and expiry, as the run writes them. */
 function Facts({ row }: { row: UserRow }) {
   const t = useT(previewMessages);
@@ -91,6 +92,7 @@ export function PreviewList({ jobId, impact }: { jobId: string; impact: Impact |
     queryFn: () => getPreview(jobId, query),
     placeholderData: keepPreviousData,
   });
+  const load = useFirstLoad(users.data);
   const rows = users.data?.users ?? [];
   return (
     <section aria-labelledby={titleId} className="flex flex-col gap-3">
@@ -125,7 +127,7 @@ export function PreviewList({ jobId, impact }: { jobId: string; impact: Impact |
           className="lg:max-w-xs"
         />
       </div>
-      {users.isPending ? (
+      {users.isPending || load.holding ? (
         <div role="status" aria-label={t('usersLabel')} className="flex flex-col gap-2">
           <Bone className="h-12 w-full" />
           <Bone className="h-12 w-full" />
