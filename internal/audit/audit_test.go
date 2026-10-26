@@ -111,3 +111,26 @@ func TestRecordRejectsUnknownOutcome(t *testing.T) {
 		t.Fatal("Record accepted an unknown outcome")
 	}
 }
+
+func TestTrimDropsEventsPastTheKeptPeriod(t *testing.T) {
+	l := newLog(t)
+	ctx := context.Background()
+	now := time.Date(2026, 10, 26, 12, 0, 0, 0, time.UTC)
+	l.now = func() time.Time { return now }
+	for _, age := range []time.Duration{Kept + time.Hour, Kept - time.Hour, time.Minute} {
+		if err := l.Record(ctx, Event{At: now.Add(-age), Actor: "owner", Action: ActionLogin, Outcome: Success}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	n, err := l.Trim(ctx)
+	if err != nil || n != 1 {
+		t.Fatalf("Trim = %d, %v", n, err)
+	}
+	left, _ := l.List(ctx, Filter{})
+	if len(left) != 2 || left[1].At.UnixMilli() != now.Add(-(Kept-time.Hour)).UnixMilli() {
+		t.Fatalf("left %+v", left)
+	}
+	if n, _ := l.Trim(ctx); n != 0 {
+		t.Errorf("a second trim dropped %d", n)
+	}
+}

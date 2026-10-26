@@ -25,8 +25,9 @@ var ErrDataDirInUse = errors.New("another Karvan process is using the data direc
 // credentialSweep is how often idle migration logins are dropped.
 const credentialSweep = 10 * time.Minute
 
-// eventTrim is how often the events of long ended jobs are trimmed (B17).
-const eventTrim = 24 * time.Hour
+// dailyTrim is how often the events of long ended jobs (B17) and old
+// audit events are trimmed.
+const dailyTrim = 24 * time.Hour
 
 // lockDataDir takes the data directory for this process (D30).
 func (a *App) lockDataDir() (func(), error) {
@@ -76,7 +77,7 @@ func (a *App) startServices(ctx context.Context) *services {
 	})
 	s.wg.Go(func() { s.host.Run(ctx) })
 	s.wg.Go(func() { s.dbstats.Run(ctx) })
-	s.wg.Go(func() { a.trimEvents(ctx, s.runs) })
+	s.wg.Go(func() { a.trimDaily(ctx, s.runs) })
 	go func() {
 		t := time.NewTicker(credentialSweep)
 		defer t.Stop()
@@ -92,22 +93,28 @@ func (a *App) startServices(ctx context.Context) *services {
 	return s
 }
 
-// trimEvents trims the events of long ended jobs at start and then daily
-// until ctx ends.
-func (a *App) trimEvents(ctx context.Context, runs *run.Service) {
-	t := time.NewTicker(eventTrim)
+// trimDaily trims the events of long ended jobs and the audit events
+// past audit.Kept at start and then daily until ctx ends.
+func (a *App) trimDaily(ctx context.Context, runs *run.Service) {
+	t := time.NewTicker(dailyTrim)
 	defer t.Stop()
 	for {
-		if n, err := runs.TrimEvents(ctx); err != nil && ctx.Err() == nil {
-			a.Logger.Warn("trim job events", "err", err)
-		} else if n > 0 {
-			a.Logger.Info("trimmed job events", "events", n)
-		}
+		a.trimmed(ctx, "job events", runs.TrimEvents)
+		a.trimmed(ctx, "audit events", a.Audit.Trim)
 		select {
 		case <-ctx.Done():
 			return
 		case <-t.C:
 		}
+	}
+}
+
+// trimmed runs one trim and logs what it did.
+func (a *App) trimmed(ctx context.Context, what string, trim func(context.Context) (int64, error)) {
+	if n, err := trim(ctx); err != nil && ctx.Err() == nil {
+		a.Logger.Warn("trim "+what, "err", err)
+	} else if n > 0 {
+		a.Logger.Info("trimmed "+what, "rows", n)
 	}
 }
 

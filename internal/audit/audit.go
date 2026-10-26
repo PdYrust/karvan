@@ -94,6 +94,19 @@ func (l *Log) Record(ctx context.Context, e Event) error {
 	return nil
 }
 
+// Kept is how long audit events are kept; older ones are deleted daily,
+// so the log cannot fill the disk over the years.
+const Kept = 180 * 24 * time.Hour
+
+// Trim deletes the events older than Kept and returns how many it deleted.
+func (l *Log) Trim(ctx context.Context) (int64, error) {
+	res, err := l.db.ExecContext(ctx, `DELETE FROM audit_events WHERE at < ?`, l.now().Add(-Kept).UnixMilli())
+	if err != nil {
+		return 0, fmt.Errorf("trim audit events: %w", err)
+	}
+	return res.RowsAffected()
+}
+
 // Filter narrows List. Zero fields match everything.
 type Filter struct {
 	Actor   string
