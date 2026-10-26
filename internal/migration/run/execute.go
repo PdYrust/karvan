@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"maps"
 
 	"golang.org/x/crypto/bcrypt"
@@ -200,12 +201,20 @@ func (s *Service) execute(ctx context.Context, j *Job, hash string, o Options) {
 	}
 	rep.State, rep.EndedAt, rep.BackupID = j.state, s.now(), j.backupID
 	j.wipe()
-	_ = s.save(context.Background(), j)
+	s.saveEnded(j)
 	s.dropCancel(j.ID)
 	// Not running any more before "done" goes out: a client that asks for
 	// the report on "done" then waits for mu instead of getting ErrBusy.
 	j.running.Store(false)
 	s.emit(j, "", EventDone, map[string]any{"state": j.state})
+}
+
+// saveEnded stores a job whose run just ended. No caller is left to hear
+// about a failure, so it goes to the server log.
+func (s *Service) saveEnded(j *Job) {
+	if err := s.save(context.Background(), j); err != nil {
+		slog.Warn("job not saved after its run", "job", j.ID, "err", err)
+	}
 }
 
 // backToChecked ends a run whose re-check found the outcome changed (B4).
@@ -217,7 +226,7 @@ func (s *Service) backToChecked(j *Job) {
 	j.state, j.report, j.lastUse = StateChecked, nil, s.now()
 	j.passwords, j.passwordFrom = map[string]string{}, ""
 	s.emit(j, StageCheck, EventLog, map[string]any{"code": "plan_stale"})
-	_ = s.save(context.Background(), j)
+	s.saveEnded(j)
 	s.dropCancel(j.ID)
 	j.running.Store(false)
 	s.emit(j, "", EventDone, map[string]any{"state": StateChecked})
