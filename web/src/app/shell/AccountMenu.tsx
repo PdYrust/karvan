@@ -13,6 +13,7 @@ import {
 } from '@phosphor-icons/react';
 import { useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
+import { useSubToggle } from '../../components/menus/use-sub-toggle';
 import { useSession, useSignOut } from '../../features/session/use-session';
 import { zoneItems } from '../../features/settings/zones';
 import { locales, type Locale } from '../../i18n/core';
@@ -38,6 +39,19 @@ function Choice({ value, children }: { value: string; children: ReactNode }) {
         </span>
       </span>
     </DropdownMenu.RadioItem>
+  );
+}
+
+/** A submenu whose trigger opens it and, pressed again, closes it. */
+function Sub({ label, children }: { label: ReactNode; children: ReactNode }) {
+  const { root, trigger } = useSubToggle();
+  return (
+    <DropdownMenu.Sub {...root}>
+      <DropdownMenu.SubTrigger className={subTrigger} {...trigger}>
+        {label}
+      </DropdownMenu.SubTrigger>
+      <DropdownMenu.SubContent>{children}</DropdownMenu.SubContent>
+    </DropdownMenu.Sub>
   );
 }
 
@@ -74,7 +88,7 @@ export function AccountMenu({ onShortcuts }: { onShortcuts: () => void }) {
           />
         }
       />
-      <DropdownMenu.Content className="w-56">
+      <DropdownMenu.Content className="w-48">
         <DropdownMenu.Group>
           <DropdownMenu.Label>
             <span className="block truncate font-mono text-sm font-normal text-kumo-default">
@@ -87,52 +101,55 @@ export function AccountMenu({ onShortcuts }: { onShortcuts: () => void }) {
           <GearSixIcon size={16} aria-hidden="true" />
           {t('settings')}
         </DropdownMenu.Item>
-        <DropdownMenu.Sub>
-          <DropdownMenu.SubTrigger className={subTrigger}>
-            {themes.find((x) => x.value === pref)?.icon}
-            {t('appearance')}
-          </DropdownMenu.SubTrigger>
-          <DropdownMenu.SubContent>
-            <DropdownMenu.RadioGroup value={pref} onValueChange={(v: ThemePref) => setPref(v)}>
-              {themes.map((x) => (
-                <Choice key={x.value} value={x.value}>
-                  {x.icon}
-                  {x.label}
-                </Choice>
-              ))}
-            </DropdownMenu.RadioGroup>
-          </DropdownMenu.SubContent>
-        </DropdownMenu.Sub>
-        <DropdownMenu.Sub>
-          <DropdownMenu.SubTrigger className={subTrigger}>
-            <TranslateIcon size={16} aria-hidden="true" />
-            {t('language')}
-          </DropdownMenu.SubTrigger>
-          <DropdownMenu.SubContent>
-            <DropdownMenu.RadioGroup value={locale} onValueChange={(v: Locale) => setLocale(v)}>
-              {locales.map((l) => (
-                <Choice key={l} value={l}>
-                  <span lang={l}>{languageNames[l]}</span>
-                </Choice>
-              ))}
-            </DropdownMenu.RadioGroup>
-          </DropdownMenu.SubContent>
-        </DropdownMenu.Sub>
-        <DropdownMenu.Sub>
-          <DropdownMenu.SubTrigger className={subTrigger}>
-            <GlobeHemisphereEastIcon size={16} aria-hidden="true" />
-            {t('timeZone')}
-          </DropdownMenu.SubTrigger>
-          <DropdownMenu.SubContent>
-            <DropdownMenu.RadioGroup value={timeZone} onValueChange={(v: string) => setTimeZone(v)}>
-              {zones.map((z) => (
-                <Choice key={z.id} value={z.id}>
-                  {z.label}
-                </Choice>
-              ))}
-            </DropdownMenu.RadioGroup>
-          </DropdownMenu.SubContent>
-        </DropdownMenu.Sub>
+        <Sub
+          label={
+            <>
+              {themes.find((x) => x.value === pref)?.icon}
+              {t('appearance')}
+            </>
+          }
+        >
+          <DropdownMenu.RadioGroup value={pref} onValueChange={(v: ThemePref) => setPref(v)}>
+            {themes.map((x) => (
+              <Choice key={x.value} value={x.value}>
+                {x.icon}
+                {x.label}
+              </Choice>
+            ))}
+          </DropdownMenu.RadioGroup>
+        </Sub>
+        <Sub
+          label={
+            <>
+              <TranslateIcon size={16} aria-hidden="true" />
+              {t('language')}
+            </>
+          }
+        >
+          <DropdownMenu.RadioGroup value={locale} onValueChange={(v: Locale) => setLocale(v)}>
+            {locales.map((l) => (
+              <Choice key={l} value={l}>
+                <span lang={l}>{languageNames[l]}</span>
+              </Choice>
+            ))}
+          </DropdownMenu.RadioGroup>
+        </Sub>
+        <Sub
+          label={
+            <>
+              <GlobeHemisphereEastIcon size={16} aria-hidden="true" />
+              {t('timeZone')}
+            </>
+          }
+        >
+          <DropdownMenu.RadioGroup value={timeZone} onValueChange={(v: string) => setTimeZone(v)}>
+            {zones.map((z) => (
+              <Choice key={z.id} value={z.id}>
+                {z.label}
+              </Choice>
+            ))}
+          </DropdownMenu.RadioGroup>
+        </Sub>
         <DropdownMenu.Item className="gap-2" onClick={onShortcuts}>
           <KeyboardIcon size={16} aria-hidden="true" />
           {t('shortcuts')}
