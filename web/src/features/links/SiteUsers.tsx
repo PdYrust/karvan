@@ -14,7 +14,7 @@ export function SiteUsers({ stats }: { stats: SiteStats | undefined }) {
       <p className="font-medium text-kumo-strong tabular">
         {t('proven', { verified: stats.verified, moved: stats.moved })}
       </p>
-      <Bar share={stats.verified / stats.moved} />
+      <Bar grow share={stats.verified / stats.moved} />
       <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-kumo-subtle tabular">
         <span>{t('pending', { count: pending })}</span>
         {stats.closed > 0 ? <span>{t('closed', { count: stats.closed })}</span> : null}

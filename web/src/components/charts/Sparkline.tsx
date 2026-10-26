@@ -57,7 +57,12 @@ export function Sparkline({
       aria-hidden="true"
       className={cn('block h-10 w-full', className)}
     >
-      <path d={areaPath(parts, x, y, h)} fill={chartColor(color)} fillOpacity={0.12} />
+      <path
+        d={areaPath(parts, x, y, h)}
+        fill={chartColor(color)}
+        fillOpacity={0.12}
+        className="k-grow-up"
+      />
       <path
         d={linePath(parts, x, y)}
         fill="none"
@@ -65,6 +70,8 @@ export function Sparkline({
         strokeWidth={1.5}
         strokeLinejoin="round"
         vectorEffect="non-scaling-stroke"
+        pathLength={1}
+        className="k-draw"
       />
     </svg>
   );

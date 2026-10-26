@@ -67,8 +67,14 @@ function Lines({
     return (
       <g key={s.name}>
         {i === 0 ? (
-          <path d={areaPath(parts, x, y, y(0))} fill={chartColor(s.color)} fillOpacity={0.1} />
+          <path
+            d={areaPath(parts, x, y, y(0))}
+            fill={chartColor(s.color)}
+            fillOpacity={0.1}
+            className="k-grow-up"
+          />
         ) : null}
+        {/* A dashed line keeps its own dashes, so it fades in instead of drawing. */}
         <path
           d={linePath(parts, x, y)}
           fill="none"
@@ -76,10 +82,14 @@ function Lines({
           strokeWidth={1.5}
           strokeLinejoin="round"
           strokeDasharray={s.dashed ? '4 3' : undefined}
+          pathLength={s.dashed ? undefined : 1}
+          className={s.dashed ? 'k-draw-fade' : 'k-draw'}
         />
-        {lonePoints(parts).map(([pt, pv]) => (
-          <circle key={pt} cx={x(pt)} cy={y(pv)} r={2} fill={chartColor(s.color)} />
-        ))}
+        <g className="k-draw-fade">
+          {lonePoints(parts).map(([pt, pv]) => (
+            <circle key={pt} cx={x(pt)} cy={y(pv)} r={2} fill={chartColor(s.color)} />
+          ))}
+        </g>
       </g>
     );
   });
@@ -128,7 +138,10 @@ export function ChartPlot({
         />
       ))}
       {bars ? (
-        <Bars frame={frame} times={times} series={series} step={step} active={active} />
+        // One group grows, so a bar a poll adds just appears with the rest.
+        <g className="k-grow-up">
+          <Bars frame={frame} times={times} series={series} step={step} active={active} />
+        </g>
       ) : (
         <Lines frame={frame} times={times} series={series} step={step} />
       )}

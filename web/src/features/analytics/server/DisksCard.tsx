@@ -25,7 +25,7 @@ export function DisksCard({ disks }: { disks: readonly Disk[] }) {
                 {fmt.percent(d.used / (d.total || 1), 0)}
               </span>
             </span>
-            <Bar share={d.used / (d.total || 1)} />
+            <Bar grow share={d.used / (d.total || 1)} />
             <span className="flex justify-between gap-3 text-sm text-kumo-subtle tabular">
               <span>{t('diskOf', { used: fmt.bytes(d.used), total: fmt.bytes(d.total) })}</span>
               <span>{t('diskFree', { free: fmt.bytes(d.free) })}</span>

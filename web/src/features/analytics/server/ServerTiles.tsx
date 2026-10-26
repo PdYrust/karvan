@@ -55,7 +55,7 @@ export function ServerTiles({
           value={fmt.percent(root.used / (root.total || 1), 0)}
           sub={t('diskOf', { used: fmt.bytes(root.used), total: fmt.bytes(root.total) })}
         >
-          <Bar share={root.used / (root.total || 1)} className="mx-4 mb-4" />
+          <Bar grow share={root.used / (root.total || 1)} className="mx-4 mb-4" />
         </StatTile>
       ) : null}
       <StatTile

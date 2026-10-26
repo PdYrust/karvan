@@ -33,6 +33,7 @@ export function BarList({ items, label }: { items: readonly BarItem[]; label: st
           </span>
           <Bar
             share={item.value / max}
+            grow
             className="order-last col-span-2 sm:order-none sm:col-span-1"
           />
           <span className="min-w-12 text-end font-medium text-kumo-strong tabular">

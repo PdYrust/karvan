@@ -34,7 +34,7 @@ function Moved({ totals }: { totals: MigrationTotals }) {
       {read > 0 ? (
         // The filled part is the number above; the rest is the users the runs left out.
         <div className="flex flex-col gap-2">
-          <Bar share={totals.moved / read} />
+          <Bar grow share={totals.moved / read} />
           {totals.skipped > 0 ? (
             <p className="text-sm text-kumo-subtle">
               {t('skippedCount', { count: totals.skipped })}

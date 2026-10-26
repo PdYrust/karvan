@@ -20,7 +20,7 @@ function serverFacts(e: EngineStats, p: PanelStats, t: Translate<AnalyticsKey>, 
       value: (
         <span className="flex flex-col items-end gap-1.5">
           {t('connectionsOf', { count: e.connections, max: e.maxConnections })}
-          <Bar share={e.connections / (e.maxConnections || 1)} className="w-24" />
+          <Bar grow share={e.connections / (e.maxConnections || 1)} className="w-24" />
         </span>
       ),
     },

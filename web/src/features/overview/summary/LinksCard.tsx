@@ -46,7 +46,7 @@ function Sites({ data }: { data: LinkSites }) {
       {u.moved > 0 ? (
         // The filled part is the proven users; the rest wait for their first old link request.
         <div className="flex flex-col gap-2">
-          <Bar share={u.verified / u.moved} />
+          <Bar grow share={u.verified / u.moved} />
           <p className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-kumo-subtle tabular">
             <span>{t('linksProven', { verified: u.verified, moved: u.moved })}</span>
             <span>{t('linksPending', { count: u.pending })}</span>
