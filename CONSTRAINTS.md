@@ -43,6 +43,7 @@ The bundle numbers keep the sign-in page usable on a slow mobile connection. The
 A lazy page is one feature folder, except that each migration wizard step is a page of its own (its chunks plus the wizard frame), because each step is its own lazy route and loads alone; the report prints every step's size.
 The largest lazy page went from 60 to 62 KB in Phase 4 (P4-13): the Templates page and the reports share the problem and fix words and the Pager with the wizard's compare step, and those shared chunks add about 1 KB of split overhead to that step; its own code did not grow.
 The Lighthouse numbers are the "good" band of Core Web Vitals; accessibility is 100 because the panel must work with a keyboard and a screen reader.
+Measured 2026-10-25 with Lighthouse 13.5.0, CPU multiplier 1 (benchmark index 400 to 640, load average 6 to 9 on 2 cores from other processes, so single runs spread about 15 points): the overview has a median of 92 of 5 in English light and 95 of 5 in Persian dark, the sign-in page 98 of 5; accessibility 100 and best practices 100 on both.
 
 ## Reviewed by a person, every page
 - Tested at 360 px and 1440 px, in fa and en, dark and light, keyboard only.
@@ -52,7 +53,6 @@ The Lighthouse numbers are the "good" band of Core Web Vitals; accessibility is 
 ## Measured, not yet meeting the bar
 | Metric | Today | Target | Direction |
 |---|---|---|---|
-| Lighthouse mobile performance, overview | median 86 of 5 runs, best 97 (2026-10-25, Lighthouse 13.5.0, CPU multiplier 1 for a benchmark index of 320 to 660; load average 12 on 2 cores from other processes, so runs spread from 82 to 97). Sign-in now meets the bar: median 97 of 5, accessibility 100 and best practices 100 on both | 90 | must not fall |
 
 ## Exceptions
 | ID | Rule | Path | Reason | Owner | Expires |
