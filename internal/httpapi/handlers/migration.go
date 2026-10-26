@@ -9,6 +9,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/httpapi/respond"
 	"github.com/PdYrust/karvan/internal/migration/dest"
 	"github.com/PdYrust/karvan/internal/migration/engine"
@@ -38,6 +39,8 @@ const (
 	// another job holds its destination.
 	codeNotRollbackable = "not_rollbackable"
 	codeDestLocked      = "destination_locked"
+	// Only a draft that never ran can be deleted.
+	codeNotDeletable = "not_deletable"
 )
 
 // controlReason says why Karvan cannot stop and start a panel, as a code.
@@ -65,6 +68,8 @@ func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
 		respond.Error(w, respond.APIError{Status: http.StatusNotFound, Code: codeNotFound})
 	case errors.Is(err, run.ErrBusy):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeBusy})
+	case errors.Is(err, run.ErrNotDeletable):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeNotDeletable})
 	case errors.Is(err, run.ErrBlocked):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeBlocked})
 	case errors.Is(err, run.ErrNotChecked):
@@ -144,6 +149,28 @@ func (a *API) GetMigration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	respond.JSON(w, http.StatusOK, map[string]any{"id": r.PathValue("id"), "state": sum.State, "summary": sum})
+}
+
+// DeleteMigration deletes a draft that never ran, with its events, and
+// the old panel's login Karvan holds for it. A job that ran keeps its
+// record.
+func (a *API) DeleteMigration(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	err := a.Runs.DeleteDraft(r.Context(), id)
+	if errors.Is(err, run.ErrNoJob) {
+		writeRunError(w, r, err)
+		return
+	}
+	outcome := audit.Success
+	if err != nil {
+		outcome = audit.Failure
+	}
+	a.record(r, audit.ActionMigrationDelete, outcome, map[string]string{"job": id})
+	if err != nil {
+		writeRunError(w, r, err)
+		return
+	}
+	respond.NoContent(w)
 }
 
 // Compare reads both panels again in the background and rebuilds the

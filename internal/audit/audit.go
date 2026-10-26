@@ -33,6 +33,7 @@ const (
 	ActionMigrationRun     = "migration.run"
 	ActionMigrationUndo    = "migration.rollback"
 	ActionMigrationStop    = "migration.cancel"
+	ActionMigrationDelete  = "migration.delete"
 	ActionSafeModeOn       = "safe_mode.on"
 	ActionSafeModeOff      = "safe_mode.off"
 	ActionBackupDelete     = "safe_mode.backup_delete"
