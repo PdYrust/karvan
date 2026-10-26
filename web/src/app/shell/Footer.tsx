@@ -2,8 +2,8 @@ import { useOverview } from '../../features/overview/use-overview';
 import { useT } from '../../i18n/locale';
 import { sharedMessages } from '../../i18n/shared';
 import { shellMessages } from './messages';
+import { repoUrl } from './repo';
 
-const repo = 'https://github.com/PdYrust/karvan';
 const link =
   'hover:text-kumo-default hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center pointer-coarse:justify-center';
 
@@ -22,10 +22,10 @@ export function Footer() {
           </bdi>
         </span>
       ) : null}
-      <a className={link} href={repo} target="_blank" rel="noreferrer">
+      <a className={link} href={repoUrl} target="_blank" rel="noreferrer">
         {t('footerSource')}
       </a>
-      <a className={link} href={`${repo}/security`} target="_blank" rel="noreferrer">
+      <a className={link} href={`${repoUrl}/security`} target="_blank" rel="noreferrer">
         {t('footerSecurity')}
       </a>
     </footer>

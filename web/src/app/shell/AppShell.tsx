@@ -92,7 +92,7 @@ export function AppShell() {
           </MobileNav>
 
           <div className="flex min-w-0 flex-col">
-            <TopBar onMenu={() => setMenuOpen(true)} onSearch={openSearch} onShortcuts={openHelp} />
+            <TopBar onMenu={() => setMenuOpen(true)} onShortcuts={openHelp} />
             <main id="content" tabIndex={-1} className="flex-1 outline-none">
               <PageBoundary page={pathname}>
                 <Suspense fallback={<PageSkeleton label={t('loadingPage')} />}>
