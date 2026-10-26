@@ -22,23 +22,13 @@ const marzbanPath =
 
 /**
  * A panel's own logo, drawn in the current text color where possible. PasarGuard ships a
- * dark logo for light pages and a light one for dark pages; `onLight` keeps the dark one
- * whatever the theme (a white tile).
+ * dark logo for light pages and a light one for dark pages.
  */
-export function PanelLogo({
-  kind,
-  size = 24,
-  onLight = false,
-}: {
-  kind: PanelKind;
-  size?: number;
-  onLight?: boolean;
-}) {
+export function PanelLogo({ kind, size = 24 }: { kind: PanelKind; size?: number }) {
   if (kind === 'pasarguard') {
-    const img = (src: string, className?: string) => (
+    const img = (src: string, className: string) => (
       <img src={src} width={size} height={size} alt="" draggable={false} className={className} />
     );
-    if (onLight) return img(pasarguardLightUrl);
     return (
       <>
         {img(pasarguardLightUrl, 'dark:hidden')}
