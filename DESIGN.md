@@ -13,7 +13,7 @@ Karvan moves users from one panel to another, and their configs keep working. Th
 ### Panel logos
 The sign-in page and the overview show the Marzban and PasarGuard logos to say which panels Karvan works with. Both projects are AGPL-3.0, like Karvan; the logos are used only to name them, never to suggest they endorse Karvan.
 - Marzban: its logo path, inline in `components/panels/PanelLogo.tsx`, drawn in `currentColor`.
-- PasarGuard: its `logo-dark.png`, resized to 128 px (`components/panels/pasarguard.png`). Always shown on a white tile so it reads in both themes.
+- PasarGuard: its own transparent logos from its dashboard (`dashboard/public/statics/favicon/`, AGPL-3.0), resized to 128 px: the dark drawing `logo-dark.png` as `components/panels/pasarguard-light.png` for the light theme and on white tiles (the sign-in globe), the light drawing `logo.png` as `pasarguard-dark.png` for the dark theme. No tile behind it, like Marzban's.
 
 ### Where boldness goes
 Only one place per screen gets the memorable treatment:
@@ -62,7 +62,8 @@ The chart tokens sit in a `@theme static` block: charts pick a color by number a
 ## 4. Space, radius, elevation
 
 - **Spacing scale (px):** 4, 8, 12, 16, 20, 24, 32, 40, 56. Nothing off-scale, except 2 px optical nudges and 2 or 6 px padding inside small inline elements (badges, keyboard keys).
-- **Layout:** sidebar 256 wide (64 when collapsed), top bar and sidebar header 56 high, content gutters 32 (16 under 640). Pages with side information use a main column plus a 352 aside, split by a hairline. Content stops growing at 1400 wide and stays at the start edge, like the dashboard.
+- **Layout:** sidebar 224 wide (64 when collapsed), top bar and sidebar header 56 high, content gutters 32 (16 under 640). Pages with side information use a main column plus a 352 aside, split by a hairline. Content stops growing at 1400 wide and stays at the start edge, like the dashboard.
+- **Controls:** buttons, inputs and selects draw 32 high with a mouse (square buttons 32 × 32), a step under Kumo's base of 36 (`styles/app.css`); on touch screens they stay 44.
 - **Radius:** 6 for badges and nav rows; 8 for buttons, inputs and cards; 12 for dialogs and the command palette. Pills only for status dots.
 - **Elevation:** surfaces are flat, separated by a 1 px hairline. Shadows only on things that float: menus, popovers, dialogs, the mobile sheet, toasts. Cards have no shadow.
 
@@ -100,7 +101,7 @@ The chart tokens sit in a `@theme static` block: charts pick a color by number a
 - A machine value inside a translated sentence (a file, a setting, a command) is marked with backticks in the message, and the sentence is drawn with `CodeText`: the value keeps left to right in mono at about 0.9 em. Left unmarked, `.env` after Persian words reads `env.`.
 - Persian text uses Persian digits (۰ to ۹); English uses Latin digits. `src/lib/format` does this; never format numbers by hand.
 - Dates: Jalali calendar and Asia/Tehran by default, Gregorian in English unless the operator chooses otherwise. Times say which zone they are in when it matters ("It is 18:40 in Tehran").
-- Kumo components that use physical classes get checked in RTL; any broken one gets a wrapper or a workaround in Karvan code instead of being used raw. Known cases: Kumo's Sidebar (not used), the DropdownMenu item `icon` slot (put the icon in the children with `gap-2` instead), Kumo's Table (`text-left`) and InputGroup (`pl-*`, `rounded-l-*`), which Karvan replaces with its own table and search field (section 8, Tables).
+- Kumo components that use physical classes get checked in RTL; any broken one gets a wrapper or a workaround in Karvan code instead of being used raw. Known cases: Kumo's Sidebar (not used), the DropdownMenu item `icon` slot (put the icon in the children with `gap-2` instead), Kumo's Table (`text-left`) and InputGroup (`pl-*`, `rounded-l-*`), which Karvan replaces with its own table and search field (section 8, Tables). Kumo's Toast pins its close button with `right-2`, over the start of Persian text: `styles/app.css` moves it to the end edge and gives the text room on that side.
 
 ## 8. Components and patterns
 
@@ -109,16 +110,16 @@ The chart tokens sit in a `@theme static` block: charts pick a color by number a
 
 ### Shell
 The Cloudflare dashboard's frame, built from Karvan's own components with logical properties (Kumo's Sidebar uses physical classes):
-- **Sidebar header (56 high):** the mark, then the panel switcher where the dashboard has its account switcher: the current panel's logo and name, an up and down chevron. Its menu lists the panels with a status dot, then "All panels", "Scan this server" and "Manage panels".
-- **Sidebar body:** a "Search... Ctrl K" field that opens the palette, then grouped rows as dense as the dashboard's: 32 high and 34 apart (44 high on touch), `base` text, 16 px icons in `text-kumo-subtle`, the current row on `bg-kumo-tint` with radius 6. Group labels are `small` and quiet, 16 above them. No Settings or Security rows: they live in the account menu.
-  - Sub-pages: a row with sub-pages has a chevron at the end (pointing to the end, down while open) and opens while one of its pages is shown. Its sub-rows indent under its label with a 1 px hairline guide at the start, as in the dashboard's DNS rows; the current sub-row is tinted, not its parent. Analytics has them: Server, then one row per panel. The collapsed sidebar shows only the parent.
+- **Sidebar header (56 high):** the mark, then the panel switcher where the dashboard has its account switcher: the current panel's logo and name, an up and down chevron. Its menu only chooses: "All panels", then the panels (a warning icon on one that needs attention). Scanning lives on the Panels page.
+- **Sidebar body:** a "Search... Ctrl K" field that opens the palette, then grouped rows as dense as the dashboard's: 30 high and 32 apart (on touch 40 high and 44 apart, each with a 44 px hit area), `base` text, 16 px icons in `text-kumo-subtle`, the current row on `bg-kumo-tint` with radius 6. Group labels are `small` and quiet, 16 above them. No Settings or Security rows: they live in the account menu.
+  - Sub-pages: a row with sub-pages is a toggle, not a link: a click opens or closes its sub-rows in place and goes nowhere (the phone sheet stays open). It has a chevron at the end (pointing to the end, down while open) and starts open while one of its pages is shown; the reader can close it. A sub-row navigates (and closes the phone sheet). Its sub-rows indent under its label with a 1 px hairline guide at the start, as in the dashboard's DNS rows; the current sub-row is tinted, not its parent. Analytics has them: Server, then one row per panel. The collapsed sidebar shows only the parent.
 - **Sidebar footer:** one button that collapses the sidebar to icons with tooltips; remembered per browser.
 - **Top bar (56 high):** at the end, the Safe Mode status (a small badge that opens Settings, like the dashboard's plan badge), a GitHub link (Phosphor's GitHub logo, icon only, opens the repository in a new tab) and the account button. On phones (under 1024) only the menu button at the start and the GitHub link and the account button at the end: the mark and search live in the sheet, and Safe Mode is not shown on phones at all.
-- **Account menu:** like the dashboard's, about 224 wide so it fits a 360 phone with room: the username alone at the top (no "Signed in as"), Settings, Appearance (light, dark, same as system), Language (فارسی, English), Time zone (the zones of Settings General, the current one checked; a choice saves as there), Keyboard shortcuts, then Sign out. Language and theme have no buttons of their own in the app.
+- **Account menu:** like the dashboard's, about 192 wide (its time zone submenu may be wider): the username alone at the top (no "Signed in as"), Settings, Appearance (light, dark, same as system), Language (فارسی, English), Time zone (the zones of Settings General, the current one checked; a choice saves as there), Keyboard shortcuts, then Sign out. Language and theme have no buttons of their own in the app.
 - **Language change:** wherever it is chosen (account menu, Settings General, the palette, the sign-in page), the choice is saved and the page reloads, so every part of the page, dates and direction included, comes back in the new language at once.
-- **Mobile:** the sidebar opens as a sheet from the start edge, with focus inside it and Escape to close. Its header, like the dashboard's phone sheet: the mark, the panel switcher beside it, and close (X) at the end; under it the search field, then the rows. Menus opened inside the sheet render inside it (the sheet is a modal `<dialog>` in the top layer, so a menu outside it would sit under it and ignore taps).
+- **Mobile:** the sidebar opens as a sheet from the start edge, 256 wide or 69 % of the screen, whichever is less, with focus inside it and Escape to close. While it is open the page behind it does not scroll; a tall sheet scrolls itself, without passing the scroll on. Its header, like the dashboard's phone sheet: the mark, the panel switcher beside it, and close (X) at the end; under it the search field, then the rows. Menus opened inside the sheet render inside it (the sheet is a modal `<dialog>` in the top layer, so a menu outside it would sit under it and ignore taps).
 - **Footer:** one quiet row at the end of the content: version, source code, report a security issue.
-- **Command palette:** every page, panel, setting, preference and action is reachable from Ctrl K. Migrations and their reports (by admin, address and panel), templates and old link sites (by name, address, domain and port) are listed once something is typed, and read only while the palette is open. `?` opens the shortcut sheet, which lists every page with its `g` letter. The palette and the sheet are the one exception to Kumo's always rendered dialogs: each builds all its rows on every shell render, so it mounts when it first opens and opens one frame later (so it still animates in), then stays rendered.
+- **Command palette:** every page, panel, setting, preference and action is reachable from Ctrl K. Migrations and their reports (by admin, address and panel), templates and old link sites (by name, address, domain and port) are listed once something is typed, and read only while the palette is open. The search row ends with an `Esc` key, the way out; the footer keeps the arrow and Enter hints. `?` opens the shortcut sheet, which lists every page with its `g` letter. The palette and the sheet are the one exception to Kumo's always rendered dialogs: each builds all its rows on every shell render, so it mounts when it first opens and opens one frame later (so it still animates in), then stays rendered.
 
 ### Page
 - **Page header:** a small label above the title when the page sits inside another (the dashboard's breadcrumb), the title, one line of context under it, actions at the end, a bottom hairline across the full width.
@@ -128,6 +129,7 @@ The Cloudflare dashboard's frame, built from Karvan's own components with logica
   - Built from `components/data`: `DataTable` (the columns, and the card one row becomes on a phone) and `SearchField` (`/` focuses it). Kumo's Table is not used: it sets `text-left` and stripes its rows.
   - The first column names the row with its logo and links to its page, underlined as in the dashboard. Status cells are an icon in the status color and a word in the default color, like the dashboard's "Active".
   - A short list the server does not page ends with "Showing 2 of 2" and no pager.
+  - `/panels`: its refresh button scans this server and refreshes the list in one action (named so), and its toast says what the scan found. There is no separate scan button.
 - **Detail pages:** title with status badges, underline tabs, content cards, an aside for facts and quick actions.
 - **Settings pages:** one page with underline tabs, one route per tab. Each setting is a row: title and one line of description at the start, the control at the end, rows split by hairlines. Under 640 a wide control (a select) drops below the text, and a switch stays at the end of the title line, as in the dashboard's settings on a phone; when the title is too long to share the line, the switch moves under the title, before the description.
 - **Aside:** short status blocks, each a heading, a status badge and one sentence, divided by hairlines.
@@ -136,13 +138,13 @@ The Cloudflare dashboard's frame, built from Karvan's own components with logica
 
 ### Overview
 Laid out like the dashboard's account home, top to bottom:
-- **Header:** the title, the date line ("Wednesday, October 21, 2026, 16:39 in Tehran", in the operator's zone and calendar) and "New migration" at the end.
+- **Header:** the title and the date line ("Wednesday, October 21, 2026, 16:39 in Tehran", in the operator's zone and calendar). No actions: new migrations start from the Migrations page and the palette.
 - **Search:** one wide field across the content that opens the palette; it says what the palette finds and shows its shortcut.
-- **Three columns:** Panels, Migrations and Recents. Each has a quiet title (a link with a chevron when its page exists) and at most a handful of short rows split by hairlines, each row a link with a chevron at the end. A column with nothing in it says so in one line on a tinted box. Columns stack on phones.
-  - Panels: logo, name and its status. Migrations: the move (`MoveLabel`), the admin, the state, then how many users moved and when.
-  - Recents: the last pages this browser opened, newest first, at most 8, named in the current language as "section / page" ("Panels / logo name"). Kept in localStorage as paths inside the hidden path, never the hidden path itself.
+- **Three columns:** Panels, Migrations and Recents. Each has a quiet title (a link with a chevron when its page exists) and at most 3 short rows (the last 3 entries) split by hairlines, each row a link with a chevron at the end. A column with nothing in it says so in one line on a tinted box. Columns stack on phones.
+  - Panels: logo, name and its status; the last 3 registered. Migrations: the move (`MoveLabel`), the admin, the state, then how many users moved and when.
+  - Recents: the last pages this browser opened, newest first, at most 3, named in the current language as "section / page" ("Panels / logo name"). Kept in localStorage as paths inside the hidden path, never the hidden path itself.
 - **Summary:** a heading, then three cards that differ in shape: users moved (the number, a meter of moved and skipped, the jobs by outcome), Safe Mode (status badge and its facts) and Old links (the count and the way in).
-- **Analytics:** a heading with "All analytics", refresh and the range (Live, 24 hours, 7 days, 30 days) at the end. Then this server's tiles, and for each panel database its name with its logo, a row of tiles (size; connections and queries per second for a database server, the write-ahead log and used traffic for SQLite, which counts neither; online now) and two layer cards: users by status and traffic per hour. The section loads after the rest of the page.
+- **Analytics:** always live, with no range and no refresh: a heading with "All analytics" at the end. Then this server's tiles, and for each panel database its name with its logo, a row of tiles (size; connections and queries per second for a database server, the write-ahead log and used traffic for SQLite, which counts neither; online now) and two layer cards: users by status and traffic per hour. The section loads after the rest of the page.
 - **No panels yet:** one empty state with both logos and "Scan this server" takes the place of the columns and the summary.
 
 ### Analytics
@@ -197,7 +199,7 @@ Laid out like the dashboard's account home, top to bottom:
 - Stop and Roll back ask first in a dialog that says what happens with Safe Mode on and off.
 
 ### Migrations, reports and templates
-- **Lists** (`/migrations`, `/reports`) follow Tables: the search field, then a state filter and the panel filter (the switcher's current panel; "All panels" clears it) and refresh. A row is the move (`MoveLabel`) with the admin as the link and the old panel's host under it, the destination with its logo, the state, the users moved and when. The server pages by cursor, so the footer says "Showing 21 to 40" with previous and next and no total. A search looks through the latest 100 jobs that match the filters and says so.
+- **Lists** (`/migrations`, `/reports`) follow Tables: the search field, then a state filter and the panel filter (the switcher's current panel; "All panels" clears it) and refresh; on `/migrations` a + button after refresh (named "New migration") starts the wizard, on phones too. A row is the move (`MoveLabel`) with the admin as the link and the old panel's host under it, the destination with its logo, the state, the users moved and when. The server pages by cursor, so the footer says "Showing 21 to 40" with previous and next and no total. A search looks through the latest 100 jobs that match the filters and says so.
 - A draft whose login Karvan dropped says "Login dropped" under its state and offers "Start again with the same address", which opens Connect with the destination, the address and the kind filled in. The password is always typed again.
 - `/migrations/:id` opens what the job needs now: a draft its step (Connect again when Karvan signed out of it), a run or a job that may need a rollback the live view, a done or rolled back job its report.
 - **Report page:** "Reports" above the title, the state and the move in the header, Print and the downloads at the end. Then the result (state, counts), the facts (times, Safe Mode and its backup, the admin and its password), the stages with their times, what a rollback cannot take back and until when, the reload, and every user (filter buttons with counts, a search, 50 a page). Its printable page (`/reports/:id/print`) follows Printable pages.
@@ -215,7 +217,7 @@ Laid out like the dashboard's account home, top to bottom:
 - Delete asks for the site's name typed.
 
 ### Backups
-- `/backups` follows Tables, without a search or a pager (backups are few and the server does not page them): refresh at the end of the header, one sentence under the title on what Safe Mode keeps.
+- `/backups` follows Tables, without a search, a pager or refresh (backups are few and the server does not page them; the list keeps itself current): one sentence under the title on what Safe Mode keeps.
 - **Row:** the move (`MoveLabel`) with the admin as the link to the job's page, the panel with its logo, the database kind (from how it was made) with the backup id in mono under it, the size, when it was taken, the job's state, and a "..." menu (Put back, Delete). Phones get cards with the move first.
 - **Panel control:** a panel Karvan cannot stop and start gets one warning above the table: its name, why (the reason's sentence) and how to allow it (the fix). Put back stays in the menu for its backups but is disabled, with the reason's short label next to it. A running job's backup can be neither put back nor deleted.
 - **Put back** asks for the backup id typed and says what goes: everything written to the panel since the backup, by Karvan and by anyone else. Once the server holds the panel the live view opens (`/migrations/:id/live?after=<seq>`), showing the rewind scene, its log and its result; a restore that failed says so above the result.
@@ -247,7 +249,8 @@ Laid out like the dashboard's account home, top to bottom:
 - **Dangerous actions:** need the name typed to confirm (delete, restore, turning Safe Mode off).
 - **Status badges:** icon + word + Kumo status color (`StatusBadge`). Kumo's warning text on its own tint is under 4.5:1, so a warning badge keeps the word in the default color and the icon in the warning color.
   - A migration's state uses the same pieces: done is success, failed is danger, running is info, interrupted is warning, drafts and rolled back jobs are neutral.
-- **Touch:** every target is at least 44 × 44 px on touch screens.
+- **Touch:** every target is at least 44 × 44 px on touch screens. A control drawn smaller there (a switch, a sidebar row) keeps a 44 px hit area with padding or a `::before`, as Kumo and the dashboard do.
+- **Disclosures toggle:** whatever a click opens (a menu, a submenu such as Appearance, Language or Time zone, a select, a collapsible section, a sidebar group) a second click on the same trigger closes. A submenu the pointer opened by hovering stays open on the first click (`components/menus/use-sub-toggle`).
 - **Every page is built:** each sidebar item has its route and its `g` letter; there are no inert "Soon" items or tabs.
 
 ## 9. Writing
