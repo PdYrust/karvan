@@ -68,12 +68,21 @@ The chart tokens sit in a `@theme static` block: charts pick a color by number a
 
 ## 5. Motion
 
-- State changes: 150 ms, ease-out. Drawers and dialogs: 220 ms. Nothing bounces.
+- Everything that changes state moves a little, so nothing appears or vanishes at once: 150 ms for small things, 220 ms for the mobile sheet, always ease-out, only `transform` and `opacity` (cheap on weak phones). Nothing bounces. The shared rules live in `styles/motion.css`.
+  - Switches, checkboxes and radios: the thumb or the mark moves and fades in.
+  - Menus, selects and popovers: fade and scale up from where they open (from 96 %), and back when they close. Dialogs do the same.
+  - The mobile sheet slides in from the start edge (from the right in Persian) while its backdrop fades, and slides back out when it closes.
+  - Collapsing sections and sidebar sub-rows: the content fades in and drops 4 px when it opens; it closes at once.
+  - Tabs: the new tab's content fades in.
+  - Toasts slide up and fade in, and fade out.
+  - Rows appearing in tables and lists fade in. A badge that changes state fades into the new one.
+- **Loading:** a page or card that has no data yet shows its skeleton for at least 400 ms, then the content fades in over 200 ms, so the change reads as data arriving, not as a flash (`lib/motion/use-first-load`). Refetches and polls never bring the skeleton back; the content updates in place.
+- **Theme change:** the page crossfades from the old theme to the new one over 200 ms with the View Transitions API (`lib/preferences/theme-transition`). Where the browser has no View Transitions, it changes at once.
 - Hover colors change at once, never with a transition (Kumo's rule: fading hovers feel slow).
-- Motion answers an action (open, expand, confirm) or shows real progress. No entrance animations on page load.
+- Motion answers an action (open, expand, confirm, switch) or data arriving. Headers, cards and the shell never slide in on their own.
 - Live charts redraw in place when a sample arrives; they do not slide or tween. The live migration view moves dots only in step with real batches, and while a backup restore runs, which has no batches (section 8, Live progress).
 - The one exception is the globe on the sign-in page: it turns slowly (about one turn a minute) and acts out what Karvan does (section 8, Sign-in). It draws at about 30 frames a second and stops when it is off screen.
-- `prefers-reduced-motion: reduce`: no transforms or autoplay; transitions shorten to 1 ms. The globe shows one still frame.
+- `prefers-reduced-motion: reduce`: no transforms, fades or autoplay; transitions and animations shorten to 1 ms. Skeletons have no minimum time, the theme changes at once, and the globe shows one still frame.
 
 ## 6. Icons
 
