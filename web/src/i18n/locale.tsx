@@ -1,5 +1,6 @@
 import { createContext, use, useMemo, useState, type ReactNode } from 'react';
-import { readLocale, saveLocale } from '../lib/preferences/preferences';
+import { readLocale } from '../lib/preferences/preferences';
+import { changeLocale } from './change-locale';
 import { createTranslate, directionOf, type Locale, type Message, type Translate } from './core';
 
 interface LocaleContextValue {
@@ -11,15 +12,12 @@ interface LocaleContextValue {
 const LocaleContext = createContext<LocaleContextValue | null>(null);
 
 export function LocaleProvider({ children }: { children: ReactNode }) {
-  const [locale, setLocaleState] = useState<Locale>(readLocale);
+  const [locale] = useState<Locale>(readLocale);
   const value = useMemo<LocaleContextValue>(
     () => ({
       locale,
       dir: directionOf(locale),
-      setLocale: (l) => {
-        saveLocale(l);
-        setLocaleState(l);
-      },
+      setLocale: (l) => changeLocale(l, locale),
     }),
     [locale],
   );
