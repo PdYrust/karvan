@@ -64,6 +64,21 @@ describe('theme', () => {
     expect(resolveMode('dark')).toBe('dark');
   });
 
+  it('points the status bar color at the chosen theme', () => {
+    mockSystemDark(false);
+    document.head.innerHTML =
+      '<meta name="theme-color" data-for="light" media="(prefers-color-scheme: light)" />' +
+      '<meta name="theme-color" data-for="dark" media="(prefers-color-scheme: dark)" />';
+    const media = () =>
+      [...document.querySelectorAll<HTMLMetaElement>('meta[name="theme-color"]')].map(
+        (m) => m.media,
+      );
+    applyTheme('dark');
+    expect(media()).toEqual(['not all', 'all']);
+    applyTheme('system');
+    expect(media()).toEqual(['(prefers-color-scheme: light)', '(prefers-color-scheme: dark)']);
+    document.head.innerHTML = '';
+  });
   it('ignores garbage in storage', () => {
     localStorage.setItem('karvan.theme', 'purple');
     expect(readThemePref()).toBe('system');

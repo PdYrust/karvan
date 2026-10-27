@@ -101,7 +101,23 @@ export function resolveMode(pref: ThemePref): Mode {
 export function applyTheme(pref: ThemePref): Mode {
   const mode = resolveMode(pref);
   document.documentElement.dataset.mode = mode;
+  syncThemeColor(pref);
   return mode;
+}
+
+/**
+ * The page has a theme-color tag per theme (index.html). A saved choice wins
+ * over the system's, so an installed app's status bar matches the page;
+ * boot.js does the same before first paint.
+ */
+function syncThemeColor(pref: ThemePref) {
+  for (const meta of document.querySelectorAll<HTMLMetaElement>(
+    'meta[name="theme-color"][data-for]',
+  )) {
+    const own = meta.dataset.for;
+    meta.media =
+      pref === 'system' ? `(prefers-color-scheme: ${own})` : own === pref ? 'all' : 'not all';
+  }
 }
 
 export function saveThemePref(pref: ThemePref): Mode {

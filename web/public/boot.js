@@ -10,6 +10,13 @@
   } catch (e) {
     // Storage can be blocked; the defaults above still apply.
   }
+  if (theme !== 'system') {
+    // A saved theme also sets the status bar color of the installed app.
+    var metas = document.querySelectorAll('meta[name="theme-color"][data-for]');
+    for (var i = 0; i < metas.length; i++) {
+      metas[i].media = metas[i].getAttribute('data-for') === theme ? 'all' : 'not all';
+    }
+  }
   if (theme === 'system') {
     theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
   }
