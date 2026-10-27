@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
-  batchDots,
+  chunkDots,
   curvesDown,
   curvesFor,
   launch,
   maxDots,
-  minBatchDots,
+  minChunkDots,
   pathOf,
   placeOf,
   pointOn,
@@ -17,24 +17,24 @@ import {
   travelMs,
 } from './dots';
 
-describe('batchDots', () => {
-  it("sends a batch's share of the run in dots", () => {
-    expect(batchDots(500, 1000, 0)).toBe(12);
-    expect(batchDots(1000, 1000, 0)).toBe(maxDots);
+describe('chunkDots', () => {
+  it("sends a chunk's share of the run in dots", () => {
+    expect(chunkDots(500, 1000, 0)).toBe(12);
+    expect(chunkDots(1000, 1000, 0)).toBe(maxDots);
   });
 
-  it('sends a few dots for a batch too small for its share', () => {
-    expect(batchDots(50, 100_000, 0)).toBe(minBatchDots);
+  it('sends a few dots for a chunk too small for its share', () => {
+    expect(chunkDots(50, 100_000, 0)).toBe(minChunkDots);
   });
 
   it('never has more than the cap in flight', () => {
-    expect(batchDots(1000, 1000, 20)).toBe(4);
-    expect(batchDots(50, 100, maxDots)).toBe(0);
+    expect(chunkDots(1000, 1000, 20)).toBe(4);
+    expect(chunkDots(50, 100, maxDots)).toBe(0);
   });
 
   it('sends nothing without progress', () => {
-    expect(batchDots(0, 100, 0)).toBe(0);
-    expect(batchDots(10, 0, 0)).toBe(0);
+    expect(chunkDots(0, 100, 0)).toBe(0);
+    expect(chunkDots(10, 0, 0)).toBe(0);
   });
 });
 

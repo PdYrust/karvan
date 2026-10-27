@@ -127,7 +127,7 @@ export function restoreFailed(stream: JobStream): boolean {
   const last = stream.stages.at(-1);
   return last?.stage === 'restore' && last.state === 'failed';
 }
-/** Stop works between batches, until the users are written; after that the run is nearly done. */
+/** Stop works between chunks, until the users are written; after that the run is nearly done. */
 export function canStop(stream: JobStream, row: LiveRow, phase: Phase): boolean {
   if (phase !== 'run') return false;
   return !stream.stages.some(

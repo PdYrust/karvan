@@ -88,7 +88,7 @@ describe('reduceStream', () => {
     });
   });
 
-  it('reads a run: stages in order, the batch counter with its ETA, then done', () => {
+  it('reads a run: stages in order, the chunk counter with its ETA, then done', () => {
     fresh();
     const s = reduceEvents([
       ev('read', 'stage', { state: 'start' }),

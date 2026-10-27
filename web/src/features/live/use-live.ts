@@ -27,7 +27,7 @@ export function useLive(id: string, after = 0) {
     queryFn: () => getReport(id),
     enabled: hasReport || phase === 'restore',
   });
-  // Skipped users never pass through a batch; the plan the run took counts them.
+  // Skipped users never pass through a chunk; the plan the run took counts them.
   const plan = useQuery({
     queryKey: migrationKeys.plan(id),
     queryFn: () => getPlan(id),

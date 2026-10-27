@@ -10,7 +10,7 @@ import { liveMessages } from './messages';
 
 /**
  * Stop asks first, and says what Safe Mode does with what was written. The
- * run stops between batches, so the button says so until it does.
+ * run stops between chunks, so the button says so until it does.
  */
 export function StopButton({ jobId, safeMode }: { jobId: string; safeMode: boolean }) {
   const t = useT(liveMessages);

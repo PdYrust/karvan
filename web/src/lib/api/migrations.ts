@@ -342,7 +342,7 @@ export function compareJob(id: string): Promise<{ id: string }> {
   return api('POST', jobPath(id, '/compare'));
 }
 
-/** Stops a compare that reads, or a run between batches; does nothing otherwise. */
+/** Stops a compare that reads, or a run between chunks; does nothing otherwise. */
 export function cancelJob(id: string): Promise<void> {
   return api('POST', jobPath(id, '/cancel'));
 }

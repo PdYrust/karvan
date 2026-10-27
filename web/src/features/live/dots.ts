@@ -8,7 +8,7 @@
 export const maxDots = 24;
 /** How long a dot takes from one panel to the other. */
 export const travelMs = 1600;
-/** The gap between dots of one batch, so they leave as a short stream. */
+/** The gap between dots of one chunk, so they leave as a short stream. */
 export const staggerMs = 70;
 
 /** forward: along the arc in the page direction; back: the other way; sink: off to the skipped users. */
@@ -19,13 +19,13 @@ export interface Dot {
   born: number;
 }
 
-/** A batch too small for its share still sends a short stream, so it reads as a batch. */
-export const minBatchDots = 3;
+/** A chunk too small for its share still sends a short stream, so it reads as a chunk. */
+export const minChunkDots = 3;
 
-/** How many dots a batch sends: its share of the run, at least a few, within the cap. */
-export function batchDots(delta: number, total: number, inFlight: number): number {
+/** How many dots a chunk sends: its share of the run, at least a few, within the cap. */
+export function chunkDots(delta: number, total: number, inFlight: number): number {
   if (delta <= 0 || total <= 0) return 0;
-  const want = Math.max(minBatchDots, Math.round((delta / total) * maxDots));
+  const want = Math.max(minChunkDots, Math.round((delta / total) * maxDots));
   return Math.max(0, Math.min(want, maxDots - inFlight));
 }
 

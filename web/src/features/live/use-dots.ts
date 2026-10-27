@@ -3,7 +3,7 @@ import { launch, maxDots, placeOf, travelMs, type Curve, type Dot, type Lane } f
 
 /** About 30 frames a second is smooth enough and spares slow phones. */
 const frameMs = 32;
-/** A restore has no batches: while it runs, one dot leaves this often. */
+/** A restore has no chunks: while it runs, one dot leaves this often. */
 const steadyMs = 360;
 
 export interface Curves {

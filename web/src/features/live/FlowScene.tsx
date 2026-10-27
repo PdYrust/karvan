@@ -5,7 +5,7 @@ import { PanelMark } from '../../components/panels/PanelLabel';
 import { panelNames } from '../../components/panels/PanelLogo';
 import { useT } from '../../i18n/locale';
 import type { PanelKind } from '../../lib/api/panels';
-import { batchDots, curvesDown, curvesFor, pathOf, sinkDots, sinkEnd, type Lane } from './dots';
+import { chunkDots, curvesDown, curvesFor, pathOf, sinkDots, sinkEnd, type Lane } from './dots';
 import type { Counter } from './live';
 import { liveMessages } from './messages';
 import { SceneTile } from './SceneTile';
@@ -16,7 +16,7 @@ import { useStacked } from './use-stacked';
 export const sceneHeight = 144;
 /** On phones the dots travel down a lane this tall between the two tiles. */
 export const laneHeight = 112;
-/** Progress that arrives this soon after the page opens is the stream's history, not a batch. */
+/** Progress that arrives this soon after the page opens is the stream's history, not a chunk. */
 const replayMs = 1500;
 
 const lanes: Readonly<Record<Lane, string>> = {
@@ -35,8 +35,8 @@ export function Mark({ kind }: { kind: PanelKind | '' }) {
   return kind ? <PanelMark kind={kind} size={28} /> : null;
 }
 
-/** Sends dots in step with each batch the counter reports. */
-function useBatches(counter: Counter | null, skipped: number, dots: Dots) {
+/** Sends dots in step with each chunk the counter reports. */
+function useChunks(counter: Counter | null, skipped: number, dots: Dots) {
   const opened = useRef(0);
   const seen = useRef<{ kind: string; done: number } | null>(null);
   const tally = useRef({ sent: 0, sunk: 0 });
@@ -50,10 +50,10 @@ function useBatches(counter: Counter | null, skipped: number, dots: Dots) {
     if (!kind) return;
     const prev = seen.current?.kind === kind ? seen.current.done : null;
     seen.current = { kind, done };
-    // The history a stream replays when the page opens is no batch to show.
+    // The history a stream replays when the page opens is no chunk to show.
     const base = prev ?? (performance.now() - opened.current > replayMs ? 0 : null);
     if (base === null || done <= base) return;
-    const n = batchDots(done - base, total, dots.inFlight());
+    const n = chunkDots(done - base, total, dots.inFlight());
     const share = kind === 'move' && skipped > 0 ? skipped / (total + skipped) : 0;
     const sunk = sinkDots(tally.current.sent, tally.current.sunk, n, share);
     tally.current = { sent: tally.current.sent + n, sunk: tally.current.sunk + sunk };
@@ -161,7 +161,7 @@ export function ArcLayer({
 
 /**
  * Move and undo (4.6): the two panels as tiles, a dashed arc between them
- * in the page direction, dots in step with each batch, and the skipped
+ * in the page direction, dots in step with each chunk, and the skipped
  * users' sink. The drawing is decoration; every number is text.
  */
 export function FlowScene({
@@ -180,7 +180,7 @@ export function FlowScene({
   const scene = useSceneCurves(sink);
   const { stacked } = scene;
   const [box, dots] = useDots(scene.curves, lanes);
-  useBatches(counter, skipped, dots);
+  useChunks(counter, skipped, dots);
   const done = counter?.done ?? 0;
   const total = counter?.total ?? 0;
   return (
