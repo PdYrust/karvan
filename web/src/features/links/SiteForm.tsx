@@ -5,7 +5,7 @@ import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
 import type { SiteInput } from '../../lib/api/links';
-import { useErrorText } from '../../lib/errors/errors';
+import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
 import { DestinationField } from '../wizard/connect/DestinationField';
 import { CertFields } from './CertFields';
 import { siteFormMessages } from './form-messages';
@@ -67,7 +67,7 @@ export function SiteForm({
   onCancel: () => void;
 }) {
   const t = useT(siteFormMessages);
-  const errorText = useErrorText();
+  const errorText = useSubscriptionErrorText();
   const [values, setValues] = useState(initial);
   const set = (patch: Partial<SiteValues>) => setValues((v) => ({ ...v, ...patch }));
   const refused = refusedField(error);

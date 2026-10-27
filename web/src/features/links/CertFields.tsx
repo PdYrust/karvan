@@ -7,7 +7,7 @@ import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
 import { inspectCert } from '../../lib/api/links';
-import { useErrorText } from '../../lib/errors/errors';
+import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
 import { CertFactsView } from './CertFactsView';
 import { siteFormMessages } from './form-messages';
 import { canCheckCert, certInputOf, type CertMode } from './site-form';
@@ -135,7 +135,7 @@ function ModeFields({ values, set, errorOf, hasKey }: FieldsProps & { hasKey: bo
 export function CertFields(props: FieldsProps & { siteId?: number; hasKey: boolean }) {
   const { values, set, siteId } = props;
   const t = useT(siteFormMessages);
-  const errorText = useErrorText();
+  const errorText = useSubscriptionErrorText();
   const check = useMutation({ mutationFn: inspectCert });
   // Facts only show for the certificate they were read from.
   const asked = JSON.stringify(certInputOf(values, siteId));

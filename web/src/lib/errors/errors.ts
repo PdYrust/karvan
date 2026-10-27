@@ -52,11 +52,6 @@ const en = {
   no_address_change:
     'No new address is waiting. It may have expired after 10 minutes. Start the change again.',
   not_new_address: 'Confirm only works from the new address. Open it and confirm there.',
-  site_invalid: "A field of this site has a value Karvan can't use. Check the fields.",
-  site_overlap: 'Another site already serves this domain and port.',
-  plain_http_off: 'Plain HTTP is off for old links. Turn it on or use HTTPS.',
-  port_mixed:
-    'This port already has sites the other way. All sites on one port use HTTPS, or none do.',
   too_large: 'The file is larger than 16 MB. Split it and upload the parts one by one.',
   source_unknown: "Karvan couldn't read the old panel. Try again in a bit.",
   source_unreachable:
@@ -129,13 +124,6 @@ const fa: Messages<ErrorKey>['fa'] = {
   no_address_change:
     'آدرس جدیدی در انتظار نیست. شاید بعد از ۱۰ دقیقه منقضی شده باشد. تغییر را دوباره شروع کنید.',
   not_new_address: 'تایید فقط از آدرس جدید انجام میشود. آن را باز کنید و همانجا تایید کنید.',
-  site_invalid:
-    'یکی از فیلدهای این سایت مقداری دارد که کاروان نمیتواند استفاده کند. فیلدها را بررسی کنید.',
-  site_overlap: 'سایت دیگری همین دامنه و پورت را دارد.',
-  plain_http_off:
-    'HTTP ساده برای لینک های قدیمی خاموش است. آن را روشن کنید یا از HTTPS استفاده کنید.',
-  port_mixed:
-    'این پورت سایت هایی به روش دیگر دارد. یا همه سایت های یک پورت HTTPS هستند یا هیچ کدام.',
   too_large:
     'فایل بزرگتر از ۱۶ مگابایت است. آن را چند قسمت کنید و قسمت ها را یکی یکی بارگذاری کنید.',
   source_unknown: 'کاروان نتوانست پنل قدیمی را بخواند. چند لحظه دیگر دوباره امتحان کنید.',

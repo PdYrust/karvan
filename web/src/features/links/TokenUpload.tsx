@@ -6,7 +6,7 @@ import { Bar } from '../../components/charts/Bar';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { useT } from '../../i18n/locale';
 import { getUpload, linkKeys, uploadTokens, type UploadProgress } from '../../lib/api/links';
-import { useErrorText } from '../../lib/errors/errors';
+import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
 import { linksMessages, type LinksKey } from './messages';
 
 const outcomes = ['stored', 'known', 'noUser', 'refused', 'failed'] as const;
@@ -62,7 +62,7 @@ function Progress({ p }: { p: UploadProgress }) {
 /** Upload a file of old links; the checks run on the server and their counter shows here. */
 export function TokenUpload({ siteId }: { siteId: number }) {
   const t = useT(linksMessages);
-  const errorText = useErrorText();
+  const errorText = useSubscriptionErrorText();
   const qc = useQueryClient();
   const input = useRef<HTMLInputElement>(null);
   const progress = useUpload(siteId);

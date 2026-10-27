@@ -3,6 +3,12 @@ import { createTranslate } from '../../i18n/core';
 import { ApiError, offline } from '../api/client';
 import { batchCodes, batchErrorMessages, batchErrorText } from './batches';
 import { errorKey, errorMessages, errorOf, errorText, knownCodes } from './errors';
+import {
+  subscriptionCodes,
+  subscriptionErrorKey,
+  subscriptionErrorMessages,
+  subscriptionErrorText,
+} from './subscriptions';
 
 const en = createTranslate(errorMessages.en, 'en');
 const fa = createTranslate(errorMessages.fa, 'fa');
@@ -48,6 +54,61 @@ describe('area word lists', () => {
     }
     expect([...batchCodes].sort()).toEqual(
       ['batch_active', 'batch_in_use', 'batch_invalid', 'not_reactivatable'].sort(),
+    );
+  });
+
+  it('give each subscriptions code its own sentence in both languages, once', () => {
+    for (const code of subscriptionCodes) {
+      expect(knownCodes, code).not.toContain(code);
+      expect(batchCodes as readonly string[], code).not.toContain(code);
+      expect(subscriptionErrorMessages.en[code], code).toBeTruthy();
+      expect(subscriptionErrorMessages.fa[code], code).toBeTruthy();
+    }
+    expect([...subscriptionCodes].sort()).toEqual(
+      [
+        'certificate_in_use',
+        'certificate_invalid',
+        'domain_in_use',
+        'domain_invalid',
+        'plain_http_off',
+        'port_mixed',
+        'site_invalid',
+        'site_overlap',
+      ].sort(),
+    );
+  });
+
+  it('name why a certificate was refused', () => {
+    expect(subscriptionErrorKey('certificate_invalid', { reason: 'unreadable' })).toBe(
+      'certificate_invalid_unreadable',
+    );
+    expect(subscriptionErrorKey('certificate_invalid', { reason: 'key_mismatch' })).toBe(
+      'certificate_invalid_key_mismatch',
+    );
+    expect(subscriptionErrorKey('certificate_invalid', { reason: 'format' })).toBe(
+      'certificate_invalid',
+    );
+    expect(subscriptionErrorKey('certificate_invalid', { reason: 'constructor' })).toBe(
+      'certificate_invalid',
+    );
+    expect(subscriptionErrorKey('certificate_invalid_no_cert')).toBeUndefined();
+    for (const lang of ['en', 'fa'] as const) {
+      for (const [key, text] of Object.entries(subscriptionErrorMessages[lang])) {
+        expect(text, key).toBeTruthy();
+      }
+    }
+  });
+
+  it('use the subscriptions sentence for its codes and the shared one for the rest', () => {
+    const ts = createTranslate(subscriptionErrorMessages.en, 'en');
+    const shared = (err: unknown) => errorText(en, err);
+    const refused = new ApiError(400, 'certificate_invalid', undefined, { reason: 'no_cert' });
+    expect(subscriptionErrorText(ts, shared, refused)).toBe(ts('certificate_invalid_no_cert'));
+    expect(subscriptionErrorText(ts, shared, new ApiError(409, 'site_overlap'))).toBe(
+      ts('site_overlap'),
+    );
+    expect(subscriptionErrorText(ts, shared, new ApiError(409, 'name_taken'))).toBe(
+      en('name_taken'),
     );
   });
 
