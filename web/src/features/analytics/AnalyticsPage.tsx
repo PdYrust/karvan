@@ -1,8 +1,8 @@
+import { CpuIcon } from '@phosphor-icons/react';
 import { Suspense } from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router';
 import type { RouteTab } from '../../components/layout/RouteTabs';
-import { SegmentTabs } from '../../components/layout/SegmentTabs';
-import { PageMenu } from './PageMenu';
+import { TabSwitcher } from '../../components/layout/TabSwitcher';
 import { usePageTitle } from '../../components/layout/use-page-title';
 import { PanelMark } from '../../components/panels/PanelLabel';
 import { useT } from '../../i18n/locale';
@@ -42,19 +42,13 @@ export function AnalyticsPage() {
     <div className="flex flex-col">
       {/* Like the dashboard's zone analytics: no title block, one sticky row of tabs and controls. */}
       <h1 className="sr-only">{t('title')}</h1>
-      <div className="sticky top-14 z-[5] flex items-center gap-3 border-b border-kumo-hairline bg-kumo-canvas px-4 py-2 sm:px-8">
-        <div className="min-w-0 flex-1">
-          <div className="flex">
-            <SegmentTabs
-              label={t('tabs')}
-              tabs={tabs}
-              scrollStart={t('tabsBack')}
-              scrollEnd={t('tabsMore')}
-            />
-          </div>
-        </div>
+      <div className="sticky top-14 z-[5] flex items-center gap-3 border-b border-kumo-hairline bg-kumo-canvas px-4 py-2 transition-transform duration-200 ease-out sm:px-8 [[data-bar-hidden]_&]:-translate-y-14">
+        <TabSwitcher
+          label={t('tabs')}
+          tabs={tabs}
+          icon={<CpuIcon size={16} aria-hidden="true" className="text-kumo-subtle" />}
+        />
         <RangeControl range={range} onRange={setRange} />
-        <PageMenu />
       </div>
       <div className="flex max-w-[1400px] flex-col gap-4 p-4 sm:p-8">
         {/* A tab's code loads under the header, so the header stays put. */}
