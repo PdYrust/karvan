@@ -2,16 +2,14 @@ package bridge
 
 import (
 	"context"
-	"errors"
 	"io"
 	"net"
 	"net/http"
 	"regexp"
-	"strconv"
+	"slices"
 	"strings"
 
 	"github.com/PdYrust/karvan/internal/migration/ledger"
-	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/source"
 	"github.com/PdYrust/karvan/internal/panel/subtoken"
 )
@@ -35,7 +33,8 @@ func (b *Bridge) Handler(port int) http.Handler {
 }
 
 // serve runs the order of D59: verified set, then the panel itself, then
-// one lazy check against the old panel.
+// one lazy check against the old panel. Users in an inactive or deleted
+// batch get the plain 404 before the panel is asked (D22).
 func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		w.Header().Set("Allow", "GET, HEAD")
@@ -47,6 +46,16 @@ func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 		answer(w, http.StatusNotFound)
 		return
 	}
+	held, err := b.st.ruleHeld(r.Context(), q.site)
+	if err != nil {
+		b.Log.Warn("bridge: rule batches", "site", q.site.Name, "err", err)
+		answer(w, http.StatusServiceUnavailable)
+		return
+	}
+	if held {
+		answer(w, http.StatusNotFound)
+		return
+	}
 	d, err := b.dest(r.Context(), q.site.PanelID)
 	if err != nil {
 		b.Log.Warn("bridge: destination", "site", q.site.Name, "err", err)
@@ -54,7 +63,7 @@ func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 		return
 	}
 	q.dest, q.mac = d, mac(b.macKey, q.token)
-	if b.fromVerified(w, r, q) || b.passThrough(w, r, q) {
+	if b.fromVerified(w, r, q) || b.namesHeld(w, r, q) || b.passThrough(w, r, q) {
 		return
 	}
 	b.lazy(w, r, q)
@@ -86,48 +95,62 @@ func (b *Bridge) route(port int, r *http.Request) (request, bool) {
 }
 
 // fromVerified serves a token proven earlier, if the user still passes.
-// A token proven on one site counts on every site of the same old panel
-// and destination (an old panel often serves its links on 80 and 443).
+// A token proven on one rule counts on every rule whose scope holds its
+// row (D23): an old panel often serves its links on 80 and 443.
 func (b *Bridge) fromVerified(w http.ResponseWriter, r *http.Request, q request) bool {
 	ctx := r.Context()
-	v, ok, err := b.st.token(ctx, q.mac)
-	if err != nil || !ok || !b.sameSource(v.SiteID, q.site) {
-		return false
-	}
-	e, err := b.Ledger.Get(ctx, v.LedgerID)
+	v, row, ok, err := b.st.token(ctx, q.mac, q.site, q.dest.Key())
 	switch {
-	case errors.Is(err, ledger.ErrNotFound), err == nil && (e.Dest != q.dest.Key() || (e.State != ledger.Done && e.State != ledger.Adopted)):
-		_ = b.st.dropToken(ctx, q.mac) // the user was moved again or rolled back
-		return false
 	case err != nil:
 		// A passing fault must not cost a proof that may never be made again.
+		b.Log.Warn("bridge: token", "site", q.site.Name, "err", err)
 		answer(w, http.StatusServiceUnavailable)
 		return true
+	case !ok:
+		return false
+	case row.held:
+		answer(w, http.StatusNotFound) // nothing asked, dropped or closed (D22)
+		return true
+	case row.State != ledger.Done && row.State != ledger.Adopted:
+		_ = b.st.dropToken(ctx, q.mac) // the user was moved again or rolled back
+		return false
+	case !row.inScope:
+		return false
 	}
-	verd, err := b.check(ctx, q.dest, e, v.Issued)
+	verd, err := b.check(ctx, q.dest, row.Entry, v.Issued)
 	if err != nil {
 		answer(w, http.StatusServiceUnavailable)
 		return true
 	}
-	b.apply(ctx, e, verd)
+	b.apply(ctx, row.Entry, verd)
 	if !verd.ok {
 		return false
 	}
 	if b.Now().Sub(v.Checked) > recheckAfter {
-		b.recheck(q, e)
+		b.recheck(q, row.Entry)
 	}
-	b.serveAs(w, r, q, e)
+	b.serveAs(w, r, q, row.Entry)
 	return true
 }
 
-// sameSource reports whether site id reads the same old panel into the
-// same destination as s.
-func (b *Bridge) sameSource(id int64, s Site) bool {
-	if id == s.ID {
+// namesHeld answers 404 when the token's payload names a user of this
+// rule in an inactive or deleted batch, before the panel is asked (D22).
+func (b *Bridge) namesHeld(w http.ResponseWriter, r *http.Request, q request) bool {
+	p, ok := subtoken.Parse(q.token)
+	if !ok {
+		return false
+	}
+	rows, err := b.st.named(r.Context(), q.site, q.dest.Key(), p)
+	if err != nil {
+		b.Log.Warn("bridge: ledger", "site", q.site.Name, "err", err)
+		answer(w, http.StatusServiceUnavailable)
 		return true
 	}
-	o, ok := b.site(id)
-	return ok && o.origin == s.origin && o.PanelID == s.PanelID
+	if slices.ContainsFunc(rows, q.site.holds) {
+		answer(w, http.StatusNotFound)
+		return true
+	}
+	return false
 }
 
 // passThrough lets the panel judge the token itself. It reports false
@@ -159,8 +182,8 @@ func (b *Bridge) serveAs(w http.ResponseWriter, r *http.Request, q request, e le
 }
 
 // lazy verifies an unknown token once against the old panel (D59 step 3).
-// The limits come before any database work, so tokens forged to name a
-// real user cannot make the bridge query both databases without bound.
+// The limits come before any work on the destination, so tokens forged to
+// name a real user cannot make the bridge query it without bound.
 func (b *Bridge) lazy(w http.ResponseWriter, r *http.Request, q request) {
 	ctx := r.Context()
 	p, ok := subtoken.Parse(q.token)
@@ -175,9 +198,10 @@ func (b *Bridge) lazy(w http.ResponseWriter, r *http.Request, q request) {
 		return
 	}
 	defer done()
-	e, status := b.candidate(ctx, q, p)
+	cands, status := b.candidates(ctx, q, p)
+	var e ledger.Entry
 	if status == 0 {
-		status = b.verify(ctx, q, e)
+		e, status = b.verify(ctx, q, cands)
 	}
 	if status != 0 {
 		answer(w, status)
@@ -192,64 +216,91 @@ func plainHTTPRefused(s Site) bool {
 	return strings.HasPrefix(s.SourceURL, "http://") && !s.PlainHTTPOK
 }
 
-// candidate finds the ledger row a token claims and checks everything
-// that needs no call to the old panel. status is 0 when a check may run.
-func (b *Bridge) candidate(ctx context.Context, q request, p subtoken.Payload) (ledger.Entry, int) {
-	e, err := b.claimed(ctx, q, p)
-	switch {
-	case errors.Is(err, ledger.ErrNotFound):
-		return e, http.StatusNotFound
-	case err != nil:
-		return e, http.StatusServiceUnavailable
-	}
-	verd, err := b.check(ctx, q.dest, e, p.Issued)
-	if err != nil {
-		return e, http.StatusServiceUnavailable
-	}
-	b.apply(ctx, e, verd)
-	if !verd.ok {
-		return e, http.StatusNotFound
-	}
-	return e, 0
+// candidate is a row in the rule's scope that a token's payload names.
+type candidate struct {
+	ledger.Entry
+	ok bool // it passes the destination check
 }
 
-// claimed is the ledger row of the user a token names. The payload only
-// picks the row; the old panel's answer must then match it.
-func (b *Bridge) claimed(ctx context.Context, q request, p subtoken.Payload) (ledger.Entry, error) {
+// candidates reads, fresh, every row in the rule's scope the payload
+// names (D24) and runs the destination check on each. status is 0 when
+// one passes, so the old panel may be asked; a payload naming a user in
+// a held batch answers 404 with no candidate (D22).
+func (b *Bridge) candidates(ctx context.Context, q request, p subtoken.Payload) ([]candidate, int) {
+	rows, err := b.st.named(ctx, q.site, q.dest.Key(), p)
 	switch {
-	case q.site.SourceKind == panel.PasarGuard && p.UserID > 0:
-		return b.Ledger.User(ctx, q.site.origin, strconv.FormatInt(p.UserID, 10), q.dest.Key())
-	case p.Username != "":
-		return b.Ledger.UserByName(ctx, q.site.origin, p.Username, q.dest.Key())
+	case err != nil:
+		return nil, http.StatusServiceUnavailable
+	case slices.ContainsFunc(rows, q.site.holds):
+		return nil, http.StatusNotFound
 	}
-	return ledger.Entry{}, ledger.ErrNotFound
+	var out []candidate
+	status := http.StatusNotFound
+	for _, r := range rows {
+		if !r.inScope {
+			continue
+		}
+		verd, err := b.check(ctx, q.dest, r.Entry, p.Issued)
+		if err != nil {
+			return nil, http.StatusServiceUnavailable
+		}
+		b.apply(ctx, r.Entry, verd)
+		out = append(out, candidate{Entry: r.Entry, ok: verd.ok})
+		if verd.ok {
+			status = 0
+		}
+	}
+	return out, status
 }
 
 // verify asks the old panel whose token this is and stores it when the
-// answer is the ledger's user. status is 0 on success.
-func (b *Bridge) verify(ctx context.Context, q request, e ledger.Entry) int {
+// answer matches exactly one candidate that passed its check (D24). Zero
+// or two matches answer 404. status is 0 on success.
+func (b *Bridge) verify(ctx context.Context, q request, cands []candidate) (ledger.Entry, int) {
 	o, err := b.old(q.site)
 	if err != nil {
-		return http.StatusServiceUnavailable
+		return ledger.Entry{}, http.StatusServiceUnavailable
 	}
 	u, err := o.Owner(ctx, q.token)
 	switch {
 	case source.CodeOf(err) == source.CodeNotFound:
 		b.neg.add(q.mac)
-		return http.StatusNotFound
+		return ledger.Entry{}, http.StatusNotFound
 	case err != nil:
-		return http.StatusServiceUnavailable
-	case !sameUser(q.site.SourceKind, u, e):
-		b.Log.Warn("bridge: old panel names another user", "site", q.site.Name, "ledger", e.ID)
-		return http.StatusNotFound
+		return ledger.Entry{}, http.StatusServiceUnavailable
 	}
+	var match []candidate
+	for _, c := range cands {
+		if sameUser(q.site.SourceKind, u, c.Entry) {
+			match = append(match, c)
+		}
+	}
+	switch {
+	case len(match) == 0:
+		b.Log.Warn("bridge: old panel names another user", "site", q.site.Name, "ledger", ledgerIDs(cands))
+		return ledger.Entry{}, http.StatusNotFound
+	case len(match) > 1:
+		b.Log.Warn("bridge: an old link matches more than one moved user", "site", q.site.Name, "ledger", ledgerIDs(match))
+		return ledger.Entry{}, http.StatusNotFound
+	case !match[0].ok:
+		return ledger.Entry{}, http.StatusNotFound
+	}
+	e := match[0].Entry
 	p, _ := subtoken.Parse(q.token)
 	stored, err := b.st.putToken(ctx, q.mac, verified{SiteID: q.site.ID, LedgerID: e.ID, Issued: p.Issued})
 	if err != nil {
-		return http.StatusServiceUnavailable
+		return e, http.StatusServiceUnavailable
 	}
 	if !stored {
-		return http.StatusNotFound // closed while the check ran
+		return e, http.StatusNotFound // closed while the check ran
 	}
-	return 0
+	return e, 0
+}
+
+func ledgerIDs(cs []candidate) []int64 {
+	ids := make([]int64, len(cs))
+	for i, c := range cs {
+		ids[i] = c.ID
+	}
+	return ids
 }

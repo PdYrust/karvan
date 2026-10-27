@@ -8,17 +8,15 @@ import (
 	"sync"
 	"time"
 
-	"github.com/PdYrust/karvan/internal/migration/ledger"
 	"github.com/PdYrust/karvan/internal/secret"
 )
 
 // Deps are what a Bridge runs on. Tests replace the openers.
 type Deps struct {
-	DB     *sql.DB
-	Key    *secret.Key
-	Now    func() time.Time
-	Log    *slog.Logger
-	Ledger *ledger.Ledger
+	DB  *sql.DB
+	Key *secret.Key
+	Now func() time.Time
+	Log *slog.Logger
 	// OpenDest opens a destination panel from its ENV path.
 	OpenDest func(ctx context.Context, envPath string) (Destination, error)
 	// OpenOld builds the client for a site's old panel.
@@ -71,9 +69,6 @@ func New(d Deps) *Bridge {
 	}
 	if d.Log == nil {
 		d.Log = slog.Default()
-	}
-	if d.Ledger == nil {
-		d.Ledger = ledger.New(d.DB)
 	}
 	if d.OpenDest == nil {
 		d.OpenDest = openPanel

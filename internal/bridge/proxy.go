@@ -73,5 +73,5 @@ func answer(w http.ResponseWriter, status int) {
 		w.Header().Set("Retry-After", retryAfter)
 	}
 	w.WriteHeader(status)
-	_, _ = io.WriteString(w, `{"detail":"`+http.StatusText(status)+`"}`) //nolint:gosec // G705: a fixed status text
+	_, _ = io.WriteString(w, `{"detail":"`+http.StatusText(status)+`"}`)
 }

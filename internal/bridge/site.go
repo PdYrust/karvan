@@ -38,8 +38,15 @@ type Site struct {
 	HasKey      bool       `json:"hasKey"`
 	Lazy        bool       `json:"lazy"`
 	PlainHTTPOK bool       `json:"plainHttpOk"`
+	Mode        string     `json:"-"` // ModeManual or ModeBatches; set when the rule is made
 	origin      string
 }
+
+// How a panel rule picks the users it serves (D23).
+const (
+	ModeManual  = "manual"  // the users of its old panel and destination in an active batch or in none
+	ModeBatches = "batches" // the users of its batches, while the batch is active
+)
 
 // TLS reports whether the site serves HTTPS.
 func (s Site) TLS() bool { return s.CertFile != "" || s.CertPEM != "" }

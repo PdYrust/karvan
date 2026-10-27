@@ -134,7 +134,7 @@ func TestSiteStats(t *testing.T) {
 	if _, err := e.b.Upload(ctx, e.site.ID, strings.NewReader(e.oldToken("ali", e.clock.now()))); err != nil {
 		t.Fatal(err)
 	}
-	if err := e.b.st.close(ctx, e.users["bob"].ID, "revoked"); err != nil {
+	if _, err := e.b.st.close(ctx, e.users["bob"].ID, "revoked"); err != nil {
 		t.Fatal(err)
 	}
 	v := e.b.View(ctx, mustSite(t, e, e.site.ID))

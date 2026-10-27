@@ -134,39 +134,6 @@ func (l *Ledger) Get(ctx context.Context, id int64) (Entry, error) {
 	return one(rows)
 }
 
-// User returns the user row a moved or adopted source user has on dest:
-// the only rows the subscription bridge serves.
-func (l *Ledger) User(ctx context.Context, origin, key, dest string) (Entry, error) {
-	rows, err := l.db.QueryContext(ctx, "SELECT "+Columns+" FROM ledger l WHERE kind = 'user' AND source_origin = ? "+
-		"AND source_key = ? AND dest = ? AND state IN ('done', 'adopted') ORDER BY id DESC LIMIT 1", origin, key, dest)
-	if err != nil {
-		return Entry{}, fmt.Errorf("read ledger: %w", err)
-	}
-	return one(rows)
-}
-
-// UserByName is User for a source username. Old PasarGuard links can
-// carry a username instead of an id (tokens from before its v2 format).
-func (l *Ledger) UserByName(ctx context.Context, origin, username, dest string) (Entry, error) {
-	rows, err := l.db.QueryContext(ctx, "SELECT "+Columns+" FROM ledger l WHERE kind = 'user' AND source_origin = ? "+
-		"AND source_username = ? AND dest = ? AND state IN ('done', 'adopted') ORDER BY id DESC LIMIT 1", origin, username, dest)
-	if err != nil {
-		return Entry{}, fmt.Errorf("read ledger: %w", err)
-	}
-	return one(rows)
-}
-
-// Served lists the rows the subscription bridge serves for one source
-// panel and destination.
-func (l *Ledger) Served(ctx context.Context, origin, dest string) ([]Entry, error) {
-	rows, err := l.db.QueryContext(ctx, "SELECT "+Columns+" FROM ledger l WHERE kind = 'user' AND source_origin = ? "+
-		"AND dest = ? AND state IN ('done', 'adopted') ORDER BY id", origin, dest)
-	if err != nil {
-		return nil, fmt.Errorf("read ledger: %w", err)
-	}
-	return scan(rows)
-}
-
 func one(rows *sql.Rows) (Entry, error) {
 	got, err := scan(rows)
 	if err != nil {

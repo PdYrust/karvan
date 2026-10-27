@@ -9,7 +9,6 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/PdYrust/karvan/internal/migration/ledger"
 	"github.com/PdYrust/karvan/internal/panel/subtoken"
 )
 
@@ -137,24 +136,23 @@ func count(res *UploadResult, o uploadOutcome) {
 // uploadOne runs the lazy check's steps for one uploaded token, without
 // the lazy switch and limits: the operator asked for these checks.
 func (b *Bridge) uploadOne(ctx context.Context, q request) uploadOutcome {
-	if v, ok, err := b.st.token(ctx, q.mac); err == nil && ok && b.sameSource(v.SiteID, q.site) {
+	if _, row, ok, err := b.st.token(ctx, q.mac, q.site, q.dest.Key()); err == nil && ok && row.inScope {
 		return outKnown
 	}
 	p, ok := subtoken.Parse(q.token)
 	if !ok {
 		return outNoUser
 	}
-	if _, err := b.claimed(ctx, q, p); errors.Is(err, ledger.ErrNotFound) {
-		return outNoUser
-	}
-	e, status := b.candidate(ctx, q, p)
+	cands, status := b.candidates(ctx, q, p)
 	if status == 0 {
-		status = b.verify(ctx, q, e)
+		_, status = b.verify(ctx, q, cands)
 	}
-	switch status {
-	case 0:
+	switch {
+	case status == 0:
 		return outStored
-	case http.StatusNotFound:
+	case status == http.StatusNotFound && len(cands) == 0:
+		return outNoUser // none in the rule's scope, or held (D22)
+	case status == http.StatusNotFound:
 		return outRefused
 	}
 	return outFailed

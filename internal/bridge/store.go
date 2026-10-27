@@ -35,13 +35,13 @@ type store struct {
 }
 
 const siteColumns = "id, name, panel_id, source_kind, source_url, source_ip, source_pin, old_path, domains, " +
-	"listen_port, cert_file, key_file, cert_pem, key_sealed IS NOT NULL, lazy, plain_http_ok"
+	"listen_port, cert_file, key_file, cert_pem, key_sealed IS NOT NULL, lazy, plain_http_ok, mode"
 
 func scanSite(row interface{ Scan(...any) error }) (Site, error) {
 	var s Site
 	var domains string
 	err := row.Scan(&s.ID, &s.Name, &s.PanelID, &s.SourceKind, &s.SourceURL, &s.SourceIP, &s.SourcePin, &s.OldPath,
-		&domains, &s.Port, &s.CertFile, &s.KeyFile, &s.CertPEM, &s.HasKey, &s.Lazy, &s.PlainHTTPOK)
+		&domains, &s.Port, &s.CertFile, &s.KeyFile, &s.CertPEM, &s.HasKey, &s.Lazy, &s.PlainHTTPOK, &s.Mode)
 	if err != nil {
 		return s, err
 	}

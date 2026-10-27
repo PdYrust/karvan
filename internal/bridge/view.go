@@ -10,9 +10,9 @@ import (
 // so a panel that does not answer cannot hold the list.
 const statsTimeout = 5 * time.Second
 
-// SiteStats counts a site's moved users: the old panel's users moved into
-// its destination, those whose old link was proven, and those closed for
-// good. The rest are pending: their first old link request checks them.
+// SiteStats counts the users in a site's scope (D23), those whose old
+// link was proven, and those closed for good. The rest are pending: their
+// first old link request checks them.
 type SiteStats struct {
 	Moved    int `json:"moved"`
 	Verified int `json:"verified"`
@@ -65,12 +65,10 @@ func (b *Bridge) stats(ctx context.Context, s Site) (SiteStats, error) {
 	if err != nil {
 		return st, err
 	}
-	const served = "l.kind = 'user' AND l.source_origin = ? AND l.dest = ? AND l.state IN ('done', 'adopted')"
-	err = b.DB.QueryRowContext(ctx, "SELECT "+
-		"(SELECT count(*) FROM ledger l WHERE "+served+"), "+
-		"(SELECT count(DISTINCT t.ledger_id) FROM legacy_tokens t JOIN ledger l ON l.id = t.ledger_id WHERE "+served+"), "+
-		"(SELECT count(*) FROM legacy_closed c JOIN ledger l ON l.id = c.ledger_id WHERE "+served+")",
-		s.origin, d.Key(), s.origin, d.Key(), s.origin, d.Key()).Scan(&st.Moved, &st.Verified, &st.Closed)
+	err = b.DB.QueryRowContext(ctx, "SELECT count(*), "+
+		"count(*) FILTER (WHERE EXISTS (SELECT 1 FROM legacy_tokens t WHERE t.ledger_id = l.id)), "+
+		"count(*) FILTER (WHERE EXISTS (SELECT 1 FROM legacy_closed c WHERE c.ledger_id = l.id))"+fromLedger+
+		" WHERE "+scopeSQL, scopeArgs(s, d.Key())...).Scan(&st.Moved, &st.Verified, &st.Closed)
 	if err != nil {
 		return st, fmt.Errorf("site numbers: %w", err)
 	}

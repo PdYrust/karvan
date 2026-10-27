@@ -40,7 +40,7 @@ func TestPasarGuardOldPanel(t *testing.T) {
 		t.Fatal(err)
 	}
 	row := panel.Row{ID: 300, Username: "sara", CreatedAt: u.CreatedAt}
-	if _, err := e.b.Ledger.Add(ctx, []ledger.Entry{{Kind: ledger.KindUser, JobID: "job", State: ledger.Done,
+	if _, err := ledger.New(e.b.DB).Add(ctx, []ledger.Entry{{Kind: ledger.KindUser, JobID: "job", State: ledger.Done,
 		SourceOrigin: site.origin, SourceKey: strconv.FormatInt(u.SourceID, 10), SourceCreated: u.CreatedAt,
 		SourceUsername: "sara", CredPrint: ledger.Fingerprint(u.Credentials), Dest: "fake-dest", Row: row}}); err != nil {
 		t.Fatal(err)

@@ -175,13 +175,13 @@ func (e *env) addUser(name string, id int64) {
 	}
 	e.old.Subscribe(tok, "") // setup only
 	row := panel.Row{ID: id, Username: "new_" + name, CreatedAt: u.CreatedAt}
-	ids, err := e.b.Ledger.Add(ctx, []ledger.Entry{{Kind: ledger.KindUser, JobID: "job", State: ledger.Done,
+	ids, err := ledger.New(e.b.DB).Add(ctx, []ledger.Entry{{Kind: ledger.KindUser, JobID: "job", State: ledger.Done,
 		SourceOrigin: e.site.origin, SourceKey: name, SourceCreated: u.CreatedAt, SourceUsername: name,
 		CredPrint: ledger.Fingerprint(u.Credentials), Dest: "fake-dest", Row: row}})
 	if err != nil {
 		e.t.Fatal(err)
 	}
-	got, _ := e.b.Ledger.Get(ctx, ids[0])
+	got, _ := ledger.New(e.b.DB).Get(ctx, ids[0])
 	e.users[name] = got
 	e.dest.set(id, func(r *Row) { r.Username, r.CreatedAt = row.Username, row.CreatedAt })
 }

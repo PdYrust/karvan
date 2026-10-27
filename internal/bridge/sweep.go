@@ -29,6 +29,9 @@ func (b *Bridge) recheck(q request, e ledger.Entry) {
 		defer done()
 		ctx, cancel := context.WithTimeout(context.Background(), lazyTimeout)
 		defer cancel()
+		if _, row, ok, err := b.st.token(ctx, q.mac, q.site, q.dest.Key()); err != nil || !ok || row.held {
+			return // a held batch's tokens stay as they are (D22)
+		}
 		o, err := b.old(q.site)
 		if err != nil {
 			return
@@ -44,8 +47,9 @@ func (b *Bridge) recheck(q request, e ledger.Entry) {
 }
 
 // Sweep checks every served user of every site against the new panel
-// and closes the old links of those it revoked or deleted. It returns
-// how many users it closed.
+// and closes the old links of those it revoked or deleted. Users in an
+// inactive or deleted batch are skipped (D22). It returns how many users
+// it closed.
 func (b *Bridge) Sweep(ctx context.Context) (int, error) {
 	sites, err := b.st.Sites(ctx)
 	if err != nil {
@@ -56,18 +60,25 @@ func (b *Bridge) Sweep(ctx context.Context) (int, error) {
 		return 0, err
 	}
 	n := 0
-	seen := map[string]bool{}
+	seen := map[int64]bool{} // ledger ids, since rules can share users
 	for _, s := range sites {
 		d, err := b.dest(ctx, s.PanelID)
 		if err != nil {
 			b.Log.Warn("bridge: sweep", "site", s.Name, "err", err)
 			continue
 		}
-		if seen[s.origin+"\x00"+d.Key()] {
-			continue
+		entries, err := b.st.served(ctx, s, d.Key())
+		if err != nil {
+			return n, err
 		}
-		seen[s.origin+"\x00"+d.Key()] = true
-		got, err := b.sweepOne(ctx, s, d, closed)
+		var open []ledger.Entry
+		for _, e := range entries {
+			if !closed[e.ID] && !seen[e.ID] {
+				seen[e.ID] = true
+				open = append(open, e)
+			}
+		}
+		got, err := b.sweepOne(ctx, d, open)
 		n += got
 		if err != nil {
 			return n, err
@@ -76,21 +87,13 @@ func (b *Bridge) Sweep(ctx context.Context) (int, error) {
 	return n, nil
 }
 
-func (b *Bridge) sweepOne(ctx context.Context, s Site, d Destination, closed map[int64]bool) (int, error) {
-	entries, err := b.Ledger.Served(ctx, s.origin, d.Key())
-	if err != nil {
-		return 0, err
-	}
-	var open []ledger.Entry
-	var ids []int64
-	for _, e := range entries {
-		if !closed[e.ID] {
-			open = append(open, e)
-			ids = append(ids, e.Row.ID)
-		}
-	}
-	if len(ids) == 0 {
+func (b *Bridge) sweepOne(ctx context.Context, d Destination, open []ledger.Entry) (int, error) {
+	if len(open) == 0 {
 		return 0, nil
+	}
+	ids := make([]int64, len(open))
+	for i, e := range open {
+		ids[i] = e.Row.ID
 	}
 	rows, err := d.Rows(ctx, ids)
 	if err != nil {
@@ -99,8 +102,7 @@ func (b *Bridge) sweepOne(ctx context.Context, s Site, d Destination, closed map
 	n := 0
 	for _, e := range open {
 		r, found := rows[e.Row.ID]
-		if v := judge(e, r, found, time.Time{}); v.close != "" {
-			b.apply(ctx, e, v)
+		if b.apply(ctx, e, judge(e, r, found, time.Time{})) {
 			n++
 		}
 	}

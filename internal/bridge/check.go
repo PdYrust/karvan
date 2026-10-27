@@ -51,16 +51,21 @@ func judge(e ledger.Entry, r Row, found bool, issued time.Time) verdict {
 	return verdict{ok: true}
 }
 
-// apply closes the user when the verdict says so.
-func (b *Bridge) apply(ctx context.Context, e ledger.Entry, v verdict) {
+// apply closes the user when the verdict says so, and reports whether
+// it did.
+func (b *Bridge) apply(ctx context.Context, e ledger.Entry, v verdict) bool {
 	if v.close == "" {
-		return
+		return false
 	}
-	if err := b.st.close(ctx, e.ID, v.close); err != nil {
+	closed, err := b.st.close(ctx, e.ID, v.close)
+	if err != nil {
 		b.Log.Warn("bridge: close user", "ledger", e.ID, "err", err)
-		return
+		return false
 	}
-	b.Log.Info("bridge: old links closed", "ledger", e.ID, "user", e.Username, "reason", v.close)
+	if closed {
+		b.Log.Info("bridge: old links closed", "ledger", e.ID, "user", e.Username, "reason", v.close)
+	}
+	return closed
 }
 
 // sameUser reports whether the old panel's answer is the user the ledger

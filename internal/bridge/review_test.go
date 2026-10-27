@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/PdYrust/karvan/internal/migration/ledger"
 	"github.com/PdYrust/karvan/internal/panel"
 	kstore "github.com/PdYrust/karvan/internal/store"
 )
@@ -26,12 +25,12 @@ func TestPassingFaultKeepsAVerifiedToken(t *testing.T) {
 		t.Fatal(err)
 	}
 	_ = broken.Close()
-	good := e.b.Ledger
-	e.b.Ledger = ledger.New(broken)
+	good := e.b.st.db
+	e.b.st.db = broken
 	if code, _ := e.get("/sub/"+tok, "198.51.100.7"); code != http.StatusServiceUnavailable {
 		t.Fatalf("ledger down: %d", code)
 	}
-	e.b.Ledger = good
+	e.b.st.db = good
 	if e.tokens() != 1 {
 		t.Fatal("the proof was dropped")
 	}
