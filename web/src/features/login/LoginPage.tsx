@@ -3,12 +3,15 @@ import { Wordmark } from '../../components/brand/Wordmark';
 import { LanguageSwitch } from '../../components/preferences/LanguageSwitch';
 import { ThemeToggle } from '../../components/preferences/ThemeToggle';
 import { useT } from '../../i18n/locale';
+import { useMedia } from '../../lib/media/use-media';
 import { LoginShowcase } from './LoginShowcase';
 import { loginMessages } from './messages';
 import { SignInForm } from './SignInForm';
 
 export function LoginPage() {
   const t = useT(loginMessages);
+  // Under lg only the form shows, and the wall's code is never fetched.
+  const wide = useMedia('(min-width: 64rem)');
 
   useEffect(() => {
     document.title = t('pageTitle');
@@ -39,7 +42,7 @@ export function LoginPage() {
           </p>
         </div>
       </main>
-      <LoginShowcase />
+      {wide ? <LoginShowcase /> : null}
     </div>
   );
 }

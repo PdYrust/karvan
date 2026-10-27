@@ -11,22 +11,22 @@ const onBrandButton = 'text-on-brand hover:bg-on-brand/15';
 
 /**
  * The brand side of the sign-in page, the firewall as a wall of hexagonal
- * columns. On small screens it is a band under the form, with nothing on it.
+ * columns. Wide screens only (the sign-in page leaves it out under lg).
  */
 export function LoginShowcase() {
   const t = useT(loginMessages);
   return (
-    <section className="relative flex h-[22dvh] max-h-44 min-h-28 flex-col overflow-hidden bg-kumo-brand text-on-brand lg:h-auto lg:max-h-none lg:min-h-dvh">
+    <section className="relative flex min-h-dvh flex-col overflow-hidden bg-kumo-brand text-on-brand">
       <Suspense fallback={null}>
         <LoginWall />
       </Suspense>
 
-      <div className="relative hidden justify-end gap-1 p-6 lg:flex">
+      <div className="relative flex justify-end gap-1 p-6">
         <LanguageSwitch className={onBrandButton} />
         <ThemeToggle className={onBrandButton} />
       </div>
 
-      <div className="relative hidden max-w-lg flex-col px-14 pt-4 lg:flex">
+      <div className="relative flex max-w-lg flex-col px-14 pt-4">
         <p dir="ltr" className="self-start font-mono text-sm text-on-brand/80">
           Marzban ⇄ PasarGuard
         </p>
