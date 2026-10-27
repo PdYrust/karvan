@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync/atomic"
 	"testing"
 	"time"
@@ -192,7 +193,7 @@ func pollDuring(t *testing.T, l *livetest.Live) func() {
 // moved admin can log in.
 func TestLivePasarGuard(t *testing.T) {
 	l := livetest.OpenLive(t, panel.PasarGuard)
-	group := wireguardGroup(t, l)
+	group := livetest.EnsureGroups(l).WireGuard
 	t.Run("touch", func(t *testing.T) {
 		rep := movePasarGuard(t, l, "pt_", group, run.ReloadTouch)
 		checkReload(t, rep, 3)
@@ -246,40 +247,6 @@ func wireguardKeys(t *testing.T, i int) map[string]any {
 	}
 }
 
-// wireguardGroup adds a WireGuard core and a group serving it, once.
-func wireguardGroup(t *testing.T, l *livetest.Live) int64 {
-	t.Helper()
-	var groups struct {
-		Groups []struct {
-			ID   int64  `json:"id"`
-			Name string `json:"name"`
-		} `json:"groups"`
-	}
-	l.Call(http.MethodGet, "/api/groups", nil, &groups)
-	for _, g := range groups.Groups {
-		if g.Name == "wireguard" {
-			return g.ID
-		}
-	}
-	k, err := ecdh.X25519().GenerateKey(rand.Reader)
-	if err != nil {
-		t.Fatal(err)
-	}
-	core := map[string]any{"name": "wg", "type": "wg", "exclude_inbound_tags": []string{}, "fallbacks_inbound_tags": []string{},
-		"config": map[string]any{"interface_name": "wg0", "private_key": base64.StdEncoding.EncodeToString(k.Bytes()),
-			"listen_port": 51820, "address": []string{"10.77.0.1/24"}}}
-	if code := l.Call(http.MethodPost, "/api/core", core, nil); code/100 != 2 {
-		t.Fatalf("add WireGuard core: %d", code)
-	}
-	var g struct {
-		ID int64 `json:"id"`
-	}
-	if code := l.Call(http.MethodPost, "/api/group", map[string]any{"name": "wireguard", "inbound_tags": []string{"wg0"}}, &g); code/100 != 2 {
-		t.Fatalf("add group: %d", code)
-	}
-	return g.ID
-}
-
 // checkPeerIPs checks every moved user has (or lacks) a peer IP from the
 // panel's 10.77.0.0/24 pool.
 func checkPeerIPs(t *testing.T, l *livetest.Live, rep *run.Report, want bool) {
@@ -294,4 +261,38 @@ func checkPeerIPs(t *testing.T, l *livetest.Live, rep *run.Report, want bool) {
 			t.Errorf("%s peer_ips %v, want assigned=%v", u.Username, ips, want)
 		}
 	}
+}
+
+// The test PasarGuard serves a WireGuard group and a VLESS group: a user
+// in each gets that group's link, and a second setup adds nothing.
+func TestLivePasarGuardGroups(t *testing.T) {
+	l := livetest.OpenLive(t, panel.PasarGuard)
+	g := livetest.EnsureGroups(l)
+	before := l.Setup()
+	if again := livetest.EnsureGroups(l); again != g || l.Setup() != before {
+		t.Errorf("second setup: %+v and %s, want %+v and %s", again, l.Setup(), g, before)
+	}
+	for name, group := range map[string]int64{"wireguard": g.WireGuard, "vless": g.VLESS} {
+		links := l.Links(addPasarGuardUser(t, l, "gl_"+name, group))
+		if len(links) != 1 || !strings.HasPrefix(links[0], name+"://") {
+			t.Errorf("%s group links %q, want one %s:// link", name, links, name)
+		}
+	}
+}
+
+// addPasarGuardUser adds an active user in group through the panel API,
+// removed again when the test ends.
+func addPasarGuardUser(t *testing.T, l *livetest.Live, name string, group int64) int64 {
+	t.Helper()
+	del := func() { l.Call(http.MethodDelete, "/api/user/"+name, nil, nil) }
+	del()
+	t.Cleanup(del)
+	var u struct {
+		ID int64 `json:"id"`
+	}
+	body := map[string]any{"username": name, "group_ids": []int64{group}, "status": "active", "proxy_settings": map[string]any{}}
+	if code := l.Call(http.MethodPost, "/api/user", body, &u); code != http.StatusCreated {
+		t.Fatalf("add user %s: %d", name, code)
+	}
+	return u.ID
 }
