@@ -12,6 +12,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PdYrust/karvan/internal/migration/batch"
 	"github.com/PdYrust/karvan/internal/migration/ledger"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 	"github.com/PdYrust/karvan/internal/safemode"
@@ -75,10 +76,11 @@ type Deps struct {
 // Service owns all jobs.
 type Service struct {
 	Deps
-	db     *sql.DB
-	now    func() time.Time
-	ledger *ledger.Ledger
-	events *bus
+	db      *sql.DB
+	now     func() time.Time
+	ledger  *ledger.Ledger
+	batches *batch.Store
+	events  *bus
 
 	mu      sync.Mutex
 	jobs    map[string]*Job
@@ -109,7 +111,7 @@ func New(d Deps) *Service {
 	if _, ok := d.Reloaders[ReloadManual]; !ok {
 		d.Reloaders[ReloadManual] = manualReload{}
 	}
-	return &Service{Deps: d, db: d.DB, now: d.Now, ledger: ledger.New(d.DB), events: newBus(d.DB, d.Now), jobs: map[string]*Job{},
+	return &Service{Deps: d, db: d.DB, now: d.Now, ledger: ledger.New(d.DB), batches: batch.New(d.DB, d.Now), events: newBus(d.DB, d.Now), jobs: map[string]*Job{},
 		cancels: map[string]context.CancelFunc{}, probes: map[string]controlProbe{}}
 }
 

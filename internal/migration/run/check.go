@@ -26,13 +26,13 @@ func (s *Service) Create(ctx context.Context, l Login, panelID int64, sourceOpts
 	if err != nil {
 		return nil, err
 	}
-	src, kind, origin, _, err := openSource(ctx, l, sourceOpts)
+	src, kind, origin, client, err := openSource(ctx, l, sourceOpts)
 	if err != nil {
 		return nil, err
 	}
 	b := make([]byte, 12)
 	_, _ = rand.Read(b)
-	j := &Job{ID: hex.EncodeToString(b), PanelID: panelID, state: StateCreated, envPath: env, login: l, source: src,
+	j := &Job{ID: hex.EncodeToString(b), PanelID: panelID, state: StateCreated, envPath: env, login: l, source: src, client: client,
 		kind: kind, origin: origin, generated: map[string]panel.Credentials{}, lastUse: s.now(), safeMode: true,
 		plan: plan.Plan{Now: s.now().UTC().Truncate(time.Second)}, passwords: map[string]string{}}
 	if err := s.save(ctx, j); err != nil {

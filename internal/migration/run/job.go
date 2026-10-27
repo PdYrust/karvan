@@ -11,6 +11,7 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/engine"
 	"github.com/PdYrust/karvan/internal/migration/plan"
 	"github.com/PdYrust/karvan/internal/panel"
+	"github.com/PdYrust/karvan/internal/panel/source"
 	"github.com/PdYrust/karvan/internal/secret"
 )
 
@@ -55,6 +56,7 @@ type Job struct {
 	envPath    string
 	login      Login
 	source     panel.Source
+	client     *source.Client // source's connection, for the address it dialed
 	kind       panel.Kind
 	origin     string
 	snapshot   *engine.Source
@@ -169,6 +171,7 @@ func (j *Job) wipe() {
 		j.source.Close()
 		j.source = nil
 	}
+	j.client = nil
 	j.login = Login{}
 	j.generated = map[string]panel.Credentials{}
 	j.snapshot = nil

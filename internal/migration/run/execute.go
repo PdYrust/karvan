@@ -200,8 +200,13 @@ func (s *Service) execute(ctx context.Context, j *Job, hash string, o Options) {
 		s.emit(j, StageExecute, EventLog, map[string]any{"code": rep.Error})
 	}
 	rep.State, rep.EndedAt, rep.BackupID = j.state, s.now(), j.backupID
+	facts := oldLinkFacts(j)
 	j.wipe()
 	s.saveEnded(j)
+	if j.state == StateDone {
+		// Still under the destination lock, so no other run writes now.
+		s.ensureBatch(j, w.dest, facts)
+	}
 	s.dropCancel(j.ID)
 	// Not running any more before "done" goes out: a client that asks for
 	// the report on "done" then waits for mu instead of getting ErrBusy.
