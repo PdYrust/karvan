@@ -75,6 +75,50 @@ func TestServerAnalytics(t *testing.T) {
 	}
 }
 
+type liveJSON struct {
+	Seq      int64               `json:"seq"`
+	Samples  []hoststats.Sample  `json:"samples"`
+	Backfill *[]hoststats.Minute `json:"backfill"`
+}
+
+func (e *env) live(t *testing.T, query string) liveJSON {
+	t.Helper()
+	var out liveJSON
+	res := e.do(http.MethodGet, analytics+"/server"+query, nil)
+	if res.status != http.StatusOK {
+		t.Fatalf("live%s: %d %s", query, res.status, res.body)
+	}
+	res.json(t, &out)
+	return out
+}
+
+func TestServerLiveBackfill(t *testing.T) {
+	e := newEnv(t)
+	e.login("")
+	ctx := context.Background()
+	minute := time.Now().Add(-10*time.Minute).Unix() / 60 * 60
+	if err := e.host.Store.Put(ctx, hoststats.Minute{TS: minute, CPU: 0.25, MemTotal: 100}); err != nil {
+		t.Fatal(err)
+	}
+	e.host.Tick(ctx)
+	time.Sleep(20 * time.Millisecond)
+	e.host.Tick(ctx)
+	first := e.live(t, "")
+	if first.Backfill == nil || len(*first.Backfill) != 1 || (*first.Backfill)[0].TS != minute || len(first.Samples) != 1 {
+		t.Fatalf("first answer: %+v", first)
+	}
+	if next := e.live(t, "?after="+strconv.FormatInt(first.Seq, 10)); next.Backfill != nil || len(next.Samples) != 0 {
+		t.Fatalf("a poll that follows on: %+v", next)
+	}
+	// A seq from before a restart: every sample again, with the minutes.
+	if again := e.live(t, "?after="+strconv.FormatInt(first.Seq+100, 10)); again.Backfill == nil || len(again.Samples) != 1 {
+		t.Fatalf("after a restart: %+v", again)
+	}
+	if over := e.live(t, "?range=1h"); over.Backfill != nil {
+		t.Fatalf("a range has no backfill: %+v", over)
+	}
+}
+
 type panelJSON struct {
 	PanelID int64 `json:"panelId"`
 	Pending bool  `json:"pending"`

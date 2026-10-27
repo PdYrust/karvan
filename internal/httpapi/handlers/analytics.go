@@ -47,6 +47,9 @@ type serverJSON struct {
 	Now       *hoststats.Sample  `json:"now"`
 	Samples   []hoststats.Sample `json:"samples,omitempty"`
 	Points    []hoststats.Minute `json:"points,omitempty"`
+	// Backfill (live only, when the samples start over): the saved minutes
+	// of the live window before the oldest sample.
+	Backfill *[]hoststats.Minute `json:"backfill,omitempty"`
 }
 
 // ServerAnalytics is this server's CPU, memory, disks and network: live
@@ -63,9 +66,7 @@ func (a *API) ServerAnalytics(w http.ResponseWriter, r *http.Request) {
 		out.Available, out.Now, out.Seq = true, &latest, latest.Seq
 	}
 	if name == liveRange {
-		after, _ := strconv.ParseInt(r.URL.Query().Get("after"), 10, 64)
-		out.Step, out.Samples = int64(hoststats.Interval/time.Second), a.Host.Since(after)
-		respond.JSON(w, http.StatusOK, out)
+		a.serverLive(w, r, out, now)
 		return
 	}
 	points, err := a.HostStore.Range(r.Context(), now.Add(-spec.span).Unix(), now.Unix()+1, spec.step)
@@ -74,6 +75,27 @@ func (a *API) ServerAnalytics(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	out.Step, out.Points = spec.step, points
+	respond.JSON(w, http.StatusOK, out)
+}
+
+// serverLive is the samples after the asked seq. When the page has none of
+// them yet (it just opened, Karvan restarted, or it fell behind the samples
+// kept), the answer starts over and brings the saved minutes before them,
+// so the live window is whole.
+func (a *API) serverLive(w http.ResponseWriter, r *http.Request, out serverJSON, now time.Time) {
+	after, _ := strconv.ParseInt(r.URL.Query().Get("after"), 10, 64)
+	if after > out.Seq {
+		after = 0 // a seq from before a restart
+	}
+	out.Step, out.Samples = int64(hoststats.Interval/time.Second), a.Host.Since(after)
+	if after <= 0 || len(out.Samples) > 0 && out.Samples[0].Seq != after+1 {
+		minutes, err := a.Host.Backfill(r.Context(), now)
+		if err != nil {
+			respond.Internal(w, r, err)
+			return
+		}
+		out.Backfill = &minutes
+	}
 	respond.JSON(w, http.StatusOK, out)
 }
 
