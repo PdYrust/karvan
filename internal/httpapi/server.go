@@ -20,8 +20,11 @@ import (
 	"github.com/PdYrust/karvan/internal/settings"
 )
 
-// staticFiles are top-level files from web/public served without a session.
-var staticFiles = []string{"favicon.svg", "boot.js"}
+// staticFiles are top-level files from web/public served without a session:
+// the sign-in page's own files, and the manifest and icons Chrome fetches,
+// without cookies, to install the panel as an app.
+var staticFiles = []string{"favicon.svg", "boot.js", "manifest.webmanifest",
+	"icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"}
 
 // appPages are the first path segments of the web panel's own pages.
 var appPages = []string{"analytics", "migrations", "reports", "templates", "links", "panels", "backups", "settings"}

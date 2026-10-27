@@ -64,7 +64,8 @@ func TestNewServesOnlyUnderBasePath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	for path, want := range map[string]int{"/abcdefgh/": http.StatusOK, "/": http.StatusNotFound, "/abcdefgh/nope": http.StatusNotFound} {
+	for path, want := range map[string]int{"/abcdefgh/": http.StatusOK, "/": http.StatusNotFound, "/abcdefgh/nope": http.StatusNotFound,
+		"/manifest.webmanifest": http.StatusNotFound, "/icon-192.png": http.StatusNotFound} {
 		rec := httptest.NewRecorder()
 		h.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
 		if rec.Code != want {

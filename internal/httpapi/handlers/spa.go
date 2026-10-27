@@ -156,7 +156,12 @@ func (s *SPA) Static(name string) http.HandlerFunc {
 			middleware.NotFound(w, r)
 			return
 		}
-		if ct := mime.TypeByExtension(path.Ext(name)); ct != "" {
+		ct := mime.TypeByExtension(path.Ext(name))
+		if path.Ext(name) == ".webmanifest" {
+			// Not in Go's built-in table, and the system's table may not have it.
+			ct = "application/manifest+json"
+		}
+		if ct != "" {
 			w.Header().Set("Content-Type", ct)
 		}
 		w.Header().Set("Cache-Control", "public, max-age=86400")
