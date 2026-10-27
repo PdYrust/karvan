@@ -196,6 +196,7 @@ func subscriptionRoutes(rt *middleware.Router, api *handlers.API, signedIn func(
 		"PATCH /api/v1/certificates/{id}":   api.SaveCertificate,
 		"DELETE /api/v1/certificates/{id}":  api.DeleteCertificate,
 		"POST /api/v1/certificates/inspect": api.InspectCert,
+		"POST /api/v1/certificates/scan":    api.ScanCertificates,
 	} {
 		rt.Handle(pattern, signedIn(h))
 	}

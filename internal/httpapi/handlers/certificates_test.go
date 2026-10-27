@@ -1,6 +1,7 @@
 package handlers_test
 
 import (
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -231,4 +232,32 @@ func TestCertificateKeysStayOutOfAnswersLogsAndAudit(t *testing.T) {
 			t.Fatalf("answer %d %s", a.status, a.body)
 		}
 	}
+}
+
+// The scan takes an empty body, answers found and skipped lists, is
+// audited with the counts only and needs the CSRF token.
+func TestCertificateScanRoute(t *testing.T) {
+	m := newMigrationEnv(t, 0)
+	scan := api + "/certificates/scan"
+	var out struct {
+		Found   []map[string]any `json:"found"`
+		Skipped []struct {
+			Place  string `json:"place"`
+			Reason string `json:"reason"`
+		} `json:"skipped"`
+	}
+	res := m.do(http.MethodPost, scan, nil)
+	res.json(t, &out)
+	if res.status != http.StatusOK || out.Found == nil || len(out.Skipped) < 2 || out.Skipped[0].Place != "/root/cert" {
+		t.Fatalf("scan: %d %s", res.status, res.body)
+	}
+	got := m.audited("certificate.scan", "success")
+	want := fmt.Sprintf(`{"found":"%d","skipped":"%d"}`, len(out.Found), len(out.Skipped))
+	if len(got) != 1 || got[0] != want {
+		t.Errorf("audit %v, want %s", got, want)
+	}
+	token := m.csrf
+	m.csrf = ""
+	wantError(t, m.do(http.MethodPost, scan, nil), http.StatusForbidden, "csrf")
+	m.csrf = token
 }

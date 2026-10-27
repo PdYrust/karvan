@@ -34,6 +34,7 @@ const serverActions = [
   'certificate.add',
   'certificate.save',
   'certificate.delete',
+  'certificate.scan',
   'sessions.end',
   'account.credentials',
   'settings.address_start',

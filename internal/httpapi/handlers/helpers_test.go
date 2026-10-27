@@ -136,7 +136,8 @@ func newEnvDeps(t *testing.T) (*env, httpapi.Deps) {
 	log := audit.New(db)
 	svc := auth.NewService(ops, auth.NewSessions(db), auth.NewLimiter(db, auth.DefaultLockout), log)
 	runs := run.New(run.Deps{DB: db, Key: key, DataDir: filepath.Join(dir, "data"), Tools: migrationtest.Tools})
-	br := bridge.New(bridge.Deps{DB: db, Key: key, Log: slog.New(slog.DiscardHandler)})
+	br := bridge.New(bridge.Deps{DB: db, Key: key, Log: slog.New(slog.DiscardHandler), DataDir: filepath.Join(dir, "data"),
+		KeyFile: keyPath, EnvRoots: []string{filepath.Join(dir, "opt")}})
 	closing := make(chan struct{})
 	hostStore := hoststats.NewStore(db)
 	host := &hoststats.Sampler{Reader: hoststats.System, Store: hostStore}

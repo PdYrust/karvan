@@ -88,6 +88,23 @@ func (a *API) DeleteCertificate(w http.ResponseWriter, r *http.Request) {
 	respond.NoContent(w)
 }
 
+// ScanCertificates looks for certificates in the known places on this
+// server, read only. The body is empty; the places are fixed (D51).
+func (a *API) ScanCertificates(w http.ResponseWriter, r *http.Request) {
+	res, err := a.Bridge.ScanCertificates(r.Context())
+	switch {
+	case errors.Is(err, bridge.ErrScanBusy):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeBusy})
+		return
+	case err != nil:
+		respond.Internal(w, r, err)
+		return
+	}
+	a.record(r, audit.ActionCertScan, audit.Success, map[string]string{"found": strconv.Itoa(len(res.Found)),
+		"skipped": strconv.Itoa(len(res.Skipped))})
+	respond.JSON(w, http.StatusOK, res)
+}
+
 // InspectCert says what a certificate covers and what is wrong with it,
 // before a rule is saved: files, a paste, or a stored one by id.
 func (a *API) InspectCert(w http.ResponseWriter, r *http.Request) {

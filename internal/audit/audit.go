@@ -53,6 +53,7 @@ const (
 	ActionCertAdd          = "certificate.add"
 	ActionCertSave         = "certificate.save"
 	ActionCertDelete       = "certificate.delete"
+	ActionCertScan         = "certificate.scan"
 
 	ActionSessionsEnd   = "sessions.end"
 	ActionLoginRenew    = "account.credentials"
