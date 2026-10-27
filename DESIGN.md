@@ -93,7 +93,7 @@ The chart and wall tokens sit in a `@theme static` block: charts pick a color by
 
 ## 6. Icons
 
-- Phosphor, `regular` weight: 16 px in sidebar rows and inline, 18 px in the top bar, 20 px in buttons. Where Phosphor has no match, a small SVG in the same stroke (`app/shell/MenuIcon.tsx`, the phone menu button: three lines, the bottom one shorter at the start edge, mirrored in RTL).
+- Phosphor, `regular` weight: 16 px in sidebar rows and inline, 18 px in the top bar, 20 px in buttons. A few icons on pages near their size budget are Phosphor's own regular drawing inlined (`components/icons/regular`), because the package's icon carries all six weights. Where Phosphor has no match, a small SVG in the same stroke (`app/shell/MenuIcon.tsx`, the phone menu button: three lines, the bottom one shorter at the start edge, mirrored in RTL).
 - Icons never stand in for words in primary actions. Icon-only buttons have an `aria-label` and a title or tooltip.
 - No emoji in the UI.
 
