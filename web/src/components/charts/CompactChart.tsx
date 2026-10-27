@@ -1,6 +1,7 @@
 import { useT } from '../../i18n/locale';
 import {
   areaPath,
+  fitDomain,
   gapLimit,
   linePath,
   runs,
@@ -87,7 +88,8 @@ export function CompactChart({
   const [ref, { width, height }] = useSize<HTMLDivElement>();
   const parts = runs(times, values, gapLimit(step, spacing));
   const empty = !parts.some((p) => p.length > 0);
-  const [t0, t1] = domain;
+  // Edge to edge: the window's edges move onto the first and last point when they are only off its grid.
+  const [t0, t1] = fitDomain(parts, domain);
   const [lo, hi] = max === undefined ? spread(values) : [0, max];
   const x = (t: number) => ((t - t0) / (t1 - t0 || 1)) * width;
   // Two pixels of room at the top, so a flat line at the maximum stays visible.
@@ -105,7 +107,13 @@ export function CompactChart({
       {empty ? <NoData /> : null}
       {!empty && width > 0 && height > 0 ? (
         // The line and its area are revealed together from the start of time (the svg's box is clipped).
-        <svg width={width} height={height} aria-hidden="true" className="k-sweep absolute inset-0">
+        // The view box stretches the whole-pixel drawing over the box's exact width, so no sliver is left at an edge.
+        <svg
+          viewBox={`0 0 ${String(width)} ${String(height)}`}
+          preserveAspectRatio="none"
+          aria-hidden="true"
+          className="k-sweep absolute inset-0 size-full"
+        >
           <path d={areaPath(parts, x, y, height)} fill={color} fillOpacity={0.12} />
           <path d={linePath(solid, x, y)} {...stroke} />
           <path d={linePath(dashed, x, y)} {...stroke} strokeDasharray="4 3" />

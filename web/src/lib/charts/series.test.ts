@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   areaPath,
+  fitDomain,
   gapLimit,
   linePath,
   lonePoints,
@@ -44,6 +45,22 @@ describe('runs', () => {
   });
 });
 
+describe('fitDomain', () => {
+  // A panel read every 60 s: buckets start on the minute, the window ends at the last reading.
+  const parts = runs([35, 95, 155, 3515, 3575], [1, 2, 3, 4, 5], 114);
+  it('moves each edge onto a point that is only off the window grid', () => {
+    expect(fitDomain(runs([35, 95, 155, 215], [1, 2, 3, 4], 114), [0, 240])).toEqual([35, 215]);
+  });
+  it('keeps an edge where no point covers a longer wait', () => {
+    expect(fitDomain(parts, [-200, 3600])).toEqual([-200, 3575]);
+    expect(fitDomain(runs([35, 95], [1, 2], 114), [0, 3600])).toEqual([35, 3600]);
+  });
+  it('keeps the window with a lone point, nothing drawn or points outside it', () => {
+    expect(fitDomain(runs([35], [1], 114), [0, 100])).toEqual([0, 100]);
+    expect(fitDomain([], [0, 100])).toEqual([0, 100]);
+    expect(fitDomain(runs([-10, 50, 110], [1, 2, 3], 114), [0, 100])).toEqual([0, 100]);
+  });
+});
 describe('paths', () => {
   const x = (t: number) => t * 10;
   const y = (v: number) => 100 - v;

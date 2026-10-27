@@ -36,13 +36,39 @@ export function runs(
   return out;
 }
 
+/** How many steps apart two points may be and still be joined. */
+const reach = 1.9;
 /**
  * The longest wait before a point that still joins it to the one before:
  * a little under two steps, or two of its own spacing where the points are
  * not evenly spaced (saved minutes before live samples).
  */
 export function gapLimit(step: number, spacing?: readonly number[]): number | number[] {
-  return spacing ? spacing.map((s) => s * 1.9) : step * 1.9;
+  return spacing ? spacing.map((s) => s * reach) : step * reach;
+}
+/**
+ * The time a full-bleed chart spans: the window, with each edge moved onto
+ * the first or last point when that point is closer to it than a joined
+ * step. Points keep their own grid (bucket starts, reading times), which
+ * rarely meets the window's edges, so without this the line stops a sliver
+ * short of both sides. A longer wait at an edge is time no point covers
+ * and stays empty.
+ */
+export function fitDomain(
+  parts: readonly Point[][],
+  domain: readonly [number, number],
+): [number, number] {
+  const [t0, t1] = domain;
+  const head = parts[0];
+  const tail = parts[parts.length - 1];
+  if (!head || head.length < 2 || !tail || tail.length < 2) return [t0, t1];
+  const first = (head[0] as Point)[0];
+  const last = (tail[tail.length - 1] as Point)[0];
+  const startStep = (head[1] as Point)[0] - first;
+  const endStep = last - (tail[tail.length - 2] as Point)[0];
+  const start = first > t0 && first - t0 <= startStep * reach ? first : t0;
+  const end = last < t1 && t1 - last <= endStep * reach ? last : t1;
+  return start < end ? [start, end] : [t0, t1];
 }
 
 type Scale = (n: number) => number;
