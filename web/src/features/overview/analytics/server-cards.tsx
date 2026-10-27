@@ -2,15 +2,18 @@ import type { BarItem } from '../../../components/charts/BarList';
 import type { SeriesColor } from '../../../components/charts/palette';
 import { Machine } from '../../../components/text/Machine';
 import { useT } from '../../../i18n/locale';
-import type { ServerStats } from '../../../lib/api/analytics';
+import type { Translate } from '../../../i18n/core';
+import type { Sample, ServerStats } from '../../../lib/api/analytics';
 import { changeOf, latestOf, type Change } from '../../../lib/charts/change';
 import { sumValues, type Value } from '../../../lib/charts/series';
 import type { AxisKind } from '../../../lib/charts/ticks';
+import type { Format } from '../../../lib/format/format';
 import { useFormat } from '../../../lib/preferences/region';
-import { analyticsMessages } from '../../analytics/messages';
+import { analyticsMessages, type AnalyticsKey } from '../../analytics/messages';
 import { rangeSpan } from '../../analytics/range';
-import { serverView } from '../../analytics/server-view';
-import { overviewMessages } from '../messages';
+import { coreColor } from '../../analytics/server/charts';
+import { cpuLines, serverView } from '../../analytics/server-view';
+import { overviewMessages, type OverviewKey } from '../messages';
 
 /** At most this many series in a detail; the rest are counted as "+N more". */
 const seriesMax = 5;
@@ -42,13 +45,18 @@ export interface ServerCard {
   };
 }
 
-/** CPU, memory, network and the disks of this server, live. */
-export function useServerCards(stats: ServerStats | undefined) {
-  const t = useT(analyticsMessages);
-  const tOverview = useT(overviewMessages);
-  const fmt = useFormat();
-  const now = stats?.now;
-  if (!stats || !now) return undefined;
+/**
+ * CPU, memory, network and the disks of this server, live. A card's line
+ * is drawn from its detail's series (the first one, or their sum), so the
+ * card and its detail always span the same times.
+ */
+export function serverCards(
+  stats: ServerStats,
+  now: Sample,
+  t: Translate<AnalyticsKey>,
+  tOverview: Translate<OverviewKey>,
+  fmt: Format,
+) {
   const view = serverView(stats, rangeSpan.live);
   const pct = (v: number) => fmt.percent(v, 0);
   const named = (
@@ -60,17 +68,25 @@ export function useServerCards(stats: ServerStats | undefined) {
     const v = latestOf(values);
     return { name, color, values, value: v === undefined ? '' : f(v) };
   };
-  const cpuSeries =
-    view.cores.length > 0
-      ? view.cores.map((c, i) =>
-          named(t('seriesCore', { n: i + 1 }), ((i % seriesMax) + 1) as SeriesColor, c, pct),
-        )
-      : [
-          named(t('seriesAllCores'), 1, view.cpu, pct),
-          named(t('seriesBusiest'), 2, view.busiest, pct),
-        ];
+  // Every core together comes first: saved minutes have only that line.
+  const cpuSeries = cpuLines(view).map((l) => {
+    if (l.line === 'all') return named(t('seriesAllCores'), 1, l.values, pct);
+    if (l.line === 'busiest') return named(t('seriesBusiest'), 2, l.values, pct);
+    const i = l.core ?? 0;
+    return named(t('seriesCore', { n: i + 1 }), coreColor(i), l.values, pct);
+  });
+  const memSeries = [
+    named(t('seriesUsed'), 1, view.memUsed, fmt.bytes),
+    named(t('seriesCache'), 2, view.memCache, fmt.bytes),
+    ...(now.mem.swapTotal > 0 ? [named(t('seriesSwap'), 3, view.swap, fmt.bytes)] : []),
+  ];
+  const netSeries = [
+    named(t('seriesIn'), 1, view.netRx, fmt.rate),
+    named(t('seriesOut'), 2, view.netTx, fmt.rate),
+  ];
+  const lead = (series: readonly DetailSeries[]) => series[0]?.values ?? [];
   const mem = fmt.bytesParts(now.mem.used);
-  const netSum = sumValues([view.netRx, view.netTx]);
+  const netSum = sumValues(netSeries.map((n) => n.values));
   const net = fmt.bytesParts(now.netRx + now.netTx);
   const root = stats.disks[0];
   const share = (used: number, total: number) => used / (total || 1);
@@ -80,8 +96,8 @@ export function useServerCards(stats: ServerStats | undefined) {
       title: t('cpu'),
       value: pct(now.cpu),
       sub: t('cores', { count: stats.facts.cores }),
-      change: changeOf(view.cpu, { points: true, risingIsBad: true }),
-      chart: { values: view.cpu, max: 1 },
+      change: changeOf(lead(cpuSeries), { points: true, risingIsBad: true }),
+      chart: { values: lead(cpuSeries), max: 1 },
       detail: {
         kind: 'percent',
         format: pct,
@@ -103,17 +119,13 @@ export function useServerCards(stats: ServerStats | undefined) {
       value: mem.value,
       unit: mem.unit,
       sub: t('ofTotal', { total: fmt.bytes(now.mem.total) }),
-      change: changeOf(view.memUsed, { risingIsBad: true }),
-      chart: { values: view.memUsed, max: now.mem.total },
+      change: changeOf(lead(memSeries), { risingIsBad: true }),
+      chart: { values: lead(memSeries), max: now.mem.total },
       detail: {
         kind: 'bytes',
         format: fmt.bytes,
         more: 0,
-        series: [
-          named(t('seriesUsed'), 1, view.memUsed, fmt.bytes),
-          named(t('seriesCache'), 2, view.memCache, fmt.bytes),
-          ...(now.mem.swapTotal > 0 ? [named(t('seriesSwap'), 3, view.swap, fmt.bytes)] : []),
-        ],
+        series: memSeries,
         contributors: [
           { key: 'used', label: t('seriesUsed'), value: now.mem.used },
           { key: 'cache', label: t('seriesCache'), value: now.mem.cache },
@@ -136,10 +148,7 @@ export function useServerCards(stats: ServerStats | undefined) {
         kind: 'rate',
         format: fmt.rate,
         more: 0,
-        series: [
-          named(t('seriesIn'), 1, view.netRx, fmt.rate),
-          named(t('seriesOut'), 2, view.netTx, fmt.rate),
-        ],
+        series: netSeries,
         contributors: now.ifaces
           .map((f) => ({
             key: f.name,
@@ -168,4 +177,12 @@ export function useServerCards(stats: ServerStats | undefined) {
     },
   ];
   return { cards, view, within: t('in_live') };
+}
+/** The overview's server cards, once the server has a sample. */
+export function useServerCards(stats: ServerStats | undefined) {
+  const t = useT(analyticsMessages);
+  const tOverview = useT(overviewMessages);
+  const fmt = useFormat();
+  const now = stats?.now;
+  return stats && now ? serverCards(stats, now, t, tOverview, fmt) : undefined;
 }
