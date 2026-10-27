@@ -54,17 +54,17 @@ afterEach(() => {
 describe('ChartPlot draw-in', () => {
   it('reveals the lines once from the start of time, without an area; a poll keeps the group', () => {
     draw(5);
-    const sweep = host.querySelector('g.k-sweep');
+    const sweep = host.querySelector('svg.k-sweep');
     expect(sweep?.querySelectorAll('path')).toHaveLength(2);
     expect(host.querySelectorAll('path[fill-opacity]')).toHaveLength(0);
     draw(6);
     // The same node: the reveal, run on mount, does not start again.
-    expect(host.querySelector('g.k-sweep')).toBe(sweep);
+    expect(host.querySelector('svg.k-sweep')).toBe(sweep);
   });
 
   it('dashes only the first and last segment of a line', () => {
     draw(5);
-    const [solid, edges] = host.querySelectorAll('g.k-sweep path');
+    const [solid, edges] = host.querySelectorAll('svg.k-sweep path');
     expect(solid?.hasAttribute('stroke-dasharray')).toBe(false);
     expect(edges?.getAttribute('stroke-dasharray')).toBe('4 3');
     // Two segments, each a move and a line.
@@ -73,7 +73,7 @@ describe('ChartPlot draw-in', () => {
 
   it('dashes a second reading all along', () => {
     draw(5, false, true);
-    const [solid, dashed] = host.querySelectorAll('g.k-sweep path');
+    const [solid, dashed] = host.querySelectorAll('svg.k-sweep path');
     expect(solid?.getAttribute('d')).toBe('');
     expect(dashed?.getAttribute('d')?.match(/M/g)).toHaveLength(1);
   });

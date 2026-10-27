@@ -122,7 +122,13 @@
   }
 }
 .k-sweep {
-  animation: k-sweep 800ms ease-out;
+  /* Starts as the card's own fade-in ends, so the reveal is seen, not spent while faded. */
+  animation: k-sweep 800ms ease-out 200ms backwards;
+}
+@media (prefers-reduced-motion: reduce) {
+  .k-sweep {
+    animation-delay: 0ms;
+  }
 }
 /* A group of bars, from the baseline at the bottom of its box. */
 .k-grow-up {

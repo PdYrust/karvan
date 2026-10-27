@@ -94,12 +94,11 @@ export function CompactChart({
     <div ref={ref} className={cn('relative', className)}>
       {empty ? <NoData /> : null}
       {!empty && width > 0 && height > 0 ? (
-        <svg width={width} height={height} aria-hidden="true" className="absolute inset-0">
-          <g className="k-sweep">
-            <path d={areaPath(parts, x, y, height)} fill={color} fillOpacity={0.12} />
-            <path d={linePath(solid, x, y)} {...stroke} />
-            <path d={linePath(dashed, x, y)} {...stroke} strokeDasharray="4 3" />
-          </g>
+        // The line and its area are revealed together from the start of time (the svg's box is clipped).
+        <svg width={width} height={height} aria-hidden="true" className="k-sweep absolute inset-0">
+          <path d={areaPath(parts, x, y, height)} fill={color} fillOpacity={0.12} />
+          <path d={linePath(solid, x, y)} {...stroke} />
+          <path d={linePath(dashed, x, y)} {...stroke} strokeDasharray="4 3" />
         </svg>
       ) : null}
     </div>

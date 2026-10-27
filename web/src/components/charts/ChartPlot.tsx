@@ -107,63 +107,65 @@ export function ChartPlot({
   crosshair: number;
 }) {
   const { y } = frame;
+  const box = { width: frame.width, height, 'aria-hidden': true } as const;
   return (
-    <svg
-      width={frame.width}
-      height={height}
-      aria-hidden="true"
-      className="absolute inset-0 overflow-visible"
-    >
-      {yTicks.map((v) => (
-        <line
-          key={v}
-          x1={frame.start}
-          x2={frame.end}
-          y1={y(v)}
-          y2={y(v)}
-          stroke={gridColor}
-          strokeDasharray={v === 0 ? undefined : '3 3'}
-        />
-      ))}
-      {bars ? (
-        // One group grows, so a bar a poll adds just appears with the rest.
-        <g className="k-grow-up">
-          <Bars frame={frame} times={times} series={series} step={step} active={active} />
-        </g>
-      ) : (
-        // The lines are revealed from the start of time to its end when the chart first shows.
-        <g className="k-sweep">
-          <Lines frame={frame} times={times} series={series} step={step} />
-        </g>
-      )}
-      {active === null ? null : (
-        <g>
+    <>
+      <svg {...box} className="absolute inset-0 overflow-visible">
+        {yTicks.map((v) => (
           <line
-            x1={crosshair}
-            x2={crosshair}
-            y1={frame.top}
-            y2={frame.bottom}
-            stroke="currentColor"
-            className="text-kumo-subtle"
+            key={v}
+            x1={frame.start}
+            x2={frame.end}
+            y1={y(v)}
+            y2={y(v)}
+            stroke={gridColor}
+            strokeDasharray={v === 0 ? undefined : '3 3'}
           />
-          {bars
-            ? null
-            : series.map((s) => {
-                const v = s.values[active];
-                return v === null || v === undefined ? null : (
-                  <circle
-                    key={s.name}
-                    cx={crosshair}
-                    cy={y(v)}
-                    r={3.5}
-                    fill={chartColor(s.color)}
-                    stroke="var(--color-kumo-base)"
-                    strokeWidth={1.5}
-                  />
-                );
-              })}
-        </g>
+        ))}
+        {bars ? (
+          // One group grows, so a bar a poll adds just appears with the rest.
+          <g className="k-grow-up">
+            <Bars frame={frame} times={times} series={series} step={step} active={active} />
+          </g>
+        ) : null}
+      </svg>
+      {bars ? null : (
+        // The lines are revealed from the start of time to its end when the chart first shows.
+        // The reveal clips the outer svg, a box every browser clips (not an inner group).
+        <svg {...box} className="k-sweep absolute inset-0 overflow-visible">
+          <Lines frame={frame} times={times} series={series} step={step} />
+        </svg>
       )}
-    </svg>
+      <svg {...box} className="absolute inset-0 overflow-visible">
+        {active === null ? null : (
+          <g>
+            <line
+              x1={crosshair}
+              x2={crosshair}
+              y1={frame.top}
+              y2={frame.bottom}
+              stroke="currentColor"
+              className="text-kumo-subtle"
+            />
+            {bars
+              ? null
+              : series.map((s) => {
+                  const v = s.values[active];
+                  return v === null || v === undefined ? null : (
+                    <circle
+                      key={s.name}
+                      cx={crosshair}
+                      cy={y(v)}
+                      r={3.5}
+                      fill={chartColor(s.color)}
+                      stroke="var(--color-kumo-base)"
+                      strokeWidth={1.5}
+                    />
+                  );
+                })}
+          </g>
+        )}
+      </svg>
+    </>
   );
 }
