@@ -54,6 +54,26 @@ func (s *Service) recoverBatches(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
+// endRestore ends a restore's hold on its batches (D18, D19), given the
+// restore's error and whether putting the backup back started: rolled
+// back when the backup is back, restore_failed once the put-back started,
+// as they were when nothing was put back. A failure leaves them restoring
+// (the bridge serves none of them) until the next start.
+func endRestore(ctx context.Context, h *batch.Restore, err error, started bool) error {
+	end := h.Cancel
+	switch {
+	case err == nil:
+		end = h.Done
+	case started:
+		end = h.Fail
+	}
+	if err := end(ctx); err != nil {
+		slog.Error("batches of a backup restore not updated", "err", err)
+		return err
+	}
+	return nil
+}
+
 // Batches is the batch store, for the batch routes.
 func (s *Service) Batches() *batch.Store { return s.batches }
 

@@ -14,14 +14,20 @@ import (
 	"github.com/PdYrust/karvan/internal/panel/pasarguarddb"
 )
 
-// fakeControl records stop and start; failStop makes Stop fail.
+// fakeControl records stop and start; failStop makes Stop fail, and
+// onStop runs as the panel stops (seen keeps what it read).
 type fakeControl struct {
 	mu       sync.Mutex
 	calls    []string
 	failStop bool
+	onStop   func()
+	seen     string
 }
 
 func (f *fakeControl) Stop(context.Context) error {
+	if f.onStop != nil {
+		f.onStop()
+	}
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	f.calls = append(f.calls, "stop")

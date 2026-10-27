@@ -19,6 +19,14 @@ The owner wants Safe Mode to show "backing up, applying, failed, restoring" and 
 On the running Marzban 0.8.4 and PasarGuard 5.4.1 (`make test-panels`): Karvan stops and starts each panel through its compose file, and a migration that fails in its second chunk with the backup choice stops Marzban, puts the backup back, starts it again and leaves the user count as it was.
 ## Changed while building
 The spec (D40) planned to run the chosen reload again after a rollback, so the core drops removed users. The running panels showed that rows Karvan writes stay out of the core until a reload, and the rollback only runs before reload, so there is nothing to drop.
+## Changed in phase 4.1: batches and a restore
+A migration that ends done becomes a batch whose old links the bridge serves. A backup restore takes back every write made after the backup, so it takes those batches with it (phase-4.1 D17 to D19):
+- After the restore locks the destination and before the panel stops, one Karvan transaction marks inactive, with reason `restoring`, every batch on that destination made after the backup (the restored job's own and every later one) that is active or whose earlier restore failed. Deleted and rolled back batches stay as they are. The lock stops any run from making a batch there meanwhile. If that transaction fails, the restore does not start (`500 internal`) and the lock is let go.
+- When the backup is back, one transaction sets those batches to `rolled_back` and marks `compensated` the restored job's rows in done, pending or unknown, and the batches' rows in those states written after the backup. Their other rows (adopted users, and users an earlier failed run wrote before the backup that a batch claimed) are in the backup, so they leave the batch as they are: manual rules serve them and a later batch can claim them. Batches made before the backup are not touched.
+- A restore that fails before anything is put back (the panel would not stop) sets each batch back as it was. One that fails once putting the backup back started leaves them `restore_failed`; the operator checks the destination and makes a batch active again or deletes it. If the closing transaction itself fails, the batches stay `restoring` and the stream says `ledger_not_updated`.
+- At start no restore runs, so Recover turns a batch still `restoring` (Karvan stopped during a restore) into `restore_failed`. It runs before the web server listens.
+- The roll back of a failed or interrupted job with the backup choice holds batches the same way, so a later batch that claimed the job's users goes down with the backup.
+
 ## Alternatives considered
 - **Always restore the backup.** Loses other admins' and the panel's writes made during the job, and stops the panel for every failure. Kept as a choice, not the default.
 - **Give Karvan Docker access.** Equal to root on the server; a narrow sudo rule does the same job.
@@ -27,3 +35,4 @@ The spec (D40) planned to run the chosen reload again after a rollback, so the c
 - With the backup choice, users see the panel stopped for the seconds the restore takes, and everything written to the panel during the job is gone; the report says so (`restore_lost_panel_writes`).
 - A panel not installed with its official script (no compose file next to its `.env`) cannot be stopped by Karvan; only the undo choice works for it.
 - A restore on request also takes back later jobs on the same panel; their ledger rows then point at rows that are gone, which a re-run sees as moved users that left (C16b).
+- Since phase 4.1 a restore also takes the batches of those later jobs inactive, so their old links answer 404 instead of reaching users that are gone. Rows of later jobs that never became a batch (failed and not rolled back) keep their state, as before.

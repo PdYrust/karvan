@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"slices"
 
+	"github.com/PdYrust/karvan/internal/migration/batch"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 	"github.com/PdYrust/karvan/internal/safemode"
 )
@@ -28,6 +29,7 @@ type restoreTask struct {
 	target paneldb.Target
 	unlock func()
 	rep    *Report
+	hold   *batch.Restore // the batches the backup takes back (D17)
 }
 
 func (t *restoreTask) release() {
@@ -47,6 +49,7 @@ func (s *Service) StartRestore(ctx context.Context, id string) (Restoring, error
 	}
 	after, err := s.events.last(ctx, t.job.ID)
 	if err != nil {
+		err = errors.Join(err, endRestore(ctx, t.hold, err, false))
 		t.release()
 		return Restoring{}, err
 	}
@@ -73,7 +76,8 @@ func (s *Service) RestoreBackup(ctx context.Context, id string, stopped bool) er
 }
 
 // prepareRestore finds the backup and its panel, checks Karvan can stop
-// the panel, locks the destination and readies the job's report.
+// the panel, locks the destination, readies the job's report and holds
+// the batches the backup takes back.
 func (s *Service) prepareRestore(ctx context.Context, id string, stopped bool) (*restoreTask, error) {
 	b, jobID, env, d, err := s.backupTarget(ctx, id)
 	if err != nil {
@@ -93,6 +97,12 @@ func (s *Service) prepareRestore(ctx context.Context, id string, stopped bool) (
 		return nil, err
 	}
 	if t.rep, t.prior, err = s.restoreReport(ctx, jobID, d.Target.String()); err != nil {
+		t.release()
+		return nil, err
+	}
+	// Before anything is put back, so the bridge stops serving the users
+	// the backup takes away (D17).
+	if t.hold, err = s.batches.Restoring(ctx, d.Target.String(), jobID, b.CreatedAt); err != nil {
 		t.release()
 		return nil, err
 	}
@@ -130,8 +140,10 @@ func (s *Service) restoreReport(ctx context.Context, jobID, db string) (*Report,
 func (s *Service) runRestore(ctx context.Context, t *restoreTask) error {
 	j, rep := t.job, t.rep
 	note := s.noter(j, StageRestore)
+	started := false
 	err := s.stage(j, rep, StageRestore, func() error {
 		put := func() error {
+			started = true
 			return safemode.Restorer{Key: s.Key, Run: s.Tools}.Restore(ctx, t.target, t.w.Server(), t.backup)
 		}
 		var err error
@@ -146,12 +158,12 @@ func (s *Service) runRestore(ctx context.Context, t *restoreTask) error {
 		}
 		return err
 	})
-	var ledgerErr error
+	// A cancelled restore (the command line stopped) still ends its hold.
+	ledgerErr := endRestore(context.WithoutCancel(ctx), t.hold, err, started)
+	if ledgerErr != nil {
+		note("ledger_not_updated")
+	}
 	if err == nil {
-		// The backup holds none of the job's rows, so its ledger rows are done with.
-		if ledgerErr = s.markRestored(ctx, j.ID); ledgerErr != nil {
-			note("ledger_not_updated")
-		}
 		rep.State, rep.Left, rep.LeftReasons = StateRolledBack, nil, nil
 		if !slices.Contains(rep.NotUndoable, UndoLostPanelWrites) {
 			rep.NotUndoable = append(rep.NotUndoable, UndoLostPanelWrites)

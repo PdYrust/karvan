@@ -13,8 +13,9 @@ import (
 
 // Recover runs once at start: jobs that were running are interrupted.
 // Their pending ledger rows are settled (read only on the destination);
-// nothing is written or removed by itself (D39). A done job without its
-// batch gets it (D5).
+// nothing is written or removed by itself (D39). A batch a restore still
+// holds has no restore running, so that restore failed (D19). A done job
+// without its batch gets it (D5).
 func (s *Service) Recover(ctx context.Context) error {
 	jobs, err := s.stuckJobs(ctx)
 	if err != nil {
@@ -34,7 +35,7 @@ func (s *Service) Recover(ctx context.Context) error {
 		errs = append(errs, s.settle(ctx, &Job{ID: sj.id, origin: sj.origin}, p))
 		p.release()
 	}
-	return errors.Join(append(errs, s.recoverBatches(ctx))...)
+	return errors.Join(append(errs, s.batches.FailRestoring(ctx), s.recoverBatches(ctx))...)
 }
 
 type stuck struct {
