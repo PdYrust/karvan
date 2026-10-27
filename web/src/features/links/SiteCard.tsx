@@ -1,13 +1,20 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
-import { DotsThreeIcon, PencilSimpleIcon, TrashIcon } from '@phosphor-icons/react';
-import { useId, type ReactNode } from 'react';
+import {
+  CaretDownIcon,
+  CaretRightIcon,
+  DotsThreeIcon,
+  PencilSimpleIcon,
+  TrashIcon,
+} from '@phosphor-icons/react';
+import { useId, useState, type ReactNode } from 'react';
+import { Collapse } from '../../components/layout/Collapse';
 import { useNavigate } from 'react-router';
 import { FactList } from '../../components/layout/FactList';
 import { MoveLabel } from '../../components/panels/PanelLabel';
 import { panelNames } from '../../components/panels/PanelLogo';
 import { useT } from '../../i18n/locale';
-import type { LinkSite } from '../../lib/api/links';
+import { pendingOf, type LinkSite } from '../../lib/api/links';
 import { panelKind, type Panel } from '../../lib/api/panels';
 import { CertFactsView } from './CertFactsView';
 import { linksMessages } from './messages';
@@ -69,7 +76,32 @@ const mono = (text: string) => (
   </bdi>
 );
 
-/** One site: where it answers, its certificate, its users, the old links file and the new links. */
+/** The closed card's one line: the domains, HTTPS or plain HTTP, proven and pending users. */
+function Summary({ site, tls }: { site: LinkSite; tls: boolean }) {
+  const t = useT(linksMessages);
+  const domains = site.domains ?? [];
+  const stats = site.stats;
+  return (
+    <p className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-0.5 text-sm text-kumo-subtle">
+      <span className="min-w-0 truncate">
+        {domains.length ? mono(domains.join(', ')) : t('everyDomain')}
+      </span>
+      <span>{tls ? t('https') : t('plainHttp')}</span>
+      {stats && stats.moved > 0 ? (
+        <>
+          <span className="tabular">
+            {t('proven', { verified: stats.verified, moved: stats.moved })}
+          </span>
+          <span className="tabular">{t('pending', { count: pendingOf(stats) })}</span>
+        </>
+      ) : null}
+    </p>
+  );
+}
+/**
+ * One site, closed to its summary; its title row opens the details in place: where it
+ * answers, its certificate, its users, the old links file and the new links.
+ */
 export function SiteCard({
   site,
   panel,
@@ -81,6 +113,8 @@ export function SiteCard({
 }) {
   const t = useT(linksMessages);
   const id = useId();
+  const [open, setOpen] = useState(false);
+  const Caret = open ? CaretDownIcon : CaretRightIcon;
   const to = panel ? panelKind(panel) : undefined;
   const domains = site.domains ?? [];
   const tls = Boolean(site.certFile || site.certPem);
@@ -94,47 +128,68 @@ export function SiteCard({
   ];
   return (
     <article aria-labelledby={id} className="rounded-lg bg-kumo-base ring ring-kumo-hairline">
-      <header className="flex items-start gap-3 border-b border-kumo-hairline py-2 ps-4 pe-2">
-        <div className="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-1 py-1.5">
-          <h2 id={id} className="min-w-0 font-semibold text-kumo-strong">
-            <bdi>{site.name}</bdi>
-          </h2>
-          {to ? (
-            <MoveLabel
-              from={site.sourceKind}
-              to={to}
-              label={t('move', { from: panelNames[site.sourceKind], to: panelNames[to] })}
-            />
-          ) : null}
-          {panel ? (
-            <bdi className="min-w-0 truncate text-sm text-kumo-subtle">{panel.name}</bdi>
-          ) : null}
-        </div>
-        <SiteMenu site={site} onDelete={onDelete} />
-      </header>
-      <div className="grid divide-kumo-hairline lg:grid-cols-2 lg:divide-x rtl:lg:divide-x-reverse">
-        <div className="flex flex-col divide-y divide-kumo-hairline">
-          <div className="px-4 py-1">
-            <FactList facts={facts} />
+      {/* The name's button covers the whole row, so a tap anywhere on it opens or closes. */}
+      <header className="relative flex items-start gap-3 py-2 ps-4 pe-2">
+        <div className="flex min-w-0 flex-1 flex-col gap-1 py-1.5">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-3 gap-y-1">
+            <h2 id={id} className="min-w-0 font-semibold text-kumo-strong">
+              <button
+                type="button"
+                aria-expanded={open}
+                aria-controls={`${id}-details`}
+                onClick={() => setOpen((o) => !o)}
+                className="text-start outline-none after:absolute after:inset-0 after:rounded-t-lg after:content-[''] focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-kumo-focus"
+              >
+                <bdi>{site.name}</bdi>
+              </button>
+            </h2>
+            {to ? (
+              <MoveLabel
+                from={site.sourceKind}
+                to={to}
+                label={t('move', { from: panelNames[site.sourceKind], to: panelNames[to] })}
+              />
+            ) : null}
+            {panel ? (
+              <bdi className="min-w-0 truncate text-sm text-kumo-subtle">{panel.name}</bdi>
+            ) : null}
           </div>
-          {site.cert ? (
-            <Part title={t('certTitle')}>
-              <CertFactsView facts={site.cert} />
+          <Summary site={site} tls={tls} />
+        </div>
+        <Caret
+          size={16}
+          aria-hidden="true"
+          className="mt-2.5 shrink-0 text-kumo-subtle rtl:-scale-x-100"
+        />
+        <div className="relative">
+          <SiteMenu site={site} onDelete={onDelete} />
+        </div>
+      </header>
+      <Collapse id={`${id}-details`} open={open}>
+        <div className="grid divide-kumo-hairline border-t border-kumo-hairline lg:grid-cols-2 lg:divide-x rtl:lg:divide-x-reverse">
+          <div className="flex flex-col divide-y divide-kumo-hairline">
+            <div className="px-4 py-1">
+              <FactList facts={facts} />
+            </div>
+            {site.cert ? (
+              <Part title={t('certTitle')}>
+                <CertFactsView facts={site.cert} />
+              </Part>
+            ) : null}
+          </div>
+          <div className="flex flex-col divide-y divide-kumo-hairline border-t border-kumo-hairline lg:border-t-0">
+            <Part title={t('usersTitle')}>
+              <SiteUsers stats={site.stats} />
             </Part>
-          ) : null}
+            <Part title={t('uploadTitle')}>
+              <TokenUpload siteId={site.id} />
+            </Part>
+            <Part title={t('newLinksTitle')}>
+              <NewLinks site={site} />
+            </Part>
+          </div>
         </div>
-        <div className="flex flex-col divide-y divide-kumo-hairline border-t border-kumo-hairline lg:border-t-0">
-          <Part title={t('usersTitle')}>
-            <SiteUsers stats={site.stats} />
-          </Part>
-          <Part title={t('uploadTitle')}>
-            <TokenUpload siteId={site.id} />
-          </Part>
-          <Part title={t('newLinksTitle')}>
-            <NewLinks site={site} />
-          </Part>
-        </div>
-      </div>
+      </Collapse>
     </article>
   );
 }
