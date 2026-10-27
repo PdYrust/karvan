@@ -149,6 +149,7 @@ type cachedCert struct {
 	cert    *tls.Certificate
 	modTime time.Time
 	pem     string
+	files   string // the certificate and key paths: a changed pair is read again
 }
 
 // certificate picks the site certificate for the SNI name on port.
@@ -206,14 +207,15 @@ func (b *Bridge) loadCert(ctx context.Context, cache *certCache, s Site) (*tls.C
 	}
 	cache.mu.Lock()
 	defer cache.mu.Unlock()
-	if c, ok := cache.m[s.ID]; ok && c.modTime.Equal(mod) && c.pem == s.CertPEM {
+	files := s.CertFile + "\x00" + s.KeyFile
+	if c, ok := cache.m[s.ID]; ok && c.modTime.Equal(mod) && c.pem == s.CertPEM && c.files == files {
 		return c.cert, nil
 	}
 	cert, err := b.readCert(ctx, s)
 	if err != nil {
 		return nil, err
 	}
-	cache.m[s.ID] = cachedCert{cert: cert, modTime: mod, pem: s.CertPEM}
+	cache.m[s.ID] = cachedCert{cert: cert, modTime: mod, pem: s.CertPEM, files: files}
 	return cert, nil
 }
 

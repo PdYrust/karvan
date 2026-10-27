@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"crypto/x509"
+	"database/sql"
 	"encoding/pem"
 	"errors"
 	"fmt"
@@ -37,16 +38,18 @@ type CertFacts struct {
 	Warnings  []string  `json:"warnings"`
 }
 
-// CertInput is a certificate to look at before saving a site: files on
-// this server, or a pasted certificate with its key. With SiteID set and
-// no KeyPEM, the site's stored key is used.
+// CertInput is a certificate to look at before saving a rule: files on
+// this server, a pasted certificate with its key, or a stored certificate
+// (CertificateID). With SiteID set and no KeyPEM, the site's stored key is
+// used.
 type CertInput struct {
-	SiteID   int64    `json:"id"`
-	CertFile string   `json:"certFile"`
-	KeyFile  string   `json:"keyFile"`
-	CertPEM  string   `json:"certPem"`
-	KeyPEM   string   `json:"keyPem"`
-	Domains  []string `json:"domains"`
+	SiteID        int64    `json:"id"`
+	CertificateID int64    `json:"certificateId"`
+	CertFile      string   `json:"certFile"`
+	KeyFile       string   `json:"keyFile"`
+	CertPEM       string   `json:"certPem"`
+	KeyPEM        string   `json:"keyPem"`
+	Domains       []string `json:"domains"`
 }
 
 // ErrNoCert means a certificate inspection was given no certificate.
@@ -55,6 +58,9 @@ var ErrNoCert = errors.New("no certificate to inspect")
 // InspectCert reads the certificate in in and says what it covers and what
 // is wrong with it. Nothing read from a file is returned except these facts.
 func (b *Bridge) InspectCert(ctx context.Context, in CertInput) (CertFacts, error) {
+	if in.CertificateID != 0 {
+		return b.inspectStored(ctx, in)
+	}
 	s := Site{ID: in.SiteID, CertFile: in.CertFile, KeyFile: in.KeyFile, CertPEM: in.CertPEM, KeyPEM: in.KeyPEM,
 		Domains: in.Domains}
 	if err := s.checkCert(); err != nil {
@@ -74,6 +80,27 @@ func (b *Bridge) InspectCert(ctx context.Context, in CertInput) (CertFacts, erro
 		s.KeyPEM = string(key)
 	}
 	return b.certFacts(s), nil
+}
+
+// inspectStored checks stored certificate in.CertificateID against
+// in.Domains; it takes no other certificate.
+func (b *Bridge) inspectStored(ctx context.Context, in CertInput) (CertFacts, error) {
+	if in.SiteID != 0 || in.CertFile != "" || in.KeyFile != "" || in.CertPEM != "" || in.KeyPEM != "" {
+		return CertFacts{}, invalid("certificateId")
+	}
+	s := Site{Domains: in.Domains}
+	if err := s.normalizeDomains(); err != nil {
+		return CertFacts{}, err
+	}
+	r, err := scanCertRow(b.DB.QueryRowContext(ctx, certRowColumns+" WHERE id = ?", in.CertificateID))
+	if errors.Is(err, sql.ErrNoRows) {
+		return CertFacts{}, invalid("certificateId")
+	}
+	if err != nil {
+		return CertFacts{}, err
+	}
+	certPEM, keyPEM := b.material(r)
+	return inspect(certPEM, keyPEM, s.Domains, b.Now()), nil
 }
 
 // siteCert reads the facts of a saved site's certificate, or nil without TLS.

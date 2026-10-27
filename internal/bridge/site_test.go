@@ -148,12 +148,18 @@ func freePort(t *testing.T) int {
 
 func selfSigned(t *testing.T, name string) (string, string) {
 	t.Helper()
+	return selfSignedFor(t, name, time.Hour)
+}
+
+// selfSignedFor is selfSigned valid for d from an hour ago.
+func selfSignedFor(t *testing.T, name string, d time.Duration) (string, string) {
+	t.Helper()
 	k, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
 	if err != nil {
 		t.Fatal(err)
 	}
 	tpl := &x509.Certificate{SerialNumber: big.NewInt(1), Subject: pkix.Name{CommonName: name}, DNSNames: []string{name},
-		NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(time.Hour)}
+		NotBefore: time.Now().Add(-time.Hour), NotAfter: time.Now().Add(d)}
 	der, err := x509.CreateCertificate(rand.Reader, tpl, tpl, &k.PublicKey, k)
 	if err != nil {
 		t.Fatal(err)
