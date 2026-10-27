@@ -14,7 +14,6 @@ describe('recentPage', () => {
       section: 'reports',
       jobId: '9f1c2b3a4d5e6f7081920a1b',
     });
-    expect(recentPage('/templates')).toEqual({ section: 'templates' });
     expect(recentPage('/links')).toEqual({ section: 'links' });
     expect(recentPage('/links/new')).toEqual({ section: 'links', page: 'new' });
     expect(recentPage('/backups')).toEqual({ section: 'backups' });
@@ -30,7 +29,7 @@ describe('recentPage', () => {
     expect(recentPath('/')).toBeUndefined();
   });
 
-  it('leaves out the overview, redirects and pages that do not exist', () => {
+  it('leaves out the overview, redirects and pages that do not exist or were removed', () => {
     for (const path of [
       '/',
       '',
@@ -42,6 +41,7 @@ describe('recentPage', () => {
       '/migrations/9f1c2b3a4d5e6f7081920a1b',
       '/reports/x',
       '/links/3',
+      '/templates',
       '/nope',
     ]) {
       expect(recentPage(path)).toBeUndefined();

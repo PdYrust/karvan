@@ -7,7 +7,6 @@ export type RecentPage =
   | { section: 'panels'; panelId?: number }
   | { section: 'migrations'; page?: 'new' }
   | { section: 'reports'; jobId?: string }
-  | { section: 'templates' }
   | { section: 'links'; page?: 'new' }
   | { section: 'backups' }
   | { section: 'settings'; tab: SettingsTab };
@@ -27,7 +26,6 @@ const routes: [RegExp, (m: RegExpExecArray) => RecentPage | undefined][] = [
   [/^\/migrations\/new$/, () => ({ section: 'migrations', page: 'new' })],
   [/^\/reports$/, () => ({ section: 'reports' })],
   [/^\/reports\/([0-9a-f]{24})$/, (m) => ({ section: 'reports', jobId: m[1] })],
-  [/^\/templates$/, () => ({ section: 'templates' })],
   [/^\/links$/, () => ({ section: 'links' })],
   [/^\/links\/new$/, () => ({ section: 'links', page: 'new' })],
   [/^\/backups$/, () => ({ section: 'backups' })],

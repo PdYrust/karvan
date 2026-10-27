@@ -1,6 +1,6 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
-import { FileTextIcon, StackIcon } from '@phosphor-icons/react';
+import { FileTextIcon } from '@phosphor-icons/react';
 import { PanelMark } from '../../components/panels/PanelLabel';
 import { panelSearchNames } from '../../components/panels/PanelLogo';
 import { useT } from '../../i18n/locale';
@@ -8,7 +8,6 @@ import { useFormat } from '../../lib/preferences/region';
 import { reportPath, reportStates } from '../../features/migrations/job-place';
 import { getLinkSites, linkKeys, type LinkSite } from '../../lib/api/links';
 import { listJobs, originHost, type JobRow } from '../../lib/api/migrations';
-import { listTemplates, templateKeys } from '../../lib/api/templates';
 import type { CommandGroup } from './commands';
 import { shellMessages } from './messages';
 
@@ -34,8 +33,7 @@ export function siteKeywords(s: LinkSite): string {
 
 /**
  * The latest migrations and their reports in the palette, found by admin
- * and address, the saved templates by name and the old link sites by name,
- * address, domain and port. They are read only while the palette is open.
+ * and address, and the old link sites by name, address, domain and port. They are read only while the palette is open.
  */
 export function useJobCommands(open: boolean): CommandGroup[] {
   const t = useT(shellMessages);
@@ -44,11 +42,6 @@ export function useJobCommands(open: boolean): CommandGroup[] {
   const jobs = useQuery({
     queryKey: ['migrations', 'palette', paletteJobs],
     queryFn: () => listJobs({ limit: paletteJobs }),
-    enabled: open,
-  });
-  const templates = useQuery({
-    queryKey: templateKeys.all,
-    queryFn: listTemplates,
     enabled: open,
   });
   const sites = useQuery({ queryKey: linkKeys.all, queryFn: getLinkSites, enabled: open });
@@ -86,18 +79,6 @@ export function useJobCommands(open: boolean): CommandGroup[] {
           icon: <FileTextIcon className="size-[18px]" />,
           run: () => void navigate(reportPath(j.id)),
         })),
-    },
-    {
-      id: 'templates',
-      label: t('navTemplates'),
-      searchOnly: true,
-      items: (templates.data ?? []).map((x) => ({
-        id: `template:${String(x.id)}`,
-        title: x.template.name,
-        keywords: 'template الگو',
-        icon: <StackIcon className="size-[18px]" />,
-        run: () => void navigate('/templates'),
-      })),
     },
     {
       id: 'sites',
