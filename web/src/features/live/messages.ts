@@ -158,15 +158,6 @@ const en = {
   next: "What's next",
   oldLinks: 'Set up old links',
   oldLinksHint: 'Keeps the old subscription links of the moved users working.',
-  saveTemplate: 'Save as template',
-  templateBody:
-    'A template keeps the categories of this migration, with their changes and fixes, for the next one.',
-  templateName: 'Name',
-  templateSave: 'Save template',
-  templateSaved: 'Saved as {name}.',
-  templateTooLong: 'Use a shorter name.',
-  templateGone: 'Karvan restarted after this migration, so its choices are gone.',
-  close: 'Close',
   rollBack: 'Roll back',
   rollBackTitle: 'Roll back this migration?',
   rollBackUndo:
@@ -338,15 +329,6 @@ const fa: Messages<LiveKey>['fa'] = {
   next: 'قدم بعدی',
   oldLinks: 'راه اندازی لینک های قدیمی',
   oldLinksHint: 'لینک های اشتراک قدیمی کاربرهای منتقل شده را فعال نگه میدارد.',
-  saveTemplate: 'ذخیره به عنوان الگو',
-  templateBody:
-    'الگو، دسته های این انتقال را با تغییرات و راه حل های آنها برای انتقال بعدی نگه میدارد.',
-  templateName: 'نام',
-  templateSave: 'ذخیره الگو',
-  templateSaved: 'با نام {name} ذخیره شد.',
-  templateTooLong: 'نام کوتاه تری بنویسید.',
-  templateGone: 'کاروان بعد از این انتقال دوباره راه اندازی شده است، پس انتخاب های آن دیگر نیستند.',
-  close: 'بستن',
   rollBack: 'برگرداندن',
   rollBackTitle: 'این انتقال برگردانده شود؟',
   rollBackUndo:

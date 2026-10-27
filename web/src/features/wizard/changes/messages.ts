@@ -115,25 +115,7 @@ const en = {
   w_skip: 'Left out',
   w_cred_new: 'New UUIDs and passwords for {protocols}',
   w_other: 'Change `{kind}`',
-  templatesTitle: 'Templates',
-  templatesIntro:
-    'A template keeps categories, their changes and fixes, to use in the next migration. Categories of picked users stay out of it.',
-  templatesFailed: "The templates didn't load.",
-  noTemplates: 'No templates yet.',
-  templateLabel: 'Template',
-  applyTemplate: 'Apply',
-  applyTitle: 'Apply {name}?',
-  applyBody:
-    "It replaces this plan's categories, their changes and the fixes. The admin, where users go and choices for single users stay.",
-  applyConfirm: 'Apply template',
-  cancel: 'Cancel',
   choose: 'Choose',
-  saveLabel: 'Save these choices as a template',
-  saveName: 'Name',
-  save: 'Save',
-  saveWait: 'Wait for the last change to save.',
-  saved: 'Saved as {name}.',
-  nameTooLong: 'Use a shorter name.',
 };
 
 export type ChangesKey = keyof typeof en;
@@ -252,25 +234,7 @@ const fa: Messages<ChangesKey>['fa'] = {
   w_skip: 'منتقل نمیشود',
   w_cred_new: 'UUID و رمز جدید برای {protocols}',
   w_other: 'تغییر `{kind}`',
-  templatesTitle: 'الگوها',
-  templatesIntro:
-    'الگو، دسته ها و تغییرات و راه حل های آنها را برای انتقال بعدی نگه میدارد. دسته های کاربرهای انتخاب شده در آن نمیآیند.',
-  templatesFailed: 'الگوها بارگذاری نشدند.',
-  noTemplates: 'هنوز الگویی نیست.',
-  templateLabel: 'الگو',
-  applyTemplate: 'اعمال',
-  applyTitle: '{name} اعمال شود؟',
-  applyBody:
-    'دسته ها، تغییرات آنها و راه حل های این برنامه را جایگزین میکند. ادمین، مقصد کاربرها و انتخاب های تک تک کاربرها میمانند.',
-  applyConfirm: 'اعمال الگو',
-  cancel: 'انصراف',
   choose: 'انتخاب کنید',
-  saveLabel: 'ذخیره این انتخاب ها به عنوان الگو',
-  saveName: 'نام',
-  save: 'ذخیره',
-  saveWait: 'صبر کنید تا آخرین تغییر ذخیره شود.',
-  saved: 'با نام {name} ذخیره شد.',
-  nameTooLong: 'نام کوتاه تری بنویسید.',
 };
 
 export const changesMessages: Messages<ChangesKey> = { en, fa };

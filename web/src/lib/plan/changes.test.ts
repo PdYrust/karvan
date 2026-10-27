@@ -1,14 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import {
   addChange,
-  applyTemplate,
   changeTarget,
   filterOf,
   filterCondition,
   opFlags,
   removeChange,
   signedAmount,
-  type Template,
 } from './changes';
 import type { Plan } from './plan';
 
@@ -192,41 +190,6 @@ describe('removeChange', () => {
     const p = plan({ tree: [{ ...vip, ops: [note] }] });
     expect(removeChange('vip', 3)(p)).toBe(p);
     expect(removeChange('nobody', 0)(p)).toBe(p);
-  });
-});
-
-describe('applyTemplate', () => {
-  const tpl: Template = {
-    name: 'Renew',
-    tree: [{ ...vip, ops: [add10] }],
-    problems: { C10: [{ kind: 'skip' }] },
-    resolutions: { C02: { option: 'suffix' } },
-    resetSchedule: 'restart',
-  };
-
-  it('replaces categories, fixes and the reset schedule, and keeps the rest', () => {
-    const before = plan({
-      tree: [{ id: 'old', name: 'Old', conditions: null, ops: null }],
-      resolutions: { C05: { option: 'skip' } },
-      users: { bob: { exclude: true } },
-    });
-    expect(applyTemplate(tpl)(before)).toEqual({
-      ...before,
-      tree: tpl.tree,
-      problems: tpl.problems,
-      resolutions: tpl.resolutions,
-      resetSchedule: 'restart',
-    });
-  });
-
-  it('sends an empty tree and no fixes for a template without them', () => {
-    const p = applyTemplate({ name: 'Empty', tree: null })(
-      plan({ tree: [vip], resolutions: { C02: { option: 'skip' } }, resetSchedule: 'restart' }),
-    );
-    expect(p.tree).toEqual([]);
-    expect(p).not.toHaveProperty('resolutions');
-    expect(p).not.toHaveProperty('problems');
-    expect(p).not.toHaveProperty('resetSchedule');
   });
 });
 

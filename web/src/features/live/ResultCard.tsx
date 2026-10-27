@@ -16,7 +16,6 @@ import { mayRollBack, shownCounts, type EndState } from './live';
 import { resultHeads, useMeaning, useReload } from './meaning';
 import { liveMessages } from './messages';
 import { RollBackButton } from './RollBackButton';
-import { SaveTemplate } from './SaveTemplate';
 
 function ReloadLine({ report }: { report: Report }) {
   const t = useT(liveMessages);
@@ -125,9 +124,6 @@ export function ResultCard({
           >
             {t('oldLinks')}
           </Button>
-        ) : null}
-        {state === 'done' || state === 'failed' || state === 'rolled_back' ? (
-          <SaveTemplate jobId={jobId} />
         ) : null}
       </div>
     </section>

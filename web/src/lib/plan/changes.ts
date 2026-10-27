@@ -4,7 +4,6 @@ import {
   removeCategory,
   type Condition,
   type Op,
-  type Plan,
   type PlanEdit,
   type PlanNode,
 } from './plan';
@@ -22,21 +21,6 @@ export type Scope =
   | { kind: 'users'; keys: readonly string[] };
 
 const own = 'change-';
-
-/** A reusable part of a plan (api-resources.md section 3). */
-export interface Template {
-  name: string;
-  tree: PlanNode[] | null;
-  problems?: Record<string, Op[]>;
-  resolutions?: Plan['resolutions'];
-  resetSchedule?: string;
-}
-
-export interface StoredTemplate {
-  id: number;
-  template: Template;
-  updatedAt: string;
-}
 
 /** "+10", "-5" or "۱۰" as the API's signed number ("10", "-5"); null when it is not one or is 0. */
 export function signedAmount(text: string, whole: boolean): string | null {
@@ -155,20 +139,6 @@ export function removeChange(id: string, index: number): PlanEdit {
     if (!ops.length && id.startsWith(own) && alone) return removeCategory(id)(p);
     const next: PlanNode = { ...node, ops: ops.length ? ops : null };
     return { ...p, tree: (p.tree ?? []).map((n) => (n.id === id ? next : n)) };
-  };
-}
-
-/** The template's categories, fixes and reset schedule in place of the plan's; the rest stays. */
-export function applyTemplate(t: Template): PlanEdit {
-  return (p) => {
-    const next: Plan = { ...p, tree: t.tree ?? [] };
-    delete next.problems;
-    delete next.resolutions;
-    delete next.resetSchedule;
-    if (t.problems) next.problems = t.problems;
-    if (t.resolutions) next.resolutions = t.resolutions;
-    if (t.resetSchedule) next.resetSchedule = t.resetSchedule;
-    return next;
   };
 }
 

@@ -12,7 +12,6 @@ import { useWizard } from '../wizard-context';
 import { AddChange } from './AddChange';
 import { ChangeList } from './ChangeList';
 import { changesMessages } from './messages';
-import { Templates } from './Templates';
 import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 function Loading() {
@@ -28,7 +27,7 @@ function Loading() {
 
 /**
  * Step 4: bulk changes on all users, a category, a filter or picked users,
- * each with how many users it reaches; then templates (4.5, D6).
+ * each with how many users it reaches (4.5).
  */
 export function ChangesStep() {
   const t = useT(changesMessages);
@@ -66,7 +65,6 @@ export function ChangesStep() {
       ) : null}
       <ChangeList summary={summary.data} counts={counts} />
       <AddChange summary={summary.data} counts={counts} />
-      <Templates />
       <StepActions jobId={jobId} back="compare" next="preview" />
     </div>
   );

@@ -26,7 +26,6 @@ const en = {
   panel_control_unavailable:
     "Rolling back from a backup needs Karvan to stop and start the panel, and it can't here. Choose undo in Safe Mode settings.",
   panel_changed: 'The panel changed after this backup was made.',
-  template_name: 'A template with this name already exists.',
   name_taken: 'This name is already taken.',
   confirm_required: 'Type the name to confirm.',
   gone: 'This file was already downloaded. Karvan keeps it only until then.',
@@ -105,7 +104,6 @@ const fa: Messages<ErrorKey>['fa'] = {
   panel_control_unavailable:
     'برگرداندن از نسخه پشتیبان نیاز دارد کاروان پنل را متوقف و روشن کند و اینجا نمیتواند. در تنظیمات حالت امن، بازگردانی تغییرات را انتخاب کنید.',
   panel_changed: 'پنل پس از گرفتن این نسخه پشتیبان تغییر کرده است.',
-  template_name: 'الگویی با این نام از قبل وجود دارد.',
   name_taken: 'این نام قبلا گرفته شده است.',
   confirm_required: 'برای تایید، نام را بنویسید.',
   gone: 'این فایل قبلا دانلود شده است. کاروان آن را فقط تا همان موقع نگه میدارد.',
