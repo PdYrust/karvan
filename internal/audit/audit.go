@@ -48,6 +48,11 @@ const (
 	ActionBatchDelete      = "batch.delete"
 	ActionBatchReactivate  = "batch.reactivate"
 	ActionBatchShowLink    = "batch.show_link"
+	ActionDomainAdd        = "domain.add"
+	ActionDomainDelete     = "domain.delete"
+	ActionCertAdd          = "certificate.add"
+	ActionCertSave         = "certificate.save"
+	ActionCertDelete       = "certificate.delete"
 
 	ActionSessionsEnd   = "sessions.end"
 	ActionLoginRenew    = "account.credentials"

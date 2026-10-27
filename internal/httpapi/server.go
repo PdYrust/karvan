@@ -88,6 +88,7 @@ func New(d Deps) (http.Handler, error) {
 	accountRoutes(rt, api, signedIn, d.Address != nil)
 	if d.Runs != nil {
 		migrationRoutes(rt, api, signedIn)
+		subscriptionRoutes(rt, api, signedIn)
 		rt.Handle("GET /api/v1/analytics/server", signedIn(api.ServerAnalytics))
 		rt.Handle("GET /api/v1/analytics/panels", signedIn(api.PanelsAnalytics))
 		rt.Handle("GET /api/v1/analytics/panels/{id}", signedIn(api.PanelAnalytics))
@@ -165,7 +166,6 @@ func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(htt
 		"POST /api/v1/legacy-sites":                   api.SaveSite,
 		"PATCH /api/v1/legacy-sites/{id}":             api.SaveSite,
 		"DELETE /api/v1/legacy-sites/{id}":            api.DeleteSite,
-		"POST /api/v1/legacy-sites/cert":              api.InspectCert,
 		"POST /api/v1/legacy-sites/{id}/tokens":       api.UploadTokens,
 		"GET /api/v1/legacy-sites/{id}/tokens":        api.UploadStatus,
 	} {
@@ -180,6 +180,22 @@ func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(htt
 		"POST " + b + "/reactivate":            api.ReactivateBatch,
 		"GET " + b + "/users":                  api.BatchUsers,
 		"POST " + b + "/users/{ledgerId}/link": api.BatchUserLink,
+	} {
+		rt.Handle(pattern, signedIn(h))
+	}
+}
+
+// subscriptionRoutes are the domains and certificates of the bridge (phase-4.1 section 4).
+func subscriptionRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.HandlerFunc) http.Handler) {
+	for pattern, h := range map[string]http.HandlerFunc{
+		"GET /api/v1/domains":               api.Domains,
+		"POST /api/v1/domains":              api.AddDomain,
+		"DELETE /api/v1/domains/{id}":       api.DeleteDomain,
+		"GET /api/v1/certificates":          api.Certificates,
+		"POST /api/v1/certificates":         api.SaveCertificate,
+		"PATCH /api/v1/certificates/{id}":   api.SaveCertificate,
+		"DELETE /api/v1/certificates/{id}":  api.DeleteCertificate,
+		"POST /api/v1/certificates/inspect": api.InspectCert,
 	} {
 		rt.Handle(pattern, signedIn(h))
 	}

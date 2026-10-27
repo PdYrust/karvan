@@ -84,22 +84,6 @@ func (a *API) SaveSite(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, status, a.Bridge.View(r.Context(), saved))
 }
 
-// InspectCert says what a certificate covers and what is wrong with it,
-// before the site is saved.
-func (a *API) InspectCert(w http.ResponseWriter, r *http.Request) {
-	var in bridge.CertInput
-	if err := respond.DecodeLimit(w, r, &in, 256<<10); err != nil {
-		respond.BadRequest(w)
-		return
-	}
-	facts, err := a.Bridge.InspectCert(r.Context(), in)
-	if err != nil {
-		writeSiteError(w, r, err)
-		return
-	}
-	respond.JSON(w, http.StatusOK, facts)
-}
-
 // DeleteSite removes a legacy site and its verified tokens.
 func (a *API) DeleteSite(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)

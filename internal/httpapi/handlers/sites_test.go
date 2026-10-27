@@ -138,7 +138,7 @@ func TestPastedKeyIsWriteOnly(t *testing.T) {
 
 func (m *migrationEnv) inspect(t *testing.T, body map[string]any) certOut {
 	t.Helper()
-	res := m.do(http.MethodPost, api+"/legacy-sites/cert", body)
+	res := m.do(http.MethodPost, api+"/certificates/inspect", body)
 	if res.status != http.StatusOK {
 		t.Fatalf("inspect %v: %d %s", body, res.status, res.body)
 	}
@@ -171,8 +171,8 @@ func TestInspectCertBeforeSaving(t *testing.T) {
 	if c := m.inspect(t, map[string]any{"certFile": "/dev/zero", "keyFile": "/dev/zero"}); !slices.Equal(c.Warnings, []string{"unreadable"}) {
 		t.Errorf("a device: %+v", c)
 	}
-	m.siteFails(t, http.MethodPost, api+"/legacy-sites/cert", map[string]any{"certFile": "cert.pem", "keyFile": "/k"}, 400, "site_invalid", "certFile")
-	if res := m.do(http.MethodPost, api+"/legacy-sites/cert", map[string]any{}); res.status != http.StatusBadRequest {
+	m.siteFails(t, http.MethodPost, api+"/certificates/inspect", map[string]any{"certFile": "cert.pem", "keyFile": "/k"}, 400, "site_invalid", "certFile")
+	if res := m.do(http.MethodPost, api+"/certificates/inspect", map[string]any{}); res.status != http.StatusBadRequest {
 		t.Errorf("nothing to inspect: %d", res.status)
 	}
 }

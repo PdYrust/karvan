@@ -85,7 +85,7 @@ export function deleteSite(id: number): Promise<void> {
   return api('DELETE', `legacy-sites/${String(id)}`);
 }
 
-/** A certificate to check before saving; with `id` and no key, the site's saved key is used. */
+/** A certificate to check before saving; with `id` and no key, the site's saved key is used (api-resources.md 10.6). */
 export interface CertInput {
   id?: number;
   certFile?: string;
@@ -96,7 +96,7 @@ export interface CertInput {
 }
 
 export function inspectCert(input: CertInput): Promise<CertFacts> {
-  return api('POST', 'legacy-sites/cert', input);
+  return api('POST', 'certificates/inspect', input);
 }
 
 /** A token list checked in the background; `checked` of `found` are done. */
