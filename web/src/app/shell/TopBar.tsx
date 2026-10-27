@@ -38,8 +38,9 @@ export function TopBar({
     <header
       ref={bar}
       className={cn(
-        'sticky top-0 z-10 flex h-14 shrink-0 items-center gap-1 border-b border-kumo-hairline bg-kumo-canvas px-3 transition-transform duration-200 ease-out sm:px-5',
-        hidden && '-translate-y-full',
+        'sticky top-0 z-10 flex h-[calc(3.5rem_+_env(safe-area-inset-top))] shrink-0 items-center gap-1 border-b border-kumo-hairline bg-kumo-canvas px-3 pt-[env(safe-area-inset-top)] transition-transform duration-200 ease-out sm:px-5',
+        // Hidden, it still covers the status bar's strip of an installed app.
+        hidden && '-translate-y-[calc(100%_-_env(safe-area-inset-top))]',
       )}
     >
       <button

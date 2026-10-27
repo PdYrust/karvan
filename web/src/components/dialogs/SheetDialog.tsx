@@ -34,7 +34,7 @@ export function SheetDialog({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog size="xl" className={sheet}>
-        <div className="flex max-h-[calc(100dvh-8rem)] flex-col max-sm:max-h-[88dvh]">
+        <div className="flex max-h-[calc(100dvh-8rem)] flex-col max-sm:max-h-[88dvh] max-sm:pb-[env(safe-area-inset-bottom)]">
           <div className="flex items-start justify-between gap-4 px-6 pt-5 pb-1 max-sm:px-4">
             <Dialog.Title className="text-heading font-semibold">{title}</Dialog.Title>
             <Dialog.Close

@@ -42,7 +42,7 @@ export function AnalyticsPage() {
     <div className="flex flex-col">
       {/* Like the dashboard's zone analytics: no title block, one sticky row of tabs and controls. */}
       <h1 className="sr-only">{t('title')}</h1>
-      <div className="sticky top-14 z-[5] flex items-center gap-3 border-b border-kumo-hairline bg-kumo-canvas px-4 py-2 transition-transform duration-200 ease-out sm:px-8 [[data-bar-hidden]_&]:-translate-y-14">
+      <div className="sticky top-[calc(3.5rem_+_env(safe-area-inset-top))] z-[5] flex items-center gap-3 border-b border-kumo-hairline bg-kumo-canvas px-4 py-2 transition-transform duration-200 ease-out sm:px-8 [[data-bar-hidden]_&]:-translate-y-14">
         <TabSwitcher
           label={t('tabs')}
           tabs={tabs}

@@ -13,7 +13,7 @@ export function Footer() {
   const ts = useT(sharedMessages);
   const version = useOverview().data?.version;
   return (
-    <footer className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-kumo-hairline px-4 py-4 text-sm text-kumo-subtle sm:px-8">
+    <footer className="flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-kumo-hairline px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] text-sm text-kumo-subtle sm:px-8">
       {version ? (
         <span className="flex items-center gap-1.5">
           {ts('brand')}

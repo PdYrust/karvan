@@ -69,7 +69,8 @@ export function AppShell() {
       <TooltipProvider>
         <div
           className={cn(
-            'k-shell min-h-dvh lg:grid',
+            // Installed on a phone (viewport-fit=cover), the page keeps clear of a side notch.
+            'k-shell min-h-dvh pl-[env(safe-area-inset-left)] pr-[env(safe-area-inset-right)] lg:grid',
             collapsed ? 'lg:grid-cols-[4rem_minmax(0,1fr)]' : 'lg:grid-cols-[14rem_minmax(0,1fr)]',
           )}
         >
