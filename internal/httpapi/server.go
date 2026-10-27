@@ -27,7 +27,7 @@ var staticFiles = []string{"favicon.svg", "boot.js", "manifest.webmanifest",
 	"icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"}
 
 // appPages are the first path segments of the web panel's own pages.
-var appPages = []string{"analytics", "migrations", "reports", "templates", "links", "panels", "backups", "settings"}
+var appPages = []string{"analytics", "migrations", "reports", "links", "panels", "backups", "settings"}
 
 // Deps is everything the handler needs.
 type Deps struct {
@@ -156,9 +156,6 @@ func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(htt
 		"GET " + m + "/links.csv":                     api.LinksCSV,
 		"POST " + m + "/passwords.csv":                api.PasswordsCSV,
 		"GET /api/v1/operations":                      api.Operations,
-		"GET /api/v1/templates":                       api.Templates,
-		"POST /api/v1/templates":                      api.SaveTemplate,
-		"DELETE /api/v1/templates/{id}":               api.DeleteTemplate,
 		"GET /api/v1/settings/safe-mode":              api.GetSafeMode,
 		"PUT /api/v1/settings/safe-mode":              api.PutSafeMode,
 		"GET /api/v1/safe-mode/backups":               api.Backups,

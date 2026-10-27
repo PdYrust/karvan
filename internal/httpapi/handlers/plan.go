@@ -178,48 +178,6 @@ func (a *API) RollbackMigration(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusAccepted, map[string]any{"id": id})
 }
 
-// Templates lists saved templates.
-func (a *API) Templates(w http.ResponseWriter, r *http.Request) {
-	ts, err := a.Runs.Templates(r.Context())
-	if err != nil {
-		respond.Internal(w, r, err)
-		return
-	}
-	respond.JSON(w, http.StatusOK, map[string]any{"templates": orEmpty(ts)})
-}
-
-// SaveTemplate keeps the reusable part of a job's plan.
-func (a *API) SaveTemplate(w http.ResponseWriter, r *http.Request) {
-	var b struct {
-		JobID string `json:"jobId"`
-		Name  string `json:"name"`
-	}
-	if err := respond.Decode(w, r, &b); err != nil || b.JobID == "" {
-		respond.BadRequest(w)
-		return
-	}
-	t, err := a.Runs.SaveTemplate(r.Context(), b.JobID, b.Name)
-	if err != nil {
-		writeRunError(w, r, err)
-		return
-	}
-	respond.JSON(w, http.StatusCreated, t)
-}
-
-// DeleteTemplate removes a template.
-func (a *API) DeleteTemplate(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
-	if err != nil {
-		respond.BadRequest(w)
-		return
-	}
-	if err := a.Runs.DeleteTemplate(r.Context(), id); err != nil {
-		writeRunError(w, r, err)
-		return
-	}
-	respond.NoContent(w)
-}
-
 // Roles lists the destination's admin roles for the final admin step:
 // each with its groups, host counts, limits and features, and the role
 // the moved admin gets now (D65). Empty on a Marzban destination.

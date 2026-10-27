@@ -101,7 +101,7 @@ func TestReadOnlyLists(t *testing.T) {
 	if job.State != run.StateChecked || job.Summary.Users != 2 {
 		t.Fatalf("job %+v", job)
 	}
-	for _, p := range []string{"/templates", "/safe-mode/backups", "/migrations/" + id + "/users?group=skipped", "/migrations/" + id + "/users?group=C10",
+	for _, p := range []string{"/safe-mode/backups", "/migrations/" + id + "/users?group=skipped", "/migrations/" + id + "/users?group=C10",
 		"/migrations/" + id + "/users?group=category:x"} {
 		if res := m.do(http.MethodGet, api+p, nil); res.status != http.StatusOK {
 			t.Errorf("%s: %d %s", p, res.status, res.body)
@@ -109,9 +109,6 @@ func TestReadOnlyLists(t *testing.T) {
 	}
 	if res := m.do(http.MethodDelete, api+"/safe-mode/backups/0123456789abcdef", nil); res.status != http.StatusNotFound {
 		t.Errorf("delete an unknown backup: %d", res.status)
-	}
-	if res := m.do(http.MethodDelete, api+"/templates/99", nil); res.status != http.StatusNotFound {
-		t.Errorf("delete an unknown template: %d", res.status)
 	}
 }
 
@@ -279,7 +276,6 @@ func TestMoreErrorCodes(t *testing.T) {
 	}{
 		{http.MethodGet, "/migrations/" + j.ID + "/groups", nil, http.StatusConflict, "not_checked"},
 		{http.MethodGet, "/migrations/" + j.ID + "/users", nil, http.StatusConflict, "not_checked"},
-		{http.MethodPost, "/templates", map[string]any{"jobId": j.ID, "name": " "}, http.StatusConflict, "template_name"},
 		{http.MethodPost, "/migrations", map[string]any{"sourceUrl": m.src.URL, "username": "a", "password": "b", "panelId": 999}, http.StatusNotFound, "not_found"},
 		{http.MethodGet, "/migrations/nope", nil, http.StatusNotFound, "not_found"},
 		{http.MethodPost, "/migrations/nope/compare", nil, http.StatusNotFound, "not_found"},
@@ -288,8 +284,6 @@ func TestMoreErrorCodes(t *testing.T) {
 		{http.MethodGet, "/migrations/nope/links.csv", nil, http.StatusNotFound, "not_found"},
 		{http.MethodPost, "/migrations/nope/rollback", nil, http.StatusNotFound, "not_found"},
 		{http.MethodPost, "/migrations/nope/cancel", nil, http.StatusNotFound, "not_found"},
-		{http.MethodPost, "/templates", map[string]any{"jobId": "nope", "name": "x"}, http.StatusNotFound, "not_found"},
-		{http.MethodDelete, "/templates/abc", nil, http.StatusBadRequest, "bad_request"},
 		{http.MethodPut, "/settings/safe-mode", map[string]any{"enabled": "yes"}, http.StatusBadRequest, "bad_request"},
 	} {
 		res := m.do(c.method, api+c.path, c.body)

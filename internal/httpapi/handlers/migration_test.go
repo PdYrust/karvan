@@ -288,21 +288,28 @@ func TestMigrationRoutesNeedASession(t *testing.T) {
 	}
 }
 
-func TestTemplatesAndSites(t *testing.T) {
+// The template routes are gone (D40): they answer the router's plain
+// 404, not an API error.
+func TestTemplateRoutesAreGone(t *testing.T) {
 	m := newMigrationEnv(t, 1)
 	id := m.create()
-	res := m.do(http.MethodPost, api+"/templates", map[string]any{"jobId": id, "name": "monthly"})
-	if res.status != http.StatusCreated {
-		t.Fatalf("save template: %d %s", res.status, res.body)
+	for _, r := range []struct {
+		method, path string
+		body         any
+	}{
+		{http.MethodGet, "/templates", nil},
+		{http.MethodPost, "/templates", map[string]any{"jobId": id, "name": "monthly"}},
+		{http.MethodDelete, "/templates/1", nil},
+	} {
+		res := m.do(r.method, api+r.path, r.body)
+		if res.status != http.StatusNotFound || !strings.HasPrefix(res.header.Get("Content-Type"), "text/plain") {
+			t.Errorf("%s %s: %d %s %s", r.method, r.path, res.status, res.header.Get("Content-Type"), res.body)
+		}
 	}
-	if dup := m.do(http.MethodPost, api+"/templates", map[string]any{"jobId": id, "name": "monthly"}); dup.status != http.StatusConflict {
-		t.Fatalf("duplicate template: %d", dup.status)
-	}
-	var tpl struct{ ID int64 }
-	res.json(t, &tpl)
-	if del := m.do(http.MethodDelete, api+"/templates/"+strconv.FormatInt(tpl.ID, 10), nil); del.status != http.StatusNoContent {
-		t.Fatalf("delete template: %d", del.status)
-	}
+}
+
+func TestSites(t *testing.T) {
+	m := newMigrationEnv(t, 1)
 	site := map[string]any{"name": "old", "panelId": m.panelID, "sourceKind": "marzban", "sourceUrl": m.src.URL, "oldPath": "sub",
 		"domains": []string{"old.example.com"}, "port": freePort(t), "lazy": true}
 	created := m.do(http.MethodPost, api+"/legacy-sites", site)

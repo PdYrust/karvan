@@ -30,7 +30,6 @@ const (
 	codeWeakPassword  = "weak_password"
 	codePlanInvalid   = "plan_invalid"
 	codePanelNotReady = "panel_not_ready"
-	codeTemplateName  = "template_name"
 	codeNameTaken     = "name_taken"
 	codeConfirm       = "confirm_required"
 	codeNothingLeft   = "gone"
@@ -84,8 +83,6 @@ func writeRunError(w http.ResponseWriter, r *http.Request, err error) {
 		respond.BadRequest(w)
 	case errors.As(err, &weak):
 		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: codeWeakPassword, Extra: map[string]any{"rule": weak.Rule}})
-	case errors.Is(err, run.ErrTemplateName):
-		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeTemplateName})
 	case errors.Is(err, dest.ErrNotReady):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codePanelNotReady})
 	case errors.As(err, &planErr):

@@ -3,17 +3,14 @@ package run
 import (
 	"context"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"os"
 	"slices"
-	"strings"
 	"time"
 
 	"github.com/PdYrust/karvan/internal/migration/dest"
 	"github.com/PdYrust/karvan/internal/migration/engine"
-	"github.com/PdYrust/karvan/internal/migration/plan"
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/safemode"
 )
@@ -207,81 +204,8 @@ func (s *Service) TakePasswords(jobID string) (map[string]string, error) {
 	return out, nil
 }
 
-// StoredTemplate is a saved template.
-type StoredTemplate struct {
-	ID       int64         `json:"id"`
-	Template plan.Template `json:"template"`
-	Updated  time.Time     `json:"updatedAt"`
-}
-
-// ErrTemplateName means a template name is empty, too long or taken.
-var ErrTemplateName = errors.New("template name is empty, too long or taken")
-
-// Templates lists saved templates by name.
-func (s *Service) Templates(ctx context.Context) ([]StoredTemplate, error) {
-	rows, err := s.db.QueryContext(ctx, "SELECT id, body, updated_at FROM templates ORDER BY name")
-	if err != nil {
-		return nil, fmt.Errorf("read templates: %w", err)
-	}
-	defer rows.Close()
-	var out []StoredTemplate
-	for rows.Next() {
-		var t StoredTemplate
-		var body string
-		var at int64
-		if err := rows.Scan(&t.ID, &body, &at); err != nil {
-			return nil, err
-		}
-		if err := json.Unmarshal([]byte(body), &t.Template); err != nil {
-			return nil, fmt.Errorf("template %d: %w", t.ID, err)
-		}
-		t.Updated = time.UnixMilli(at).UTC()
-		out = append(out, t)
-	}
-	return out, rows.Err()
-}
-
-// SaveTemplate stores the reusable part of a job's plan under name.
-func (s *Service) SaveTemplate(ctx context.Context, jobID, name string) (StoredTemplate, error) {
-	name = strings.TrimSpace(name)
-	if name == "" || len(name) > 64 {
-		return StoredTemplate{}, ErrTemplateName
-	}
-	_, p, _, err := s.View(jobID)
-	if err != nil {
-		return StoredTemplate{}, err
-	}
-	t := plan.TemplateOf(name, p)
-	body, err := json.Marshal(t)
-	if err != nil {
-		return StoredTemplate{}, err
-	}
-	now := s.now().UnixMilli()
-	res, err := s.db.ExecContext(ctx, "INSERT INTO templates (name, body, created_at, updated_at) VALUES (?, ?, ?, ?)", name, string(body), now, now)
-	if err != nil {
-		if strings.Contains(err.Error(), "UNIQUE") {
-			return StoredTemplate{}, ErrTemplateName
-		}
-		return StoredTemplate{}, fmt.Errorf("save template: %w", err)
-	}
-	id, err := res.LastInsertId()
-	return StoredTemplate{ID: id, Template: t, Updated: time.UnixMilli(now).UTC()}, err
-}
-
-// ErrNotFound means no such template or backup.
+// ErrNotFound means no such backup or panel.
 var ErrNotFound = errors.New("not found")
-
-// DeleteTemplate removes a template.
-func (s *Service) DeleteTemplate(ctx context.Context, id int64) error {
-	res, err := s.db.ExecContext(ctx, "DELETE FROM templates WHERE id = ?", id)
-	if err != nil {
-		return fmt.Errorf("delete template: %w", err)
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return ErrNotFound
-	}
-	return nil
-}
 
 // BackupInfo is a Safe Mode backup on disk, with the job that took it:
 // its panel, its state and the old panel's kind, address and admin.

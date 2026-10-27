@@ -1,7 +1,7 @@
 // Package plan is the operator's migration plan as Karvan stores it: the
 // category tree with its operations, the conflict resolutions, per-user
 // decisions and the destination choices. It holds no secret, so it can be
-// saved, shown and turned into a template.
+// saved and shown.
 package plan
 
 import (
