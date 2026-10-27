@@ -1,11 +1,14 @@
-import { RefreshButton } from '../../components/actions/RefreshButton';
 import { useState } from 'react';
-import { SearchField } from '../../components/data/SearchField';
+import { ToolbarRefresh } from '../../components/data/ToolbarRefresh';
+import { ListToolbar } from '../../components/data/ListToolbar';
+import { dataMessages } from '../../components/data/messages';
+import { sortChoice } from '../../components/data/sort-choice';
+import { sortRows, type ListSort } from '../../lib/lists/choices';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { usePageTitle } from '../../components/layout/use-page-title';
-import { useT } from '../../i18n/locale';
+import { useLocale, useT } from '../../i18n/locale';
 import { panelsMessages } from './messages';
 import { NoPanels } from './NoPanels';
 import { PanelsTable } from './PanelsTable';
@@ -32,11 +35,22 @@ export function PanelsPage() {
   const panels = usePanels();
   const { scan, scanning } = useScanPanels();
   const finds = useScanFinds();
+  const td = useT(dataMessages);
+  const { locale } = useLocale();
   const [query, setQuery] = useState('');
-
+  const [status, setStatus] = useState<'all' | 'ready' | 'attention'>('all');
+  const [sort, setSort] = useState<ListSort>('name');
   const load = useFirstLoad(panels.data);
   const all = load.data ?? [];
-  const shown = all.filter((p) => matchesPanel(p, query));
+  const isStatus = (p: (typeof all)[number], s: typeof status) =>
+    s === 'all' || (s === 'ready') === p.ready;
+  const shown = sortRows(
+    all.filter((p) => isStatus(p, status) && matchesPanel(p, query)),
+    sort,
+    { name: (p) => p.name, time: (p) => p.id },
+    locale,
+  );
+  const statusText = { all: td('showAll'), ready: t('ready'), attention: t('needsAttention') };
   let body;
   if (!load.data) {
     body = panels.isError ? (
@@ -53,17 +67,25 @@ export function PanelsPage() {
   } else {
     body = (
       <div className="flex flex-col gap-4">
-        <div className="flex items-center gap-2">
-          <SearchField label={t('search')} value={query} onChange={setQuery} className="flex-1" />
-          <RefreshButton
-            variant="secondary"
-            aria-label={t('scanAndRefresh')}
-            title={t('scanAndRefresh')}
-            loading={scanning}
-            onClick={scan}
-            className="pointer-coarse:size-9"
-          />
-        </div>
+        <ListToolbar
+          search={{ label: t('search'), value: query, onChange: setQuery }}
+          choices={[
+            {
+              label: td('filter'),
+              value: status,
+              all: 'all',
+              options: (['all', 'ready', 'attention'] as const).map((s) => ({
+                value: s,
+                label: statusText[s],
+                text: statusText[s],
+                count: all.filter((p) => isStatus(p, s)).length,
+              })),
+              onChange: (s) => setStatus(s as typeof status),
+            },
+            sortChoice(td, sort, setSort, ['name', 'newest']),
+          ]}
+          refresh={<ToolbarRefresh label={t('scanAndRefresh')} loading={scanning} onClick={scan} />}
+        />
         {shown.length > 0 ? (
           <PanelsTable panels={shown} />
         ) : (

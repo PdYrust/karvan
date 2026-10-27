@@ -1,16 +1,15 @@
 import { Badge } from '@cloudflare/kumo/components/badge';
-import { Button } from '@cloudflare/kumo/components/button';
 import { ArrowRightIcon } from '@phosphor-icons/react';
 import { useDeferredValue, useId, useMemo, useState } from 'react';
 import { DataTable, type Column } from '../../components/data/DataTable';
 import { Pager } from '../../components/data/Pager';
 import { RowCard } from '../../components/data/RowCard';
 import { StatusLabel } from '../../components/feedback/StatusBadge';
-import { SearchField } from '../../components/data/SearchField';
+import { ListToolbar } from '../../components/data/ListToolbar';
+import { dataMessages } from '../../components/data/messages';
 import { useT } from '../../i18n/locale';
 import type { JobState } from '../../lib/api/migrations';
 import type { ReportUser } from '../../lib/api/report';
-import { useFormat } from '../../lib/preferences/region';
 import { reportsMessages } from './messages';
 import {
   filterCounts,
@@ -99,10 +98,10 @@ function UsersTable({ users, state }: { users: readonly ReportUser[]; state: Job
   );
 }
 
-/** Every user of the report: filter buttons with counts, a search, 50 a page. */
+/** Every user of the report: the list toolbar with a search and a filter with counts, 50 a page. */
 export function ReportUsers({ users, state }: { users: readonly ReportUser[]; state: JobState }) {
   const t = useT(reportsMessages);
-  const fmt = useFormat();
+  const td = useT(dataMessages);
   const titleId = useId();
   const [filter, setFilter] = useState<UserFilter>('all');
   const [term, setTerm] = useState('');
@@ -119,33 +118,31 @@ export function ReportUsers({ users, state }: { users: readonly ReportUser[]; st
       <h2 id={titleId} className="text-heading font-semibold text-kumo-strong">
         {t('users')}
       </h2>
-      <div className="flex flex-col gap-3">
-        <SearchField
-          label={t('usersSearch')}
-          value={term}
-          onChange={(v) => {
+      <ListToolbar
+        search={{
+          label: t('usersSearch'),
+          value: term,
+          onChange: (v) => {
             setTerm(v);
             setOffset(0);
-          }}
-        />
-        <div role="group" aria-label={t('filtersLabel')} className="flex flex-wrap gap-2">
-          {userFilters.map((f) => (
-            <Button
-              key={f}
-              aria-pressed={filter === f}
-              variant={filter === f ? 'secondary' : 'ghost'}
-              className="pointer-coarse:h-9"
-              onClick={() => {
-                setFilter(f);
-                setOffset(0);
-              }}
-            >
-              {t(`f_${f}`)}
-              <span className="tabular opacity-80">{fmt.number(counts[f])}</span>
-            </Button>
-          ))}
-        </div>
-      </div>
+          },
+        }}
+        choices={[
+          {
+            label: td('filter'),
+            value: filter,
+            all: 'all',
+            options: userFilters.map((f) => {
+              const text = f === 'all' ? td('showAll') : t(`f_${f}`);
+              return { value: f, label: text, text, count: counts[f] };
+            }),
+            onChange: (f) => {
+              setFilter(f as UserFilter);
+              setOffset(0);
+            },
+          },
+        ]}
+      />
       {page.length === 0 ? (
         <p className="rounded-lg bg-kumo-tint px-4 py-3 text-kumo-subtle">{t('noUsers')}</p>
       ) : (

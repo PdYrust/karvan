@@ -11,7 +11,11 @@ import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { usePageTitle } from '../../components/layout/use-page-title';
-import { useT } from '../../i18n/locale';
+import { useLocale, useT } from '../../i18n/locale';
+import { ListToolbar } from '../../components/data/ListToolbar';
+import { dataMessages } from '../../components/data/messages';
+import { sortChoice } from '../../components/data/sort-choice';
+import { matchesTerm, sortRows, type ListSort } from '../../lib/lists/choices';
 import { deleteSite, getLinkSites, linkKeys, type LinkSite } from '../../lib/api/links';
 import { useErrorText } from '../../lib/errors/errors';
 import { useFormat } from '../../lib/preferences/region';
@@ -48,6 +52,11 @@ export function LinksPage() {
   const list = useQuery({ queryKey: linkKeys.all, queryFn: getLinkSites });
   const panels = usePanels();
   const [asking, setAsking] = useState<LinkSite | null>(null);
+  const td = useT(dataMessages);
+  const { locale } = useLocale();
+  const [query, setQuery] = useState('');
+  const [tls, setTls] = useState<'all' | 'https' | 'plain'>('all');
+  const [sort, setSort] = useState<ListSort>('name');
   // The dialog keeps the name while it fades out.
   const named = useLingering(asking);
   const remove = useMutation({
@@ -88,13 +97,48 @@ export function LinksPage() {
     );
   } else {
     const ports = Object.keys(load.data.portErrors).map((p) => fmt.number(Number(p)));
+    const sites = load.data.sites;
+    const isTls = (s: LinkSite, f: typeof tls) =>
+      f === 'all' || (f === 'https') === Boolean(s.certFile || s.certPem);
+    const shown = sortRows(
+      sites.filter(
+        (s) => isTls(s, tls) && matchesTerm(query, [s.name, s.sourceUrl, ...(s.domains ?? [])]),
+      ),
+      sort,
+      { name: (s) => s.name, time: (s) => s.id },
+      locale,
+    );
+    const tlsText = { all: td('showAll'), https: t('https'), plain: t('plainHttp') };
     body = (
       <>
         {ports.length > 0 ? (
           <InlineAlert tone="warning">{t('portsFailed', { ports: ports.join(', ') })}</InlineAlert>
         ) : null}
+        <ListToolbar
+          search={{ label: t('search'), value: query, onChange: setQuery }}
+          choices={[
+            {
+              label: td('filter'),
+              value: tls,
+              all: 'all',
+              options: (['all', 'https', 'plain'] as const).map((f) => ({
+                value: f,
+                label: tlsText[f],
+                text: tlsText[f],
+                count: sites.filter((s) => isTls(s, f)).length,
+              })),
+              onChange: (f) => setTls(f as typeof tls),
+            },
+            sortChoice(td, sort, setSort, ['name', 'newest']),
+          ]}
+        />
+        {shown.length === 0 ? (
+          <p className="rounded-lg bg-kumo-base px-4 py-8 text-center text-kumo-subtle ring ring-kumo-hairline">
+            {t('noMatch')}
+          </p>
+        ) : null}
         <section aria-label={t('list')} className="flex flex-col gap-4">
-          {load.data.sites.map((s) => (
+          {shown.map((s) => (
             <SiteCard
               key={s.id}
               site={s}

@@ -3,7 +3,7 @@ import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ArrowRightIcon } from '@phosphor-icons/react';
 import { useEffect, useState, type ReactNode } from 'react';
 import { Pager } from '../../components/data/Pager';
-import { SearchField } from '../../components/data/SearchField';
+import { SearchBar } from '../../components/data/SearchBar';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { useT } from '../../i18n/locale';
@@ -79,14 +79,15 @@ export function UserList({
   const rows = users.data?.users ?? [];
   return (
     <div className="flex flex-col gap-3">
-      <SearchField
-        label={t('search')}
-        value={term}
-        onChange={(v) => {
-          setTerm(v);
-          setOffset(0);
+      <SearchBar
+        search={{
+          label: t('search'),
+          value: term,
+          onChange: (v) => {
+            setTerm(v);
+            setOffset(0);
+          },
         }}
-        className="sm:max-w-sm"
       />
       {users.isPending || load.holding ? (
         <div role="status" aria-label={label} className="flex flex-col gap-2">

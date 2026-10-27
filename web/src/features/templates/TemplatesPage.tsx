@@ -10,7 +10,11 @@ import { ErrorState } from '../../components/feedback/ErrorState';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { usePageTitle } from '../../components/layout/use-page-title';
-import { useT } from '../../i18n/locale';
+import { useLocale, useT } from '../../i18n/locale';
+import { ListToolbar } from '../../components/data/ListToolbar';
+import { dataMessages } from '../../components/data/messages';
+import { sortChoice } from '../../components/data/sort-choice';
+import { matchesTerm, sortRows, type ListSort } from '../../lib/lists/choices';
 import { deleteTemplate, listTemplates, templateKeys } from '../../lib/api/templates';
 import { useErrorText } from '../../lib/errors/errors';
 import type { StoredTemplate } from '../../lib/plan/changes';
@@ -33,6 +37,10 @@ export function TemplatesPage() {
   const errorText = useErrorText();
   const list = useQuery({ queryKey: templateKeys.all, queryFn: listTemplates });
   const [asking, setAsking] = useState<StoredTemplate | null>(null);
+  const td = useT(dataMessages);
+  const { locale } = useLocale();
+  const [query, setQuery] = useState('');
+  const [sort, setSort] = useState<ListSort>('newest');
   // The dialog keeps the name while it fades out.
   const named = useLingering(asking);
   const remove = useMutation({
@@ -79,9 +87,24 @@ export function TemplatesPage() {
       </EmptyState>
     );
   } else {
+    const shown = sortRows(
+      load.data.filter((x) => matchesTerm(query, [x.template.name])),
+      sort,
+      { name: (x) => x.template.name, time: (x) => x.updatedAt },
+      locale,
+    );
     body = (
       <section aria-label={t('list')} className="flex flex-col gap-4">
-        {load.data.map((x) => (
+        <ListToolbar
+          search={{ label: t('search'), value: query, onChange: setQuery }}
+          choices={[sortChoice(td, sort, setSort, ['newest', 'name'])]}
+        />
+        {shown.length === 0 ? (
+          <p className="rounded-lg bg-kumo-base px-4 py-8 text-center text-kumo-subtle ring ring-kumo-hairline">
+            {t('noMatch')}
+          </p>
+        ) : null}
+        {shown.map((x) => (
           <TemplateCard
             key={x.id}
             template={x}

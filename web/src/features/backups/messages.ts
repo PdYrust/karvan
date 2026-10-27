@@ -31,6 +31,10 @@ const en = {
   deleteFailed: "Karvan couldn't delete it.",
   deleted: 'Backup deleted',
   shown: { one: 'Showing one backup', other: 'Showing {count} backups' },
+  search: 'Search backups',
+  noMatch: 'No backup matches.',
+  canPutBack: 'Can be put back',
+  locked: 'Locked',
 };
 
 export type BackupsKey = keyof typeof en;
@@ -67,6 +71,10 @@ const fa: Messages<BackupsKey>['fa'] = {
   deleteFailed: 'کاروان نتوانست آن را حذف کند.',
   deleted: 'پشتیبان حذف شد',
   shown: { one: 'نمایش یک پشتیبان', other: 'نمایش {count} پشتیبان' },
+  search: 'جستجوی پشتیبان ها',
+  noMatch: 'پشتیبانی پیدا نشد.',
+  canPutBack: 'قابل برگرداندن',
+  locked: 'قفل شده',
 };
 
 export const backupsMessages: Messages<BackupsKey> = { en, fa };

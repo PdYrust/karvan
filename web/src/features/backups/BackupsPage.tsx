@@ -13,6 +13,7 @@ import { PageHeader } from '../../components/layout/PageHeader';
 import { usePageTitle } from '../../components/layout/use-page-title';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
+import { BackupsToolbar, useBackupFilters } from './BackupsToolbar';
 import { migrationKeys } from '../../lib/api/migrations';
 import type { Panel } from '../../lib/api/panels';
 import { backupKeys, deleteBackup, restoreBackup } from '../../lib/api/safemode';
@@ -108,6 +109,7 @@ export function BackupsPage() {
   const a = useBackupActions();
   const load = useFirstLoad(backups.data);
   const rows = load.data ? backupRows(load.data, panels.data ?? []) : null;
+  const filters = useBackupFilters();
   let body;
   if (backups.isError) {
     body = (
@@ -132,8 +134,14 @@ export function BackupsPage() {
         {blockedPanels(rows).map((p) => (
           <ControlNotice key={p.id} panel={p} />
         ))}
+        <BackupsToolbar rows={rows} filters={filters} />
+        {filters.shown(rows).length === 0 ? (
+          <p className="rounded-lg bg-kumo-base px-4 py-8 text-center text-kumo-subtle ring ring-kumo-hairline">
+            {t('noMatch')}
+          </p>
+        ) : null}
         <BackupsTable
-          rows={rows}
+          rows={filters.shown(rows)}
           now={now}
           actions={{
             onRestore: (r) => {
@@ -146,7 +154,9 @@ export function BackupsPage() {
             },
           }}
         />
-        <p className="text-sm text-kumo-subtle">{t('shown', { count: rows.length })}</p>
+        <p className="text-sm text-kumo-subtle">
+          {t('shown', { count: filters.shown(rows).length })}
+        </p>
       </>
     );
   }

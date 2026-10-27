@@ -1,9 +1,9 @@
 import { Badge } from '@cloudflare/kumo/components/badge';
-import { Button } from '@cloudflare/kumo/components/button';
 import { ArrowRightIcon } from '@phosphor-icons/react';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { useId, useState } from 'react';
-import { SearchField } from '../../../components/data/SearchField';
+import { ListToolbar } from '../../../components/data/ListToolbar';
+import { dataMessages } from '../../../components/data/messages';
 import { ErrorState } from '../../../components/feedback/ErrorState';
 import { Bone } from '../../../components/feedback/PageSkeleton';
 import { useT } from '../../../i18n/locale';
@@ -80,7 +80,7 @@ const countOf: Record<PreviewFilter, keyof Impact> = {
 export function PreviewList({ jobId, impact }: { jobId: string; impact: Impact | undefined }) {
   const t = useT(previewMessages);
   const tw = useT(wizardMessages);
-  const fmt = useFormat();
+  const td = useT(dataMessages);
   const titleId = useId();
   const [filter, setFilter] = useState<PreviewFilter>('');
   const [term, setTerm] = useState('');
@@ -99,34 +99,31 @@ export function PreviewList({ jobId, impact }: { jobId: string; impact: Impact |
       <h2 id={titleId} className="text-heading font-semibold text-kumo-strong">
         {t('usersTitle')}
       </h2>
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-        <div role="group" aria-label={t('filtersLabel')} className="flex flex-wrap gap-2">
-          {previewFilters.map((f) => (
-            <Button
-              key={f || 'all'}
-              aria-pressed={filter === f}
-              variant={filter === f ? 'secondary' : 'ghost'}
-              className="pointer-coarse:h-9"
-              onClick={() => {
-                setFilter(f);
-                setOffset(0);
-              }}
-            >
-              {f ? t(`filter_${f}`) : t('filterAll')}
-              <span className="tabular opacity-80">{fmt.number(impact?.[countOf[f]] ?? 0)}</span>
-            </Button>
-          ))}
-        </div>
-        <SearchField
-          label={tw('search')}
-          value={term}
-          onChange={(v) => {
+      <ListToolbar
+        search={{
+          label: tw('search'),
+          value: term,
+          onChange: (v) => {
             setTerm(v);
             setOffset(0);
-          }}
-          className="lg:max-w-xs"
-        />
-      </div>
+          },
+        }}
+        choices={[
+          {
+            label: td('filter'),
+            value: filter || 'all',
+            all: 'all',
+            options: previewFilters.map((f) => {
+              const text = f ? t(`filter_${f}`) : td('showAll');
+              return { value: f || 'all', label: text, text, count: impact?.[countOf[f]] ?? 0 };
+            }),
+            onChange: (v) => {
+              setFilter(v === 'all' ? '' : (v as PreviewFilter));
+              setOffset(0);
+            },
+          },
+        ]}
+      />
       {users.isPending || load.holding ? (
         <div role="status" aria-label={t('usersLabel')} className="flex flex-col gap-2">
           <Bone className="h-12 w-full" />

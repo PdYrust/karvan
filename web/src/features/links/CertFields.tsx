@@ -1,6 +1,6 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { Radio } from '@cloudflare/kumo/components/radio';
-import { FileArrowUpIcon, SealCheckIcon } from '@phosphor-icons/react';
+import { FileArrowUpIcon, SealCheckIcon } from '../../components/icons/regular';
 import { useMutation } from '@tanstack/react-query';
 import { useRef, useState } from 'react';
 import { InlineAlert } from '../../components/feedback/InlineAlert';

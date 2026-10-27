@@ -73,6 +73,8 @@ const en = {
   downloadOf: 'Download the new links of {admin}, {date}',
   newLinksFailed: "Couldn't load the migrations.",
   downloadFailed: "Couldn't download the file.",
+  search: 'Search sites',
+  noMatch: 'No site matches.',
 };
 
 export type LinksKey = keyof typeof en;
@@ -153,6 +155,8 @@ const fa: Messages<LinksKey>['fa'] = {
   downloadOf: 'دانلود لینک های جدید {admin}، {date}',
   newLinksFailed: 'انتقال ها بارگذاری نشدند.',
   downloadFailed: 'فایل دانلود نشد.',
+  search: 'جستجوی سایت ها',
+  noMatch: 'سایتی پیدا نشد.',
 };
 
 export const linksMessages: Messages<LinksKey> = { en, fa };

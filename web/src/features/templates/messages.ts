@@ -20,6 +20,8 @@ const en = {
   emptyBody: 'Save the choices of a migration as a template at its Changes step, or when it ends.',
   newMigration: 'New migration',
   loadFailed: "Couldn't load the templates.",
+  search: 'Search templates',
+  noMatch: 'No template matches.',
 };
 
 export type TemplatesKey = keyof typeof en;
@@ -46,6 +48,8 @@ const fa: Messages<TemplatesKey>['fa'] = {
   emptyBody: 'انتخاب های یک انتقال را در مرحله تغییرها یا وقتی تمام شد به عنوان الگو ذخیره کنید.',
   newMigration: 'انتقال جدید',
   loadFailed: 'الگوها خوانده نشدند.',
+  search: 'جستجوی الگوها',
+  noMatch: 'الگویی پیدا نشد.',
 };
 
 export const templatesMessages: Messages<TemplatesKey> = { en, fa };

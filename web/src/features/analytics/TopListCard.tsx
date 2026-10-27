@@ -1,10 +1,9 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
-import { Input } from '@cloudflare/kumo/components/input';
-import { Select } from '@cloudflare/kumo/components/select';
-import { ArrowsOutSimpleIcon, DotsThreeIcon, MagnifyingGlassIcon } from '@phosphor-icons/react';
-import { useId, useState, type ReactNode } from 'react';
+import { ArrowsOutSimpleIcon, DotsThreeIcon } from '@phosphor-icons/react';
+import { useState, type ReactNode } from 'react';
 import { BarList } from '../../components/charts/BarList';
+import { ListToolbar } from '../../components/data/ListToolbar';
 import { SheetDialog } from '../../components/dialogs/SheetDialog';
 import { useT } from '../../i18n/locale';
 import { ChartCard } from './ChartCard';
@@ -31,54 +30,33 @@ function FullList({
   onOpenChange: (o: boolean) => void;
 }) {
   const t = useT(analyticsMessages);
-  const id = useId();
   const [query, setQuery] = useState('');
   const [count, setCount] = useState<number>(25);
   const rows = topRows(items, { query, sort, count });
-  const sorts = { share: t('sortShare'), name: t('sortName') };
-  const sizes = Object.fromEntries(counts.map((n) => [String(n), t('itemsShown', { count: n })]));
-  // Joined on desktop: the search, then the two selects, as one control.
   const top = (
-    <div className="flex flex-col gap-2 sm:flex-row sm:gap-0">
-      <div className="relative min-w-0 flex-1">
-        <MagnifyingGlassIcon
-          size={16}
-          aria-hidden="true"
-          className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-kumo-subtle"
-        />
-        <Input
-          type="search"
-          aria-label={t('searchList', { list: title })}
-          placeholder={t('searchList', { list: title })}
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          autoComplete="off"
-          className="w-full ps-9 sm:rounded-e-none pointer-coarse:h-9"
-        />
-      </div>
-      <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-0">
-        <span id={`${id}-s`} className="sr-only">
-          {t('sortBy')}
-        </span>
-        <Select
-          aria-labelledby={`${id}-s`}
-          className="w-full sm:-ms-px sm:w-36 sm:rounded-none pointer-coarse:h-9"
-          value={sort}
-          items={sorts}
-          onValueChange={(v) => onSort(v === 'name' ? 'name' : 'share')}
-        />
-        <span id={`${id}-c`} className="sr-only">
-          {t('itemCount')}
-        </span>
-        <Select
-          aria-labelledby={`${id}-c`}
-          className="w-full sm:-ms-px sm:w-32 sm:rounded-s-none pointer-coarse:h-9"
-          value={String(count)}
-          items={sizes}
-          onValueChange={(v) => setCount(Number(v) || 25)}
-        />
-      </div>
-    </div>
+    <ListToolbar
+      search={{ label: t('searchList', { list: title }), value: query, onChange: setQuery }}
+      choices={[
+        {
+          label: t('sortBy'),
+          value: sort,
+          options: (['share', 'name'] as const).map((v) => {
+            const text = t(v === 'name' ? 'sortName' : 'sortShare');
+            return { value: v, label: text, text };
+          }),
+          onChange: (v) => onSort(v === 'name' ? 'name' : 'share'),
+        },
+        {
+          label: t('itemCount'),
+          value: String(count),
+          options: counts.map((n) => {
+            const text = t('itemsShown', { count: n });
+            return { value: String(n), label: text, text };
+          }),
+          onChange: (v) => setCount(Number(v) || 25),
+        },
+      ]}
+    />
   );
   return (
     <SheetDialog open={open} onOpenChange={onOpenChange} title={title} top={top}>

@@ -1,10 +1,9 @@
-import { Input } from '@cloudflare/kumo/components/input';
 import { cn } from '@cloudflare/kumo/utils';
 import { MagnifyingGlassIcon } from '@phosphor-icons/react';
-
 /**
- * The search field across the top of a list. `/` focuses it from anywhere
- * on the page (data-page-search), and Escape clears it.
+ * The search input at the start of a list toolbar (ListToolbar), drawn bare:
+ * the toolbar's group draws its frame. `/` focuses it from anywhere on the
+ * page (data-page-search), and Escape clears it.
  */
 export function SearchField({
   label,
@@ -18,13 +17,13 @@ export function SearchField({
   className?: string;
 }) {
   return (
-    <div className={cn('relative', className)}>
+    <div className={cn('relative min-w-0 flex-1', className)}>
       <MagnifyingGlassIcon
         size={16}
         aria-hidden="true"
         className="pointer-events-none absolute start-3 top-1/2 -translate-y-1/2 text-kumo-subtle"
       />
-      <Input
+      <input
         type="search"
         aria-label={label}
         placeholder={label}
@@ -39,7 +38,7 @@ export function SearchField({
         data-page-search=""
         autoComplete="off"
         spellCheck={false}
-        className="w-full ps-9 pointer-coarse:h-9"
+        className="h-full w-full rounded-lg bg-transparent ps-9 pe-3 text-base text-kumo-default placeholder:text-kumo-subtle focus-visible:-outline-offset-2"
       />
     </div>
   );
