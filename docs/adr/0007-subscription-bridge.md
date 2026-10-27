@@ -16,6 +16,14 @@ Every moved user has an old link that points at the old panel's domain and carri
 - Token lists can be uploaded (text or CSV of old links) and are verified 4 at a time, so users never wait for a lazy check.
 ## Checked
 Unit tests run every step and abuse case with fake panels (forged tokens, a reused name or id on the old panel, an answer for another user, floods from one address, one /64 and many addresses, an old panel that is down, slow or rate limiting). Against the running Marzban, an old link through the bridge returns the moved user's real subscription, and a revoke on the new panel closes it.
+## Changed in phase 4.1: rules serve batches
+A migration that ends done becomes a batch, and a backup restore can take batches down (ADR 0006). The bridge now serves by batch (phase-4.1 D21 to D24):
+- **One read per request.** The token, its ledger row and the row's batch come from one query on every request. A cached batch state could serve a user for a moment after a restore started.
+- **Held batches answer 404 at once.** A token whose row is in an inactive or deleted batch gets the same 404 bytes as an unknown path: the panel is not asked, no lazy check runs, and nothing is dropped or closed, so a restore that removes users from the destination cannot close their links for good. A rule of batches whose batches are all held answers 404 to every request. On other rules, a payload that names a user of the rule in a held batch answers 404 before the request goes to the panel. The sweep and the daily re-check skip those users.
+- **Rule scope replaces "same old panel".** A rule of batches serves the users of its batches while the batch is active; a manual rule serves the users of its old panel and destination in an active batch or in none. A token proven on one rule counts on another only when its row is in that rule's scope. Token upload and the rule's numbers use the same scope. Every scope also requires the rule's old panel and destination, so one rule never reads two old panels.
+- **Exactly one match.** A lazy check reads every row in scope that the payload can name, runs the destination check on each, asks the old panel once, and keeps the token only when exactly one row matches the answer and passes its check. Two matches are a data error: 404 and a warning with the rule and the ledger ids. Before, the newest row alone was tried.
+- A failed token read answers 503 with `Retry-After` and serves nothing.
+- A close for good reads the batch state in the same statement that writes it, so a close decided just before a restore held the batch does not land.
 ## Alternatives considered
 - **Ask for the old panel's secret** (or its database) and accept old tokens offline. That is the database method of Phase 6; in Phase 3 only the reseller's login exists.
 - **Accept any token whose payload names a moved user.** Anyone could forge one from a username.
