@@ -26,6 +26,11 @@ func TestSecurityHeaders(t *testing.T) {
 	if rec.Header().Get("Strict-Transport-Security") != "" {
 		t.Error("HSTS sent over plain HTTP")
 	}
+	for _, d := range []string{"manifest-src 'self'", "worker-src 'none'"} {
+		if !strings.Contains(ContentSecurityPolicy, d+";") {
+			t.Errorf("CSP lacks %s", d)
+		}
+	}
 
 	req := httptest.NewRequest(http.MethodGet, "/", nil)
 	req.TLS = &tls.ConnectionState{}
