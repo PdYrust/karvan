@@ -13,6 +13,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"syscall"
 	"time"
 )
 
@@ -134,8 +135,11 @@ func (b *Bridge) certFacts(s Site) CertFacts {
 	return inspect(certPEM, keyPEM, s.Domains, b.Now())
 }
 
-// readSmallFile reads a regular file of at most maxCertFileBytes. A FIFO or
-// device is refused before it is opened, so a wrong path cannot hang a request.
+// readSmallFile reads a regular file of at most maxCertFileBytes that the
+// operator named. Links are followed, so a Let's Encrypt live link keeps
+// working after a renewal. A FIFO or device is refused before it is
+// opened, and the open does not block, so a wrong path cannot hang a
+// request.
 func readSmallFile(path string) ([]byte, error) {
 	if !filepath.IsAbs(path) {
 		return nil, fmt.Errorf("%s: not an absolute path", path)
@@ -147,16 +151,49 @@ func readSmallFile(path string) ([]byte, error) {
 	if !info.Mode().IsRegular() || info.Size() > maxCertFileBytes {
 		return nil, fmt.Errorf("%s: not a certificate file", path)
 	}
-	f, err := os.Open(path) //nolint:gosec // the operator names this file; only parsed facts leave it
+	//nolint:gosec // the operator names this file; only parsed facts leave it
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
 		return nil, err
 	}
+	data, _, err := readOpened(f, nil)
+	return data, err
+}
+
+// readSmallFileIn reads the file rel inside root for the certificate scan.
+// root resolves every element of rel at the open and refuses an absolute
+// link or any link or ".." that leaves it. The file must then be regular,
+// at most maxCertFileBytes and not deny (Karvan's key file), else it is
+// closed unread. The info of the opened file is returned when there is
+// one.
+func readSmallFileIn(root *os.Root, rel string, deny os.FileInfo) ([]byte, os.FileInfo, error) {
+	f, err := root.OpenFile(rel, os.O_RDONLY|syscall.O_NONBLOCK, 0)
+	if err != nil {
+		return nil, nil, err
+	}
+	return readOpened(f, deny)
+}
+
+// readOpened checks the opened f and reads it, then closes it: a regular
+// file of at most maxCertFileBytes that is not deny.
+func readOpened(f *os.File, deny os.FileInfo) ([]byte, os.FileInfo, error) {
 	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return nil, nil, err
+	}
+	switch {
+	case !info.Mode().IsRegular() || info.Size() > maxCertFileBytes:
+		return nil, info, fmt.Errorf("%s: not a certificate file", f.Name())
+	case deny != nil && os.SameFile(info, deny):
+		return nil, info, fmt.Errorf("%s: not readable", f.Name())
+	}
 	data, err := io.ReadAll(io.LimitReader(f, maxCertFileBytes+1))
 	if err == nil && len(data) > maxCertFileBytes {
-		err = fmt.Errorf("%s: too large", path)
+		clear(data)
+		return nil, info, fmt.Errorf("%s: too large", f.Name())
 	}
-	return data, err
+	return data, info, err
 }
 
 // inspect parses the first certificate in certPEM and checks it against

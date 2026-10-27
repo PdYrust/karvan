@@ -21,6 +21,11 @@ type Deps struct {
 	OpenDest func(ctx context.Context, envPath string) (Destination, error)
 	// OpenOld builds the client for a site's old panel.
 	OpenOld func(s Site) (OldPanel, error)
+	// DataDir and KeyFile are Karvan's own; the certificate scan never
+	// reads them. EnvRoots are where the panel scan looks for ENV files.
+	DataDir  string
+	KeyFile  string
+	EnvRoots []string
 }
 
 // destTTL is how long an opened destination is reused before its ENV is
@@ -55,6 +60,9 @@ type Bridge struct {
 	upMu   sync.Mutex
 	ups    map[int64]*UploadProgress // by site id
 	upWG   sync.WaitGroup            // token lists being checked
+
+	scanMu sync.Mutex // held while a certificate scan runs
+	scanT  scanTest
 }
 
 type openDest struct {
