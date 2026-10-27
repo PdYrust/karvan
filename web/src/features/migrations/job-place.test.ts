@@ -36,8 +36,8 @@ describe('jobPlace', () => {
     }
   });
   it('sends a finished job to its report', () => {
-    expect(jobPlace(row({ state: 'done' }))).toBe(`/reports/${id}`);
-    expect(jobPlace(row({ state: 'rolled_back' }))).toBe(`/reports/${id}`);
+    expect(jobPlace(row({ state: 'done' }))).toBe(`/migrations/${id}/report`);
+    expect(jobPlace(row({ state: 'rolled_back' }))).toBe(`/migrations/${id}/report`);
   });
 });
 

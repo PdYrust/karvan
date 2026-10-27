@@ -1,15 +1,15 @@
 import { Badge } from '@cloudflare/kumo/components/badge';
 import { ArrowRightIcon } from '@phosphor-icons/react';
 import { useDeferredValue, useId, useMemo, useState } from 'react';
-import { DataTable, type Column } from '../../components/data/DataTable';
-import { Pager } from '../../components/data/Pager';
-import { RowCard } from '../../components/data/RowCard';
-import { StatusLabel } from '../../components/feedback/StatusBadge';
-import { ListToolbar } from '../../components/data/ListToolbar';
-import { dataMessages } from '../../components/data/messages';
-import { useT } from '../../i18n/locale';
-import type { JobState } from '../../lib/api/migrations';
-import type { ReportUser } from '../../lib/api/report';
+import { DataTable, type Column } from '../../../components/data/DataTable';
+import { Pager } from '../../../components/data/Pager';
+import { RowCard } from '../../../components/data/RowCard';
+import { StatusLabel } from '../../../components/feedback/StatusBadge';
+import { ListToolbar } from '../../../components/data/ListToolbar';
+import { dataMessages } from '../../../components/data/messages';
+import { useT } from '../../../i18n/locale';
+import type { JobState } from '../../../lib/api/migrations';
+import type { ReportUser } from '../../../lib/api/report';
 import { reportsMessages } from './messages';
 import {
   filterCounts,

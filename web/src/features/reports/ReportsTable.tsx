@@ -13,7 +13,7 @@ import { JobDestination, JobName, JobUsers, JobWhen } from '../migrations/JobCel
 import { JobStateLabel } from '../migrations/JobLabels';
 import { reportPath } from '../migrations/job-place';
 import { listMessages } from '../migrations/list-messages';
-import { reportsMessages } from './messages';
+import { reportsMessages } from '../migrations/report/messages';
 
 type File = 'json' | 'csv' | 'links';
 const fileWords: Readonly<Record<File, LiveKey>> = {

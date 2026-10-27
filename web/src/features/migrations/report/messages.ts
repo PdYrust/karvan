@@ -1,4 +1,4 @@
-import type { Messages } from '../../i18n/locale';
+import type { Messages } from '../../../i18n/locale';
 
 // Words of the Reports pages; counts, stages, reload and files come from the live view's words.
 const en = {

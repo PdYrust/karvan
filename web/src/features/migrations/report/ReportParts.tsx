@@ -1,15 +1,15 @@
 import { cn } from '@cloudflare/kumo/utils';
 import { CheckCircleIcon, XCircleIcon } from '@phosphor-icons/react';
-import type { Fact } from '../../components/layout/FactList';
-import { Section } from '../../components/layout/Section';
-import { PanelLabel } from '../../components/panels/PanelLabel';
-import { CodeText } from '../../components/text/CodeText';
-import { Machine } from '../../components/text/Machine';
-import { useT } from '../../i18n/locale';
-import type { JobState } from '../../lib/api/migrations';
-import type { Report, StageTime } from '../../lib/api/report';
-import { useFormat } from '../../lib/preferences/region';
-import { liveMessages, type LiveKey } from '../live/messages';
+import type { Fact } from '../../../components/layout/FactList';
+import { Section } from '../../../components/layout/Section';
+import { PanelLabel } from '../../../components/panels/PanelLabel';
+import { CodeText } from '../../../components/text/CodeText';
+import { Machine } from '../../../components/text/Machine';
+import { useT } from '../../../i18n/locale';
+import type { JobState } from '../../../lib/api/migrations';
+import type { Report, StageTime } from '../../../lib/api/report';
+import { useFormat } from '../../../lib/preferences/region';
+import { liveMessages, type LiveKey } from '../../live/messages';
 import { reportsMessages, type ReportsKey } from './messages';
 import { knownUndoCodes, undoWindow } from './report-view';
 

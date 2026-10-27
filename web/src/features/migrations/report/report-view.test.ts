@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Counts } from '../../lib/api/migrations';
-import type { Report, ReportUser } from '../../lib/api/report';
+import type { Counts } from '../../../lib/api/migrations';
+import type { Report, ReportUser } from '../../../lib/api/report';
 import { filterCounts, knownUndoCodes, undoWindow, userMatches, userOutcome } from './report-view';
 
 const user = (patch: Partial<ReportUser>): ReportUser => ({

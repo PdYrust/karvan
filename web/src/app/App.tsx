@@ -92,10 +92,10 @@ const ReportsPage = lazy(() =>
   import('../features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })),
 );
 const ReportPage = lazy(() =>
-  import('../features/reports/ReportPage').then((m) => ({ default: m.ReportPage })),
+  import('../features/migrations/report/ReportPage').then((m) => ({ default: m.ReportPage })),
 );
 const ReportPrint = lazy(() =>
-  import('../features/reports/ReportPrint').then((m) => ({ default: m.ReportPrint })),
+  import('../features/migrations/report/ReportPrint').then((m) => ({ default: m.ReportPrint })),
 );
 const BackupsPage = lazy(() =>
   import('../features/backups/BackupsPage').then((m) => ({ default: m.BackupsPage })),
@@ -171,7 +171,7 @@ export function App() {
                       }
                     />
                     <Route
-                      path="reports/:id/print"
+                      path="migrations/:id/report/print"
                       element={
                         <Suspense>
                           <ReportPrint />
@@ -197,9 +197,9 @@ export function App() {
                           <Route path="start" element={<StartStep />} />
                         </Route>
                         <Route path="live" element={<LivePage />} />
+                        <Route path="report" element={<ReportPage />} />
                       </Route>
                       <Route path="reports" element={<ReportsPage />} />
-                      <Route path="reports/:id" element={<ReportPage />} />
                       <Route path="backups" element={<BackupsPage />} />
                       <Route path="links" element={<LinksPage />} />
                       <Route path="links/new" element={<SiteFormPage />} />

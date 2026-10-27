@@ -1,6 +1,6 @@
-import type { JobState } from '../../lib/api/migrations';
-import type { Report, ReportUser } from '../../lib/api/report';
-import { mayRollBack } from '../live/live';
+import type { JobState } from '../../../lib/api/migrations';
+import type { Report, ReportUser } from '../../../lib/api/report';
+import { mayRollBack } from '../../live/live';
 
 /** The filter buttons over a report's users, in their order. */
 export const userFilters = ['all', 'moved', 'left', 'renamed', 'config', 'link'] as const;

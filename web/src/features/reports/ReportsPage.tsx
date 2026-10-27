@@ -10,7 +10,7 @@ import { ListBody, ListSkeleton } from '../migrations/ListBody';
 import { useJobList, useStateFilter } from '../migrations/use-job-list';
 import { useNow } from '../overview/use-now';
 import { useCurrentPanel } from '../panels/current-panel';
-import { reportsMessages } from './messages';
+import { reportsMessages } from '../migrations/report/messages';
 import { ReportsTable } from './ReportsTable';
 
 const filters: readonly StateFilter[] = ['all', 'done', 'failed', 'rolled_back'];

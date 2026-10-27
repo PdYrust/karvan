@@ -1,14 +1,14 @@
 import { cn } from '@cloudflare/kumo/utils';
 import { useId } from 'react';
-import { StatusIcon } from '../../components/feedback/StatusBadge';
-import { useT } from '../../i18n/locale';
-import type { Counts, JobState } from '../../lib/api/migrations';
-import type { Report } from '../../lib/api/report';
-import { useFormat } from '../../lib/preferences/region';
-import { Files } from '../live/Files';
-import { resultHeads, useMeaning } from '../live/meaning';
-import { liveMessages } from '../live/messages';
-import { jobStates } from '../migrations/job-state';
+import { StatusIcon } from '../../../components/feedback/StatusBadge';
+import { useT } from '../../../i18n/locale';
+import type { Counts, JobState } from '../../../lib/api/migrations';
+import type { Report } from '../../../lib/api/report';
+import { useFormat } from '../../../lib/preferences/region';
+import { Files } from '../../live/Files';
+import { resultHeads, useMeaning } from '../../live/meaning';
+import { liveMessages } from '../../live/messages';
+import { jobStates } from '../job-state';
 
 /** The five figures a report always shows, the main one first. */
 const figures = [

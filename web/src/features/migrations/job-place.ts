@@ -35,7 +35,7 @@ export function loginDropped(job: Pick<JobRow, 'state' | 'loginHeld'>): boolean 
 }
 
 export function reportPath(id: string): string {
-  return `/reports/${encodeURIComponent(id)}`;
+  return `/migrations/${encodeURIComponent(id)}/report`;
 }
 
 /**

@@ -3,31 +3,32 @@ import { cn } from '@cloudflare/kumo/utils';
 import { ArrowRightIcon, PlayIcon, PrinterIcon } from '@phosphor-icons/react';
 import { useQuery } from '@tanstack/react-query';
 import { Link, useParams } from 'react-router';
-import { ErrorState } from '../../components/feedback/ErrorState';
-import { EmptyState } from '../../components/feedback/EmptyState';
-import { Bone } from '../../components/feedback/PageSkeleton';
-import { PageHeader } from '../../components/layout/PageHeader';
-import { Section } from '../../components/layout/Section';
-import { usePageTitle } from '../../components/layout/use-page-title';
-import { MoveLabel } from '../../components/panels/PanelLabel';
-import { panelNames } from '../../components/panels/PanelLogo';
-import { Machine } from '../../components/text/Machine';
-import { useT } from '../../i18n/locale';
-import { errorOf } from '../../lib/errors/errors';
-import { getReport, type Report } from '../../lib/api/report';
-import { getJobRow, migrationKeys, type JobState } from '../../lib/api/migrations';
-import { useFormat } from '../../lib/preferences/region';
-import { mayRollBack } from '../live/live';
-import { liveMessages } from '../live/messages';
-import { JobStateBadge } from '../migrations/JobLabels';
-import { migrationsMessages } from '../migrations/messages';
+import { ErrorState } from '../../../components/feedback/ErrorState';
+import { EmptyState } from '../../../components/feedback/EmptyState';
+import { Bone } from '../../../components/feedback/PageSkeleton';
+import { PageHeader } from '../../../components/layout/PageHeader';
+import { Section } from '../../../components/layout/Section';
+import { usePageTitle } from '../../../components/layout/use-page-title';
+import { MoveLabel } from '../../../components/panels/PanelLabel';
+import { panelNames } from '../../../components/panels/PanelLogo';
+import { Machine } from '../../../components/text/Machine';
+import { useT } from '../../../i18n/locale';
+import { errorOf } from '../../../lib/errors/errors';
+import { getReport, type Report } from '../../../lib/api/report';
+import { getJobRow, migrationKeys, type JobState } from '../../../lib/api/migrations';
+import { useFormat } from '../../../lib/preferences/region';
+import { mayRollBack } from '../../live/live';
+import { liveMessages } from '../../live/messages';
+import { JobStateBadge } from '../JobLabels';
+import { listMessages } from '../list-messages';
+import { migrationsMessages } from '../messages';
 import { reportsMessages } from './messages';
 import { ReportAside } from './ReportAside';
 import { Stages, UndoCard } from './ReportParts';
 import { ReportResult } from './ReportResult';
 import { ReportUsers } from './ReportUsers';
-import { Reveal } from '../../components/feedback/Reveal';
-import { useFirstLoad } from '../../lib/motion/use-first-load';
+import { Reveal } from '../../../components/feedback/Reveal';
+import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 const linkButton = cn(buttonVariants({ variant: 'secondary' }), 'gap-2 pointer-coarse:h-9');
 
@@ -109,12 +110,13 @@ function HeaderLine({ report }: { report: Report }) {
 export function ReportPage() {
   const { id = '' } = useParams();
   const t = useT(reportsMessages);
+  const tl = useT(listMessages);
   const report = useQuery({ queryKey: migrationKeys.report(id), queryFn: () => getReport(id) });
   const row = useQuery({ queryKey: migrationKeys.row(id), queryFn: () => getJobRow(id) });
   const load = useFirstLoad(report.data);
   const r = load.data;
   const name = r?.source.admin || r?.source.origin || '';
-  usePageTitle(r ? t('reportTitle', { name }) : t('title'));
+  usePageTitle(r ? t('reportTitle', { name }) : t('printTitle'));
   // The job's own state wins: a backup restore changes it without a new report.
   const state = row.data?.state ?? r?.state ?? 'done';
   const missing = report.isError && errorOf(report.error).code === 'not_found';
@@ -127,7 +129,12 @@ export function ReportPage() {
           {t('openLive')}
         </Link>
       ) : null}
-      <a href={`reports/${enc}/print`} target="_blank" rel="noopener" className={linkButton}>
+      <a
+        href={`migrations/${enc}/report/print`}
+        target="_blank"
+        rel="noopener"
+        className={linkButton}
+      >
         <PrinterIcon size={16} aria-hidden="true" />
         {t('print')}
       </a>
@@ -138,10 +145,10 @@ export function ReportPage() {
       <PageHeader
         eyebrow={
           <Link
-            to="/reports"
+            to="/migrations"
             className="inline-flex items-center hover:text-kumo-default pointer-coarse:min-h-9"
           >
-            {t('title')}
+            {tl('title')}
           </Link>
         }
         title={

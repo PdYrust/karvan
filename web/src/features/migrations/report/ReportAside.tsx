@@ -1,15 +1,15 @@
-import { StatusBadge, type StatusTone } from '../../components/feedback/StatusBadge';
-import { AsideBlock } from '../../components/layout/AsideBlock';
-import { FactList, type Fact } from '../../components/layout/FactList';
-import { PanelLabel } from '../../components/panels/PanelLabel';
-import { CodeText } from '../../components/text/CodeText';
-import { Machine } from '../../components/text/Machine';
-import { useT } from '../../i18n/locale';
-import type { JobState } from '../../lib/api/migrations';
-import type { Report } from '../../lib/api/report';
-import { useFormat } from '../../lib/preferences/region';
-import { useReload } from '../live/meaning';
-import { liveMessages } from '../live/messages';
+import { StatusBadge, type StatusTone } from '../../../components/feedback/StatusBadge';
+import { AsideBlock } from '../../../components/layout/AsideBlock';
+import { FactList, type Fact } from '../../../components/layout/FactList';
+import { PanelLabel } from '../../../components/panels/PanelLabel';
+import { CodeText } from '../../../components/text/CodeText';
+import { Machine } from '../../../components/text/Machine';
+import { useT } from '../../../i18n/locale';
+import type { JobState } from '../../../lib/api/migrations';
+import type { Report } from '../../../lib/api/report';
+import { useFormat } from '../../../lib/preferences/region';
+import { useReload } from '../../live/meaning';
+import { liveMessages } from '../../live/messages';
 import { reportsMessages } from './messages';
 
 /** How the admin landed on the new panel, and whose password it has. */
