@@ -186,6 +186,27 @@ func TestClockSkew(t *testing.T) {
 	}
 }
 
+// The client remembers the address it connected to, so a lazy check can
+// reach the old panel there once its domain points elsewhere.
+func TestRemembersTheDialedAddress(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		_, _ = w.Write([]byte("{}"))
+	}))
+	defer srv.Close()
+	port := srv.URL[strings.LastIndexByte(srv.URL, ':')+1:]
+	r := fakeResolver{"old.test": {netip.MustParseAddr("127.0.0.1")}}
+	c, _ := client(t, "http://old.test:"+port, Options{Resolver: r})
+	if a := c.Addr(); a.IsValid() {
+		t.Fatalf("address before any request: %v", a)
+	}
+	if _, err := c.Get(context.Background(), "/", nil, nil); err != nil {
+		t.Fatal(err)
+	}
+	if a := c.Addr(); a != netip.MustParseAddr("127.0.0.1") {
+		t.Fatalf("address = %v", a)
+	}
+}
+
 func TestParseBase(t *testing.T) {
 	for _, bad := range []string{"ftp://x", "http://", "https://u:p@x", "http://x/?a=1", "x.com"} {
 		if _, err := ParseBase(bad); err == nil {

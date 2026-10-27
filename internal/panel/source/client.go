@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/netip"
 	"net/url"
 	"strings"
 	"sync/atomic"
@@ -36,6 +37,7 @@ type Options struct {
 // Client talks to one old panel.
 type Client struct {
 	base     *url.URL
+	dialer   *guardedDialer
 	http     *http.Client
 	maxBody  int64
 	attempts int
@@ -80,8 +82,9 @@ func New(o Options) (*Client, error) {
 	if err != nil {
 		return nil, err
 	}
+	dialer := newGuardedDialer(o.Resolver)
 	tr := &http.Transport{
-		DialContext:           newGuardedDialer(o.Resolver).DialContext,
+		DialContext:           dialer.DialContext,
 		TLSClientConfig:       tlsConf,
 		TLSHandshakeTimeout:   10 * time.Second,
 		ResponseHeaderTimeout: orDefault(o.Timeout, DefaultTimeout),
@@ -90,7 +93,8 @@ func New(o Options) (*Client, error) {
 		Proxy:                 nil, // never through an environment proxy
 	}
 	c := &Client{
-		base: base,
+		base:   base,
+		dialer: dialer,
 		http: &http.Client{
 			Transport:     tr,
 			Timeout:       orDefault(o.Timeout, DefaultTimeout),
@@ -121,6 +125,15 @@ func orDefault(d, def time.Duration) time.Duration {
 
 // Base is the panel address.
 func (c *Client) Base() *url.URL { u := *c.base; return &u }
+
+// Addr is the checked address of the client's last connection to the
+// panel; not valid before the first one.
+func (c *Client) Addr() netip.Addr {
+	if a := c.dialer.last.Load(); a != nil {
+		return *a
+	}
+	return netip.Addr{}
+}
 
 // Skew is the panel's clock minus Karvan's, from the last Date header.
 func (c *Client) Skew() time.Duration { return time.Duration(c.skew.Load()) }

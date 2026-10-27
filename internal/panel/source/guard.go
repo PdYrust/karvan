@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net"
 	"net/netip"
+	"sync/atomic"
 	"time"
 )
 
@@ -46,6 +47,7 @@ func allowed(a netip.Addr) bool {
 type guardedDialer struct {
 	resolver Resolver
 	dialer   net.Dialer
+	last     atomic.Pointer[netip.Addr] // the address of the last connection
 }
 
 func newGuardedDialer(r Resolver) *guardedDialer {
@@ -73,6 +75,7 @@ func (g *guardedDialer) DialContext(ctx context.Context, network, address string
 	for _, a := range addrs {
 		c, err := g.dialer.DialContext(ctx, network, net.JoinHostPort(a.String(), port))
 		if err == nil {
+			g.last.Store(&a)
 			return c, nil
 		}
 		last = err
