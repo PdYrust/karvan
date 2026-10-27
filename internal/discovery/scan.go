@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io"
 	"os"
 	"path/filepath"
 	"slices"
@@ -87,17 +88,9 @@ var DefaultRoots = []string{"/opt"}
 // Scan inspects every <root>/*/.env, plus extra ENV files, and returns
 // the panels sorted by folder. Panels that share a database are flagged.
 func Scan(ctx context.Context, roots, extra []string) []Panel {
-	var envs []string
-	for _, r := range roots {
-		matches, _ := filepath.Glob(filepath.Join(r, "*", ".env"))
-		envs = append(envs, matches...)
-	}
-	envs = append(envs, extra...)
-	slices.Sort(envs)
-	envs = slices.Compact(envs)
 	var out []Panel
 	seen := map[string]string{}
-	for _, e := range envs {
+	for _, e := range envFiles(roots, extra) {
 		p := Inspect(ctx, e)
 		if p.Kind == "" && hasFinding(p, NotAPanel) {
 			continue
@@ -142,17 +135,31 @@ func Inspect(ctx context.Context, envPath string) Panel {
 	return p
 }
 
+// readEnv reads a panel ENV file of at most maxEnvFileSize. The open does
+// not block, and anything but a regular file is refused unread, so a FIFO
+// named .env cannot hang a scan.
 func readEnv(path string) (map[string]string, error) {
-	info, err := os.Stat(path)
+	f, err := os.OpenFile(path, os.O_RDONLY|syscall.O_NONBLOCK, 0) //nolint:gosec // a panel ENV file, read only
 	if err != nil {
 		return nil, err
+	}
+	defer f.Close()
+	info, err := f.Stat()
+	if err != nil {
+		return nil, err
+	}
+	if !info.Mode().IsRegular() {
+		return nil, fmt.Errorf("%s is not a regular file", path)
 	}
 	if info.Size() > maxEnvFileSize {
 		return nil, fmt.Errorf("%s is larger than %d bytes", path, maxEnvFileSize)
 	}
-	b, err := os.ReadFile(path) //nolint:gosec // a panel ENV file, read only
+	b, err := io.ReadAll(io.LimitReader(f, maxEnvFileSize+1))
 	if err != nil {
 		return nil, err
+	}
+	if len(b) > maxEnvFileSize {
+		return nil, fmt.Errorf("%s is larger than %d bytes", path, maxEnvFileSize)
 	}
 	return ParseDotenv(b), nil
 }
