@@ -3,7 +3,6 @@ package store
 import (
 	"context"
 	"database/sql"
-	"io/fs"
 	"maps"
 	"path/filepath"
 	"testing"
@@ -70,7 +69,7 @@ func TestTemplatesTableIsDropped(t *testing.T) {
 	if _, ok := schemaBefore["table templates"]; !ok {
 		t.Fatal("no templates table at version 8")
 	}
-	if err := migrateFrom(ctx, db, fs.FS(migrationFiles)); err != nil {
+	if err := migrateFrom(ctx, db, upTo(t, 10)); err != nil {
 		t.Fatal(err)
 	}
 	schemaAfter, countsAfter := schemaAndCounts(t, db)
