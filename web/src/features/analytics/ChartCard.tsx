@@ -38,7 +38,12 @@ export function ChartCard({
         <Heading id={id} className="line-clamp-2 min-w-0">
           {title}
         </Heading>
-        {aside ? <span className="shrink-0 text-sm font-normal">{aside}</span> : null}
+        {/* Negative margins: a 28 px control never makes the row taller than its title. */}
+        {aside ? (
+          <span className="k-head-aside -my-2 flex shrink-0 items-center text-sm font-normal">
+            {aside}
+          </span>
+        ) : null}
       </LayerCard.Secondary>
       <LayerCard.Primary className="flex-1 gap-4 p-4">{children}</LayerCard.Primary>
     </LayerCard>

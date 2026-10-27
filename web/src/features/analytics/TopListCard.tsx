@@ -93,12 +93,12 @@ export function TopListCard({
           variant="ghost"
           shape="square"
           size="sm"
-          className="text-kumo-subtle pointer-coarse:size-9"
+          className="size-7 text-kumo-subtle"
           aria-label={t('showAll')}
           title={t('showAll')}
           aria-haspopup="dialog"
           onClick={() => setOpen(true)}
-          icon={<ArrowsOutSimpleIcon size={16} />}
+          icon={<ArrowsOutSimpleIcon size={14} />}
         />
         <DropdownMenu>
           <DropdownMenu.Trigger
@@ -107,10 +107,10 @@ export function TopListCard({
                 variant="ghost"
                 shape="square"
                 size="sm"
-                className="text-kumo-subtle pointer-coarse:size-9"
+                className="size-7 text-kumo-subtle"
                 aria-label={t('listMenu', { list: title })}
                 title={t('listMenu', { list: title })}
-                icon={<DotsThreeIcon size={18} weight="bold" />}
+                icon={<DotsThreeIcon size={16} weight="bold" />}
               />
             }
           />

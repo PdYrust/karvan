@@ -74,6 +74,10 @@
     :where([class~='pointer-coarse:size-9'], .size-9):not(.k-joined *)::after {
       inset-inline: -4px;
     }
+    /* A chart card's title row is 56 high: its 28 px controls reach 44 inside it. */
+    .k-head-aside :is([data-kumo-component='Button'], [data-kumo-part='trigger'])::after {
+      inset-block: -8px;
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {
