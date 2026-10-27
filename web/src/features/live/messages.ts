@@ -105,6 +105,8 @@ const en = {
     "Karvan can't stop and start this panel, so it can't put the backup back.",
   code_ledger_not_updated: "The backup is back, but Karvan couldn't note it. Check the panel.",
   code_report_not_stored: "Karvan couldn't save the report of this rollback.",
+  code_batch_not_stored:
+    "Karvan couldn't save this migration's batch. It tries again when it restarts.",
   code_panel_stopped: 'Panel stopped.',
   code_backup_put_back: 'Database replaced with the backup.',
   code_panel_started: 'Panel started again.',
@@ -274,6 +276,8 @@ const fa: Messages<LiveKey>['fa'] = {
     'کاروان نمیتواند این پنل را متوقف و روشن کند، پس پشتیبان را برنمیگرداند.',
   code_ledger_not_updated: 'پشتیبان برگشت، اما کاروان نتوانست آن را ثبت کند. پنل را بررسی کنید.',
   code_report_not_stored: 'کاروان نتوانست گزارش این برگرداندن را ذخیره کند.',
+  code_batch_not_stored:
+    'کاروان نتوانست دسته این انتقال را ذخیره کند. با شروع دوباره، دوباره تلاش میکند.',
   code_panel_stopped: 'پنل متوقف شد.',
   code_backup_put_back: 'دیتابیس با پشتیبان جایگزین شد.',
   code_panel_started: 'پنل دوباره روشن شد.',

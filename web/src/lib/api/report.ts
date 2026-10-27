@@ -64,6 +64,8 @@ export interface Report {
   error?: string;
   /** Destination rows a rollback could not remove. */
   left?: number[];
+  /** Why a row of left stayed, by destination id: in_batch when a later batch holds it. */
+  leftReasons?: Record<string, 'in_batch'>;
 }
 
 const jobPath = (id: string, rest = '') => `migrations/${encodeURIComponent(id)}${rest}`;

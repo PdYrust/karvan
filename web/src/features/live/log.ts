@@ -38,6 +38,7 @@ const runCodes: Readonly<Record<string, LiveKey>> = {
   restore_unavailable: 'code_restore_unavailable',
   ledger_not_updated: 'code_ledger_not_updated',
   report_not_stored: 'code_report_not_stored',
+  batch_not_stored: 'code_batch_not_stored',
   panel_stopped: 'code_panel_stopped',
   backup_put_back: 'code_backup_put_back',
   panel_started: 'code_panel_started',
