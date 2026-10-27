@@ -36,6 +36,7 @@ Last reviewed: 2026-10-15.
 | Component size | 250 lines or less per `.tsx` (aim for 200) | ESLint `max-lines` | `make check` |
 | Web tests and coverage | all pass; 80% or more lines in `web/src/lib` and `web/src/i18n` | `vitest run --coverage` | `make check` |
 | Bundle (gzip, fonts excluded) | sign-in JS 145 KB or less; sign-in wall (lazy) 15 KB or less; app JS 260 KB or less; largest lazy page 63 KB or less; stylesheet 35 KB or less | `web/scripts/bundle-size.mjs` (follows the Vite manifest) | `make web` |
+| Control size | buttons and selects draw 32 px high with a mouse and 36 px on touch screens (owner decision 2026-10-26, replacing the 44 px drawn size); each keeps a 44 px hit area wherever it does not overlap a neighbour (inside a joined group it grows only up and down); inputs cannot carry a hit area and stay at 36 | the page check's hit-area measure (`audit.js`: box plus absolute `::before`/`::after` insets, flags under 44 px at 360 px touch) in the browser pass | every page's browser pass |
 | Web dependencies | nothing at high or above | `pnpm audit --audit-level high` | `make check-full` |
 
 The coverage floor (80%) is high enough that new logic needs a test, and low enough to leave room for wiring code.
