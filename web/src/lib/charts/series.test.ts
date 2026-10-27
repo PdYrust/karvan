@@ -131,11 +131,15 @@ describe('splitEdges', () => {
           [2, 2],
         ],
         [
-          [3, 3],
           [4, 4],
+          [3, 3],
         ],
       ],
     });
+  });
+  it('draws the last dash from the end, so the line ends on a dash, not a space', () => {
+    const run = [1, 2, 3].map((t) => [t, t] as const);
+    expect(splitEdges([run]).dashed.at(-1)?.[0]).toEqual([3, 3]);
   });
   it('leaves only dashes when a series has two points', () => {
     const { solid, dashed } = splitEdges([

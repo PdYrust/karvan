@@ -135,7 +135,8 @@ export function spreadIndexes(length: number, n: number): number[] {
 }
 /**
  * The first and last segment of a series, drawn dashed: a bucket at either
- * edge of the window is not complete. The rest stays solid.
+ * edge of the window is not complete. The rest stays solid. Each dash
+ * starts at its edge of the window.
  */
 export function splitEdges(parts: readonly Point[][]): { solid: Point[][]; dashed: Point[][] } {
   const solid = parts.map((p) => [...p]);
@@ -148,7 +149,8 @@ export function splitEdges(parts: readonly Point[][]): { solid: Point[][]; dashe
   const at = solid.length - 1;
   const last = solid[at];
   if (last && last.length >= 2) {
-    dashed.push(last.slice(-2));
+    // Drawn from the end, so the dash pattern starts at the window's edge and no space is left there.
+    dashed.push(last.slice(-2).reverse());
     solid[at] = last.slice(0, -1);
   }
   return { solid: solid.filter((p) => p.length >= 2), dashed };
