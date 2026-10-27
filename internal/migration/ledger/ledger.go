@@ -67,21 +67,34 @@ func New(db *sql.DB) *Ledger { return &Ledger{db: db, now: time.Now} }
 
 func micro(t time.Time) int64 { return t.UTC().UnixMicro() }
 
-const columns = "id, kind, job_id, state, chunk, source_origin, source_key, source_created, source_username, " +
-	"cred_fingerprint, dest, dest_id, dest_username, dest_created, created_at"
+// Columns is the column list ScanEntry reads, over the ledger as table
+// l, so a query can join it with other tables.
+const Columns = "l.id, l.kind, l.job_id, l.state, l.chunk, l.source_origin, l.source_key, l.source_created, " +
+	"l.source_username, l.cred_fingerprint, l.dest, l.dest_id, l.dest_username, l.dest_created, l.created_at"
+
+// ScanEntry reads one row of the ledger's columns, then extra columns
+// that follow them in the row.
+func ScanEntry(row interface{ Scan(...any) error }, extra ...any) (Entry, error) {
+	var e Entry
+	var src, dst, written int64
+	dest := []any{&e.ID, &e.Kind, &e.JobID, &e.State, &e.Chunk, &e.SourceOrigin, &e.SourceKey, &src,
+		&e.SourceUsername, &e.CredPrint, &e.Dest, &e.Row.ID, &e.Username, &dst, &written}
+	if err := row.Scan(append(dest, extra...)...); err != nil {
+		return e, fmt.Errorf("read ledger: %w", err)
+	}
+	e.SourceCreated, e.CreatedAt = time.UnixMicro(src).UTC(), time.UnixMicro(dst).UTC()
+	e.Written = time.UnixMicro(written).UTC()
+	return e, nil
+}
 
 func scan(rows *sql.Rows) ([]Entry, error) {
 	defer rows.Close()
 	var out []Entry
 	for rows.Next() {
-		var e Entry
-		var src, dst, written int64
-		if err := rows.Scan(&e.ID, &e.Kind, &e.JobID, &e.State, &e.Chunk, &e.SourceOrigin, &e.SourceKey, &src,
-			&e.SourceUsername, &e.CredPrint, &e.Dest, &e.Row.ID, &e.Username, &dst, &written); err != nil {
-			return nil, fmt.Errorf("read ledger: %w", err)
+		e, err := ScanEntry(rows)
+		if err != nil {
+			return nil, err
 		}
-		e.SourceCreated, e.CreatedAt = time.UnixMicro(src).UTC(), time.UnixMicro(dst).UTC()
-		e.Written = time.UnixMicro(written).UTC()
 		out = append(out, e)
 	}
 	return out, rows.Err()
@@ -90,7 +103,7 @@ func scan(rows *sql.Rows) ([]Entry, error) {
 // Live returns the live rows (pending, done, adopted, unknown) for one
 // source panel and destination: what a new check must know about.
 func (l *Ledger) Live(ctx context.Context, origin, dest string) ([]Entry, error) {
-	rows, err := l.db.QueryContext(ctx, "SELECT "+columns+" FROM ledger WHERE source_origin = ? AND dest = ? "+
+	rows, err := l.db.QueryContext(ctx, "SELECT "+Columns+" FROM ledger l WHERE source_origin = ? AND dest = ? "+
 		"AND state IN ('pending', 'done', 'adopted', 'unknown') ORDER BY id", origin, dest)
 	if err != nil {
 		return nil, fmt.Errorf("read ledger: %w", err)
@@ -114,7 +127,7 @@ var ErrNotFound = errors.New("not in the ledger")
 
 // Get returns one row.
 func (l *Ledger) Get(ctx context.Context, id int64) (Entry, error) {
-	rows, err := l.db.QueryContext(ctx, "SELECT "+columns+" FROM ledger WHERE id = ?", id)
+	rows, err := l.db.QueryContext(ctx, "SELECT "+Columns+" FROM ledger l WHERE id = ?", id)
 	if err != nil {
 		return Entry{}, fmt.Errorf("read ledger: %w", err)
 	}
@@ -124,7 +137,7 @@ func (l *Ledger) Get(ctx context.Context, id int64) (Entry, error) {
 // User returns the user row a moved or adopted source user has on dest:
 // the only rows the subscription bridge serves.
 func (l *Ledger) User(ctx context.Context, origin, key, dest string) (Entry, error) {
-	rows, err := l.db.QueryContext(ctx, "SELECT "+columns+" FROM ledger WHERE kind = 'user' AND source_origin = ? "+
+	rows, err := l.db.QueryContext(ctx, "SELECT "+Columns+" FROM ledger l WHERE kind = 'user' AND source_origin = ? "+
 		"AND source_key = ? AND dest = ? AND state IN ('done', 'adopted') ORDER BY id DESC LIMIT 1", origin, key, dest)
 	if err != nil {
 		return Entry{}, fmt.Errorf("read ledger: %w", err)
@@ -135,7 +148,7 @@ func (l *Ledger) User(ctx context.Context, origin, key, dest string) (Entry, err
 // UserByName is User for a source username. Old PasarGuard links can
 // carry a username instead of an id (tokens from before its v2 format).
 func (l *Ledger) UserByName(ctx context.Context, origin, username, dest string) (Entry, error) {
-	rows, err := l.db.QueryContext(ctx, "SELECT "+columns+" FROM ledger WHERE kind = 'user' AND source_origin = ? "+
+	rows, err := l.db.QueryContext(ctx, "SELECT "+Columns+" FROM ledger l WHERE kind = 'user' AND source_origin = ? "+
 		"AND source_username = ? AND dest = ? AND state IN ('done', 'adopted') ORDER BY id DESC LIMIT 1", origin, username, dest)
 	if err != nil {
 		return Entry{}, fmt.Errorf("read ledger: %w", err)
@@ -146,7 +159,7 @@ func (l *Ledger) UserByName(ctx context.Context, origin, username, dest string) 
 // Served lists the rows the subscription bridge serves for one source
 // panel and destination.
 func (l *Ledger) Served(ctx context.Context, origin, dest string) ([]Entry, error) {
-	rows, err := l.db.QueryContext(ctx, "SELECT "+columns+" FROM ledger WHERE kind = 'user' AND source_origin = ? "+
+	rows, err := l.db.QueryContext(ctx, "SELECT "+Columns+" FROM ledger l WHERE kind = 'user' AND source_origin = ? "+
 		"AND dest = ? AND state IN ('done', 'adopted') ORDER BY id", origin, dest)
 	if err != nil {
 		return nil, fmt.Errorf("read ledger: %w", err)
@@ -180,7 +193,7 @@ func Fingerprint(c panel.Credentials) string {
 
 // Job returns a job's rows in the given states, newest chunk first.
 func (l *Ledger) Job(ctx context.Context, jobID string, states ...string) ([]Entry, error) {
-	q := "SELECT " + columns + " FROM ledger WHERE job_id = ?"
+	q := "SELECT " + Columns + " FROM ledger l WHERE job_id = ?"
 	args := []any{jobID}
 	if len(states) > 0 {
 		q += " AND state IN (" + strings.TrimSuffix(strings.Repeat("?, ", len(states)), ", ") + ")"
