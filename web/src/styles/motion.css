@@ -115,10 +115,14 @@
 
 /* A line and its area, revealed from the start of the time axis to its end
    (components/charts). Time runs left to right in both languages, so this
-   never flips. It ends with no clip at all. */
+   never flips. Both ends are inset() so the clip interpolates (inset to none
+   would jump at the midpoint); with backwards fill no clip is left after it. */
 @keyframes k-sweep {
   from {
     clip-path: inset(0 100% 0 0);
+  }
+  to {
+    clip-path: inset(0 0 0 0);
   }
 }
 .k-sweep {
