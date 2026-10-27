@@ -35,6 +35,26 @@ export function mergeLive(prev: ServerStats | undefined, next: ServerStats): Ser
 /** Per-core lines up to this many cores; past it, only the busiest core. */
 export const maxCoreLines = 4;
 
+/** One live CPU line: every core together, one core, or the busiest core. */
+export interface CpuLine {
+  line: 'all' | 'core' | 'busiest';
+  /** Which core, from 0, for a core's line. */
+  core?: number;
+  values: readonly Value[];
+}
+/**
+ * The live CPU lines, every core together first. Saved minutes keep only
+ * that line, so it is the one that spans the whole window; the cores (or
+ * the busiest core) start with the samples. The overview card, its detail
+ * and the analytics chart all take their CPU lines from here.
+ */
+export function cpuLines(v: ServerView): CpuLine[] {
+  return [
+    { line: 'all', values: v.cpu },
+    ...v.cores.map((values, core) => ({ line: 'core' as const, core, values })),
+    ...(v.busiest.length > 0 ? [{ line: 'busiest' as const, values: v.busiest }] : []),
+  ];
+}
 /** Everything the server charts draw, as series over shared times. */
 export interface ServerView {
   /** Sample times, ms. */

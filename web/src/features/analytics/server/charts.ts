@@ -6,7 +6,7 @@ import { maxValue, sumValues, type Value } from '../../../lib/charts/series';
 import type { AxisKind } from '../../../lib/charts/ticks';
 import type { Format } from '../../../lib/format/format';
 import type { AnalyticsKey } from '../messages';
-import type { ServerView } from '../server-view';
+import { cpuLines, type ServerView } from '../server-view';
 
 /** A series with the number its legend shows. */
 export type LegendSeries = ChartSeries & { value?: string };
@@ -21,6 +21,8 @@ export interface ChartSpec {
   groups?: { by: 'groupCore' | 'groupDirection'; total: LegendSeries[] };
 }
 
+/** A core's line color: the colors after the one every core together takes. */
+export const coreColor = (core: number) => (core + 2) as SeriesColor;
 export function mean(values: readonly Value[]): number | undefined {
   let sum = 0;
   let n = 0;
@@ -64,15 +66,14 @@ export function serverCharts(
   ): LegendSeries => ({ name, color, values, value, dashed });
 
   const cpu = v.live
-    ? [
-        s(t('seriesAllCores'), 1, v.cpu, pct(now.cpu)),
-        ...v.cores.map((values, i) =>
-          s(t('seriesCore', { n: i + 1 }), (i + 2) as SeriesColor, values, pct(now.cores[i] ?? 0)),
-        ),
-        ...(v.busiest.length > 0
-          ? [s(t('seriesBusiest'), 2, v.busiest, pct(Math.max(0, ...now.cores)), true)]
-          : []),
-      ]
+    ? cpuLines(v).map((l) => {
+        if (l.line === 'all') return s(t('seriesAllCores'), 1, l.values, pct(now.cpu));
+        if (l.line === 'busiest') {
+          return s(t('seriesBusiest'), 2, l.values, pct(Math.max(0, ...now.cores)), true);
+        }
+        const i = l.core ?? 0;
+        return s(t('seriesCore', { n: i + 1 }), coreColor(i), l.values, pct(now.cores[i] ?? 0));
+      })
     : [
         s(t('seriesAverage'), 1, v.cpu, avg(v.cpu, pct)),
         s(t('seriesPeak'), 1, v.cpuPeak, pct(maxValue([v.cpuPeak])), true),
