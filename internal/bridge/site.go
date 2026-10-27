@@ -39,7 +39,10 @@ type Site struct {
 	Lazy        bool       `json:"lazy"`
 	PlainHTTPOK bool       `json:"plainHttpOk"`
 	Mode        string     `json:"-"` // ModeManual or ModeBatches; set when the rule is made
-	origin      string
+	// CertificateID is the certificates row the site is served with, or 0:
+	// plain HTTP, or its own certificate columns when not adopted (D54).
+	CertificateID int64 `json:"-"`
+	origin        string
 }
 
 // How a panel rule picks the users it serves (D23).

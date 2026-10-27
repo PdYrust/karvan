@@ -34,14 +34,18 @@ type store struct {
 	now func() time.Time
 }
 
-const siteColumns = "id, name, panel_id, source_kind, source_url, source_ip, source_pin, old_path, domains, " +
-	"listen_port, cert_file, key_file, cert_pem, key_sealed IS NOT NULL, lazy, plain_http_ok, mode"
+// siteColumns read a site with the certificate it is served with: its
+// certificates row once adopted (D54), else its own columns.
+const siteColumns = "s.id, s.name, s.panel_id, s.source_kind, s.source_url, s.source_ip, s.source_pin, s.old_path, s.domains, " +
+	"s.listen_port, COALESCE(c.cert_file, s.cert_file), COALESCE(c.key_file, s.key_file), COALESCE(c.cert_pem, s.cert_pem), " +
+	"COALESCE(c.key_sealed, s.key_sealed) IS NOT NULL, s.lazy, s.plain_http_ok, s.mode, COALESCE(s.certificate_id, 0)" +
+	" FROM legacy_sites s LEFT JOIN certificates c ON c.id = s.certificate_id"
 
 func scanSite(row interface{ Scan(...any) error }) (Site, error) {
 	var s Site
 	var domains string
 	err := row.Scan(&s.ID, &s.Name, &s.PanelID, &s.SourceKind, &s.SourceURL, &s.SourceIP, &s.SourcePin, &s.OldPath,
-		&domains, &s.Port, &s.CertFile, &s.KeyFile, &s.CertPEM, &s.HasKey, &s.Lazy, &s.PlainHTTPOK, &s.Mode)
+		&domains, &s.Port, &s.CertFile, &s.KeyFile, &s.CertPEM, &s.HasKey, &s.Lazy, &s.PlainHTTPOK, &s.Mode, &s.CertificateID)
 	if err != nil {
 		return s, err
 	}
@@ -62,7 +66,7 @@ func (s *Site) setOrigin() error {
 
 // Sites lists every site.
 func (st *store) Sites(ctx context.Context) ([]Site, error) {
-	rows, err := st.db.QueryContext(ctx, "SELECT "+siteColumns+" FROM legacy_sites ORDER BY id")
+	rows, err := st.db.QueryContext(ctx, "SELECT "+siteColumns+" ORDER BY s.id")
 	if err != nil {
 		return nil, fmt.Errorf("read sites: %w", err)
 	}
@@ -80,27 +84,31 @@ func (st *store) Sites(ctx context.Context) ([]Site, error) {
 
 // Site reads one site.
 func (st *store) Site(ctx context.Context, id int64) (Site, error) {
-	s, err := scanSite(st.db.QueryRowContext(ctx, "SELECT "+siteColumns+" FROM legacy_sites WHERE id = ?", id))
+	s, err := scanSite(st.db.QueryRowContext(ctx, "SELECT "+siteColumns+" WHERE s.id = ?", id))
 	if errors.Is(err, sql.ErrNoRows) {
 		return s, ErrNotFound
 	}
 	return s, err
 }
 
-// key reads a site's private key, for an uploaded certificate.
+// siteKey reads the private key of a site's pasted certificate: from its
+// certificates row once adopted, else from the site.
 func (st *store) siteKey(ctx context.Context, id int64) ([]byte, error) {
-	var sealed []byte
-	err := st.db.QueryRowContext(ctx, "SELECT key_sealed FROM legacy_sites WHERE id = ?", id).Scan(&sealed)
-	if errors.Is(err, sql.ErrNoRows) {
+	var own, adopted []byte
+	var certID sql.NullInt64
+	err := st.db.QueryRowContext(ctx, "SELECT s.key_sealed, s.certificate_id, c.key_sealed FROM legacy_sites s "+
+		"LEFT JOIN certificates c ON c.id = s.certificate_id WHERE s.id = ?", id).Scan(&own, &certID, &adopted)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
 		return nil, ErrNotFound
-	}
-	if err != nil {
+	case err != nil:
 		return nil, err
-	}
-	if sealed == nil {
+	case certID.Valid && adopted != nil:
+		return st.key.Open(adopted, secret.AAD("certificates", "key_sealed", certID.Int64))
+	case certID.Valid || own == nil:
 		return nil, nil
 	}
-	return st.key.Open(sealed, secret.AAD("legacy_sites", "key_sealed", id))
+	return st.key.Open(own, secret.AAD("legacy_sites", "key_sealed", id))
 }
 
 // Save creates (ID 0) or updates a site. An empty KeyPEM on update keeps
@@ -112,6 +120,14 @@ func (st *store) Save(ctx context.Context, s Site) (Site, error) {
 	if err := st.checkSave(ctx, s); err != nil {
 		return s, err
 	}
+	kept, err := st.keptCertificate(ctx, &s)
+	if err != nil {
+		return s, err
+	}
+	own := s // the site's own certificate columns are empty while it keeps its row
+	if kept.Valid {
+		own.CertFile, own.KeyFile, own.CertPEM, own.KeyPEM = "", "", "", ""
+	}
 	domains, _ := json.Marshal(s.Domains)
 	now := st.now().Unix()
 	tx, err := st.db.BeginTx(ctx, nil)
@@ -120,7 +136,7 @@ func (st *store) Save(ctx context.Context, s Site) (Site, error) {
 	}
 	defer tx.Rollback() //nolint:errcheck // a no-op after Commit
 	args := []any{s.Name, s.PanelID, string(s.SourceKind), s.SourceURL, s.SourceIP, s.SourcePin, s.OldPath, string(domains),
-		s.Port, s.CertFile, s.KeyFile, s.CertPEM, s.Lazy, s.PlainHTTPOK, now}
+		s.Port, own.CertFile, own.KeyFile, own.CertPEM, s.Lazy, s.PlainHTTPOK, now}
 	if s.ID == 0 {
 		res, err := tx.ExecContext(ctx, "INSERT INTO legacy_sites (name, panel_id, source_kind, source_url, source_ip, source_pin, "+
 			"old_path, domains, listen_port, cert_file, key_file, cert_pem, lazy, plain_http_ok, updated_at, created_at) "+
@@ -131,10 +147,11 @@ func (st *store) Save(ctx context.Context, s Site) (Site, error) {
 		if s.ID, err = res.LastInsertId(); err != nil {
 			return s, err
 		}
-	} else if err := update(ctx, tx, s.ID, args); err != nil {
+	} else if err := update(ctx, tx, s.ID, append(args, kept)); err != nil {
 		return s, err
 	}
-	if err := st.sealKey(ctx, tx, &s); err != nil {
+	own.ID = s.ID
+	if err := st.sealKey(ctx, tx, &own); err != nil {
 		return s, err
 	}
 	if err := tx.Commit(); err != nil {
@@ -196,10 +213,45 @@ func (st *store) checkPastedKey(ctx context.Context, s Site) error {
 	return nil
 }
 
+// keptCertificate is the certificates row a changed site keeps: the one
+// it is served with now, when the save sends that same certificate and
+// key. Otherwise the site takes the sent certificate as its own columns
+// and is adopted again (D54); a pasted certificate sent without its key
+// takes the key it is served with now, as a save always did.
+func (st *store) keptCertificate(ctx context.Context, s *Site) (sql.NullInt64, error) {
+	var certID sql.NullInt64
+	if s.ID == 0 {
+		return certID, nil
+	}
+	var certFile, keyFile, certPEM string
+	err := st.db.QueryRowContext(ctx, "SELECT s.certificate_id, COALESCE(c.cert_file, ''), COALESCE(c.key_file, ''), "+
+		"COALESCE(c.cert_pem, '') FROM legacy_sites s LEFT JOIN certificates c ON c.id = s.certificate_id WHERE s.id = ?",
+		s.ID).Scan(&certID, &certFile, &keyFile, &certPEM)
+	if errors.Is(err, sql.ErrNoRows) || err == nil && !certID.Valid {
+		return sql.NullInt64{}, nil
+	}
+	if err != nil {
+		return certID, fmt.Errorf("read site certificate: %w", err)
+	}
+	var stored []byte
+	if s.CertPEM != "" {
+		if stored, err = st.siteKey(ctx, s.ID); err != nil {
+			return certID, err
+		}
+		if s.KeyPEM == "" {
+			s.KeyPEM = string(stored)
+		}
+	}
+	if certFile == s.CertFile && keyFile == s.KeyFile && certPEM == s.CertPEM && s.KeyPEM == string(stored) {
+		return certID, nil
+	}
+	return sql.NullInt64{}, nil
+}
+
 func update(ctx context.Context, tx *sql.Tx, id int64, args []any) error {
 	res, err := tx.ExecContext(ctx, "UPDATE legacy_sites SET name = ?, panel_id = ?, source_kind = ?, source_url = ?, "+
 		"source_ip = ?, source_pin = ?, old_path = ?, domains = ?, listen_port = ?, cert_file = ?, key_file = ?, cert_pem = ?, "+
-		"lazy = ?, plain_http_ok = ?, updated_at = ? WHERE id = ?", append(args, id)...)
+		"lazy = ?, plain_http_ok = ?, updated_at = ?, certificate_id = ? WHERE id = ?", append(args, id)...)
 	if err != nil {
 		return fmt.Errorf("update site: %w", err)
 	}

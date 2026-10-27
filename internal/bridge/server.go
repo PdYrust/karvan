@@ -20,8 +20,10 @@ type listener struct {
 	tls bool
 }
 
-// Run serves every site and sweeps hourly until ctx ends.
+// Run adopts the sites' own certificates, then serves every site and
+// sweeps hourly until ctx ends.
 func (b *Bridge) Run(ctx context.Context) error {
+	b.adoptCertificates(ctx)
 	if err := b.Reload(ctx); err != nil {
 		return err
 	}

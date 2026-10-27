@@ -19,12 +19,18 @@ type SiteStats struct {
 	Closed   int `json:"closed"`
 }
 
-// SiteView is a site with its certificate facts and numbers. Cert is nil
-// for a plain HTTP site; Stats is nil when the destination cannot be read.
+// WarnNotAdopted flags a site whose certificate is still in its own
+// columns: its adoption failed (D54, D50).
+const WarnNotAdopted = "certificate_not_adopted"
+
+// SiteView is a site with its certificate facts, warnings and numbers.
+// Cert is nil for a plain HTTP site; Stats is nil when the destination
+// cannot be read.
 type SiteView struct {
 	Site
-	Cert  *CertFacts `json:"cert,omitempty"`
-	Stats *SiteStats `json:"stats,omitempty"`
+	Cert     *CertFacts `json:"cert,omitempty"`
+	Warnings []string   `json:"warnings"`
+	Stats    *SiteStats `json:"stats,omitempty"`
 }
 
 // Views lists every site with its certificate facts and numbers.
@@ -42,7 +48,10 @@ func (b *Bridge) Views(ctx context.Context) ([]SiteView, error) {
 
 // View adds a site's certificate facts and numbers.
 func (b *Bridge) View(ctx context.Context, s Site) SiteView {
-	v := SiteView{Site: s, Cert: b.siteCert(ctx, s)}
+	v := SiteView{Site: s, Cert: b.siteCert(ctx, s), Warnings: []string{}}
+	if s.TLS() && s.CertificateID == 0 {
+		v.Warnings = append(v.Warnings, WarnNotAdopted)
+	}
 	st, err := b.stats(ctx, s)
 	if err != nil {
 		b.Log.Warn("bridge: site numbers", "site", s.Name, "err", err)
