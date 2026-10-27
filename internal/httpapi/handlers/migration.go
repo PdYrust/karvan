@@ -129,23 +129,25 @@ func (a *API) CreateMigration(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusCreated, map[string]any{"id": j.ID, "state": j.State()})
 }
 
-// GetMigration reports a job's state and, once checked, its summary.
+// GetMigration reports a job's state, once checked its summary, and the
+// batch it became (null when none).
 func (a *API) GetMigration(w http.ResponseWriter, r *http.Request) {
-	sum, err := a.Runs.Summary(r.PathValue("id"))
+	id := r.PathValue("id")
+	sum, err := a.Runs.Summary(id)
+	out := map[string]any{"id": id}
 	if errors.Is(err, run.ErrNotChecked) || errors.Is(err, run.ErrNoJob) {
-		state, err := a.Runs.JobState(r.Context(), r.PathValue("id"))
-		if err != nil {
-			writeRunError(w, r, err)
-			return
-		}
-		respond.JSON(w, http.StatusOK, map[string]any{"id": r.PathValue("id"), "state": state})
-		return
+		out["state"], err = a.Runs.JobState(r.Context(), id)
+	} else if err == nil {
+		out["state"], out["summary"] = sum.State, sum
+	}
+	if err == nil {
+		out["batch"], err = a.Runs.Batches().ByJob(r.Context(), id)
 	}
 	if err != nil {
 		writeRunError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, map[string]any{"id": r.PathValue("id"), "state": sum.State, "summary": sum})
+	respond.JSON(w, http.StatusOK, out)
 }
 
 // DeleteMigration deletes a draft that never ran, with its events, and

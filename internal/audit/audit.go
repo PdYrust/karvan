@@ -44,6 +44,10 @@ const (
 	ActionSiteDelete       = "legacy_site.delete"
 	ActionSiteTokens       = "legacy_site.tokens"
 	ActionPasswordsTaken   = "migration.passwords_download"
+	ActionBatchRename      = "batch.rename"
+	ActionBatchDelete      = "batch.delete"
+	ActionBatchReactivate  = "batch.reactivate"
+	ActionBatchShowLink    = "batch.show_link"
 
 	ActionSessionsEnd   = "sessions.end"
 	ActionLoginRenew    = "account.credentials"

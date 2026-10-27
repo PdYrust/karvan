@@ -171,4 +171,16 @@ func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(htt
 	} {
 		rt.Handle(pattern, signedIn(h))
 	}
+	const b = "/api/v1/batches/{id}"
+	for pattern, h := range map[string]http.HandlerFunc{
+		"GET /api/v1/batches":                  api.Batches,
+		"GET " + b:                             api.Batch,
+		"PATCH " + b:                           api.RenameBatch,
+		"DELETE " + b:                          api.DeleteBatch,
+		"POST " + b + "/reactivate":            api.ReactivateBatch,
+		"GET " + b + "/users":                  api.BatchUsers,
+		"POST " + b + "/users/{ledgerId}/link": api.BatchUserLink,
+	} {
+		rt.Handle(pattern, signedIn(h))
+	}
 }
