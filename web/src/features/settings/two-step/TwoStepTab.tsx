@@ -69,13 +69,13 @@ export function TwoStepTab() {
           description={t(on ? 'hintOn' : 'hintOff')}
           control={
             on ? (
-              <Button className="pointer-coarse:h-11" onClick={() => setTurningOff(true)}>
+              <Button className="pointer-coarse:h-9" onClick={() => setTurningOff(true)}>
                 {t('turnOff')}
               </Button>
             ) : setup ? null : (
               <Button
                 variant="primary"
-                className="pointer-coarse:h-11"
+                className="pointer-coarse:h-9"
                 loading={begin.isPending}
                 onClick={() => {
                   void loadQr();

@@ -16,7 +16,7 @@ export function ThemeToggle({ className }: { className?: string }) {
       title={label}
       onClick={() => setPref(mode === 'dark' ? 'light' : 'dark')}
       className={cn(
-        'grid size-8 place-items-center rounded-md transition-colors pointer-coarse:size-11',
+        'grid size-8 place-items-center rounded-md transition-colors pointer-coarse:size-9',
         className ?? 'text-kumo-default hover:bg-kumo-tint',
       )}
     >

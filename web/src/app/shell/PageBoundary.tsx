@@ -9,7 +9,7 @@ function PageFailed() {
   return (
     <div className="flex flex-col items-start gap-3 p-4 sm:p-8">
       <InlineAlert>{t('pageFailed')}</InlineAlert>
-      <Button className="h-9 pointer-coarse:h-11" onClick={() => window.location.reload()}>
+      <Button className="h-9 pointer-coarse:h-9" onClick={() => window.location.reload()}>
         {t('reload')}
       </Button>
     </div>

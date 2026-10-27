@@ -34,7 +34,7 @@ export function JobMenu({ job, onDelete }: { job: DraftJob; onDelete: (job: Draf
             aria-label={label}
             title={label}
             icon={<DotsThreeIcon size={20} weight="bold" />}
-            className="pointer-coarse:size-11"
+            className="pointer-coarse:size-9"
           />
         }
       />
@@ -113,7 +113,7 @@ export function useDeleteDraft() {
         ) : null}
         <div className="flex flex-wrap justify-end gap-2">
           <Button
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
             disabled={remove.isPending}
             onClick={() => setOpen(false)}
           >
@@ -121,7 +121,7 @@ export function useDeleteDraft() {
           </Button>
           <Button
             variant="destructive"
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
             loading={remove.isPending}
             onClick={() => job && remove.mutate(job)}
           >

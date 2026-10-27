@@ -10,7 +10,7 @@ import { useT } from '../../../i18n/locale';
 import type { ConnectValues, SignIn } from './form';
 import { connectMessages } from './messages';
 
-const inputClass = 'h-10 pointer-coarse:h-11';
+const inputClass = 'h-10 pointer-coarse:h-9';
 
 /** The old panel: address, kind and sign-in. */
 export function SourceFields({

@@ -94,7 +94,7 @@ export function SiteFormPage() {
         eyebrow={
           <Link
             to="/links"
-            className="inline-flex items-center hover:text-kumo-default pointer-coarse:min-h-11"
+            className="inline-flex items-center hover:text-kumo-default pointer-coarse:min-h-9"
           >
             {tl('title')}
           </Link>

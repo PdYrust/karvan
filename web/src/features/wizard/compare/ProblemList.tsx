@@ -58,7 +58,7 @@ function ProblemCard({ group, kind }: { group: ProblemGroup; kind: PanelKind }) 
           variant="ghost"
           aria-expanded={open}
           aria-controls={usersId}
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
           icon={<CaretDownIcon size={14} className={open ? 'rotate-180' : undefined} />}
           onClick={() => setOpen((o) => !o)}
         >

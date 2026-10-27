@@ -106,7 +106,7 @@ export function PreviewList({ jobId, impact }: { jobId: string; impact: Impact |
               key={f || 'all'}
               aria-pressed={filter === f}
               variant={filter === f ? 'secondary' : 'ghost'}
-              className="pointer-coarse:h-11"
+              className="pointer-coarse:h-9"
               onClick={() => {
                 setFilter(f);
                 setOffset(0);

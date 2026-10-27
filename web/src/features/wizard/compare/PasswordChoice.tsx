@@ -89,12 +89,12 @@ export function PasswordChoice({
                 hideLabel={t('hide')}
                 value={password.value}
                 onChange={(e) => setPassword({ choice: 'new', value: e.target.value })}
-                className="font-mono pointer-coarse:h-11"
+                className="font-mono pointer-coarse:h-9"
               />
             </div>
             <div className="flex gap-2">
               <Button
-                className="flex-1 justify-center pointer-coarse:h-11"
+                className="flex-1 justify-center pointer-coarse:h-9"
                 onClick={() => {
                   setPassword({ choice: 'new', value: generatePassword(username) });
                   setMade((n) => n + 1);
@@ -106,7 +106,7 @@ export function PasswordChoice({
                 text={password.value}
                 select={() => field.current?.select()}
                 disabled={!password.value}
-                className="flex-1 justify-center pointer-coarse:h-11"
+                className="flex-1 justify-center pointer-coarse:h-9"
               />
             </div>
           </div>

@@ -79,7 +79,7 @@ export function LinksCard() {
       <Reveal on={load.reveal}>{body}</Reveal>
       <Link
         to="/links"
-        className="mt-auto inline-flex items-center gap-1 self-start text-sm text-kumo-link hover:underline pointer-coarse:min-h-11"
+        className="mt-auto inline-flex items-center gap-1 self-start text-sm text-kumo-link hover:underline pointer-coarse:min-h-9"
       >
         {t('linksOpen')}
         <CaretRightIcon size={12} aria-hidden="true" className="rtl:-scale-x-100" />

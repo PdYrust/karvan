@@ -28,7 +28,7 @@ function useOverflow(el: HTMLElement | null) {
 }
 
 const arrow =
-  'grid size-8 shrink-0 place-items-center rounded-md text-kumo-subtle hover:bg-kumo-base hover:text-kumo-default pointer-coarse:size-11';
+  'grid size-8 shrink-0 place-items-center rounded-md text-kumo-subtle hover:bg-kumo-base hover:text-kumo-default pointer-coarse:size-9';
 
 /**
  * Tabs as a segmented control, like the dashboard's analytics: a tinted
@@ -79,7 +79,7 @@ export function SegmentTabs({
             end={x.end}
             className={({ isActive }) =>
               cn(
-                'flex h-8 shrink-0 items-center gap-2 rounded-md px-3 text-sm whitespace-nowrap pointer-coarse:h-11',
+                'flex h-8 shrink-0 items-center gap-2 rounded-md px-3 text-sm whitespace-nowrap pointer-coarse:h-9',
                 isActive
                   ? 'bg-kumo-base font-medium text-kumo-strong ring ring-kumo-hairline'
                   : 'text-kumo-subtle hover:text-kumo-default',

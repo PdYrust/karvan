@@ -83,7 +83,7 @@ export function AccountMenu({ onShortcuts }: { onShortcuts: () => void }) {
             shape="square"
             aria-label={t('account')}
             title={t('account')}
-            className="pointer-coarse:size-11"
+            className="pointer-coarse:size-9"
             icon={<UserCircleIcon size={22} />}
           />
         }

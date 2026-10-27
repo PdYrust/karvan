@@ -26,7 +26,7 @@ export function RollBackButton({ jobId, backup }: { jobId: string; backup: boole
       <Button
         variant="primary"
         icon={<ArrowCounterClockwiseIcon size={16} />}
-        className="pointer-coarse:h-11"
+        className="pointer-coarse:h-9"
         loading={roll.isPending || roll.isSuccess}
         onClick={() => setOpen(true)}
       >
@@ -42,12 +42,12 @@ export function RollBackButton({ jobId, backup }: { jobId: string; backup: boole
             {t(backup ? 'rollBackBackup' : 'rollBackUndo')}
           </Dialog.Description>
           <div className="flex flex-wrap justify-end gap-2">
-            <Button className="pointer-coarse:h-11" onClick={() => setOpen(false)}>
+            <Button className="pointer-coarse:h-9" onClick={() => setOpen(false)}>
               {t('cancel')}
             </Button>
             <Button
               variant="destructive"
-              className="pointer-coarse:h-11"
+              className="pointer-coarse:h-9"
               loading={roll.isPending}
               onClick={() => roll.mutate()}
             >

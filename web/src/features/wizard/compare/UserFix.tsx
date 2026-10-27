@@ -46,7 +46,7 @@ export function UserFix({ group, row }: { group: ProblemGroup; row: UserRow }) {
     <div className="flex flex-wrap items-center gap-2">
       <Select
         aria-label={label}
-        className="w-full sm:w-64 pointer-coarse:h-11"
+        className="w-full sm:w-64 pointer-coarse:h-9"
         value={value}
         items={items}
         onValueChange={(v) => v && choose(v)}
@@ -60,12 +60,12 @@ export function UserFix({ group, row }: { group: ProblemGroup; row: UserRow }) {
             spellCheck={false}
             value={name}
             onChange={(e) => setName(e.target.value)}
-            className="w-40 pointer-coarse:h-11"
+            className="w-40 pointer-coarse:h-9"
           />
           <Button
             type="submit"
             disabled={!name.trim() || name.trim() === saved}
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
           >
             {t('save')}
           </Button>

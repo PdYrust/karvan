@@ -93,7 +93,7 @@ export function JalaliDateField({
           <Select
             aria-labelledby={`${id}-day`}
             placeholder={t('day')}
-            className="w-20 pointer-coarse:h-11"
+            className="w-20 pointer-coarse:h-9"
             value={parts.day ? String(parts.day) : null}
             items={Object.fromEntries(range(31).map((d) => [String(d), fmt.number(d)]))}
             onValueChange={(d) => update({ day: Number(d) })}
@@ -106,7 +106,7 @@ export function JalaliDateField({
           <Select
             aria-labelledby={`${id}-month`}
             placeholder={t('month')}
-            className="w-36 pointer-coarse:h-11"
+            className="w-36 pointer-coarse:h-9"
             value={parts.month ? String(parts.month) : null}
             items={Object.fromEntries(range(12).map((m) => [String(m), monthName(m)]))}
             onValueChange={(m) => update({ month: Number(m) })}
@@ -129,7 +129,7 @@ export function JalaliDateField({
             maxLength={4}
             value={parts.year}
             onChange={(e) => update({ year: e.target.value })}
-            className="w-20 tabular pointer-coarse:h-11"
+            className="w-20 tabular pointer-coarse:h-9"
           />
         </div>
       </div>

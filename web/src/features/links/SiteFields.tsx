@@ -35,7 +35,7 @@ export function OldPanelFields({ values, set, errorOf }: FieldsProps) {
         <Select
           id="site-kind"
           aria-labelledby="site-kind-label"
-          className="h-10 w-full sm:w-64 pointer-coarse:h-11"
+          className="h-10 w-full sm:w-64 pointer-coarse:h-9"
           value={values.sourceKind}
           onValueChange={(v) => v && set({ sourceKind: v as PanelKind })}
           items={panelNames}

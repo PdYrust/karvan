@@ -21,7 +21,7 @@ export function PageMenu() {
           <Button
             variant="ghost"
             shape="square"
-            className="shrink-0 pointer-coarse:size-11"
+            className="shrink-0 pointer-coarse:size-9"
             aria-label={t('pageMenu')}
             title={t('pageMenu')}
             icon={<DotsThreeIcon size={18} weight="bold" />}

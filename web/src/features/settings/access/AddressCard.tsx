@@ -108,7 +108,7 @@ export function AddressCard() {
           title={t('pathTitle')}
           description={t('pathHint')}
           control={
-            <Button className="pointer-coarse:h-11" onClick={() => open('path')}>
+            <Button className="pointer-coarse:h-9" onClick={() => open('path')}>
               {t('newPath')}
             </Button>
           }
@@ -117,7 +117,7 @@ export function AddressCard() {
           title={t('portTitle')}
           description={<CodeText text={t('portHint', { port: `\`${current}\`` })} />}
           control={
-            <Button className="pointer-coarse:h-11" onClick={() => open('port')}>
+            <Button className="pointer-coarse:h-9" onClick={() => open('port')}>
               {t('changePort')}
             </Button>
           }

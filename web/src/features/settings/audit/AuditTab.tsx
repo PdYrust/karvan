@@ -137,7 +137,7 @@ export function AuditTab() {
           </p>
           {log.hasNextPage ? (
             <Button
-              className="pointer-coarse:h-11"
+              className="pointer-coarse:h-9"
               loading={log.isFetchingNextPage}
               onClick={() => void log.fetchNextPage()}
             >

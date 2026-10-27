@@ -37,7 +37,7 @@ export function TargetsCard({
           <Button
             variant="ghost"
             size="sm"
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
             onClick={() => plan.edit(setTargets(null))}
           >
             {t('targetsDefault')}

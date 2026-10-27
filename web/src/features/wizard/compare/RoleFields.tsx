@@ -105,7 +105,7 @@ export function RoleFields({
           <Select
             id="admin-role"
             aria-labelledby="admin-role-label"
-            className="w-full sm:w-72 pointer-coarse:h-11"
+            className="w-full sm:w-72 pointer-coarse:h-9"
             value={String(current)}
             items={items}
             onValueChange={(v) => v && plan.edit(setAdmin({ roleId: Number(v) }))}

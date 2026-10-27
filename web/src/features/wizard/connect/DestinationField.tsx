@@ -71,7 +71,7 @@ export function DestinationField({
     return (
       <div className="flex flex-col items-start gap-3">
         <InlineAlert tone="warning">{t('noReadyPanels')}</InlineAlert>
-        <Button className="pointer-coarse:h-11" onClick={() => void navigate('/panels')}>
+        <Button className="pointer-coarse:h-9" onClick={() => void navigate('/panels')}>
           {t('openPanels')}
         </Button>
       </div>

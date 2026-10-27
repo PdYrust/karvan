@@ -26,7 +26,7 @@ function UnknownPanel() {
       action={
         <Button
           variant="secondary"
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
           onClick={() => void navigate(`/analytics/server${search}`)}
         >
           {t('backToServer')}

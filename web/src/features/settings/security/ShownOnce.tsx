@@ -39,7 +39,7 @@ export function ShownOnce({
         ))}
       </div>
       <div className="flex justify-end">
-        <Button variant="primary" className="pointer-coarse:h-11" onClick={onDone}>
+        <Button variant="primary" className="pointer-coarse:h-9" onClick={onDone}>
           {t('savedThem')}
         </Button>
       </div>

@@ -11,7 +11,7 @@ import { useNow } from '../overview/use-now';
 import { settingsMessages } from './messages';
 import { zoneItems } from './zones';
 
-const control = 'w-full sm:w-64 pointer-coarse:h-11';
+const control = 'w-full sm:w-64 pointer-coarse:h-9';
 
 export function GeneralTab() {
   const t = useT(settingsMessages);

@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import { FormField } from '../../components/form/FormField';
 import { CodeText } from '../../components/text/CodeText';
 
-const inputClass = 'h-10 pointer-coarse:h-11';
+const inputClass = 'h-10 pointer-coarse:h-9';
 
 /**
  * A labelled text field of the site form. Machine values (addresses, paths,

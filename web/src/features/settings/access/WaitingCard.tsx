@@ -54,7 +54,7 @@ export function WaitingCard({
           <div className="flex justify-end">
             <Button
               variant="primary"
-              className="pointer-coarse:h-11"
+              className="pointer-coarse:h-9"
               loading={confirming}
               onClick={onConfirm}
             >
@@ -76,7 +76,7 @@ export function WaitingCard({
                   href={link.url}
                   external
                   variant="primary"
-                  className="gap-2 pointer-coarse:h-11"
+                  className="gap-2 pointer-coarse:h-9"
                 >
                   {t('openNew')}
                   <ArrowSquareOutIcon size={16} className="rtl:-scale-x-100" />

@@ -29,7 +29,7 @@ function SiteMenu({ site, onDelete }: { site: LinkSite; onDelete: () => void }) 
             aria-label={label}
             title={label}
             icon={<DotsThreeIcon size={20} weight="bold" />}
-            className="shrink-0 pointer-coarse:size-11"
+            className="shrink-0 pointer-coarse:size-9"
           />
         }
       />

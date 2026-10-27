@@ -56,7 +56,7 @@ export function PortFields({
             value={typed}
             disabled={disabled}
             onChange={(e) => onChange({ kind: 'typed', text: portDigits(e.target.value) })}
-            className="h-10 w-32 font-mono pointer-coarse:h-11"
+            className="h-10 w-32 font-mono pointer-coarse:h-9"
           />
         </FormField>
       ) : null}

@@ -94,7 +94,7 @@ export function ReauthDialog({
                   variant="ghost"
                   shape="square"
                   size="sm"
-                  className="pointer-coarse:size-11"
+                  className="pointer-coarse:size-9"
                   aria-label={td('close')}
                   disabled={pending}
                   icon={<XIcon size={18} />}
@@ -116,7 +116,7 @@ export function ReauthDialog({
                 value={password}
                 disabled={pending}
                 onChange={(e) => setPassword(e.target.value)}
-                className="h-10 pointer-coarse:h-11"
+                className="h-10 pointer-coarse:h-9"
               />
             </FormField>
             {askCode ? (
@@ -135,7 +135,7 @@ export function ReauthDialog({
                 <Button
                   {...props}
                   variant="secondary"
-                  className="pointer-coarse:h-11"
+                  className="pointer-coarse:h-9"
                   disabled={pending}
                 >
                   {td('cancel')}
@@ -145,7 +145,7 @@ export function ReauthDialog({
             <Button
               type="submit"
               variant={danger ? 'destructive' : 'primary'}
-              className="pointer-coarse:h-11"
+              className="pointer-coarse:h-9"
               disabled={!filled || pending}
               loading={pending}
             >

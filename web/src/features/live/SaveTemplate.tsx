@@ -44,7 +44,7 @@ export function SaveTemplate({ jobId }: { jobId: string }) {
     <>
       <Button
         icon={<BookmarkSimpleIcon size={16} />}
-        className="pointer-coarse:h-11"
+        className="pointer-coarse:h-9"
         onClick={openDialog}
       >
         {t('saveTemplate')}
@@ -72,7 +72,7 @@ export function SaveTemplate({ jobId }: { jobId: string }) {
                 dir="auto"
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                className="w-full pointer-coarse:h-11"
+                className="w-full pointer-coarse:h-9"
               />
               <p aria-live="polite" className="text-sm text-kumo-subtle">
                 {tooLong
@@ -84,13 +84,13 @@ export function SaveTemplate({ jobId }: { jobId: string }) {
             </div>
             {failure ? <InlineAlert>{failure}</InlineAlert> : null}
             <div className="flex flex-wrap justify-end gap-2">
-              <Button className="pointer-coarse:h-11" onClick={() => setOpen(false)}>
+              <Button className="pointer-coarse:h-9" onClick={() => setOpen(false)}>
                 {t('close')}
               </Button>
               <Button
                 type="submit"
                 variant="primary"
-                className="pointer-coarse:h-11"
+                className="pointer-coarse:h-9"
                 disabled={!templateNameFits(name)}
                 loading={save.isPending}
               >

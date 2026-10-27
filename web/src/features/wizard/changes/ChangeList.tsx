@@ -67,7 +67,7 @@ export function ChangeList({
                         size="sm"
                         icon={<TrashIcon size={16} />}
                         aria-label={t('removeChange', { change: words.replaceAll('`', '') })}
-                        className="ms-auto pointer-coarse:h-11"
+                        className="ms-auto pointer-coarse:h-9"
                         onClick={() => plan.edit(removeChange(n.id, i))}
                       >
                         {t('remove')}

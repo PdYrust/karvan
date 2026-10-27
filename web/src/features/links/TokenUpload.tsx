@@ -100,7 +100,7 @@ export function TokenUpload({ siteId }: { siteId: number }) {
         icon={<UploadSimpleIcon size={16} />}
         loading={send.isPending}
         disabled={running}
-        className="pointer-coarse:h-11"
+        className="pointer-coarse:h-9"
         onClick={() => input.current?.click()}
       >
         {p && p.state !== 'none' ? t('uploadAgain') : t('upload')}

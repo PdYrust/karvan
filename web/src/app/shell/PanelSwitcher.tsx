@@ -44,7 +44,7 @@ export function PanelSwitcher({ collapsed = false }: { collapsed?: boolean }) {
             type="button"
             aria-label={`${t('panelSwitcherLabel')}: ${label}`}
             className={cn(
-              'flex min-h-10 items-center gap-2 rounded-md text-start hover:bg-kumo-tint pointer-coarse:min-h-11',
+              'flex min-h-10 items-center gap-2 rounded-md text-start hover:bg-kumo-tint pointer-coarse:min-h-9',
               collapsed ? 'size-10 justify-center' : 'min-w-0 flex-1 px-2',
             )}
           >

@@ -61,7 +61,7 @@ export function PanelsPage() {
             title={t('scanAndRefresh')}
             loading={scanning}
             onClick={scan}
-            className="pointer-coarse:size-11"
+            className="pointer-coarse:size-9"
           />
         </div>
         {shown.length > 0 ? (

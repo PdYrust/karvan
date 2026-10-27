@@ -134,7 +134,7 @@ export function ReportUsers({ users, state }: { users: readonly ReportUser[]; st
               key={f}
               aria-pressed={filter === f}
               variant={filter === f ? 'secondary' : 'ghost'}
-              className="pointer-coarse:h-11"
+              className="pointer-coarse:h-9"
               onClick={() => {
                 setFilter(f);
                 setOffset(0);

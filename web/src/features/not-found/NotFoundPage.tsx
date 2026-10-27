@@ -15,7 +15,7 @@ export function NotFoundPage() {
       <CompassIcon size={44} weight="light" aria-hidden="true" className="text-kumo-default" />
       <h1 className="text-title font-semibold text-kumo-strong">{t('notFoundTitle')}</h1>
       <p className="max-w-prose text-kumo-subtle">{t('notFoundBody')}</p>
-      <Button className="mt-2 h-9 pointer-coarse:h-11" onClick={() => void navigate('/')}>
+      <Button className="mt-2 h-9 pointer-coarse:h-9" onClick={() => void navigate('/')}>
         {t('notFoundAction')}
       </Button>
     </div>

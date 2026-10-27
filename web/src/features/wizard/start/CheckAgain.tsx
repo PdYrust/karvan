@@ -90,7 +90,7 @@ export function CheckAgain({ check }: { check: Check }) {
           icon={<ArrowsClockwiseIcon size={16} />}
           loading={check.compare.isPending}
           disabled={!check.ready}
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
           onClick={check.run}
         >
           {t('checkButton')}

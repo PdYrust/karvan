@@ -41,14 +41,14 @@ function NameProblem({ c01, c30 }: { c01: Conflict | undefined; c30: Conflict | 
       <div className="flex flex-wrap gap-2">
         {suggestion ? (
           <Button
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
             onClick={() => plan.edit(setAdmin({ username: suggestion, mode: 'create' }))}
           >
             <CodeText text={t('useName', { name: suggestion })} />
           </Button>
         ) : null}
         <Button
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
           onClick={() => plan.edit(setAdmin({ username: name, mode: 'merge' }))}
         >
           <CodeText text={t('mergeInto', { name })} />
@@ -91,9 +91,9 @@ function NameFields({ admin, mode, name }: { admin: AdminPlan; mode: Mode; name:
               spellCheck={false}
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
-              className="w-full sm:w-72 pointer-coarse:h-11"
+              className="w-full sm:w-72 pointer-coarse:h-9"
             />
-            <Button type="submit" disabled={draft.trim() === name} className="pointer-coarse:h-11">
+            <Button type="submit" disabled={draft.trim() === name} className="pointer-coarse:h-9">
               {t('save')}
             </Button>
           </div>

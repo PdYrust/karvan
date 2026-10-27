@@ -53,7 +53,7 @@ function FullList({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           autoComplete="off"
-          className="w-full ps-9 sm:rounded-e-none pointer-coarse:h-11"
+          className="w-full ps-9 sm:rounded-e-none pointer-coarse:h-9"
         />
       </div>
       <div className="grid grid-cols-2 gap-2 sm:flex sm:gap-0">
@@ -62,7 +62,7 @@ function FullList({
         </span>
         <Select
           aria-labelledby={`${id}-s`}
-          className="w-full sm:-ms-px sm:w-36 sm:rounded-none pointer-coarse:h-11"
+          className="w-full sm:-ms-px sm:w-36 sm:rounded-none pointer-coarse:h-9"
           value={sort}
           items={sorts}
           onValueChange={(v) => onSort(v === 'name' ? 'name' : 'share')}
@@ -72,7 +72,7 @@ function FullList({
         </span>
         <Select
           aria-labelledby={`${id}-c`}
-          className="w-full sm:-ms-px sm:w-32 sm:rounded-s-none pointer-coarse:h-11"
+          className="w-full sm:-ms-px sm:w-32 sm:rounded-s-none pointer-coarse:h-9"
           value={String(count)}
           items={sizes}
           onValueChange={(v) => setCount(Number(v) || 25)}
@@ -115,7 +115,7 @@ export function TopListCard({
           variant="ghost"
           shape="square"
           size="sm"
-          className="text-kumo-subtle pointer-coarse:size-11"
+          className="text-kumo-subtle pointer-coarse:size-9"
           aria-label={t('showAll')}
           title={t('showAll')}
           aria-haspopup="dialog"
@@ -129,7 +129,7 @@ export function TopListCard({
                 variant="ghost"
                 shape="square"
                 size="sm"
-                className="text-kumo-subtle pointer-coarse:size-11"
+                className="text-kumo-subtle pointer-coarse:size-9"
                 aria-label={t('listMenu', { list: title })}
                 title={t('listMenu', { list: title })}
                 icon={<DotsThreeIcon size={18} weight="bold" />}

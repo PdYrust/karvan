@@ -44,7 +44,7 @@ export function SafeModeCard({
         </h2>
         <Link
           to="/settings/safe-mode"
-          className={cn(buttonVariants({ variant: 'secondary' }), 'pointer-coarse:h-11')}
+          className={cn(buttonVariants({ variant: 'secondary' }), 'pointer-coarse:h-9')}
         >
           {t('safeChange')}
         </Link>

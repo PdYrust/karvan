@@ -19,7 +19,7 @@ export function SafeModePill() {
       aria-label={label}
       title={label}
       className={cn(
-        'inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-sm ring hover:bg-kumo-tint pointer-coarse:h-11 pointer-coarse:min-w-11 pointer-coarse:justify-center',
+        'inline-flex h-8 items-center gap-1.5 rounded-full px-2.5 text-sm ring hover:bg-kumo-tint pointer-coarse:h-9 pointer-coarse:min-w-9 pointer-coarse:justify-center',
         on
           ? 'text-kumo-default ring-kumo-line'
           : 'bg-kumo-warning-tint text-kumo-default ring-kumo-warning/40',

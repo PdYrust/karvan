@@ -8,14 +8,14 @@ import { usePanels } from '../../features/panels/use-panels';
 import { useLocale, useT } from '../../i18n/locale';
 import { shellMessages } from './messages';
 import { nav, type NavItem } from './nav';
-// As dense as the dashboard's rows: 30 high, 32 apart. On touch screens a row draws 40 high,
-// 44 apart, and its hit area reaches 2 px past each edge, so every row takes a 44 px tap.
+// As dense as the dashboard's rows: 30 high, 32 apart. On touch screens a row draws 36 high,
+// 40 apart, and its hit area reaches 2 px past each edge, up to the next row's.
 // Hover colors change at once (Kumo's rule), so no transition here.
 const row =
-  "relative flex min-h-7.5 w-full items-center gap-3 rounded-md px-3 text-start text-base text-kumo-default hover:bg-kumo-tint aria-[current=page]:bg-kumo-tint aria-[current=page]:font-medium aria-[current=page]:text-kumo-strong pointer-coarse:min-h-10 pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:-inset-y-0.5 pointer-coarse:before:content-['']";
+  "relative flex min-h-7.5 w-full items-center gap-3 rounded-md px-3 text-start text-base text-kumo-default hover:bg-kumo-tint aria-[current=page]:bg-kumo-tint aria-[current=page]:font-medium aria-[current=page]:text-kumo-strong pointer-coarse:min-h-9 pointer-coarse:before:absolute pointer-coarse:before:inset-x-0 pointer-coarse:before:-inset-y-0.5 pointer-coarse:before:content-['']";
 const rows = 'flex flex-col gap-0.5 pointer-coarse:gap-1';
 const iconRow =
-  'grid size-10 place-items-center rounded-md text-kumo-default hover:bg-kumo-tint aria-[current=page]:bg-kumo-tint pointer-coarse:size-11';
+  'grid size-10 place-items-center rounded-md text-kumo-default hover:bg-kumo-tint aria-[current=page]:bg-kumo-tint pointer-coarse:size-9';
 /** Analytics' sub-pages, as its tabs: this server, then each panel. */
 function SubRows({ onNavigate }: { onNavigate?: () => void }) {
   const t = useT(shellMessages);

@@ -36,7 +36,7 @@ export function CodeField({
             key={i}
             aria-hidden="true"
             className={cn(
-              'grid h-10 w-9 place-items-center rounded-lg bg-kumo-control font-mono text-lg text-kumo-strong ring ring-kumo-line pointer-coarse:h-11 pointer-coarse:w-10',
+              'grid h-10 w-9 place-items-center rounded-lg bg-kumo-control font-mono text-lg text-kumo-strong ring ring-kumo-line',
               i === at && 'group-focus-within:ring-[1.5px] group-focus-within:ring-kumo-focus',
             )}
           >

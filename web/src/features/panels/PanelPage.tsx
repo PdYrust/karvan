@@ -43,19 +43,19 @@ function Actions({ panel }: { panel: Panel }) {
         icon={<ArrowsClockwiseIcon size={16} />}
         loading={checking}
         onClick={refresh}
-        className="pointer-coarse:h-11"
+        className="pointer-coarse:h-9"
       >
         {t('check')}
       </Button>
       {current?.id === panel.id ? null : (
-        <Button onClick={() => select(panel.id)} className="pointer-coarse:h-11">
+        <Button onClick={() => select(panel.id)} className="pointer-coarse:h-9">
           {t('workOn')}
         </Button>
       )}
       <Button
         icon={<ChartLineIcon size={16} />}
         onClick={() => void navigate(`/analytics/panels/${String(panel.id)}`)}
-        className="pointer-coarse:h-11"
+        className="pointer-coarse:h-9"
       >
         {t('analytics')}
       </Button>
@@ -145,7 +145,7 @@ export function PanelPage() {
       title={t('unknownTitle')}
       description={t('unknownBody')}
       actions={
-        <Button onClick={() => void navigate('/panels')} className="pointer-coarse:h-11">
+        <Button onClick={() => void navigate('/panels')} className="pointer-coarse:h-9">
           {t('allPanels')}
         </Button>
       }

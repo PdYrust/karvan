@@ -24,7 +24,7 @@ function FilterFields({ form, onChange }: { form: ScopeForm; onChange: (f: Scope
         </span>
         <Select
           aria-labelledby="change-filter"
-          className="w-64 pointer-coarse:h-11"
+          className="w-64 pointer-coarse:h-9"
           value={form.filter}
           items={Object.fromEntries(
             (Object.keys(filters) as FilterKey[]).map((k) => [k, t(filterWord(k))]),
@@ -40,7 +40,7 @@ function FilterFields({ form, onChange }: { form: ScopeForm; onChange: (f: Scope
           <Select
             aria-labelledby="change-filter-value"
             placeholder={t('choose')}
-            className="w-44 pointer-coarse:h-11"
+            className="w-44 pointer-coarse:h-9"
             value={form.value || null}
             items={Object.fromEntries(statuses.map((s) => [s, t(s)]))}
             onValueChange={(v) => onChange({ ...form, value: v ?? '' })}
@@ -54,7 +54,7 @@ function FilterFields({ form, onChange }: { form: ScopeForm; onChange: (f: Scope
             spellCheck={false}
             value={form.value}
             onChange={(e) => onChange({ ...form, value: e.target.value })}
-            className="w-44 pointer-coarse:h-11"
+            className="w-44 pointer-coarse:h-9"
           />
         )}
       </div>
@@ -112,7 +112,7 @@ export function WhoFields({
             <Select
               aria-labelledby="change-category"
               placeholder={t('choose')}
-              className="w-full sm:w-72 pointer-coarse:h-11"
+              className="w-full sm:w-72 pointer-coarse:h-9"
               value={form.category || null}
               items={Object.fromEntries(
                 categories.map((n) => [n.id, `${n.name} (${fmt.number(counts[n.id] ?? 0)})`]),
@@ -135,7 +135,7 @@ export function WhoFields({
               <Button
                 variant="ghost"
                 size="sm"
-                className="pointer-coarse:h-11"
+                className="pointer-coarse:h-9"
                 onClick={() => onChange({ ...form, keys: [] })}
               >
                 {t('clearPicked')}

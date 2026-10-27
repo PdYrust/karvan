@@ -70,7 +70,7 @@ export function JobsToolbar({
       </span>
       <Select
         aria-labelledby={`${id}-state`}
-        className="min-w-0 flex-1 sm:w-44 sm:flex-none pointer-coarse:h-11"
+        className="min-w-0 flex-1 sm:w-44 sm:flex-none pointer-coarse:h-9"
         value={state}
         items={Object.fromEntries(states.map((s) => [s, t(`filter_${s}` as ListKey)]))}
         onValueChange={(s) => s && onState(s as StateFilter)}
@@ -80,7 +80,7 @@ export function JobsToolbar({
       </span>
       <Select
         aria-labelledby={`${id}-panel`}
-        className="min-w-0 flex-1 sm:w-56 sm:flex-none pointer-coarse:h-11"
+        className="min-w-0 flex-1 sm:w-56 sm:flex-none pointer-coarse:h-9"
         value={panel ? String(panel.id) : 'all'}
         renderValue={(v: string) => {
           const p = panels.find((x) => String(x.id) === v);
@@ -101,7 +101,7 @@ export function JobsToolbar({
         title={t('refresh')}
         loading={refreshing}
         onClick={onRefresh}
-        className="pointer-coarse:size-11"
+        className="pointer-coarse:size-9"
       />
       {children ? <div className="flex max-sm:-order-1">{children}</div> : null}
     </div>

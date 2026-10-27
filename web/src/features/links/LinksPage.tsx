@@ -28,7 +28,7 @@ function AddButton() {
     <Button
       variant="primary"
       icon={<PlusIcon size={16} />}
-      className="pointer-coarse:h-11"
+      className="pointer-coarse:h-9"
       onClick={() => void navigate('/links/new')}
     >
       {t('add')}

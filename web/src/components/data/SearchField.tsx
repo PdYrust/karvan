@@ -39,7 +39,7 @@ export function SearchField({
         data-page-search=""
         autoComplete="off"
         spellCheck={false}
-        className="w-full ps-9 pointer-coarse:h-11"
+        className="w-full ps-9 pointer-coarse:h-9"
       />
     </div>
   );

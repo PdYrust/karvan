@@ -47,7 +47,7 @@ function FilesMenu({ job }: { job: JobRow }) {
             title={name}
             loading={file.isPending}
             icon={<DotsThreeIcon size={20} weight="bold" />}
-            className="pointer-coarse:size-11"
+            className="pointer-coarse:size-9"
           />
         }
       />

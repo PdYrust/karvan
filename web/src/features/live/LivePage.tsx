@@ -88,7 +88,7 @@ function LiveBody({ id, live }: { id: string; live: Live }) {
         icon={<MagnifyingGlassIcon size={32} />}
         title={t('notFoundTitle')}
         action={
-          <Button className="pointer-coarse:h-11" onClick={() => void navigate('/')}>
+          <Button className="pointer-coarse:h-9" onClick={() => void navigate('/')}>
             {t('toOverview')}
           </Button>
         }
@@ -112,7 +112,7 @@ function LiveBody({ id, live }: { id: string; live: Live }) {
         title={t('idleTitle')}
         action={
           <Button
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
             onClick={() => void navigate(stepPath('start', id))}
           >
             {t('openStart')}

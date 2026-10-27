@@ -65,7 +65,7 @@ export function NewLinks({ site }: { site: LinkSite }) {
               icon={<DownloadSimpleIcon size={16} />}
               aria-label={t('downloadOf', { admin, date: ended ? fmt.dateTime(ended) : '' })}
               loading={file.isPending && file.variables === j.id}
-              className="pointer-coarse:h-11"
+              className="pointer-coarse:h-9"
               onClick={() => file.mutate(j.id)}
             >
               {t('download')}

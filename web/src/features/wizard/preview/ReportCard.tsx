@@ -35,7 +35,7 @@ export function ReportCard({ jobId }: { jobId: string }) {
           to={`/migrations/${encodeURIComponent(jobId)}/preview/print`}
           target="_blank"
           rel="noopener"
-          className={cn(buttonVariants({ variant: 'secondary' }), 'gap-2 pointer-coarse:h-11')}
+          className={cn(buttonVariants({ variant: 'secondary' }), 'gap-2 pointer-coarse:h-9')}
         >
           <PrinterIcon size={16} aria-hidden="true" />
           {t('reportOpen')}
@@ -47,7 +47,7 @@ export function ReportCard({ jobId }: { jobId: string }) {
             icon={<DownloadSimpleIcon size={16} />}
             loading={busy === kind}
             disabled={busy !== undefined}
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
             onClick={() => file.mutate(kind)}
           >
             {t(kind === 'json' ? 'reportJson' : 'reportCsv')}

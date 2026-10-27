@@ -53,7 +53,7 @@ export function LoginCard() {
           description={name ? <CodeText text={t('usernameHint', { name: `\`${name}\`` })} /> : null}
           control={
             <Button
-              className="pointer-coarse:h-11"
+              className="pointer-coarse:h-9"
               onClick={() => {
                 renew.reset();
                 setAsking(true);

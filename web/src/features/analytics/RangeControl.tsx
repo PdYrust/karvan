@@ -19,7 +19,7 @@ export function RangeControl({
         render={
           <Button
             variant="secondary"
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
             aria-label={`${t('rangeLabel')}: ${t(`range_${range}`)}`}
             icon={<CalendarBlankIcon size={16} />}
           >

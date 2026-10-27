@@ -19,7 +19,7 @@ interface TreeProps {
 }
 
 const row =
-  'flex min-h-10 w-full items-center gap-2 rounded-md px-2 text-start pointer-coarse:min-h-11';
+  'flex min-h-10 w-full items-center gap-2 rounded-md px-2 text-start pointer-coarse:min-h-9';
 
 /** Desktop: every category nested under All users, with its count, next to the list. */
 function Tree({ tree, counts, total, open, onOpen }: TreeProps) {

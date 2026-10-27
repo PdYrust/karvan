@@ -54,7 +54,7 @@ export function ShortcutSheet({
                 {...props}
                 variant="ghost"
                 shape="square"
-                className="pointer-coarse:size-11"
+                className="pointer-coarse:size-9"
                 aria-label={t('close')}
                 icon={<XIcon size={18} />}
               />

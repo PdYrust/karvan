@@ -28,7 +28,7 @@ export function StopButton({ jobId, safeMode }: { jobId: string; safeMode: boole
         </p>
       ) : (
         <Button
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
           loading={stop.isPending}
           onClick={() => setOpen(true)}
         >
@@ -45,12 +45,12 @@ export function StopButton({ jobId, safeMode }: { jobId: string; safeMode: boole
             {t(safeMode ? 'stopSafe' : 'stopOff')}
           </Dialog.Description>
           <div className="flex flex-wrap justify-end gap-2">
-            <Button className="pointer-coarse:h-11" onClick={() => setOpen(false)}>
+            <Button className="pointer-coarse:h-9" onClick={() => setOpen(false)}>
               {t('keepGoing')}
             </Button>
             <Button
               variant="destructive"
-              className="pointer-coarse:h-11"
+              className="pointer-coarse:h-9"
               loading={stop.isPending}
               onClick={() => stop.mutate()}
             >

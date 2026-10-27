@@ -28,7 +28,7 @@ export function PanelMenu({ panel }: { panel: Panel }) {
             aria-label={t('moreFor', { name: panel.name })}
             title={t('moreFor', { name: panel.name })}
             icon={<DotsThreeIcon size={20} weight="bold" />}
-            className="pointer-coarse:size-11"
+            className="pointer-coarse:size-9"
           />
         }
       />

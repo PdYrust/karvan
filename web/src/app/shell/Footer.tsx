@@ -5,7 +5,7 @@ import { shellMessages } from './messages';
 import { repoUrl } from './repo';
 
 const link =
-  'hover:text-kumo-default hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-11 pointer-coarse:min-w-11 pointer-coarse:items-center pointer-coarse:justify-center';
+  'hover:text-kumo-default hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-9 pointer-coarse:min-w-11 pointer-coarse:items-center pointer-coarse:justify-center';
 
 /** One quiet row under every page, like the dashboard's footer. */
 export function Footer() {

@@ -73,7 +73,7 @@ export function CertificateCard({
         ]}
       />
       <div className="flex justify-end">
-        <Button loading={pending} onClick={onTrust} className="pointer-coarse:h-11">
+        <Button loading={pending} onClick={onTrust} className="pointer-coarse:h-9">
           {t('certTrust')}
         </Button>
       </div>

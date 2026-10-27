@@ -36,7 +36,7 @@ function Row({
         if (e.key === 'Enter') onRun();
       }}
       className={cn(
-        'flex h-9 cursor-pointer items-center gap-3 rounded-md px-3 pointer-coarse:h-11',
+        'flex h-9 cursor-pointer items-center gap-3 rounded-md px-3 pointer-coarse:h-9',
         active && 'bg-kumo-tint',
       )}
     >
@@ -146,7 +146,7 @@ export function HomeSearch() {
             onBlur={close}
             onClick={() => setOpen(true)}
             onKeyDown={onKeyDown}
-            className="h-11 w-full rounded-lg bg-kumo-base ps-10 pe-3 text-kumo-default ring ring-kumo-line outline-none placeholder:text-kumo-subtle focus-visible:ring-2 focus-visible:ring-kumo-focus pointer-coarse:h-11"
+            className="h-11 w-full rounded-lg bg-kumo-base ps-10 pe-3 text-kumo-default ring ring-kumo-line outline-none placeholder:text-kumo-subtle focus-visible:ring-2 focus-visible:ring-kumo-focus"
           />
         </div>
       </div>

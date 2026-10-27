@@ -12,7 +12,7 @@ import { loginMessages } from './messages';
 import { useCountdown } from './use-countdown';
 import { useSignIn, type SignInError } from './use-sign-in';
 
-const inputClass = 'h-10 pointer-coarse:h-11';
+const inputClass = 'h-10 pointer-coarse:h-9';
 
 export function SignInForm() {
   const t = useT(loginMessages);
@@ -119,7 +119,7 @@ export function SignInForm() {
           size="lg"
           loading={s.pending}
           disabled={locked || (totp && s.fields.code.length !== 6)}
-          className="h-10 w-full justify-center pointer-coarse:h-11"
+          className="h-10 w-full justify-center pointer-coarse:h-9"
         >
           {s.pending ? t('submitting') : totp ? t('totpSubmit') : t('submit')}
         </Button>
@@ -129,7 +129,7 @@ export function SignInForm() {
             variant="ghost"
             onClick={s.back}
             icon={<ArrowLeftIcon size={16} className="rtl:-scale-x-100" />}
-            className="h-10 w-full justify-center pointer-coarse:h-11"
+            className="h-10 w-full justify-center pointer-coarse:h-9"
           >
             {t('totpBack')}
           </Button>

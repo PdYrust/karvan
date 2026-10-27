@@ -63,7 +63,7 @@ export function TypeToConfirm({
                   variant="ghost"
                   shape="square"
                   size="sm"
-                  className="pointer-coarse:size-11"
+                  className="pointer-coarse:size-9"
                   aria-label={t('close')}
                   disabled={pending}
                   icon={<XIcon size={18} />}
@@ -95,7 +95,7 @@ export function TypeToConfirm({
                 value={typed}
                 disabled={pending}
                 onChange={(e) => setTyped(e.target.value)}
-                className="h-10 font-mono pointer-coarse:h-11"
+                className="h-10 font-mono pointer-coarse:h-9"
               />
             </div>
           </div>
@@ -105,7 +105,7 @@ export function TypeToConfirm({
                 <Button
                   {...props}
                   variant="secondary"
-                  className="pointer-coarse:h-11"
+                  className="pointer-coarse:h-9"
                   disabled={pending}
                 >
                   {t('cancel')}
@@ -115,7 +115,7 @@ export function TypeToConfirm({
             <Button
               type="submit"
               variant="destructive"
-              className="pointer-coarse:h-11"
+              className="pointer-coarse:h-9"
               disabled={!matches || pending}
               loading={pending}
             >

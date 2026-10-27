@@ -19,7 +19,7 @@ export function NoPanels({ onScan, scanning }: { onScan: () => void; scanning: b
           icon={<ArrowsClockwiseIcon size={16} />}
           loading={scanning}
           onClick={onScan}
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
         >
           {t('scan')}
         </Button>

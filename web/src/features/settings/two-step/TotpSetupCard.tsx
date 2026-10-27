@@ -60,7 +60,7 @@ function SecretKey({ secret }: { secret: string }) {
       >
         {groupSecret(secret)}
       </p>
-      <CopyButton text={secret} select={select} className="w-full pointer-coarse:h-11" />
+      <CopyButton text={secret} select={select} className="w-full pointer-coarse:h-9" />
     </div>
   );
 }
@@ -134,7 +134,7 @@ export function TotpSetupCard({
       <div className="flex justify-end gap-2 border-t border-kumo-hairline pt-4">
         <Button
           variant="secondary"
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
           disabled={confirm.isPending}
           onClick={onCancel}
         >
@@ -143,7 +143,7 @@ export function TotpSetupCard({
         <Button
           type="submit"
           variant="primary"
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
           disabled={code.length !== 6}
           loading={confirm.isPending}
         >

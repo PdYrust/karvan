@@ -29,12 +29,12 @@ export function CopyValue({
           spellCheck={false}
           value={shown ?? value}
           onFocus={(e) => e.currentTarget.select()}
-          className="h-10 min-w-0 flex-1 font-mono pointer-coarse:h-11"
+          className="h-10 min-w-0 flex-1 font-mono pointer-coarse:h-9"
         />
         <CopyButton
           text={value}
           select={() => field.current?.select()}
-          className="h-10 shrink-0 pointer-coarse:h-11"
+          className="h-10 shrink-0 pointer-coarse:h-9"
         />
       </div>
     </div>

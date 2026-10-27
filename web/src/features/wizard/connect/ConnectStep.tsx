@@ -35,7 +35,7 @@ function ReadStopped({ c }: { c: Connect }) {
         </InlineAlert>
       )}
       <div className="flex flex-wrap justify-end gap-2">
-        <Button className="pointer-coarse:h-11" onClick={c.changeDetails}>
+        <Button className="pointer-coarse:h-9" onClick={c.changeDetails}>
           {t('changeDetails')}
         </Button>
         {c.cert ? null : (
@@ -43,7 +43,7 @@ function ReadStopped({ c }: { c: Connect }) {
             variant="primary"
             loading={c.compare.isPending}
             onClick={c.readAgain}
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
           >
             {t('readAgain')}
           </Button>
@@ -84,7 +84,7 @@ function ConnectForm({ c }: { c: Connect }) {
           type="submit"
           variant="primary"
           loading={busy}
-          className="w-full justify-center sm:w-auto pointer-coarse:h-11"
+          className="w-full justify-center sm:w-auto pointer-coarse:h-9"
         >
           {t('connect')}
         </Button>

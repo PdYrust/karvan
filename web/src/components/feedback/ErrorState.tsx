@@ -24,7 +24,7 @@ export function ErrorState({
       <InlineAlert>
         {message} {isOffline ? ts('errorOffline') : ts('errorServer')}
       </InlineAlert>
-      <Button className="pointer-coarse:h-11" onClick={onRetry}>
+      <Button className="pointer-coarse:h-9" onClick={onRetry}>
         {ts('retry')}
       </Button>
     </div>

@@ -122,7 +122,7 @@ export function StartStep() {
         ) : null}
         <div className="flex gap-2 sm:justify-end">
           <Button
-            className="flex-1 justify-center sm:flex-none pointer-coarse:h-11"
+            className="flex-1 justify-center sm:flex-none pointer-coarse:h-9"
             onClick={() => void navigate(stepPath('preview', jobId))}
           >
             {tw('back')}
@@ -131,7 +131,7 @@ export function StartStep() {
             variant="primary"
             disabled={!ready || !safe.data}
             loading={start.run.isPending && !start.confirming}
-            className="flex-1 justify-center sm:flex-none pointer-coarse:h-11"
+            className="flex-1 justify-center sm:flex-none pointer-coarse:h-9"
             onClick={() => (safe.data?.enabled ? go() : start.setConfirming(true))}
           >
             {t('start')}

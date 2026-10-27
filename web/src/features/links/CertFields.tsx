@@ -47,7 +47,7 @@ function PemFile({ label, onText }: { label: string; onText: (text: string) => v
       />
       <Button
         icon={<FileArrowUpIcon size={16} />}
-        className="pointer-coarse:h-11"
+        className="pointer-coarse:h-9"
         onClick={() => input.current?.click()}
       >
         {label}
@@ -168,7 +168,7 @@ export function CertFields(props: FieldsProps & { siteId?: number; hasKey: boole
             icon={<SealCheckIcon size={16} />}
             loading={check.isPending}
             disabled={!canCheckCert(values)}
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
             onClick={() => check.mutate(certInputOf(values, siteId))}
           >
             {t('check')}

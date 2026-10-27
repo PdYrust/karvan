@@ -40,7 +40,7 @@ function PasswordFile({ jobId, admin }: { jobId: string; admin: string }) {
       ) : (
         <Button
           icon={<KeyIcon size={16} />}
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
           loading={file.isPending}
           onClick={() => setOpen(true)}
         >
@@ -57,12 +57,12 @@ function PasswordFile({ jobId, admin }: { jobId: string; admin: string }) {
             <CodeText text={t('passwordBody', { admin })} />
           </Dialog.Description>
           <div className="flex flex-wrap justify-end gap-2">
-            <Button className="pointer-coarse:h-11" onClick={() => setOpen(false)}>
+            <Button className="pointer-coarse:h-9" onClick={() => setOpen(false)}>
               {t('cancel')}
             </Button>
             <Button
               variant="primary"
-              className="pointer-coarse:h-11"
+              className="pointer-coarse:h-9"
               loading={file.isPending}
               onClick={() => file.mutate()}
             >
@@ -99,7 +99,7 @@ export function Files({
           <Button
             key={f}
             icon={<DownloadSimpleIcon size={16} />}
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
             loading={file.isPending && file.variables === f}
             onClick={() => file.mutate(f)}
           >

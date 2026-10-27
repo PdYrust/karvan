@@ -37,10 +37,10 @@ function ConflictDialog({ plan }: { plan: PlanApi }) {
         <Dialog.Title className="text-heading font-semibold">{t('conflictTitle')}</Dialog.Title>
         <Dialog.Description className="text-kumo-subtle">{t('conflictBody')}</Dialog.Description>
         <div className="flex flex-wrap justify-end gap-2">
-          <Button className="pointer-coarse:h-11" onClick={plan.dismiss}>
+          <Button className="pointer-coarse:h-9" onClick={plan.dismiss}>
             {t('conflictKeep')}
           </Button>
-          <Button variant="primary" className="pointer-coarse:h-11" onClick={plan.replay}>
+          <Button variant="primary" className="pointer-coarse:h-9" onClick={plan.replay}>
             {t('conflictReplay')}
           </Button>
         </div>

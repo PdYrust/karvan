@@ -10,7 +10,7 @@ import { SearchButton } from './SearchButton';
 import { SidebarNav } from './SidebarNav';
 
 const iconButton =
-  'grid size-10 place-items-center rounded-md text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default pointer-coarse:size-11';
+  'grid size-10 place-items-center rounded-md text-kumo-subtle hover:bg-kumo-tint hover:text-kumo-default pointer-coarse:size-9';
 
 /** The phone sheet's body: search and navigation (the switcher sits in the sheet's header). */
 export function SidebarBody({

@@ -29,7 +29,7 @@ import { ReportUsers } from './ReportUsers';
 import { Reveal } from '../../components/feedback/Reveal';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
 
-const linkButton = cn(buttonVariants({ variant: 'secondary' }), 'gap-2 pointer-coarse:h-11');
+const linkButton = cn(buttonVariants({ variant: 'secondary' }), 'gap-2 pointer-coarse:h-9');
 
 /**
  * The detail page's body: the result, the stages, what cannot be undone and
@@ -139,7 +139,7 @@ export function ReportPage() {
         eyebrow={
           <Link
             to="/reports"
-            className="inline-flex items-center hover:text-kumo-default pointer-coarse:min-h-11"
+            className="inline-flex items-center hover:text-kumo-default pointer-coarse:min-h-9"
           >
             {t('title')}
           </Link>

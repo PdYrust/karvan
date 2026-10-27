@@ -29,7 +29,7 @@ export function GroupBy({
       </span>
       <Select
         aria-labelledby={id}
-        className="h-7 min-w-28 pointer-coarse:h-11"
+        className="h-7 min-w-28 pointer-coarse:h-9"
         value={grouped ? by : 'none'}
         items={{ [by]: t(by), none: t('groupNone') }}
         onValueChange={(v) => onChange(v === by)}

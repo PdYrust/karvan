@@ -98,7 +98,7 @@ export function CheckReportPage() {
       <div className="sticky top-0 flex items-center justify-end gap-2 border-b border-kumo-hairline bg-kumo-base px-4 py-3 print:hidden">
         <Link
           to={stepPath('preview', id)}
-          className={cn(buttonVariants({ variant: 'ghost' }), 'pointer-coarse:h-11')}
+          className={cn(buttonVariants({ variant: 'ghost' }), 'pointer-coarse:h-9')}
         >
           {t('backToPreview')}
         </Link>
@@ -106,7 +106,7 @@ export function CheckReportPage() {
           variant="primary"
           icon={<PrinterIcon size={16} />}
           disabled={!load.data}
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
           onClick={() => window.print()}
         >
           {t('print')}

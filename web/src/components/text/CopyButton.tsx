@@ -13,7 +13,7 @@ export function CopyButton({
   text,
   select,
   disabled,
-  className = 'shrink-0 pointer-coarse:h-11',
+  className = 'shrink-0 pointer-coarse:h-9',
 }: {
   text: string;
   select?: () => void;

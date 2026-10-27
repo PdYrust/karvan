@@ -20,7 +20,7 @@ export function PartFailed({ message, onRetry }: { message: string; onRetry: () 
         />
         {message}
       </span>
-      <Button variant="ghost" size="sm" onClick={onRetry} className="pointer-coarse:h-11">
+      <Button variant="ghost" size="sm" onClick={onRetry} className="pointer-coarse:h-9">
         {ts('retry')}
       </Button>
     </div>

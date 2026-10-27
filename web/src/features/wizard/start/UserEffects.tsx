@@ -76,7 +76,7 @@ export function UserEffects({
         <div>
           <Link
             to={stepPath('compare', jobId)}
-            className={cn(buttonVariants({ variant: 'secondary' }), 'pointer-coarse:h-11')}
+            className={cn(buttonVariants({ variant: 'secondary' }), 'pointer-coarse:h-9')}
           >
             {t('openCompare')}
           </Link>

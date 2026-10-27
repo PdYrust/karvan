@@ -29,7 +29,7 @@ export function StepActions({
       <div className="flex gap-2 sm:justify-end">
         {back ? (
           <Button
-            className="flex-1 justify-center sm:flex-none pointer-coarse:h-11"
+            className="flex-1 justify-center sm:flex-none pointer-coarse:h-9"
             onClick={() => void navigate(stepPath(back, jobId))}
           >
             {t('back')}
@@ -37,7 +37,7 @@ export function StepActions({
         ) : null}
         <Button
           variant="primary"
-          className="flex-1 justify-center sm:flex-none pointer-coarse:h-11"
+          className="flex-1 justify-center sm:flex-none pointer-coarse:h-9"
           onClick={() => void navigate(stepPath(next, jobId))}
         >
           {t('continue')}

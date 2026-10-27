@@ -30,7 +30,7 @@ export function AuditFilters({
       </span>
       <Select
         aria-labelledby={`${id}-action`}
-        className="w-full min-w-0 sm:w-72 pointer-coarse:h-11"
+        className="w-full min-w-0 sm:w-72 pointer-coarse:h-9"
         value={filter.action || all}
         items={actions}
         onValueChange={(v) => onChange({ ...filter, action: !v || v === all ? '' : v })}
@@ -40,7 +40,7 @@ export function AuditFilters({
       </span>
       <Select
         aria-labelledby={`${id}-outcome`}
-        className="w-full min-w-0 sm:w-44 pointer-coarse:h-11"
+        className="w-full min-w-0 sm:w-44 pointer-coarse:h-9"
         value={filter.outcome || all}
         items={outcomes}
         onValueChange={(v) =>

@@ -54,7 +54,7 @@ function BackupMenu({ row, actions }: { row: BackupRow; actions: BackupActions }
             aria-label={label}
             title={label}
             icon={<DotsThreeIcon size={20} weight="bold" />}
-            className="pointer-coarse:size-11"
+            className="pointer-coarse:size-9"
           />
         }
       />

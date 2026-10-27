@@ -14,7 +14,7 @@ export function TopBar({ onMenu, onShortcuts }: { onMenu: () => void; onShortcut
       <button
         type="button"
         aria-label={t('openMenu')}
-        className="grid size-8 place-items-center rounded-md text-kumo-default hover:bg-kumo-tint pointer-coarse:size-11 lg:hidden"
+        className="grid size-8 place-items-center rounded-md text-kumo-default hover:bg-kumo-tint pointer-coarse:size-9 lg:hidden"
         onClick={onMenu}
       >
         <MenuIcon />

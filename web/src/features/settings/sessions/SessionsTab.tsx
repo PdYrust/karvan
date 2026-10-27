@@ -127,7 +127,7 @@ export function SessionsTab() {
   const signOut = (s: AccountSession) => (
     <Button
       size="sm"
-      className="pointer-coarse:h-11"
+      className="pointer-coarse:h-9"
       aria-label={t('signOutNamed', {
         name: agent.text(s.userAgent),
         time: fmt.dateTime(new Date(s.createdAt)),
@@ -163,7 +163,7 @@ export function SessionsTab() {
             <p className="max-w-prose text-sm text-kumo-subtle">{t('description')}</p>
           </div>
           <Button
-            className="shrink-0 self-start pointer-coarse:h-11"
+            className="shrink-0 self-start pointer-coarse:h-9"
             disabled={!others}
             title={others ? undefined : t('noOthers')}
             loading={endOthers.isPending}

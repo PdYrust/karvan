@@ -44,7 +44,7 @@ export function SheetDialog({
                   variant="ghost"
                   shape="square"
                   size="sm"
-                  className="-me-2 pointer-coarse:size-11"
+                  className="-me-2 pointer-coarse:size-9"
                   aria-label={t('close')}
                   icon={<XIcon size={18} />}
                 />

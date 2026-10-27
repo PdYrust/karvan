@@ -42,7 +42,7 @@ function TextField({
         spellCheck={false}
         value={value}
         onChange={(e) => onText(e.target.value)}
-        className="w-full sm:w-72 pointer-coarse:h-11"
+        className="w-full sm:w-72 pointer-coarse:h-9"
       />
     </FormField>
   );
@@ -67,7 +67,7 @@ function AmountField({
           autoComplete="off"
           value={form.amount}
           onChange={(e) => onChange({ ...form, amount: e.target.value })}
-          className="w-28 tabular pointer-coarse:h-11"
+          className="w-28 tabular pointer-coarse:h-9"
         />
         <span className="text-kumo-subtle">{unit}</span>
       </div>

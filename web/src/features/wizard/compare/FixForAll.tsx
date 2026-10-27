@@ -44,12 +44,12 @@ function TextParam({ type, option, value }: { type: string; option: string; valu
           spellCheck={false}
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          className="w-full sm:w-56 pointer-coarse:h-11"
+          className="w-full sm:w-56 pointer-coarse:h-9"
         />
         <Button
           type="submit"
           disabled={draft === value && option !== 'prefix'}
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
         >
           {t('apply')}
         </Button>
@@ -121,7 +121,7 @@ export function FixForAll({ group, kind }: { group: ProblemGroup; kind: PanelKin
           </span>
           <Select
             aria-labelledby={`fix-${group.type}-method`}
-            className="w-full sm:w-64 pointer-coarse:h-11"
+            className="w-full sm:w-64 pointer-coarse:h-9"
             value={current.params?.method ?? ''}
             items={Object.fromEntries(methods[kind].map((m) => [m, m]))}
             onValueChange={(m) =>

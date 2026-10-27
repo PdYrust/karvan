@@ -125,7 +125,7 @@ export function SiteForm({
         </InlineAlert>
       ) : null}
       <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" className="pointer-coarse:h-11" onClick={onCancel}>
+        <Button type="button" className="pointer-coarse:h-9" onClick={onCancel}>
           {t('cancel')}
         </Button>
         <Button
@@ -133,7 +133,7 @@ export function SiteForm({
           variant="primary"
           loading={saving}
           disabled={!values.name.trim() || !values.sourceUrl.trim()}
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
         >
           {siteId ? t('save') : t('addSite')}
         </Button>

@@ -52,7 +52,7 @@ export function MigrationsPage() {
                 aria-label={t('newMigration')}
                 title={t('newMigration')}
                 icon={<PlusIcon size={16} />}
-                className="pointer-coarse:size-11"
+                className="pointer-coarse:size-9"
                 onClick={() => void navigate(newMigrationPath)}
               />
             </JobsToolbar>
@@ -68,7 +68,7 @@ export function MigrationsPage() {
                   action={
                     <Button
                       icon={<PlusIcon size={16} />}
-                      className="pointer-coarse:h-11"
+                      className="pointer-coarse:h-9"
                       onClick={() => void navigate(newMigrationPath)}
                     >
                       {t('newMigration')}

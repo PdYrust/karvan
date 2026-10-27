@@ -37,12 +37,12 @@ function ApplyDialog({
         </Dialog.Title>
         <Dialog.Description className="text-kumo-subtle">{t('applyBody')}</Dialog.Description>
         <div className="flex flex-wrap justify-end gap-2">
-          <Button className="pointer-coarse:h-11" onClick={onClose}>
+          <Button className="pointer-coarse:h-9" onClick={onClose}>
             {t('cancel')}
           </Button>
           <Button
             variant="primary"
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
             onClick={() => {
               if (template) plan.edit(applyTemplate(template.template));
               onClose();
@@ -95,12 +95,12 @@ function SaveTemplate() {
           placeholder={t('saveName')}
           value={name}
           onChange={(e) => setName(e.target.value)}
-          className="w-full sm:w-72 pointer-coarse:h-11"
+          className="w-full sm:w-72 pointer-coarse:h-9"
         />
         <Button
           type="submit"
           disabled={!templateNameFits(name) || plan.saving || save.isPending}
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
         >
           {t('save')}
         </Button>
@@ -148,14 +148,14 @@ export function Templates() {
               <Select
                 aria-labelledby="template-pick"
                 placeholder={t('choose')}
-                className="min-w-0 flex-1 sm:w-72 sm:flex-none pointer-coarse:h-11"
+                className="min-w-0 flex-1 sm:w-72 sm:flex-none pointer-coarse:h-9"
                 value={picked || null}
                 items={Object.fromEntries(templates.map((x) => [String(x.id), x.template.name]))}
                 onValueChange={(id) => setPicked(id ?? '')}
               />
               <Button
                 disabled={!chosen}
-                className="pointer-coarse:h-11"
+                className="pointer-coarse:h-9"
                 onClick={() => setAsking(chosen ?? null)}
               >
                 {t('applyTemplate')}

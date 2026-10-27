@@ -44,7 +44,7 @@ export function PageButtons({
         disabled={!hasPrevious}
         onClick={onPrevious}
         icon={<CaretLeftIcon size={16} className="rtl:-scale-x-100" />}
-        className="pointer-coarse:size-11"
+        className="pointer-coarse:size-9"
       />
       <Button
         shape="square"
@@ -52,7 +52,7 @@ export function PageButtons({
         disabled={!hasNext}
         onClick={onNext}
         icon={<CaretRightIcon size={16} className="rtl:-scale-x-100" />}
-        className="pointer-coarse:size-11"
+        className="pointer-coarse:size-9"
       />
     </div>
   );

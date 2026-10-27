@@ -53,7 +53,7 @@ export function ReadProgress({
           loading={stopping}
           disabled={building}
           onClick={onStop}
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
         >
           {t('stopReading')}
         </Button>

@@ -35,7 +35,7 @@ function StartAgain({ job }: { job: JobRow }) {
     <Button
       size="sm"
       icon={<ArrowCounterClockwiseIcon size={16} />}
-      className="pointer-coarse:h-11"
+      className="pointer-coarse:h-9"
       onClick={() => void navigate(againPath(job))}
     >
       {t('startAgain')}

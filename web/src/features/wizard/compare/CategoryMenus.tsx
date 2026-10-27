@@ -36,7 +36,7 @@ export function AddCategory({ parent }: { parent: PlanNode | undefined }) {
     <DropdownMenu>
       <DropdownMenu.Trigger
         render={
-          <Button icon={<PlusIcon size={16} />} className="pointer-coarse:h-11">
+          <Button icon={<PlusIcon size={16} />} className="pointer-coarse:h-9">
             <bdi>{parent ? t('addInside', { name: parent.name }) : t('addCategory')}</bdi>
           </Button>
         }
@@ -90,18 +90,18 @@ function RenameDialog({
               autoComplete="off"
               value={name}
               onChange={(e) => setName(e.target.value)}
-              className="pointer-coarse:h-11"
+              className="pointer-coarse:h-9"
             />
           </div>
           <div className="flex justify-end gap-2">
-            <Button className="pointer-coarse:h-11" onClick={() => close(false)}>
+            <Button className="pointer-coarse:h-9" onClick={() => close(false)}>
               {t('cancel')}
             </Button>
             <Button
               type="submit"
               variant="primary"
               disabled={!name.trim()}
-              className="pointer-coarse:h-11"
+              className="pointer-coarse:h-9"
             >
               {t('save')}
             </Button>
@@ -130,7 +130,7 @@ export function CategoryMenu({ node, onRemoved }: { node: PlanNode; onRemoved: (
               aria-label={label}
               title={label}
               icon={<DotsThreeIcon size={18} weight="bold" />}
-              className="pointer-coarse:size-11"
+              className="pointer-coarse:size-9"
             />
           }
         />

@@ -98,7 +98,7 @@ export function ResultCard({
         {state === 'checked' ? (
           <Button
             variant="primary"
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
             onClick={() => void navigate(stepPath('start', jobId))}
           >
             {t('reviewChanges')}
@@ -111,7 +111,7 @@ export function ResultCard({
           <Button
             variant="primary"
             icon={<LinkIcon size={16} />}
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
             title={t('oldLinksHint')}
             onClick={() =>
               void navigate(

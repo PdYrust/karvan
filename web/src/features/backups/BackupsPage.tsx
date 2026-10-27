@@ -56,7 +56,7 @@ function Empty() {
       action={
         <Button
           icon={<ShieldCheckIcon size={16} />}
-          className="pointer-coarse:h-11"
+          className="pointer-coarse:h-9"
           onClick={() => void navigate('/settings/safe-mode')}
         >
           {t('safeModeSettings')}

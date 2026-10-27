@@ -82,7 +82,7 @@ export function TemplateCard({
           size="sm"
           icon={<TrashIcon size={16} />}
           aria-label={t('deleteNamed', { name })}
-          className="ms-auto pointer-coarse:h-11"
+          className="ms-auto pointer-coarse:h-9"
           onClick={onDelete}
         >
           {t('delete')}

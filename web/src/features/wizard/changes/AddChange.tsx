@@ -81,7 +81,7 @@ export function AddChange({
             <div className="flex flex-wrap items-center gap-2">
               <Select
                 aria-labelledby="change-kind"
-                className="w-full sm:w-80 pointer-coarse:h-11"
+                className="w-full sm:w-80 pointer-coarse:h-9"
                 value={kind}
                 items={Object.fromEntries(opKinds.map((k) => [k, t(opWord(k))]))}
                 onValueChange={(k) => {
@@ -112,7 +112,7 @@ export function AddChange({
             onClick={add}
             icon={<PlusIcon size={16} />}
             disabled={!scope || !op}
-            className="pointer-coarse:h-11"
+            className="pointer-coarse:h-9"
           >
             {t('add')}
           </Button>

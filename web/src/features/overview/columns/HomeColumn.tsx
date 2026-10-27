@@ -22,7 +22,7 @@ export function HomeColumn({
         {to ? (
           <Link
             to={to}
-            className="inline-flex items-center gap-1 rounded-sm hover:text-kumo-default pointer-coarse:min-h-11"
+            className="inline-flex items-center gap-1 rounded-sm hover:text-kumo-default pointer-coarse:min-h-9"
           >
             {title}
             <CaretRightIcon size={12} aria-hidden="true" className={chevron} />
