@@ -55,7 +55,7 @@ func seed(t *testing.T, tg paneldb.Target, k kind) {
 	defer w.Close()
 	d := tg.Dialect
 	at := func(before time.Duration) any { return paneldb.TimeArg(d, now.Add(-before)) }
-	err = w.Batch(ctx, func(x paneldb.Execer) error {
+	err = w.Chunk(ctx, func(x paneldb.Execer) error {
 		admins := make([]int64, 2)
 		for i, name := range []string{"reseller1", "reseller2"} {
 			q := "INSERT INTO admins (username, hashed_password, created_at) VALUES (?, 'x', ?)"

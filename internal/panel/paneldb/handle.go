@@ -111,7 +111,7 @@ func (w *Writer) Lock(ctx context.Context, t Target) (release func(), err error)
 	}, nil
 }
 
-// Writer is a read-write handle. Writes happen only inside Batch.
+// Writer is a read-write handle. Writes happen only inside Chunk.
 type Writer struct {
 	db     *sql.DB
 	server Server
@@ -137,8 +137,8 @@ func (w *Writer) Close() error { return w.db.Close() }
 // (a lost connection, a timeout). The caller must read back before going on.
 var ErrCommitUnknown = errors.New("commit outcome unknown")
 
-// Batch runs fn in one transaction and commits only if fn returns nil.
-func (w *Writer) Batch(ctx context.Context, fn func(x Execer) error) error {
+// Chunk runs fn in one transaction and commits only if fn returns nil.
+func (w *Writer) Chunk(ctx context.Context, fn func(x Execer) error) error {
 	tx, err := w.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err

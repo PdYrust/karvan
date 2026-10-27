@@ -51,7 +51,7 @@ func (s *Service) backup(ctx context.Context, j *Job, p *prepared) error {
 	return err
 }
 
-// write creates the admin and the users, batch by batch, with the ledger
+// write creates the admin and the users, chunk by chunk, with the ledger
 // protocol of D32.
 func (s *Service) write(ctx context.Context, j *Job, p *prepared, hash string, rep *Report) error {
 	return s.stage(j, rep, StageExecute, func() error {
@@ -62,14 +62,14 @@ func (s *Service) write(ctx context.Context, j *Job, p *prepared, hash string, r
 			return err
 		}
 		items := movable(j.result)
-		size := s.BatchSize(p.db.Server().Dialect)
+		size := s.ChunkSize(p.db.Server().Dialect)
 		started := s.now()
 		for n, start := 1, 0; start < len(items); n, start = n+1, start+size {
 			if err := ctx.Err(); err != nil {
 				return err
 			}
-			batch := items[start:min(start+size, len(items))]
-			if err := s.writeBatch(ctx, j, p, n, batch, rep); err != nil {
+			chunk := items[start:min(start+size, len(items))]
+			if err := s.writeChunk(ctx, j, p, n, chunk, rep); err != nil {
 				return err
 			}
 			done := min(start+size, len(items))
@@ -89,8 +89,8 @@ func movable(r *engine.Result) []*engine.Item {
 	return out
 }
 
-func (s *Service) entry(j *Job, p *prepared, it *engine.Item, state string, batch int) ledger.Entry {
-	return ledger.Entry{Kind: ledger.KindUser, JobID: j.ID, State: state, Batch: batch, SourceOrigin: j.origin,
+func (s *Service) entry(j *Job, p *prepared, it *engine.Item, state string, chunk int) ledger.Entry {
+	return ledger.Entry{Kind: ledger.KindUser, JobID: j.ID, State: state, Chunk: chunk, SourceOrigin: j.origin,
 		SourceKey: it.Key, SourceCreated: it.Source.CreatedAt, SourceUsername: it.Source.Username,
 		CredPrint: ledger.Fingerprint(it.Source.Credentials), Dest: p.dest,
 		Row: panel.Row{Username: it.User.Username, CreatedAt: paneldb.Stored(p.db.Server().Dialect, it.User.CreatedAt)}}
@@ -137,7 +137,7 @@ func (s *Service) supersede(ctx context.Context, j *Job, p *prepared, destIDs []
 	return s.ledger.Set(ctx, ledger.Superseded, ids)
 }
 
-// writeAdmin creates the admin in batch 0, or records the merge.
+// writeAdmin creates the admin in chunk 0, or records the merge.
 func (s *Service) writeAdmin(ctx context.Context, j *Job, p *prepared, hash string, rep *Report) error {
 	out := j.result.Admin
 	admin := j.snapshot.Admin
@@ -153,7 +153,7 @@ func (s *Service) writeAdmin(ctx context.Context, j *Job, p *prepared, hash stri
 	now := s.now().UTC()
 	e.State, e.Username, e.CreatedAt = ledger.Pending, admin.Username, paneldb.Stored(p.db.Server().Dialect, now)
 	var ids []int64
-	err := p.db.Batch(ctx, func(x paneldb.Execer) error {
+	err := p.db.Chunk(ctx, func(x paneldb.Execer) error {
 		if err := p.writer.Prepare(ctx, x); err != nil {
 			return err
 		}
@@ -169,20 +169,20 @@ func (s *Service) writeAdmin(ctx context.Context, j *Job, p *prepared, hash stri
 		return s.fault("admin", 0)
 	})
 	if err != nil {
-		return s.afterFailedBatch(ctx, j, p, ids, err)
+		return s.afterFailedChunk(ctx, j, p, ids, err)
 	}
 	p.adminID, p.created, rep.Admin.ID = e.Row.ID, true, e.Row.ID
 	return s.ledger.Set(ctx, ledger.Done, ids)
 }
 
-// writeBatch is one destination transaction (D32): insert (ids come back),
+// writeChunk is one destination transaction (D32): insert (ids come back),
 // ledger rows pending with those ids (Karvan commit), destination commit,
 // ledger rows done.
-func (s *Service) writeBatch(ctx context.Context, j *Job, p *prepared, n int, items []*engine.Item, rep *Report) error {
+func (s *Service) writeChunk(ctx context.Context, j *Job, p *prepared, n int, items []*engine.Item, rep *Report) error {
 	now := s.now().UTC()
 	var ids []int64
 	entries := make([]ledger.Entry, len(items))
-	err := p.db.Batch(ctx, func(x paneldb.Execer) error {
+	err := p.db.Chunk(ctx, func(x paneldb.Execer) error {
 		for i, it := range items {
 			id, err := p.writer.InsertUser(ctx, x, it, p.adminID, usageLog(it.User, j.plan.ResetSchedule, now), now)
 			if err != nil {
@@ -196,13 +196,13 @@ func (s *Service) writeBatch(ctx context.Context, j *Job, p *prepared, n int, it
 			return err
 		}
 		p.wrote = true
-		return s.fault("batch", n)
+		return s.fault("chunk", n)
 	})
 	if err != nil {
-		return s.afterFailedBatch(ctx, j, p, ids, err)
+		return s.afterFailedChunk(ctx, j, p, ids, err)
 	}
 	if err := s.fault("ledger", n); err != nil {
-		return s.afterFailedBatch(ctx, j, p, ids, errors.Join(paneldb.ErrCommitUnknown, err))
+		return s.afterFailedChunk(ctx, j, p, ids, errors.Join(paneldb.ErrCommitUnknown, err))
 	}
 	for i, it := range items {
 		rep.moved(it.Key, entries[i].Row.ID)
@@ -210,9 +210,9 @@ func (s *Service) writeBatch(ctx context.Context, j *Job, p *prepared, n int, it
 	return s.ledger.Set(ctx, ledger.Done, ids)
 }
 
-// afterFailedBatch settles a batch whose outcome is not clean (D32, D33):
+// afterFailedChunk settles a chunk whose outcome is not clean (D32, D33):
 // rolled back rows become compensated, an unknown commit is read back.
-func (s *Service) afterFailedBatch(ctx context.Context, j *Job, p *prepared, ids []int64, cause error) error {
+func (s *Service) afterFailedChunk(ctx context.Context, j *Job, p *prepared, ids []int64, cause error) error {
 	if len(ids) == 0 {
 		return cause
 	}

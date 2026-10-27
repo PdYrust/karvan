@@ -49,7 +49,7 @@ func scribble(t *testing.T, tg paneldb.Target) {
 		t.Fatal(err)
 	}
 	defer w.Close()
-	err = w.Batch(ctx, func(x paneldb.Execer) error {
+	err = w.Chunk(ctx, func(x paneldb.Execer) error {
 		_, err := x.ExecContext(ctx, "INSERT INTO jwt (id, secret_key) VALUES (?, ?)", 99, "scribble")
 		return err
 	})

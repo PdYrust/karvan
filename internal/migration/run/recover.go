@@ -221,7 +221,7 @@ func (s *Service) storeRollback(ctx context.Context, rep *Report) error {
 	return nil
 }
 
-// Cancel stops a running job between batches; Safe Mode then undoes it.
+// Cancel stops a running job between chunks; Safe Mode then undoes it.
 func (s *Service) Cancel(jobID string) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()

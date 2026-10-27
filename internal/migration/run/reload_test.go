@@ -23,7 +23,7 @@ func addFullAdmin(t *testing.T, tg paneldb.Target) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = w.Batch(ctx, func(x paneldb.Execer) error {
+	err = w.Chunk(ctx, func(x paneldb.Execer) error {
 		_, err := pasarguarddb.Writer{Dialect: tg.Dialect}.InsertAdmin(ctx, x, panel.Admin{Username: "root"}, "$2b$12$x", 1, time.Now())
 		return err
 	})

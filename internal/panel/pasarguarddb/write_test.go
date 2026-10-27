@@ -45,7 +45,7 @@ func checkWritten(t *testing.T, got *Written, u panel.User, adminID int64, d pan
 func remove(t *testing.T, db *paneldb.Writer, u panel.User, userID, adminID int64, now time.Time) {
 	t.Helper()
 	ctx, d := context.Background(), db.Server().Dialect
-	err := db.Batch(ctx, func(x paneldb.Execer) error {
+	err := db.Chunk(ctx, func(x paneldb.Execer) error {
 		removed, _, err := RemoveUsers(ctx, x, d, []panel.Row{{ID: userID, Username: u.Username, CreatedAt: u.CreatedAt}})
 		if err != nil {
 			return err
@@ -78,7 +78,7 @@ func TestWriteReadBackAndRemove(t *testing.T) {
 		w := Writer{Dialect: d}
 		now, u := time.Now().UTC(), movedUser()
 		var adminID, userID int64
-		err = db.Batch(ctx, func(x paneldb.Execer) error {
+		err = db.Chunk(ctx, func(x paneldb.Execer) error {
 			var err error
 			if adminID, err = w.InsertAdmin(ctx, x, panel.Admin{Username: "newshop", UsedTraffic: 9}, "$2a$12$h", OperatorRole, now); err != nil {
 				return err

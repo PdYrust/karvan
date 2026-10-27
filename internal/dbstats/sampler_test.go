@@ -65,7 +65,7 @@ func (r *rig) exec(query string) {
 	}
 	defer w.Close()
 	at := paneldb.TimeArg(paneldb.SQLite, r.now.Add(-time.Minute))
-	err = w.Batch(context.Background(), func(x paneldb.Execer) error {
+	err = w.Chunk(context.Background(), func(x paneldb.Execer) error {
 		args := []any{at, at}[:countArgs(query)]
 		_, err := x.ExecContext(context.Background(), query, args...)
 		return err

@@ -37,9 +37,9 @@ func movedUser(name string) panel.User {
 	}
 }
 
-func batch(t *testing.T, w *paneldb.Writer, fn func(x paneldb.Execer) error) {
+func chunk(t *testing.T, w *paneldb.Writer, fn func(x paneldb.Execer) error) {
 	t.Helper()
-	if err := w.Batch(context.Background(), fn); err != nil {
+	if err := w.Chunk(context.Background(), fn); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -48,7 +48,7 @@ func batch(t *testing.T, w *paneldb.Writer, fn func(x paneldb.Execer) error) {
 func writeOne(t *testing.T, db *paneldb.Writer, w Writer, u panel.User, now time.Time) (adminID, userID int64) {
 	t.Helper()
 	ctx, d := context.Background(), w.Dialect
-	batch(t, db, func(x paneldb.Execer) error {
+	chunk(t, db, func(x paneldb.Execer) error {
 		var err error
 		if adminID, err = w.InsertAdmin(ctx, x, panel.Admin{Username: "shop", UsedTraffic: 5}, "$2a$12$hash", now); err != nil {
 			return err
@@ -92,20 +92,20 @@ func TestWriteReadBackAndRemove(t *testing.T) {
 		defer db.Close()
 		d := db.Server().Dialect
 		w := NewWriter(d, targets)
-		batch(t, db, func(x paneldb.Execer) error { return w.EnsureInbounds(ctx, x) })
+		chunk(t, db, func(x paneldb.Execer) error { return w.EnsureInbounds(ctx, x) })
 		clean := paneldbtest.Checksum(t, tg)
 
 		now, u := time.Now().UTC(), movedUser("moved_user")
 		adminID, userID := writeOne(t, db, w, u, now)
 		var got *Written
-		batch(t, db, func(x paneldb.Execer) error {
+		chunk(t, db, func(x paneldb.Execer) error {
 			back, err := ReadUsers(ctx, x, d, []int64{userID})
 			got = back[userID]
 			return err
 		})
 		checkWritten(t, got, u, adminID, d)
 
-		batch(t, db, func(x paneldb.Execer) error {
+		chunk(t, db, func(x paneldb.Execer) error {
 			removed, skipped, err := RemoveUsers(ctx, x, d, []panel.Row{{ID: userID, Username: u.Username, CreatedAt: u.CreatedAt}, {ID: 999999, Username: "x"}})
 			if err != nil {
 				return err
@@ -136,7 +136,7 @@ func TestRemoveLeavesChangedRows(t *testing.T) {
 	w := NewWriter(paneldb.SQLite, targets)
 	u := movedUser("someone")
 	var id int64
-	batch(t, db, func(x paneldb.Execer) error {
+	chunk(t, db, func(x paneldb.Execer) error {
 		if err := w.EnsureInbounds(ctx, x); err != nil {
 			return err
 		}
@@ -145,11 +145,11 @@ func TestRemoveLeavesChangedRows(t *testing.T) {
 		return err
 	})
 	// An admin renames the user on the panel before a rollback.
-	batch(t, db, func(x paneldb.Execer) error {
+	chunk(t, db, func(x paneldb.Execer) error {
 		_, err := x.ExecContext(ctx, "UPDATE users SET username = 'renamed' WHERE id = ?", id)
 		return err
 	})
-	batch(t, db, func(x paneldb.Execer) error {
+	chunk(t, db, func(x paneldb.Execer) error {
 		removed, skipped, err := RemoveUsers(ctx, x, paneldb.SQLite, []panel.Row{{ID: id, Username: "someone", CreatedAt: u.CreatedAt}})
 		if err == nil && (len(removed) != 0 || len(skipped) != 1) {
 			t.Errorf("a changed row must be left alone: removed %v", removed)
@@ -169,15 +169,15 @@ func TestEnsureInboundsAddsTheDefaultHost(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer db.Close()
-		batch(t, db, func(x paneldb.Execer) error {
+		chunk(t, db, func(x paneldb.Execer) error {
 			_, err := x.ExecContext(ctx, "INSERT INTO inbounds (tag) VALUES (?)", "VMess WS")
 			return err
 		})
 		w := NewWriter(db.Server().Dialect, targets)
 		for range 2 {
-			batch(t, db, func(x paneldb.Execer) error { return w.EnsureInbounds(ctx, x) })
+			chunk(t, db, func(x paneldb.Execer) error { return w.EnsureInbounds(ctx, x) })
 		}
-		batch(t, db, func(x paneldb.Execer) error {
+		chunk(t, db, func(x paneldb.Execer) error {
 			rows, err := x.QueryContext(ctx, "SELECT inbound_tag, remark, address, alpn FROM hosts ORDER BY inbound_tag")
 			if err != nil {
 				return err

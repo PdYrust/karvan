@@ -21,7 +21,7 @@ func insertAdmin(t *testing.T, tg paneldb.Target, name string) {
 		t.Fatal(err)
 	}
 	defer func() { _ = w.Close() }()
-	err = w.Batch(ctx, func(x paneldb.Execer) error {
+	err = w.Chunk(ctx, func(x paneldb.Execer) error {
 		_, err := pasarguarddb.Writer{Dialect: tg.Dialect}.InsertAdmin(ctx, x, panel.Admin{Username: name}, "$2b$12$x", 1, time.Now())
 		return err
 	})

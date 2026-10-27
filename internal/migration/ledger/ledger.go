@@ -45,7 +45,7 @@ type Entry struct {
 	Kind           string
 	JobID          string
 	State          string
-	Batch          int
+	Chunk          int
 	SourceOrigin   string
 	SourceKey      string
 	SourceCreated  time.Time
@@ -67,7 +67,7 @@ func New(db *sql.DB) *Ledger { return &Ledger{db: db, now: time.Now} }
 
 func micro(t time.Time) int64 { return t.UTC().UnixMicro() }
 
-const columns = "id, kind, job_id, state, batch, source_origin, source_key, source_created, source_username, " +
+const columns = "id, kind, job_id, state, chunk, source_origin, source_key, source_created, source_username, " +
 	"cred_fingerprint, dest, dest_id, dest_username, dest_created, created_at"
 
 func scan(rows *sql.Rows) ([]Entry, error) {
@@ -76,7 +76,7 @@ func scan(rows *sql.Rows) ([]Entry, error) {
 	for rows.Next() {
 		var e Entry
 		var src, dst, written int64
-		if err := rows.Scan(&e.ID, &e.Kind, &e.JobID, &e.State, &e.Batch, &e.SourceOrigin, &e.SourceKey, &src,
+		if err := rows.Scan(&e.ID, &e.Kind, &e.JobID, &e.State, &e.Chunk, &e.SourceOrigin, &e.SourceKey, &src,
 			&e.SourceUsername, &e.CredPrint, &e.Dest, &e.Row.ID, &e.Username, &dst, &written); err != nil {
 			return nil, fmt.Errorf("read ledger: %w", err)
 		}
@@ -178,7 +178,7 @@ func Fingerprint(c panel.Credentials) string {
 	return hex.EncodeToString(h.Sum(nil)[:12])
 }
 
-// Job returns a job's rows in the given states, newest batch first.
+// Job returns a job's rows in the given states, newest chunk first.
 func (l *Ledger) Job(ctx context.Context, jobID string, states ...string) ([]Entry, error) {
 	q := "SELECT " + columns + " FROM ledger WHERE job_id = ?"
 	args := []any{jobID}
@@ -188,7 +188,7 @@ func (l *Ledger) Job(ctx context.Context, jobID string, states ...string) ([]Ent
 			args = append(args, s)
 		}
 	}
-	rows, err := l.db.QueryContext(ctx, q+" ORDER BY batch DESC, id", args...)
+	rows, err := l.db.QueryContext(ctx, q+" ORDER BY chunk DESC, id", args...)
 	if err != nil {
 		return nil, fmt.Errorf("read ledger: %w", err)
 	}
@@ -206,10 +206,10 @@ func (l *Ledger) Add(ctx context.Context, entries []Entry) ([]int64, error) {
 	now := micro(l.now())
 	ids := make([]int64, 0, len(entries))
 	for _, e := range entries {
-		res, err := tx.ExecContext(ctx, "INSERT INTO ledger (kind, job_id, state, batch, source_origin, source_key, "+
+		res, err := tx.ExecContext(ctx, "INSERT INTO ledger (kind, job_id, state, chunk, source_origin, source_key, "+
 			"source_created, source_username, cred_fingerprint, dest, dest_id, dest_username, dest_created, created_at, updated_at) "+
 			"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-			e.Kind, e.JobID, e.State, e.Batch, e.SourceOrigin, e.SourceKey, micro(e.SourceCreated), e.SourceUsername,
+			e.Kind, e.JobID, e.State, e.Chunk, e.SourceOrigin, e.SourceKey, micro(e.SourceCreated), e.SourceUsername,
 			e.CredPrint, e.Dest, e.Row.ID, e.Username, micro(e.CreatedAt), now, now)
 		if err != nil {
 			if strings.Contains(err.Error(), "UNIQUE") {

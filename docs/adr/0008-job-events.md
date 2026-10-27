@@ -16,7 +16,7 @@ A migration of many users takes minutes. The web panel must show each stage live
 - While a compare reads, readers keep the job's previous build; a plan change, a second compare and a run answer busy. Cancel and shutdown stop the read.
 - A run whose re-check finds the outcome changed writes nothing, logs `plan_stale` and ends with `done` in state `checked`. It keeps the old panel's login, so the operator reviews the changes and runs the new plan version.
 - `POST .../rollback` answers 202 once it holds the destination's lock (409 `not_rollbackable` for a job that is not failed or interrupted, 409 `destination_locked` when another job writes there) and undoes in the background, on the job's stream:
-  - the `undo` stage, with a `progress` event before the first batch and after each one: the job's user rows handled (removed, or found gone already) of the total. A run's own Safe Mode undo sends the same events;
+  - the `undo` stage, with a `progress` event before the first chunk and after each one: the job's user rows handled (removed, or found gone already) of the total. A run's own Safe Mode undo sends the same events;
   - the `restore` stage when Safe Mode puts the whole backup back;
   - then `done` with `rolled_back`, or `failed` when rows are left. Before `done` the job's report is stored again with the undo counted, so the job list and the overview count what the rollback took back.
 ## Alternatives considered

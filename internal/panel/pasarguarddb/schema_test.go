@@ -32,7 +32,7 @@ func exec(t *testing.T, tg paneldb.Target, stmts ...[]any) {
 		t.Fatal(err)
 	}
 	defer w.Close()
-	err = w.Batch(ctx, func(x paneldb.Execer) error {
+	err = w.Chunk(ctx, func(x paneldb.Execer) error {
 		for _, s := range stmts {
 			if _, err := x.ExecContext(ctx, s[0].(string), s[1:]...); err != nil {
 				return err

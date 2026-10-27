@@ -55,7 +55,7 @@ func newHarness(t *testing.T, from, to panel.Kind, tg paneldb.Target, users int)
 	}
 	h := &harness{t: t, tg: tg, to: to}
 	env := migrationtest.PanelEnv(t, tg, to)
-	h.svc = New(Deps{DB: db, Key: key, DataDir: dir, Tools: migrationtest.Tools, BatchSize: func(paneldb.Dialect) int { return 5 },
+	h.svc = New(Deps{DB: db, Key: key, DataDir: dir, Tools: migrationtest.Tools, ChunkSize: func(paneldb.Dialect) int { return 5 },
 		Fault: func(step string, n int) error {
 			if h.fault != nil {
 				return h.fault(step, n)
@@ -179,12 +179,12 @@ func TestMoveAndMoveAgain(t *testing.T) {
 }
 
 func TestFailureWithSafeModeUndoesEverything(t *testing.T) {
-	for _, step := range []string{"batch", "ledger"} {
+	for _, step := range []string{"chunk", "ledger"} {
 		t.Run(step, func(t *testing.T) { undoesEverything(t, step) })
 	}
 }
 
-// undoesEverything fails batch 2 at step: "batch" before the destination
+// undoesEverything fails chunk 2 at step: "chunk" before the destination
 // commits, "ledger" after it committed but before the ledger says so.
 func undoesEverything(t *testing.T, step string) {
 	each(t, func(t *testing.T, from, to panel.Kind, tg paneldb.Target) {
@@ -216,7 +216,7 @@ func TestFailureWithoutSafeModeKeepsWhatCommitted(t *testing.T) {
 	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/pasarguarddb/testdata/" + pasarguarddb.Revision + ".sqlite.sql"})
 	h := newHarness(t, panel.Marzban, panel.PasarGuard, tg, 12)
 	h.fault = func(s string, n int) error {
-		if s == "batch" && n == 2 {
+		if s == "chunk" && n == 2 {
 			return errors.New("injected")
 		}
 		return nil

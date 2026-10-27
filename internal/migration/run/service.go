@@ -66,10 +66,10 @@ type Deps struct {
 	Control func(ctx context.Context, envPath string) (PanelControl, error)
 	// Reloaders are the ways to make a panel pick up written users (D46).
 	Reloaders map[string]Reloader
-	// BatchSize is users per destination transaction (D15).
-	BatchSize func(d paneldb.Dialect) int
+	// ChunkSize is users per destination transaction (D15).
+	ChunkSize func(d paneldb.Dialect) int
 	// Fault, in tests, fails a step on purpose.
-	Fault func(step string, batch int) error
+	Fault func(step string, chunk int) error
 }
 
 // Service owns all jobs.
@@ -95,8 +95,8 @@ func New(d Deps) *Service {
 	if d.Tools == nil {
 		d.Tools = safemode.DefaultRunner
 	}
-	if d.BatchSize == nil {
-		d.BatchSize = func(d paneldb.Dialect) int {
+	if d.ChunkSize == nil {
+		d.ChunkSize = func(d paneldb.Dialect) int {
 			if d == paneldb.SQLite {
 				return 50
 			}
@@ -131,7 +131,7 @@ func (s *Service) SafeModeDir() string { return filepath.Join(s.DataDir, "safe-m
 // Wait blocks until running jobs end (shutdown, tests).
 func (s *Service) Wait() { s.wg.Wait() }
 
-// Shutdown stops every running job between batches (Safe Mode undoes
+// Shutdown stops every running job between chunks (Safe Mode undoes
 // them) and waits for them to end.
 func (s *Service) Shutdown() {
 	s.mu.Lock()

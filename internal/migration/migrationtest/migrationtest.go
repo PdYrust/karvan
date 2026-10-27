@@ -78,7 +78,7 @@ func execSQL(t *testing.T, tg paneldb.Target, q string, args ...any) {
 		t.Fatal(err)
 	}
 	defer w.Close()
-	if err := w.Batch(ctx, func(x paneldb.Execer) error { _, err := x.ExecContext(ctx, q, args...); return err }); err != nil {
+	if err := w.Chunk(ctx, func(x paneldb.Execer) error { _, err := x.ExecContext(ctx, q, args...); return err }); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -91,7 +91,7 @@ func seedGroup(t *testing.T, tg paneldb.Target) {
 		t.Fatal(err)
 	}
 	defer w.Close()
-	err = w.Batch(ctx, func(x paneldb.Execer) error {
+	err = w.Chunk(ctx, func(x paneldb.Execer) error {
 		for _, s := range []struct {
 			q    string
 			args []any

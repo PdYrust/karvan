@@ -23,7 +23,7 @@ func seed(t *testing.T, tg paneldb.Target) {
 	defer w.Close()
 	d := w.Server().Dialect
 	created := time.Date(2025, 3, 1, 10, 0, 0, 123456000, time.UTC)
-	err = w.Batch(ctx, func(x paneldb.Execer) error {
+	err = w.Chunk(ctx, func(x paneldb.Execer) error {
 		stmts := []struct {
 			q    string
 			args []any

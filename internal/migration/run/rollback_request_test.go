@@ -27,7 +27,7 @@ func failedJob(t *testing.T) (*harness, *Report) {
 	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/marzbandb/testdata/" + marzbandb.Revision + ".sqlite.sql"})
 	h := newHarness(t, panel.PasarGuard, panel.Marzban, tg, 12)
 	h.fault = func(s string, n int) error {
-		if s == "batch" && n == 3 {
+		if s == "chunk" && n == 3 {
 			return errors.New("injected")
 		}
 		return nil

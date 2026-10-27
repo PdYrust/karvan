@@ -29,7 +29,7 @@ func (s *Service) rollBack(ctx context.Context, j *Job, p *prepared, rep *Report
 	s.undo(ctx, j, p, rep, true)
 }
 
-// undo removes exactly this job's rows, newest batch first, each batch in
+// undo removes exactly this job's rows, newest chunk first, each chunk in
 // its own short transaction, and checks nothing of the job is left. If
 // the undo failed or something is left, it puts the backup back when
 // orRestore is set.
@@ -52,7 +52,7 @@ func (s *Service) compensate(ctx context.Context, j *Job, p *prepared, rep *Repo
 	if err != nil {
 		return err
 	}
-	batches := map[int][]ledger.Entry{}
+	chunks := map[int][]ledger.Entry{}
 	var order []int
 	var admin *ledger.Entry
 	for i, e := range rows {
@@ -60,10 +60,10 @@ func (s *Service) compensate(ctx context.Context, j *Job, p *prepared, rep *Repo
 			admin = &rows[i]
 			continue
 		}
-		if _, ok := batches[e.Batch]; !ok {
-			order = append(order, e.Batch)
+		if _, ok := chunks[e.Chunk]; !ok {
+			order = append(order, e.Chunk)
 		}
-		batches[e.Batch] = append(batches[e.Batch], e)
+		chunks[e.Chunk] = append(chunks[e.Chunk], e)
 	}
 	slices.Sort(order)
 	slices.Reverse(order)
@@ -74,10 +74,10 @@ func (s *Service) compensate(ctx context.Context, j *Job, p *prepared, rep *Repo
 	}
 	s.emit(j, StageUndo, EventProgress, map[string]any{"done": 0, "total": total})
 	for _, n := range order {
-		if err := s.removeBatch(ctx, p, batches[n], rep); err != nil {
+		if err := s.removeChunk(ctx, p, chunks[n], rep); err != nil {
 			return err
 		}
-		handled += len(batches[n])
+		handled += len(chunks[n])
 		s.emit(j, StageUndo, EventProgress, map[string]any{"done": handled, "total": total})
 	}
 	if admin != nil {
@@ -86,15 +86,15 @@ func (s *Service) compensate(ctx context.Context, j *Job, p *prepared, rep *Repo
 	return nil
 }
 
-func (s *Service) removeBatch(ctx context.Context, p *prepared, batch []ledger.Entry, rep *Report) error {
-	rows := make([]panel.Row, len(batch))
+func (s *Service) removeChunk(ctx context.Context, p *prepared, chunk []ledger.Entry, rep *Report) error {
+	rows := make([]panel.Row, len(chunk))
 	byID := map[int64]int64{}
-	for i, e := range batch {
+	for i, e := range chunk {
 		rows[i] = e.Row
 		byID[e.Row.ID] = e.ID
 	}
 	var removed []int64
-	err := p.db.Batch(ctx, func(x paneldb.Execer) error {
+	err := p.db.Chunk(ctx, func(x paneldb.Execer) error {
 		var err error
 		removed, _, err = p.writer.RemoveUsers(ctx, x, rows)
 		return err
@@ -112,7 +112,7 @@ func (s *Service) removeBatch(ctx context.Context, p *prepared, batch []ledger.E
 
 func (s *Service) removeAdmin(ctx context.Context, p *prepared, e ledger.Entry) error {
 	var ok bool
-	err := p.db.Batch(ctx, func(x paneldb.Execer) error {
+	err := p.db.Chunk(ctx, func(x paneldb.Execer) error {
 		var err error
 		ok, err = p.writer.RemoveAdmin(ctx, x, e.Row)
 		return err

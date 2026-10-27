@@ -98,7 +98,7 @@ func TestBackupRollbackFallsBackToUndo(t *testing.T) {
 	h, tg := backupHarness(t, ctl)
 	before := paneldbtest.ChecksumExcept(t, tg, "inbounds")
 	h.fault = func(step string, n int) error {
-		if step == "batch" && n == 2 {
+		if step == "chunk" && n == 2 {
 			return errors.New("injected")
 		}
 		return nil

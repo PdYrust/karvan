@@ -105,7 +105,7 @@ func (l *Live) addFullAdmin() {
 		l.t.Fatal(err)
 	}
 	defer w.Close()
-	err = w.Batch(ctx, func(x paneldb.Execer) error {
+	err = w.Chunk(ctx, func(x paneldb.Execer) error {
 		now := paneldb.TimeArg(l.Target.Dialect, time.Now().UTC())
 		if l.Kind == panel.Marzban {
 			_, err := x.ExecContext(ctx, "INSERT INTO admins (username, hashed_password, created_at, is_sudo) VALUES (?, ?, ?, ?)",

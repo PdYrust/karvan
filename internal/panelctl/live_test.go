@@ -72,7 +72,7 @@ func TestLiveBackupRollback(t *testing.T) {
 		u["proxies"] = map[string]any{"vless": map[string]any{"id": fmt.Sprintf("00000000-0000-4c00-8000-%012d", i), "flow": ""}}
 	})
 	m := livetest.NewMover(t, l)
-	m.Svc.BatchSize = func(paneldb.Dialect) int { return 2 }
+	m.Svc.ChunkSize = func(paneldb.Dialect) int { return 2 }
 	m.Svc.Fault = func(step string, n int) error {
 		if step == "ledger" && n == 2 {
 			return errors.New("injected")

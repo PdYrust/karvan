@@ -146,7 +146,7 @@ func (a *API) RunMigration(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusAccepted, map[string]any{"id": id, "state": run.StateRunning})
 }
 
-// CancelMigration stops a running job between batches.
+// CancelMigration stops a running job between chunks.
 func (a *API) CancelMigration(w http.ResponseWriter, r *http.Request) {
 	if err := a.Runs.Cancel(r.PathValue("id")); err != nil {
 		writeRunError(w, r, err)
