@@ -2,8 +2,10 @@ package run
 
 import (
 	"context"
+	"errors"
 	"net/url"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/PdYrust/karvan/internal/panel"
@@ -68,5 +70,48 @@ func TestRecoverMakesAMissingBatch(t *testing.T) {
 	}
 	if b, ok := h.batchOf(rep.JobID); !ok || b.members != 6 || b.name != "shop" || b.path != "" || b.hosts != "[]" {
 		t.Fatalf("batch %+v found %v", b, ok)
+	}
+}
+
+// A batch user's new link is built on request from the destination panel,
+// the same link the report hands out (D57), and only while the panel
+// still points at the database the batch moved it to.
+func TestUserLinkOfABatchUser(t *testing.T) {
+	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/pasarguarddb/testdata/" + pasarguarddb.Revision + ".sqlite.sql"})
+	h := newHarness(t, panel.Marzban, panel.PasarGuard, tg, 2)
+	rep := h.run(h.job(nil), false)
+	b, ok := h.batchOf(rep.JobID)
+	if !ok {
+		t.Fatal("no batch")
+	}
+	ctx := context.Background()
+	var ledgerID int64
+	if err := h.svc.db.QueryRow("SELECT min(id) FROM ledger WHERE batch_id = ?", b.id).Scan(&ledgerID); err != nil {
+		t.Fatal(err)
+	}
+	m, err := h.svc.Batches().Member(ctx, b.id, ledgerID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	link, err := h.svc.UserLink(ctx, m)
+	if err != nil {
+		t.Fatal(err)
+	}
+	full, err := h.svc.WithLinks(ctx, rep.JobID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := ""
+	for _, u := range full.Users {
+		if u.DestID == m.DestID {
+			want = u.NewLink
+		}
+	}
+	if link == "" || want == "" || link[:strings.LastIndex(link, "/")] != want[:strings.LastIndex(want, "/")] {
+		t.Fatalf("link %q, report link %q", link, want)
+	}
+	m.Dest = "sqlite:///elsewhere.db"
+	if _, err := h.svc.UserLink(ctx, m); !errors.Is(err, ErrPanelChanged) {
+		t.Fatalf("another database: %v", err)
 	}
 }

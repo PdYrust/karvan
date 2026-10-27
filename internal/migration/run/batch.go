@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/PdYrust/karvan/internal/migration/batch"
+	"github.com/PdYrust/karvan/internal/migration/dest"
 )
 
 // oldLinkFacts reads the old link facts of a run (D7) before the job
@@ -51,4 +52,30 @@ func (s *Service) recoverBatches(ctx context.Context) error {
 		}
 	}
 	return errors.Join(errs...)
+}
+
+// Batches is the batch store, for the batch routes.
+func (s *Service) Batches() *batch.Store { return s.batches }
+
+// UserLink builds a batch user's subscription link the way the
+// destination panel does (D57, Q7 B). Karvan never stores it. A panel
+// that now points at another database than the batch's gives
+// ErrPanelChanged.
+func (s *Service) UserLink(ctx context.Context, m batch.Member) (string, error) {
+	env, err := s.envPath(ctx, m.PanelID)
+	if err != nil {
+		return "", err
+	}
+	d, err := dest.Open(ctx, env)
+	if err != nil {
+		return "", err
+	}
+	if d.Target.String() != m.Dest {
+		return "", ErrPanelChanged
+	}
+	l, err := d.Links(ctx, m.AdminDestID)
+	if err != nil {
+		return "", err
+	}
+	return l.Link(m.DestID, m.Username, s.now()), nil
 }

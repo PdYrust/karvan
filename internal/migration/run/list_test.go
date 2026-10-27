@@ -187,3 +187,22 @@ func TestJobsShowWhoHoldsALogin(t *testing.T) {
 		t.Errorf("finished job %+v", r)
 	}
 }
+
+// A job that became a batch names it on its row; the others carry none.
+func TestJobsNameTheirBatch(t *testing.T) {
+	s := listService(t)
+	if _, err := s.db.Exec(`INSERT INTO batches (id, job_id, panel_id, dest, source_kind, source_origin, name, state, created_at, updated_at)
+		VALUES (7, 'job4', 1, 'sqlite:///d.db', 'marzban', 'https://old.example', 'reseller', 'active', 6000, 6000)`); err != nil {
+		t.Fatal(err)
+	}
+	rows, _, err := s.Jobs(context.Background(), JobFilter{}, "", 2)
+	if err != nil || len(rows) != 2 {
+		t.Fatalf("rows %v %v", rows, err)
+	}
+	if b := rows[0].Batch; b == nil || b.ID != 7 || b.Name != "reseller" || b.State != "active" {
+		t.Fatalf("job4 batch %+v", b)
+	}
+	if rows[1].Batch != nil {
+		t.Fatalf("job3 batch %+v", rows[1].Batch)
+	}
+}

@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/PdYrust/karvan/internal/migration/batch"
 )
 
 // JobRow is one job as the jobs list shows it.
@@ -36,6 +38,9 @@ type JobRow struct {
 	// LoginHeld says Karvan still has the old panel's login, so the job
 	// can be checked and run without signing in again.
 	LoginHeld bool `json:"loginHeld"`
+	// Batch is the batch the job became when it ended done; nil when it
+	// has none.
+	Batch *batch.Ref `json:"batch"`
 }
 
 // JobFilter narrows the jobs list; zero values mean all.
@@ -118,8 +123,8 @@ func (s *Service) Jobs(ctx context.Context, f JobFilter, after string, limit int
 
 func jobsQuery(f JobFilter, c cursor, limit int) (string, []any, error) {
 	q := `SELECT j.id, j.state, j.panel_id, p.name, p.kind, j.source_kind, j.source_origin, j.source_admin, j.safe_mode,
-		j.counts, j.ended_at, j.created_at, j.updated_at
-		FROM jobs j JOIN panels p ON p.id = j.panel_id
+		j.counts, j.ended_at, j.created_at, j.updated_at, b.id, b.name, b.state
+		FROM jobs j JOIN panels p ON p.id = j.panel_id LEFT JOIN batches b ON b.job_id = j.id
 		WHERE (j.created_at < ? OR (j.created_at = ? AND j.id < ?))`
 	args := []any{c.created, c.created, c.id}
 	if f.PanelID != 0 {
@@ -146,10 +151,15 @@ func scanJob(rows *sql.Rows) (JobRow, error) {
 	var row JobRow
 	var counts string
 	var ended, created, updated int64
+	var batchID sql.NullInt64
+	var batchName, batchState sql.NullString
 	err := rows.Scan(&row.ID, &row.State, &row.Panel.ID, &row.Panel.Name, &row.Panel.Kind, &row.Source.Kind, &row.Source.Origin,
-		&row.Source.Admin, &row.SafeMode, &counts, &ended, &created, &updated)
+		&row.Source.Admin, &row.SafeMode, &counts, &ended, &created, &updated, &batchID, &batchName, &batchState)
 	if err != nil {
 		return JobRow{}, fmt.Errorf("list jobs: %w", err)
+	}
+	if batchID.Valid {
+		row.Batch = &batch.Ref{ID: batchID.Int64, Name: batchName.String, State: batchState.String}
 	}
 	if counts != "" {
 		row.Counts = &Counts{}
