@@ -4,8 +4,11 @@ import (
 	"context"
 	"database/sql"
 	"embed"
+	"errors"
 	"fmt"
 	"io/fs"
+	"os"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -64,8 +67,88 @@ func migrateFrom(ctx context.Context, db *sql.DB, fsys fs.FS) error {
 	if current > len(all) {
 		return fmt.Errorf("database schema version %d is newer than this Karvan build (%d); upgrade Karvan", current, len(all))
 	}
+	if current > 0 && current < len(all) {
+		if err := copyBefore(ctx, db, current+1); err != nil {
+			return fmt.Errorf("store copy before migration %d: %w", current+1, err)
+		}
+	}
 	for _, m := range all[current:] {
 		if err := apply(ctx, db, m); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// copyBefore writes <db>.before-<v>, a copy of the database as it is
+// before migration v, and deletes the copies taken before older
+// migrations (phase 4.1 D43). It is the way back for a migration that
+// changes existing data. VACUUM INTO refuses an existing file and creates
+// it with the umask, hence the tmp name and the chmod; the data folder is
+// 0700, so no other user can open the file before the chmod.
+func copyBefore(ctx context.Context, db *sql.DB, v int) error {
+	var path string
+	if err := db.QueryRowContext(ctx, "SELECT file FROM pragma_database_list WHERE name = 'main'").Scan(&path); err != nil {
+		return fmt.Errorf("find database file: %w", err)
+	}
+	if path == "" {
+		return errors.New("the database has no file")
+	}
+	final := path + ".before-" + strconv.Itoa(v)
+	tmp := final + ".tmp"
+	if err := os.Remove(tmp); err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return err
+	}
+	// VACUUM cannot run inside a transaction; db.ExecContext runs it alone.
+	if _, err := db.ExecContext(ctx, "VACUUM INTO ?", tmp); err != nil {
+		return fmt.Errorf("vacuum into %s: %w", tmp, err)
+	}
+	if err := os.Chmod(tmp, 0o600); err != nil {
+		return err
+	}
+	if err := syncPath(tmp); err != nil {
+		return err
+	}
+	if err := os.Rename(tmp, final); err != nil {
+		return err
+	}
+	if err := syncPath(filepath.Dir(final)); err != nil {
+		return err
+	}
+	return removeOlderCopies(path, v)
+}
+
+// syncPath flushes a file or folder to disk.
+func syncPath(path string) error {
+	f, err := os.Open(path) //nolint:gosec // G304: path is Karvan's own database copy or its folder.
+	if err != nil {
+		return err
+	}
+	defer func() { _ = f.Close() }()
+	if err := f.Sync(); err != nil {
+		return err
+	}
+	return f.Close()
+}
+
+// removeOlderCopies deletes <db>.before-<n> and <db>.before-<n>.tmp for
+// every n below v. A copy for a later migration is not Karvan's to judge.
+func removeOlderCopies(path string, v int) error {
+	dir, base := filepath.Split(path)
+	list, err := os.ReadDir(dir)
+	if err != nil {
+		return err
+	}
+	for _, e := range list {
+		rest, ok := strings.CutPrefix(e.Name(), base+".before-")
+		if !ok {
+			continue
+		}
+		n, err := strconv.Atoi(strings.TrimSuffix(rest, ".tmp"))
+		if err != nil || n >= v {
+			continue
+		}
+		if err := os.Remove(filepath.Join(dir, e.Name())); err != nil {
 			return err
 		}
 	}
