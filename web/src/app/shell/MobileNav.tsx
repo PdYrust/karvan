@@ -15,6 +15,8 @@ import { PanelSwitcher } from './PanelSwitcher';
  * has its rows while it slides out. A modal dialog sits in the top layer
  * and makes the rest of the page inert, so menus opened inside it (the panel
  * switcher) portal into the dialog, or they would sit under it and ignore taps.
+ * The dialog itself does not clip (its content scrolls inside it), so a menu
+ * wider than the sheet opens in full over the page.
  */
 export function MobileNav({
   open,
@@ -45,7 +47,7 @@ export function MobileNav({
       // Light dismiss: a click on the backdrop closes the sheet, like Escape.
       {...{ closedby: 'any' }}
       aria-label={t('mainNav')}
-      className="k-sheet m-0 h-dvh max-h-none w-[min(16rem,69vw)] max-w-none bg-kumo-canvas p-0 text-kumo-default shadow-xl backdrop:bg-kumo-contrast/40 me-auto lg:hidden"
+      className="k-sheet m-0 h-dvh overflow-visible max-h-none w-[min(16rem,69vw)] max-w-none bg-kumo-canvas p-0 text-kumo-default shadow-xl backdrop:bg-kumo-contrast/40 me-auto lg:hidden"
     >
       <KumoPortalProvider container={ref}>
         <div className="flex h-full flex-col overflow-y-auto overscroll-contain">
