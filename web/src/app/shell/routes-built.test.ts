@@ -23,7 +23,7 @@ describe('built routes', () => {
       o: '/',
       a: '/analytics',
       m: '/migrations',
-      r: '/reports',
+      r: undefined,
       l: '/links',
       p: '/panels',
       s: '/settings',

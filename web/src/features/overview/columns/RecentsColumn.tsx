@@ -26,13 +26,6 @@ function RecentName({ page, panel }: { page: RecentPage; panel: Panel | undefine
     name = page.page ? t('newMigration') : undefined;
   } else if (page.section === 'links') {
     name = page.page ? t('newSite') : undefined;
-  } else if (page.section === 'reports') {
-    // A job has no name of its own; its id's start tells two reports apart.
-    name = page.jobId ? (
-      <bdi dir="ltr" className="font-mono text-sm">
-        {page.jobId.slice(0, 8)}
-      </bdi>
-    ) : undefined;
   } else if (panel) {
     name = (
       <span className="inline-flex max-w-full items-center gap-1.5">

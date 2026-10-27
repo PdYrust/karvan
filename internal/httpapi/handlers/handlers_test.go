@@ -183,10 +183,21 @@ func TestPagesAndAssets(t *testing.T) {
 func TestDeepLinksOpenTheApp(t *testing.T) {
 	e := newEnv(t)
 	e.login("")
-	for _, deep := range []string{"/settings", "/settings/safe-mode", "/migrations/abc/live"} {
+	for _, deep := range []string{"/settings", "/settings/safe-mode", "/migrations/abc/live", "/migrations/abc/report", "/migrations/abc/report/print"} {
 		page := e.do(http.MethodGet, "/"+base+deep, nil)
 		if page.status != http.StatusOK || !bytes.Contains(page.body, []byte("app")) || page.header.Get("Cache-Control") != "no-store" {
 			t.Fatalf("deep link %s: %d %v %s", deep, page.status, page.header, page.body)
+		}
+	}
+}
+
+func TestRemovedPagesAnswerPlainNotFound(t *testing.T) {
+	e := newEnv(t)
+	e.login("")
+	for _, gone := range []string{"/reports", "/reports/abc", "/reports/abc/print", "/templates"} {
+		page := e.do(http.MethodGet, "/"+base+gone, nil)
+		if page.status != http.StatusNotFound || !strings.HasPrefix(page.header.Get("Content-Type"), "text/plain") {
+			t.Fatalf("removed page %s: %d %q", gone, page.status, page.header.Get("Content-Type"))
 		}
 	}
 }

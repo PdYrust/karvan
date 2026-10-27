@@ -88,9 +88,6 @@ const MigrationsPage = lazy(() =>
 const JobRedirect = lazy(() =>
   import('../features/migrations/JobRedirect').then((m) => ({ default: m.JobRedirect })),
 );
-const ReportsPage = lazy(() =>
-  import('../features/reports/ReportsPage').then((m) => ({ default: m.ReportsPage })),
-);
 const ReportPage = lazy(() =>
   import('../features/migrations/report/ReportPage').then((m) => ({ default: m.ReportPage })),
 );
@@ -199,7 +196,6 @@ export function App() {
                         <Route path="live" element={<LivePage />} />
                         <Route path="report" element={<ReportPage />} />
                       </Route>
-                      <Route path="reports" element={<ReportsPage />} />
                       <Route path="backups" element={<BackupsPage />} />
                       <Route path="links" element={<LinksPage />} />
                       <Route path="links/new" element={<SiteFormPage />} />

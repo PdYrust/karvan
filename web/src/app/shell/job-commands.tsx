@@ -1,11 +1,9 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router';
-import { FileTextIcon } from '@phosphor-icons/react';
 import { PanelMark } from '../../components/panels/PanelLabel';
 import { panelSearchNames } from '../../components/panels/PanelLogo';
 import { useT } from '../../i18n/locale';
 import { useFormat } from '../../lib/preferences/region';
-import { reportPath, reportStates } from '../../features/migrations/job-place';
 import { getLinkSites, linkKeys, type LinkSite } from '../../lib/api/links';
 import { listJobs, originHost, type JobRow } from '../../lib/api/migrations';
 import type { CommandGroup } from './commands';
@@ -32,7 +30,7 @@ export function siteKeywords(s: LinkSite): string {
 }
 
 /**
- * The latest migrations and their reports in the palette, found by admin
+ * The latest migrations in the palette, found by admin
  * and address, and the old link sites by name, address, domain and port. They are read only while the palette is open.
  */
 export function useJobCommands(open: boolean): CommandGroup[] {
@@ -64,21 +62,6 @@ export function useJobCommands(open: boolean): CommandGroup[] {
         icon: <PanelMark kind={j.source.kind} size={18} />,
         run: () => void navigate(`/migrations/${encodeURIComponent(j.id)}`),
       })),
-    },
-    {
-      id: 'reports',
-      label: t('navReports'),
-      searchOnly: true,
-      items: rows
-        .filter((j) => reportStates.includes(j.state))
-        .map((j) => ({
-          id: `report:${j.id}`,
-          title: t('actionReport', name(j)),
-          hint: format.dateTime(new Date(j.endedAt ?? j.updatedAt)),
-          keywords: keywordsOf(j),
-          icon: <FileTextIcon className="size-[18px]" />,
-          run: () => void navigate(reportPath(j.id)),
-        })),
     },
     {
       id: 'sites',

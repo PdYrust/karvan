@@ -37,7 +37,6 @@ export function useRecentCommands(panels: readonly Panel[]): CommandGroup {
     if (page.section === 'settings') name = t(recentTab[page.tab]);
     else if (page.section === 'migrations' && page.page) name = t('newMigration');
     else if (page.section === 'links' && page.page) name = t('newSite');
-    else if (page.section === 'reports' && page.jobId) name = page.jobId.slice(0, 8);
     else if (panel) name = panel.name;
     else if (page.section === 'analytics') name = t('recentServer');
     const kind = panel ? panelKind(panel) : undefined;

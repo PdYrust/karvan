@@ -9,11 +9,6 @@ describe('recentPage', () => {
     expect(recentPage('/panels/12')).toEqual({ section: 'panels', panelId: 12 });
     expect(recentPage('/migrations')).toEqual({ section: 'migrations' });
     expect(recentPage('/migrations/new')).toEqual({ section: 'migrations', page: 'new' });
-    expect(recentPage('/reports')).toEqual({ section: 'reports' });
-    expect(recentPage('/reports/9f1c2b3a4d5e6f7081920a1b')).toEqual({
-      section: 'reports',
-      jobId: '9f1c2b3a4d5e6f7081920a1b',
-    });
     expect(recentPage('/links')).toEqual({ section: 'links' });
     expect(recentPage('/links/new')).toEqual({ section: 'links', page: 'new' });
     expect(recentPage('/backups')).toEqual({ section: 'backups' });
@@ -39,7 +34,9 @@ describe('recentPage', () => {
       '/panels/2/more',
       '/settings/billing',
       '/migrations/9f1c2b3a4d5e6f7081920a1b',
-      '/reports/x',
+      '/reports',
+      '/reports/9f1c2b3a4d5e6f7081920a1b',
+      '/migrations/9f1c2b3a4d5e6f7081920a1b/report',
       '/links/3',
       '/templates',
       '/nope',

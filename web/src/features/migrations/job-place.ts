@@ -22,9 +22,6 @@ export function statesOf(f: StateFilter): JobState[] {
   return [f];
 }
 
-/** Jobs that ended with a report: the Reports page lists these. */
-export const reportStates: readonly JobState[] = ['done', 'failed', 'rolled_back'];
-
 export function isDraft(state: JobState): boolean {
   return state === 'created' || state === 'checked';
 }

@@ -2,7 +2,6 @@ import {
   ArchiveIcon,
   ArrowsLeftRightIcon,
   ChartLineIcon,
-  FileTextIcon,
   HardDrivesIcon,
   LinkSimpleIcon,
   SquaresFourIcon,
@@ -38,7 +37,6 @@ export const nav: NavGroup[] = [
     label: 'groupMove',
     items: [
       { label: 'navMigrations', icon: ArrowsLeftRightIcon, to: '/migrations', key: 'KeyM' },
-      { label: 'navReports', icon: FileTextIcon, to: '/reports', key: 'KeyR' },
       { label: 'navLinks', icon: LinkSimpleIcon, to: '/links', key: 'KeyL' },
     ],
   },

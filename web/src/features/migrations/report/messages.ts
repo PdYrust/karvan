@@ -1,20 +1,7 @@
 import type { Messages } from '../../../i18n/locale';
 
-// Words of the Reports pages; counts, stages, reload and files come from the live view's words.
+// Words of a migration's report and its print view; counts, stages, reload and files come from the live view's words.
 const en = {
-  title: 'Reports',
-  description: 'What each finished migration did, with its files.',
-  search: 'Search by admin or address',
-  table: 'Reports, newest first',
-  colReport: 'Migration',
-  colResult: 'Result',
-  colEnded: 'Ended',
-  colFiles: 'Files',
-  filesFor: 'Files of {name}',
-  emptyTitle: 'No reports yet',
-  emptyBody: 'A migration that ends leaves a report of every user it moved.',
-  noMatch: 'No report matches.',
-  loadFailed: "Couldn't load the reports.",
   reportTitle: 'Report of {name}',
   reportFailed: "Couldn't load this report.",
   noReport: 'This migration has no report.',
@@ -88,19 +75,6 @@ const en = {
 export type ReportsKey = keyof typeof en;
 
 const fa: Messages<ReportsKey>['fa'] = {
-  title: 'گزارش ها',
-  description: 'کاری که هر انتقال تمام شده انجام داد، با فایل هایش.',
-  search: 'جستجو با ادمین یا آدرس',
-  table: 'گزارش ها، جدیدترین اول',
-  colReport: 'انتقال',
-  colResult: 'نتیجه',
-  colEnded: 'پایان',
-  colFiles: 'فایل ها',
-  filesFor: 'فایل های {name}',
-  emptyTitle: 'هنوز گزارشی نیست',
-  emptyBody: 'هر انتقالی که تمام شود، گزارشی از همه کاربرهایی که منتقل کرده میگذارد.',
-  noMatch: 'هیچ گزارشی پیدا نشد.',
-  loadFailed: 'گزارش ها خوانده نشدند.',
   reportTitle: 'گزارش {name}',
   reportFailed: 'این گزارش خوانده نشد.',
   noReport: 'این انتقال گزارشی ندارد.',
