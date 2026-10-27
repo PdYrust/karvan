@@ -106,3 +106,34 @@ func TestRollbackOfAnInterruptedJobAfterARestart(t *testing.T) {
 		t.Fatalf("report %+v users %d", back, h.count("users"))
 	}
 }
+
+// D14: a roll back of a failed job leaves the users a later batch claimed
+// and lists them as left with in_batch; the job still counts as rolled
+// back, and nothing else is undone.
+func TestRollbackLeavesUsersOfALaterBatch(t *testing.T) {
+	h, failed := failedJob(t)
+	later := h.run(h.job(nil), false)
+	b, ok := h.batchOf(later.JobID)
+	if later.State != StateDone || later.Counts.Moved != 2 || !ok || b.members != 12 {
+		t.Fatalf("later run: state %s counts %+v batch %+v", later.State, later.Counts, b)
+	}
+	h.rollBackOnRequest(failed.JobID)
+	rep, err := h.svc.Report(failed.JobID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.State != StateRolledBack || rep.Counts.Undone != 0 || len(rep.Left) != 10 || len(rep.LeftReasons) != 10 {
+		t.Fatalf("state %s counts %+v left %v reasons %v", rep.State, rep.Counts, rep.Left, rep.LeftReasons)
+	}
+	for _, id := range rep.Left {
+		if rep.LeftReasons[id] != LeftInBatch {
+			t.Fatalf("left %d: reason %q", id, rep.LeftReasons[id])
+		}
+	}
+	if n := h.count("users"); n != 12 {
+		t.Fatalf("%d users on the destination", n)
+	}
+	if b, _ := h.batchOf(later.JobID); b.members != 12 {
+		t.Fatalf("the batch lost users: %+v", b)
+	}
+}

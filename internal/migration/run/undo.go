@@ -2,6 +2,7 @@ package run
 
 import (
 	"context"
+	"log/slog"
 	"slices"
 	"time"
 
@@ -30,17 +31,26 @@ func (s *Service) rollBack(ctx context.Context, j *Job, p *prepared, rep *Report
 }
 
 // undo removes exactly this job's rows, newest chunk first, each chunk in
-// its own short transaction, and checks nothing of the job is left. If
-// the undo failed or something is left, it puts the backup back when
-// orRestore is set.
+// its own short transaction, and checks nothing of the job is left. Users
+// a later batch holds stay (D14): they are listed as left with
+// LeftInBatch and do not make the undo incomplete. If the undo failed or
+// something else is left, it puts the backup back when orRestore is set.
 func (s *Service) undo(ctx context.Context, j *Job, p *prepared, rep *Report, orRestore bool) {
 	undoErr := s.stage(j, rep, StageUndo, func() error { return s.compensate(ctx, j, p, rep) })
-	left, err := s.leftovers(ctx, j)
+	left, held, err := s.leftovers(ctx, j)
+	rep.Left, rep.LeftReasons = held, nil
+	if len(held) > 0 {
+		rep.LeftReasons = map[int64]string{}
+		for _, id := range held {
+			rep.LeftReasons[id] = LeftInBatch
+		}
+		slog.Warn("rollback left users a later batch holds", "job", j.ID, "users", len(held))
+	}
 	if undoErr == nil && err == nil && len(left) == 0 {
 		rep.State = StateRolledBack
 		return
 	}
-	rep.Left = left
+	rep.Left = append(rep.Left, left...)
 	s.emit(j, StageUndo, EventLog, map[string]any{"code": "undo_incomplete", "left": len(left)})
 	if orRestore {
 		s.restore(ctx, j, p, rep)
@@ -52,6 +62,11 @@ func (s *Service) compensate(ctx context.Context, j *Job, p *prepared, rep *Repo
 	if err != nil {
 		return err
 	}
+	held, err := s.batches.Foreign(ctx, j.ID)
+	if err != nil {
+		return err
+	}
+	rows = slices.DeleteFunc(rows, func(e ledger.Entry) bool { return held[e.ID] })
 	chunks := map[int][]ledger.Entry{}
 	var order []int
 	var admin *ledger.Entry
@@ -123,19 +138,27 @@ func (s *Service) removeAdmin(ctx context.Context, p *prepared, e ledger.Entry) 
 	return s.ledger.Set(ctx, ledger.Compensated, []int64{e.ID})
 }
 
-// leftovers lists destination ids the job wrote that are still done.
-func (s *Service) leftovers(ctx context.Context, j *Job) ([]int64, error) {
+// leftovers lists destination ids the job wrote that are still done:
+// left, and held, the ones a later batch holds (D14).
+func (s *Service) leftovers(ctx context.Context, j *Job) (left, held []int64, err error) {
 	rows, err := s.ledger.Job(ctx, j.ID, ledger.Done, ledger.Pending)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	var out []int64
+	foreign, err := s.batches.Foreign(ctx, j.ID)
+	if err != nil {
+		return nil, nil, err
+	}
 	for _, e := range rows {
-		if e.Kind == ledger.KindUser {
-			out = append(out, e.Row.ID)
+		switch {
+		case e.Kind != ledger.KindUser:
+		case foreign[e.ID]:
+			held = append(held, e.Row.ID)
+		default:
+			left = append(left, e.Row.ID)
 		}
 	}
-	return out, nil
+	return left, held, nil
 }
 
 // restore puts the Safe Mode backup back with the panel stopped, then
@@ -166,7 +189,7 @@ func (s *Service) restore(ctx context.Context, j *Job, p *prepared, rep *Report)
 	if err := s.markRestored(ctx, j.ID); err != nil {
 		s.emit(j, StageRestore, EventLog, map[string]any{"code": "ledger_not_updated"})
 	}
-	rep.State, rep.Left = StateRolledBack, nil
+	rep.State, rep.Left, rep.LeftReasons = StateRolledBack, nil, nil
 	rep.NotUndoable = append(rep.NotUndoable, UndoLostPanelWrites)
 	return true
 }

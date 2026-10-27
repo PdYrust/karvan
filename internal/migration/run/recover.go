@@ -165,7 +165,7 @@ func (s *Service) rollbackReport(j *Job, row rollbackRow, p *prepared) (*Report,
 		rep.Source.Kind, rep.Source.Origin, rep.Source.Admin = row.kind, row.origin, row.admin
 		rep.Destination.DB = p.dest
 	}
-	rep.State, rep.Left, rep.Rollback = "", nil, j.rollbackOrUndo()
+	rep.State, rep.Left, rep.LeftReasons, rep.Rollback = "", nil, nil, j.rollbackOrUndo()
 	return rep, nil
 }
 

@@ -152,7 +152,7 @@ func (s *Service) runRestore(ctx context.Context, t *restoreTask) error {
 		if ledgerErr = s.markRestored(ctx, j.ID); ledgerErr != nil {
 			note("ledger_not_updated")
 		}
-		rep.State, rep.Left = StateRolledBack, nil
+		rep.State, rep.Left, rep.LeftReasons = StateRolledBack, nil, nil
 		if !slices.Contains(rep.NotUndoable, UndoLostPanelWrites) {
 			rep.NotUndoable = append(rep.NotUndoable, UndoLostPanelWrites)
 		}

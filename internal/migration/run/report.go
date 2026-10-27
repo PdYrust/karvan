@@ -52,7 +52,14 @@ type Report struct {
 	Stages      []StageTime       `json:"stages"`
 	Error       string            `json:"error,omitempty"`
 	Left        []int64           `json:"left,omitempty"` // rows a rollback could not remove
+	// LeftReasons says why a row of Left stayed, by destination id, when
+	// Karvan knows: LeftInBatch.
+	LeftReasons map[int64]string `json:"leftReasons,omitempty"`
 }
+
+// LeftInBatch is the reason for a row a later batch holds (D14): a
+// rollback leaves it.
+const LeftInBatch = "in_batch"
 
 // Counts sum up the users.
 type Counts struct {
