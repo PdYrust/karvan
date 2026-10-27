@@ -28,21 +28,21 @@ function QrCode({ text, label }: { text: string; label: string }) {
       live = false;
     };
   }, [text]);
-  if (!qr) return <Bone className="size-52 shrink-0 rounded-lg" />;
+  if (!qr) return <Bone className="size-48 shrink-0 rounded-lg sm:size-52" />;
   return (
     <svg
       role="img"
       aria-label={label}
       viewBox={`0 0 ${String(qr.size)} ${String(qr.size)}`}
       shapeRendering="crispEdges"
-      className="k-fade size-52 shrink-0 rounded-lg bg-qr-paper ring ring-kumo-hairline"
+      className="k-fade size-48 shrink-0 rounded-lg sm:size-52 bg-qr-paper ring ring-kumo-hairline"
     >
       <path d={qr.d} className="fill-qr-ink" />
     </svg>
   );
 }
 
-/** The secret in groups of four, in mono, wrapping under the code, with Copy. */
+/** The secret in groups of four, in mono, wrapping under the code, with Copy next to it. */
 function SecretKey({ secret }: { secret: string }) {
   const t = useT(twoStepMessages);
   const box = useRef<HTMLParagraphElement>(null);
@@ -51,16 +51,18 @@ function SecretKey({ secret }: { secret: string }) {
     if (box.current) window.getSelection()?.selectAllChildren(box.current);
   };
   return (
-    <div className="flex w-52 flex-col items-stretch gap-2">
-      <p className="text-center text-sm text-kumo-subtle">{t('key')}</p>
-      <p
-        ref={box}
-        dir="ltr"
-        className="rounded-lg bg-kumo-tint px-3 py-2 text-center font-mono text-sm leading-6 break-words text-kumo-strong select-all"
-      >
-        {groupSecret(secret)}
-      </p>
-      <CopyButton text={secret} select={select} className="w-full pointer-coarse:h-9" />
+    <div className="flex w-full max-w-sm flex-col gap-2">
+      <p className="text-sm text-kumo-subtle">{t('key')}</p>
+      <div className="flex items-start gap-2">
+        <p
+          ref={box}
+          dir="ltr"
+          className="min-w-0 flex-1 rounded-lg bg-kumo-tint px-3 py-1 font-mono text-sm leading-6 break-words text-kumo-strong select-all"
+        >
+          {groupSecret(secret)}
+        </p>
+        <CopyButton text={secret} select={select} />
+      </div>
     </div>
   );
 }
@@ -73,11 +75,11 @@ function Step({ n, text, children }: { n: number; text: string; children: ReactN
       <div className="flex items-start gap-3">
         <span
           aria-hidden="true"
-          className="grid size-6 shrink-0 place-items-center rounded-full bg-kumo-tint text-sm font-medium text-kumo-strong tabular"
+          className="grid size-7 shrink-0 place-items-center rounded-full bg-kumo-base text-sm font-semibold text-kumo-strong ring ring-kumo-line tabular"
         >
           {fmt.number(n)}
         </span>
-        <p className="pt-0.5 text-kumo-default">{text}</p>
+        <p className="pt-1 text-kumo-default">{text}</p>
       </div>
       {children}
     </li>
@@ -106,7 +108,8 @@ export function TotpSetupCard({
   }
   return (
     <form aria-label={t('setupTitle')} onSubmit={submit} className="flex flex-col gap-6 py-6">
-      <ol className="grid gap-8 md:grid-cols-2">
+      {/* Stacked on phones with a hairline between the steps, side by side from 768 px. */}
+      <ol className="grid gap-6 md:grid-cols-2 md:gap-8 max-md:[&>li+li]:border-t max-md:[&>li+li]:border-kumo-hairline max-md:[&>li+li]:pt-6">
         <Step n={1} text={t('scan')}>
           <div className="flex flex-col items-center gap-4">
             <QrCode text={setup.uri} label={t('qrLabel')} />
@@ -114,7 +117,7 @@ export function TotpSetupCard({
           </div>
         </Step>
         <Step n={2} text={t('enterCode')}>
-          <div className="flex flex-col gap-4 sm:ps-9">
+          <div className="flex flex-col gap-4 sm:ps-10">
             <CodeField
               id={`${id}-code`}
               label={t('enterCode')}
@@ -122,15 +125,17 @@ export function TotpSetupCard({
               value={code}
               onChange={setCode}
               disabled={confirm.isPending}
+              fill
             />
             {confirm.isError ? <InlineAlert>{errorText(confirm.error)}</InlineAlert> : null}
           </div>
         </Step>
       </ol>
-      <div className="flex justify-end gap-2 border-t border-kumo-hairline pt-4">
+      {/* On phones both span the width, Turn on last, at the bottom. */}
+      <div className="flex flex-col gap-2 border-t border-kumo-hairline pt-4 sm:flex-row sm:justify-end">
         <Button
           variant="secondary"
-          className="pointer-coarse:h-9"
+          className="w-full sm:w-auto pointer-coarse:h-9"
           disabled={confirm.isPending}
           onClick={onCancel}
         >
@@ -139,7 +144,7 @@ export function TotpSetupCard({
         <Button
           type="submit"
           variant="primary"
-          className="pointer-coarse:h-9"
+          className="w-full sm:w-auto pointer-coarse:h-9"
           disabled={code.length !== 6}
           loading={confirm.isPending}
         >

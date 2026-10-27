@@ -18,6 +18,7 @@ export function CodeField({
   value,
   onChange,
   disabled,
+  fill,
 }: {
   id: string;
   label: string;
@@ -26,17 +27,27 @@ export function CodeField({
   value: string;
   onChange: (code: string) => void;
   disabled?: boolean;
+  /** Spans the width on phones, the boxes sharing it. */
+  fill?: boolean;
 }) {
   const at = Math.min(value.length, cells.length - 1);
   return (
     <FormField id={id} label={label} hint={hint} hideLabel={hideLabel}>
-      <div dir="ltr" className={cn('group relative flex w-fit gap-2', disabled && 'opacity-50')}>
+      <div
+        dir="ltr"
+        className={cn(
+          'group relative flex gap-2',
+          fill ? 'w-full sm:w-fit' : 'w-fit',
+          disabled && 'opacity-50',
+        )}
+      >
         {cells.map((i) => (
           <span
             key={i}
             aria-hidden="true"
             className={cn(
-              'grid h-10 w-9 place-items-center rounded-lg bg-kumo-control font-mono text-lg text-kumo-strong ring ring-kumo-line',
+              'grid h-10 place-items-center rounded-lg bg-kumo-control font-mono text-lg text-kumo-strong ring ring-kumo-line',
+              fill ? 'flex-1 sm:w-9 sm:flex-none' : 'w-9',
               i === at && 'group-focus-within:ring-[1.5px] group-focus-within:ring-kumo-focus',
             )}
           >
