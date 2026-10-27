@@ -1,4 +1,4 @@
-import { linePath, lonePoints, runs, splitEdges } from '../../lib/charts/series';
+import { gapLimit, linePath, lonePoints, runs, splitEdges } from '../../lib/charts/series';
 import { chartColor, gridColor } from './palette';
 import type { ChartSeries } from './TimeSeries';
 
@@ -55,15 +55,18 @@ function Lines({
   times,
   series,
   step,
+  spacing,
 }: {
   frame: Frame;
   times: readonly number[];
   series: readonly ChartSeries[];
   step: number;
+  spacing?: readonly number[];
 }) {
   const { x, y } = frame;
+  const limit = gapLimit(step, spacing);
   return series.map((s) => {
-    const parts = runs(times, s.values, step * 1.9);
+    const parts = runs(times, s.values, limit);
     // A second reading (the peak) is dashed all along; others only at their unfinished edges.
     const { solid, dashed } = s.dashed ? { solid: [], dashed: parts } : splitEdges(parts);
     const stroke = {
@@ -91,6 +94,7 @@ export function ChartPlot({
   times,
   series,
   step,
+  spacing,
   bars,
   active,
   crosshair,
@@ -101,6 +105,8 @@ export function ChartPlot({
   times: readonly number[];
   series: readonly ChartSeries[];
   step: number;
+  /** Time each point is due after the one before, in ms, where it is not one step. */
+  spacing?: readonly number[];
   bars: boolean;
   active: number | null;
   /** The crosshair's x, in the chart's pixels. */
@@ -133,7 +139,7 @@ export function ChartPlot({
         // The lines are revealed from the start of time to its end when the chart first shows.
         // The reveal clips the outer svg, a box every browser clips (not an inner group).
         <svg {...box} className="k-sweep absolute inset-0 overflow-visible">
-          <Lines frame={frame} times={times} series={series} step={step} />
+          <Lines frame={frame} times={times} series={series} step={step} spacing={spacing} />
         </svg>
       )}
       <svg {...box} className="absolute inset-0 overflow-visible">

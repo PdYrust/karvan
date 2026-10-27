@@ -7,11 +7,12 @@ export type Point = readonly [t: number, v: number];
  * Splits a series into runs of points that follow each other. A missing
  * value, or a gap of more than maxGap between two times, ends a run, so the
  * chart leaves a hole instead of drawing a line through time it never saw.
+ * maxGap is one limit for every point, or the limit before each point.
  */
 export function runs(
   times: readonly number[],
   values: readonly Value[],
-  maxGap: number,
+  maxGap: number | readonly number[],
 ): Point[][] {
   const out: Point[][] = [];
   let run: Point[] = [];
@@ -23,7 +24,8 @@ export function runs(
       run = [];
       return;
     }
-    if (run.length > 0 && t - last > maxGap) {
+    const limit = typeof maxGap === 'number' ? maxGap : (maxGap[i] ?? 0);
+    if (run.length > 0 && t - last > limit) {
       out.push(run);
       run = [];
     }
@@ -32,6 +34,15 @@ export function runs(
   });
   if (run.length > 0) out.push(run);
   return out;
+}
+
+/**
+ * The longest wait before a point that still joins it to the one before:
+ * a little under two steps, or two of its own spacing where the points are
+ * not evenly spaced (saved minutes before live samples).
+ */
+export function gapLimit(step: number, spacing?: readonly number[]): number | number[] {
+  return spacing ? spacing.map((s) => s * 1.9) : step * 1.9;
 }
 
 type Scale = (n: number) => number;

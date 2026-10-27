@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   areaPath,
+  gapLimit,
   linePath,
   lonePoints,
   maxValue,
@@ -31,6 +32,15 @@ describe('runs', () => {
 
   it('skips values that are not numbers', () => {
     expect(runs([0, 1], [Number.NaN, undefined], 5)).toEqual([]);
+  });
+
+  it('takes a limit for each point where the points are not evenly spaced', () => {
+    // Minutes 60 apart, then samples 5 apart; 0 before 130 breaks the line there.
+    const times = [0, 60, 120, 130, 135];
+    expect(
+      runs(times, [1, 2, 3, 4, 5], gapLimit(5, [60, 60, 60, 0, 5])).map((r) => r.length),
+    ).toEqual([3, 2]);
+    expect(gapLimit(5)).toBe(9.5);
   });
 });
 

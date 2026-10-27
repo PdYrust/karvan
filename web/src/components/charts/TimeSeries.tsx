@@ -30,6 +30,8 @@ export interface TimeSeriesProps {
   domain: readonly [number, number];
   /** Time between samples in ms; a longer gap leaves a hole. */
   step: number;
+  /** Time each point is due after the one before, in ms, where the points are not one step apart. */
+  spacing?: readonly number[];
   kind: AxisKind;
   /** A value as the tooltip and the table write it. */
   format: (v: number) => string;
@@ -79,7 +81,7 @@ function stackedMax(series: readonly ChartSeries[], n: number): number {
  */
 export function TimeSeries(props: TimeSeriesProps) {
   const { label, times, series, domain, step, kind, format, empty } = props;
-  const { bars = false, height = 176 } = props;
+  const { bars = false, height = 176, spacing } = props;
   const fmt = useFormat();
   const t = useT(chartMessages);
   const [ref, width] = useWidth<HTMLDivElement>();
@@ -157,6 +159,7 @@ export function TimeSeries(props: TimeSeriesProps) {
             times={times}
             series={series}
             step={step}
+            spacing={spacing}
             bars={bars}
             active={active}
             crosshair={crosshair}

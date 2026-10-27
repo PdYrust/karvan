@@ -1,5 +1,12 @@
 import { useT } from '../../i18n/locale';
-import { areaPath, linePath, runs, splitEdges, type Value } from '../../lib/charts/series';
+import {
+  areaPath,
+  gapLimit,
+  linePath,
+  runs,
+  splitEdges,
+  type Value,
+} from '../../lib/charts/series';
 import { chartMessages } from './messages';
 import { chartColor, gridColor } from './palette';
 import { useSize } from './use-width';
@@ -60,6 +67,7 @@ export function CompactChart({
   values,
   domain,
   step,
+  spacing,
   max,
   className,
 }: {
@@ -68,6 +76,8 @@ export function CompactChart({
   domain: readonly [number, number];
   /** Time between samples, in ms; longer gaps break the line. */
   step: number;
+  /** Time each point is due after the one before, in ms, where the points are not one step apart. */
+  spacing?: readonly number[];
   /** A fixed scale from zero, such as 1 for a share; else the values' own range. */
   max?: number;
   /** Its height, by screen size ("h-18 sm:h-14"). */
@@ -75,7 +85,7 @@ export function CompactChart({
 }) {
   // Always the same box, so it is measured even when the data arrive after it mounts.
   const [ref, { width, height }] = useSize<HTMLDivElement>();
-  const parts = runs(times, values, step * 1.9);
+  const parts = runs(times, values, gapLimit(step, spacing));
   const empty = !parts.some((p) => p.length > 0);
   const [t0, t1] = domain;
   const [lo, hi] = max === undefined ? spread(values) : [0, max];
