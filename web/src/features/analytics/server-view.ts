@@ -4,20 +4,32 @@ import type { Value } from '../../lib/charts/series';
 /** How much live history the page keeps: the 15 minutes the server holds. */
 export const liveWindow = 15 * 60_000;
 
+/** A saved minute is drawn at its end, as a sample is drawn at the end of its 5 seconds. */
+const minuteEnd = (m: HostMinute) => (m.t + 60) * 1000;
+
 /**
  * Adds a poll's new samples to the ones the page already has. The server
  * sends only samples after the seq it was asked about; when Karvan restarts
- * its seq starts over, and the old samples go.
+ * its seq starts over, and the old samples go. When the samples start over
+ * the server also sends the saved minutes before them (backfill), which
+ * take the place of what the page had.
  */
 export function mergeLive(prev: ServerStats | undefined, next: ServerStats): ServerStats {
   const fresh = next.samples ?? [];
   let samples: Sample[] = fresh;
-  if (prev?.samples && next.seq >= prev.seq) {
+  let backfill = next.backfill ?? [];
+  if (!next.backfill && prev?.samples && next.seq >= prev.seq) {
     const last = prev.samples.at(-1)?.seq ?? 0;
     samples = [...prev.samples, ...fresh.filter((s) => s.seq > last)];
+    backfill = prev.backfill ?? [];
   }
   const end = Date.parse(samples.at(-1)?.at ?? '');
-  return { ...next, samples: samples.filter((s) => end - Date.parse(s.at) <= liveWindow) };
+  const kept = (t: number) => !Number.isFinite(end) || end - t <= liveWindow;
+  return {
+    ...next,
+    samples: samples.filter((s) => end - Date.parse(s.at) <= liveWindow),
+    backfill: backfill.filter((m) => kept(minuteEnd(m))),
+  };
 }
 
 /** Per-core lines up to this many cores; past it, only the busiest core. */
@@ -29,6 +41,11 @@ export interface ServerView {
   times: number[];
   /** Time between samples, ms. */
   step: number;
+  /**
+   * Live with saved minutes before the samples: the time each point is due
+   * after the one before, ms (a minute, then a step; 0 where they do not meet).
+   */
+  spacing?: number[];
   domain: [number, number];
   live: boolean;
   cpu: Value[];
@@ -55,7 +72,7 @@ export interface ServerView {
   covered: number[];
 }
 
-type Series = Omit<ServerView, 'domain' | 'step' | 'times'>;
+type Series = Omit<ServerView, 'domain' | 'step' | 'times' | 'spacing'>;
 
 function fromSamples(samples: readonly Sample[], stepSeconds: number): Series {
   const pick = <T>(f: (s: Sample) => T) => samples.map(f);
@@ -114,16 +131,68 @@ function fromPoints(points: readonly HostMinute[]): Series {
  * server's latest sample rather than this browser's clock, which may be off.
  */
 export function serverView(stats: ServerStats, span: number): ServerView {
-  const samples = stats.samples ?? [];
   const points = stats.points ?? [];
   const live = stats.range === 'live';
-  const times = live ? samples.map((s) => Date.parse(s.at)) : points.map((p) => p.t * 1000);
+  const drawn = live
+    ? fromLive(stats.backfill ?? [], stats.samples ?? [], stats.step)
+    : { times: points.map((p) => p.t * 1000), series: fromPoints(points) };
   const latest = stats.now ? Date.parse(stats.now.at) : Number.NaN;
-  const end = Number.isFinite(latest) ? latest : (times.at(-1) ?? Date.now());
+  const end = Number.isFinite(latest) ? latest : (drawn.times.at(-1) ?? Date.now());
   return {
-    times,
+    times: drawn.times,
     step: stats.step * 1000,
     domain: [end - span, end],
-    ...(live ? fromSamples(samples, stats.step) : fromPoints(points)),
+    ...(drawn.spacing ? { spacing: drawn.spacing } : {}),
+    ...drawn.series,
+  };
+}
+
+/**
+ * The live samples, after the saved minutes that come before them. A
+ * minute has only what a minute keeps (no cores, no 5 and 15 minute load,
+ * no time-wait sockets), so those lines start with the samples. Minutes
+ * that reach into the samples are left out, so no time is drawn twice.
+ */
+function fromLive(
+  backfill: readonly HostMinute[],
+  samples: readonly Sample[],
+  stepSeconds: number,
+): { times: number[]; spacing?: number[]; series: Series } {
+  const sampleTimes = samples.map((s) => Date.parse(s.at));
+  const first = sampleTimes[0] ?? Infinity;
+  const minutes = backfill.filter((m) => minuteEnd(m) <= first);
+  const series = fromSamples(samples, stepSeconds);
+  if (minutes.length === 0) return { times: sampleTimes, series };
+  const lead = <T>(f: (m: HostMinute) => T, rest: readonly T[]) => [...minutes.map(f), ...rest];
+  const none = (rest: readonly Value[]): Value[] =>
+    rest.length > 0 ? [...minutes.map(() => null), ...rest] : [];
+  // The samples join the minutes only when the last minute ends in the minute they start in.
+  const lastEnd = minuteEnd(minutes.at(-1) as HostMinute);
+  const meets = Math.floor(first / 60_000) * 60_000 === lastEnd;
+  return {
+    times: [...minutes.map(minuteEnd), ...sampleTimes],
+    spacing: [
+      ...minutes.map(() => 60_000),
+      ...sampleTimes.map((_, i) => (i > 0 ? stepSeconds * 1000 : meets ? 60_000 : 0)),
+    ],
+    series: {
+      ...series,
+      covered: lead((m) => m.minutes * 60, series.covered),
+      cpu: lead((m) => m.cpu, series.cpu),
+      cores: series.cores.map(none),
+      busiest: none(series.busiest),
+      load1: lead((m) => m.load1, series.load1),
+      load5: none(series.load5),
+      load15: none(series.load15),
+      memUsed: lead((m) => m.memUsed, series.memUsed),
+      memCache: lead((m) => m.memCache, series.memCache),
+      swap: lead((m) => m.swapUsed, series.swap),
+      netRx: lead((m) => m.netRx, series.netRx),
+      netTx: lead((m) => m.netTx, series.netTx),
+      diskRead: lead((m) => m.diskRead, series.diskRead),
+      diskWrite: lead((m) => m.diskWrite, series.diskWrite),
+      tcp: lead((m) => m.tcp, series.tcp),
+      closing: none(series.closing),
+    },
   };
 }

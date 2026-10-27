@@ -96,6 +96,8 @@ export interface ServerStats {
   now: Sample | null;
   samples?: Sample[];
   points?: HostMinute[];
+  /** Live, when the samples start over: the saved minutes of the window before the oldest sample. */
+  backfill?: HostMinute[];
 }
 
 export interface EngineStats {

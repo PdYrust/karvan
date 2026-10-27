@@ -52,6 +52,7 @@ export function CardDetail({
               series={detail.series}
               domain={view.domain}
               step={view.step}
+              spacing={view.spacing}
               kind={detail.kind}
               format={detail.format}
               empty={ta('noData', { range: within })}

@@ -32,6 +32,7 @@ export function OverviewCard({
             values={card.chart.values}
             domain={view.domain}
             step={view.step}
+            spacing={view.spacing}
             max={card.chart.max}
             className="h-30"
           />

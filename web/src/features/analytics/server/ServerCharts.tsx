@@ -37,6 +37,7 @@ function ServerChart({
         series={series}
         domain={view.domain}
         step={view.step}
+        spacing={view.spacing}
         kind={spec.kind}
         format={spec.format}
         empty={t('noData', { range: within })}

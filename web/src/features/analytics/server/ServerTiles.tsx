@@ -41,6 +41,7 @@ export function ServerTiles({
       values={values}
       domain={view.domain}
       step={view.step}
+      spacing={view.spacing}
       max={max}
       className={rowChart}
     />
