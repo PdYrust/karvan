@@ -18,6 +18,13 @@ export interface Counts {
   verified: number;
 }
 
+/** The batch a job became when it ended done (phase 4.1 D1). */
+export interface BatchRef {
+  id: number;
+  name: string;
+  state: 'active' | 'inactive' | 'deleted';
+}
+
 /** One job as the jobs list shows it. */
 export interface JobRow {
   id: string;
@@ -34,6 +41,8 @@ export interface JobRow {
   endedAt: string | null;
   /** Karvan still holds the old panel's login. */
   loginHeld: boolean;
+  /** The batch the job became; null when it has none. */
+  batch: BatchRef | null;
 }
 
 export interface JobPage {
@@ -174,6 +183,8 @@ export interface Job {
   state: JobState;
   /** Present once a compare has read the old panel. */
   summary?: JobSummary;
+  /** The batch the job became; null when it has none. */
+  batch: BatchRef | null;
 }
 
 export function getJob(id: string): Promise<Job> {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createTranslate } from '../../i18n/core';
 import { ApiError, offline } from '../api/client';
+import { batchCodes, batchErrorMessages, batchErrorText } from './batches';
 import { errorKey, errorMessages, errorOf, errorText, knownCodes } from './errors';
 
 const en = createTranslate(errorMessages.en, 'en');
@@ -35,6 +36,27 @@ describe('errorKey', () => {
   it('does not read inherited object keys as codes', () => {
     expect(errorKey('constructor')).toBe('unknown');
     expect(errorKey('toString')).toBe('unknown');
+  });
+});
+
+describe('area word lists', () => {
+  it('give each Batches page code its own sentence in both languages, once', () => {
+    for (const code of batchCodes) {
+      expect(knownCodes, code).not.toContain(code);
+      expect(batchErrorMessages.en[code], code).toBeTruthy();
+      expect(batchErrorMessages.fa[code], code).toBeTruthy();
+    }
+    expect([...batchCodes].sort()).toEqual(
+      ['batch_active', 'batch_in_use', 'batch_invalid', 'not_reactivatable'].sort(),
+    );
+  });
+
+  it('use the area sentence for its codes and the shared one for the rest', () => {
+    const tb = createTranslate(batchErrorMessages.en, 'en');
+    const shared = (err: unknown) => errorText(en, err);
+    expect(batchErrorText(tb, shared, new ApiError(409, 'batch_active'))).toBe(tb('batch_active'));
+    expect(batchErrorText(tb, shared, new ApiError(409, 'busy'))).toBe(en('busy'));
+    expect(batchErrorText(tb, shared, new ApiError(409, 'constructor'))).toBe(en('unknown'));
   });
 });
 

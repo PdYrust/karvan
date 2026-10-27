@@ -14,6 +14,7 @@ const row = (patch: Partial<JobRow> = {}): JobRow => ({
   updatedAt: '2026-10-17T09:06:00Z',
   endedAt: null,
   loginHeld: false,
+  batch: null,
   ...patch,
 });
 
