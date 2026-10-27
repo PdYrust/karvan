@@ -17,6 +17,8 @@ import { twoStepMessages } from './messages';
 import { loadQr, TotpSetupCard } from './TotpSetupCard';
 import { Reveal } from '../../../components/feedback/Reveal';
 import { useFirstLoad } from '../../../lib/motion/use-first-load';
+import { useLingering } from '../../../lib/motion/use-lingering';
+import { Collapse } from '../../../components/layout/Collapse';
 
 /** Two-step sign-in: set up with a QR code and a first code, or turn off with the password and a code. */
 export function TwoStepTab() {
@@ -40,6 +42,9 @@ export function TwoStepTab() {
   });
 
   const load = useFirstLoad(session.data);
+  const totpOn = session.data?.operator?.totpEnabled ?? false;
+  // Kept while the steps close, then gone.
+  const shown = useLingering(totpOn ? null : setup);
   if (session.isPending || load.holding) {
     return (
       <div role="status" aria-label={t('title')}>
@@ -56,11 +61,12 @@ export function TwoStepTab() {
       />
     );
   }
-  const on = session.data.operator?.totpEnabled ?? false;
+  const on = totpOn;
 
   return (
     <Reveal on={load.reveal}>
-      <SettingsCard>
+      {/* The row's hairline shows only while the setup is open under it. */}
+      <SettingsCard className="[&_div:has(+.k-collapse[data-closed])]:border-b-0">
         <SettingRow
           title={t('title')}
           badge={
@@ -93,17 +99,19 @@ export function TwoStepTab() {
             </p>
           ) : null}
         </SettingRow>
-        {setup && !on ? (
-          <TotpSetupCard
-            setup={setup}
-            onDone={() => {
-              setSetup(null);
-              toasts.add({ title: t('turnedOn') });
-              void queryClient.invalidateQueries({ queryKey: sessionKey });
-            }}
-            onCancel={() => setSetup(null)}
-          />
-        ) : null}
+        <Collapse id="two-step-setup" open={Boolean(setup && !on)}>
+          {shown ? (
+            <TotpSetupCard
+              setup={shown}
+              onDone={() => {
+                setSetup(null);
+                toasts.add({ title: t('turnedOn') });
+                void queryClient.invalidateQueries({ queryKey: sessionKey });
+              }}
+              onCancel={() => setSetup(null)}
+            />
+          ) : null}
+        </Collapse>
       </SettingsCard>
       {begin.isError ? <InlineAlert>{errorText(begin.error)}</InlineAlert> : null}
       <ReauthDialog

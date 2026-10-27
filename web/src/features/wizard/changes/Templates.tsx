@@ -18,6 +18,7 @@ import { useErrorText } from '../../../lib/errors/errors';
 import { applyTemplate, type StoredTemplate } from '../../../lib/plan/changes';
 import { useWizard } from '../wizard-context';
 import { changesMessages } from './messages';
+import { useLingering } from '../../../lib/motion/use-lingering';
 
 /** Asks before a template replaces the plan's categories, changes and fixes. */
 function ApplyDialog({
@@ -29,11 +30,13 @@ function ApplyDialog({
 }) {
   const t = useT(changesMessages);
   const { plan } = useWizard();
+  // The dialog keeps the name while it fades out.
+  const named = useLingering(template);
   return (
     <Dialog.Root open={template !== null} onOpenChange={(open) => !open && onClose()}>
       <Dialog className="flex flex-col gap-4 p-6" size="base">
         <Dialog.Title className="text-heading font-semibold">
-          <bdi>{t('applyTitle', { name: template?.template.name ?? '' })}</bdi>
+          <bdi>{t('applyTitle', { name: named?.template.name ?? '' })}</bdi>
         </Dialog.Title>
         <Dialog.Description className="text-kumo-subtle">{t('applyBody')}</Dialog.Description>
         <div className="flex flex-wrap justify-end gap-2">

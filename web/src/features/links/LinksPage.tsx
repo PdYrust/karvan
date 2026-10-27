@@ -20,6 +20,7 @@ import { linksMessages } from './messages';
 import { SiteCard } from './SiteCard';
 import { Reveal } from '../../components/feedback/Reveal';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
+import { useLingering } from '../../lib/motion/use-lingering';
 
 function AddButton() {
   const t = useT(linksMessages);
@@ -47,6 +48,8 @@ export function LinksPage() {
   const list = useQuery({ queryKey: linkKeys.all, queryFn: getLinkSites });
   const panels = usePanels();
   const [asking, setAsking] = useState<LinkSite | null>(null);
+  // The dialog keeps the name while it fades out.
+  const named = useLingering(asking);
   const remove = useMutation({
     mutationFn: (s: LinkSite) => deleteSite(s.id),
     onSuccess: (_, s) => {
@@ -123,7 +126,7 @@ export function LinksPage() {
           if (!open) setAsking(null);
         }}
         title={t('deleteTitle')}
-        word={asking?.name ?? ''}
+        word={named?.name ?? ''}
         action={t('delete')}
         pending={remove.isPending}
         error={remove.isError ? `${t('deleteFailed')} ${errorText(remove.error)}` : undefined}

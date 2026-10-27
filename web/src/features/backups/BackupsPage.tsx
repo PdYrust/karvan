@@ -27,6 +27,7 @@ import { BackupsTable } from './BackupsTable';
 import { backupsMessages } from './messages';
 import { Reveal } from '../../components/feedback/Reveal';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
+import { useLingering } from '../../lib/motion/use-lingering';
 
 /** A panel Karvan can't stop and start: why, and how to allow it. */
 function ControlNotice({ panel }: { panel: Panel }) {
@@ -149,7 +150,9 @@ export function BackupsPage() {
       </>
     );
   }
-  const r = a.restoring;
+  // Each dialog keeps its backup's words while it fades out.
+  const r = useLingering(a.restoring);
+  const removing = useLingering(a.removing);
   return (
     <div className="flex flex-col">
       <PageHeader title={t('title')} description={t('description')} />
@@ -157,7 +160,7 @@ export function BackupsPage() {
         <Reveal on={load.reveal}>{body}</Reveal>
       </div>
       <TypeToConfirm
-        open={r !== null}
+        open={a.restoring !== null}
         onOpenChange={(open) => {
           if (!open && !a.restore.isPending) a.setRestoring(null);
         }}
@@ -181,7 +184,7 @@ export function BackupsPage() {
           if (!open) a.setRemoving(null);
         }}
         title={t('deleteTitle')}
-        word={a.removing?.backup.id ?? ''}
+        word={removing?.backup.id ?? ''}
         action={t('delete')}
         pending={a.remove.isPending}
         error={a.remove.isError ? `${t('deleteFailed')} ${errorText(a.remove.error)}` : undefined}

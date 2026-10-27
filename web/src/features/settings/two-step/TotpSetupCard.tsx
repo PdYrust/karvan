@@ -105,11 +105,7 @@ export function TotpSetupCard({
     if (code.length === 6 && !confirm.isPending) confirm.mutate(code);
   }
   return (
-    <form
-      aria-label={t('setupTitle')}
-      onSubmit={submit}
-      className="k-fade flex flex-col gap-6 border-b border-kumo-hairline py-6 last:border-b-0"
-    >
+    <form aria-label={t('setupTitle')} onSubmit={submit} className="flex flex-col gap-6 py-6">
       <ol className="grid gap-8 md:grid-cols-2">
         <Step n={1} text={t('scan')}>
           <div className="flex flex-col items-center gap-4">

@@ -20,6 +20,7 @@ import { templatesMessages } from './messages';
 import { TemplateCard } from './TemplateCard';
 import { Reveal } from '../../components/feedback/Reveal';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
+import { useLingering } from '../../lib/motion/use-lingering';
 
 /** Saved templates with what each does, and Delete behind the typed name (4.8). */
 export function TemplatesPage() {
@@ -32,6 +33,8 @@ export function TemplatesPage() {
   const errorText = useErrorText();
   const list = useQuery({ queryKey: templateKeys.all, queryFn: listTemplates });
   const [asking, setAsking] = useState<StoredTemplate | null>(null);
+  // The dialog keeps the name while it fades out.
+  const named = useLingering(asking);
   const remove = useMutation({
     mutationFn: (x: StoredTemplate) => deleteTemplate(x.id),
     onSuccess: () => {
@@ -104,7 +107,7 @@ export function TemplatesPage() {
           if (!open) setAsking(null);
         }}
         title={t('deleteTitle')}
-        word={asking?.template.name ?? ''}
+        word={named?.template.name ?? ''}
         action={t('delete')}
         pending={remove.isPending}
         error={remove.isError ? `${t('deleteFailed')} ${errorText(remove.error)}` : undefined}
