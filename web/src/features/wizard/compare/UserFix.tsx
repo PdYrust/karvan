@@ -25,9 +25,11 @@ export function UserFix({ group, row }: { group: ProblemGroup; row: UserRow }) {
   const applied = appliedFix(row, group.type);
   const items: Record<string, string> = {
     [follow]: applied
-      ? `${t('followAll')}: ${tc(fixWords(applied), { fix: applied })}`
+      ? `${t('followAll')}: ${tc(fixWords(applied, group.type), { fix: applied })}`
       : t('followAll'),
-    ...Object.fromEntries(userFixes(group).map((o) => [o.id, tc(fixWords(o.id), { fix: o.id })])),
+    ...Object.fromEntries(
+      userFixes(group).map((o) => [o.id, tc(fixWords(o.id, group.type), { fix: o.id })]),
+    ),
   };
   const choose = (v: string) => {
     if (v === 'rename') return setPicked(v);

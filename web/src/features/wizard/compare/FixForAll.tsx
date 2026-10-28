@@ -86,7 +86,7 @@ export function FixForAll({ group, kind }: { group: ProblemGroup; kind: PanelKin
   if (only) {
     return (
       <p className="text-kumo-default">
-        {t('onlyFix', { fix: tc(fixWords(only.id), { fix: only.id }) })}
+        {t('onlyFix', { fix: tc(fixWords(only.id, group.type), { fix: only.id }) })}
       </p>
     );
   }
@@ -99,7 +99,7 @@ export function FixForAll({ group, kind }: { group: ProblemGroup; kind: PanelKin
             value={o.id}
             label={
               <span className="flex flex-wrap items-center gap-2">
-                {tc(fixWords(o.id), { fix: o.id })}
+                {tc(fixWords(o.id, group.type), { fix: o.id })}
                 {o.changesConfig ? <Badge variant="outline">{t('configFlag')}</Badge> : null}
               </span>
             }

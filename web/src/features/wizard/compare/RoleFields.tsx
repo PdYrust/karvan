@@ -19,7 +19,7 @@ import { Reveal } from '../../../components/feedback/Reveal';
 import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 /** The role warnings of the whole job (api-migration.md section 4). */
-const roleConflicts = ['C09', 'C33', 'C34', 'C35', 'C36', 'C37'];
+const roleConflicts = ['C09', 'C33', 'C34', 'C35', 'C37'];
 
 /** The roles as Select items, an owner role marked. */
 export function roleItems(roles: readonly Role[], t: Translate<CompareKey>) {

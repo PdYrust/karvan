@@ -14,7 +14,8 @@ const severities: Readonly<Record<string, Severity>> = {
   C12: 'blocker',
   C19: 'blocker',
   C24: 'blocker',
-  C10: 'warning',
+  C10: 'blocker',
+  C38: 'blocker',
   C16b: 'warning',
   C18: 'warning',
   C28: 'warning',
@@ -26,7 +27,7 @@ const severities: Readonly<Record<string, Severity>> = {
 
 /** Types whose first fix applies when nothing is chosen, unless it changes configs. */
 const withDefault = new Set(
-  Object.keys(severities).filter((t) => !['C11', 'C12', 'C19'].includes(t)),
+  Object.keys(severities).filter((t) => !['C10', 'C11', 'C12', 'C19', 'C38'].includes(t)),
 );
 
 export function severityOf(type: string): Severity {
@@ -95,7 +96,9 @@ export function typeWords(type: string): ConflictKey {
   return typeKeys.has(type) ? (`type_${type}` as ConflictKey) : 'type_unknown';
 }
 
-export function fixWords(fix: string): ConflictKey {
+/** The words of a fix; accept on a user whose config stops working moves them anyway (D37, D38). */
+export function fixWords(fix: string, type?: string): ConflictKey {
+  if (fix === 'accept' && (type === 'C10' || type === 'C38')) return 'fix_move_anyway';
   return fixes.has(fix) ? (`fix_${fix}` as ConflictKey) : 'fix_unknown';
 }
 

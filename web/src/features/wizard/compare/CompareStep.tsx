@@ -79,6 +79,9 @@ export function CompareStep() {
             <CodeText text={tc('job_C27', { skew: c.detail?.skew ?? '' })} />
           </InlineAlert>
         ))}
+      {g.conflicts.some((c) => c.type === 'source_groups_unknown') ? (
+        <InlineAlert tone="info">{tc('job_source_groups_unknown')}</InlineAlert>
+      ) : null}
       <AdminList summary={summary.data} conflicts={g.conflicts} />
       <ProblemList groups={g.groups} kind={kind} />
       <Categories counts={g.categories} total={summary.data.users} />

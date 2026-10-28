@@ -33,12 +33,16 @@ describe('byRelevance', () => {
   it('puts groups that still need a fix first, then blockers, warnings and notes, then size', () => {
     const order = byRelevance([
       group('C26', 900),
-      group('C10', 40),
+      group('C18', 40),
       group('C02', 3),
       group('C11', 2, 2),
       group('C07', 50),
     ]).map((g) => g.type);
-    expect(order).toEqual(['C11', 'C07', 'C02', 'C10', 'C26']);
+    expect(order).toEqual(['C11', 'C07', 'C02', 'C18', 'C26']);
+  });
+  it('ranks C10 and C38 as blockers (phase 4.1 D37, D38)', () => {
+    const order = byRelevance([group('C18', 90), group('C38', 2), group('C10', 5)]);
+    expect(order.map((g) => g.type)).toEqual(['C10', 'C38', 'C18']);
   });
 });
 
@@ -52,6 +56,11 @@ describe('defaultFix and fixForAll', () => {
   it('has no default for a type that needs a choice, or a first fix that changes configs', () => {
     expect(defaultFix(group('C11', 2, 2, [opt('accept', true), opt('skip')]))).toBeUndefined();
     expect(defaultFix(group('C24', 2, 0, [opt('new_credential', true)]))).toBeUndefined();
+  });
+  it('has no default for C10 and C38, whose first fix leaves the user out', () => {
+    for (const type of ['C10', 'C38']) {
+      expect(defaultFix(group(type, 2, 2, [opt('skip'), opt('accept', true)]))).toBeUndefined();
+    }
   });
 
   it('prefers the fix chosen for all', () => {
@@ -81,8 +90,8 @@ describe('appliedFix', () => {
 
   it('reads an open conflict with its fix, or a fix that already applied', () => {
     expect(
-      appliedFix(row({ conflicts: [{ type: 'C10', severity: 'warning', fix: 'keep' }] }), 'C10'),
-    ).toBe('keep');
+      appliedFix(row({ conflicts: [{ type: 'C10', severity: 'warning', fix: 'accept' }] }), 'C10'),
+    ).toBe('accept');
     expect(appliedFix(row({ applied: ['op:note.set', 'fix:C02:suffix'] }), 'C02')).toBe('suffix');
     expect(appliedFix(row({}), 'C02')).toBeUndefined();
   });
@@ -101,5 +110,13 @@ describe('words', () => {
     expect(typeWords('C99')).toBe('type_unknown');
     expect(fixWords('new_credential')).toBe('fix_new_credential');
     expect(fixWords('magic')).toBe('fix_unknown');
+    expect(typeWords('C38')).toBe('type_C38');
+    expect(typeWords('C36')).toBe('type_unknown');
+  });
+  it('calls accept on C10 and C38 a move anyway', () => {
+    expect(fixWords('accept', 'C10')).toBe('fix_move_anyway');
+    expect(fixWords('accept', 'C38')).toBe('fix_move_anyway');
+    expect(fixWords('accept', 'C11')).toBe('fix_accept');
+    expect(fixWords('skip', 'C38')).toBe('fix_skip');
   });
 });
