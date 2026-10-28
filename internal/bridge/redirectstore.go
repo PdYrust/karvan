@@ -7,8 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"slices"
-
-	"github.com/PdYrust/karvan/internal/secret"
 )
 
 // redirectColumns read a redirect with the certificates row it uses.
@@ -163,19 +161,6 @@ func (st *store) writeRedirect(ctx context.Context, d *Redirect) error {
 		return err
 	}
 	return tx.Commit()
-}
-
-// certificateKey opens the sealed key of certificates row id; nil for a
-// file pair.
-func (st *store) certificateKey(ctx context.Context, id int64) ([]byte, error) {
-	var sealed []byte
-	if err := st.db.QueryRowContext(ctx, "SELECT key_sealed FROM certificates WHERE id = ?", id).Scan(&sealed); err != nil {
-		return nil, fmt.Errorf("read certificate key: %w", err)
-	}
-	if sealed == nil {
-		return nil, nil
-	}
-	return st.key.Open(sealed, secret.AAD("certificates", "key_sealed", id))
 }
 
 // Redirects lists every redirect rule with its certificate and warnings.

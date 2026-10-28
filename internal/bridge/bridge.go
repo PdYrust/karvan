@@ -53,6 +53,8 @@ type Bridge struct {
 	mu       sync.Mutex
 	sites    []Site
 	routes   table               // built from sites and the redirect rules (D52)
+	shakes   map[int]portShake   // the certificate pick of each TLS port (D62), by port
+	certRows map[int64]certSnap  // the certificates rows the picks read, by id
 	dests    map[int64]*openDest // by panel id
 	olds     map[int64]OldPanel  // by site id
 	servers  map[int]*listener   // by port

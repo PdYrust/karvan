@@ -97,6 +97,7 @@ func (e *env) start(log *slog.Logger, adopt bool) *Bridge {
 	b := New(Deps{DB: e.b.DB, Key: e.b.Key, Now: e.clock.now, Log: log, OpenDest: e.b.OpenDest})
 	if adopt {
 		b.adoptCertificates(context.Background())
+		b.fillDomains(context.Background())
 	}
 	if err := b.Reload(context.Background()); err != nil {
 		e.t.Fatal(err)
