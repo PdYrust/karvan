@@ -33,6 +33,9 @@ const en = {
   site_invalid_inactive: 'A batch of this rule is not active. Pick only active batches.',
   site_invalid_mixed:
     'These batches come from different old panels or destinations. Pick batches of one old panel and one destination.',
+  redirect_invalid: "A field of this redirect has a value Karvan can't use. Check the fields.",
+  redirect_invalid_loop:
+    'This address leads back to a redirect rule of Karvan. Enter an address outside Karvan.',
 };
 
 export type SubscriptionErrorKey = keyof typeof en;
@@ -66,6 +69,10 @@ const fa: Messages<SubscriptionErrorKey>['fa'] = {
   site_invalid_inactive: 'یکی از دسته های این قانون فعال نیست. فقط دسته های فعال را انتخاب کنید.',
   site_invalid_mixed:
     'این دسته ها از پنل های قدیمی یا مقصدهای مختلف هستند. دسته های یک پنل قدیمی و یک مقصد را انتخاب کنید.',
+  redirect_invalid:
+    'یکی از فیلدهای این ریدایرکت مقداری دارد که کاروان نمیتواند استفاده کند. فیلدها را بررسی کنید.',
+  redirect_invalid_loop:
+    'این آدرس دوباره به یک قانون ریدایرکت کاروان میرسد. آدرسی بیرون از کاروان وارد کنید.',
 };
 
 export const subscriptionErrorMessages: Messages<SubscriptionErrorKey> = { en, fa };
@@ -82,10 +89,13 @@ const reasonKeys: Readonly<Record<string, Readonly<Record<string, SubscriptionEr
     inactive: 'site_invalid_inactive',
     mixed: 'site_invalid_mixed',
   },
+  redirect_invalid: { loop: 'redirect_invalid_loop' },
 };
 
 const isReason = (k: string) =>
-  k.startsWith('certificate_invalid_') || k.startsWith('site_invalid_');
+  k.startsWith('certificate_invalid_') ||
+  k.startsWith('site_invalid_') ||
+  k.startsWith('redirect_invalid_');
 
 /** Every code the server sends that this list words, for the words test. */
 export const subscriptionCodes = (Object.keys(en) as SubscriptionErrorKey[]).filter(

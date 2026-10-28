@@ -75,6 +75,7 @@ describe('area word lists', () => {
         'plain_http_off',
         'port_mixed',
         'port_taken',
+        'redirect_invalid',
         'site_invalid',
         'site_overlap',
       ].sort(),
@@ -107,6 +108,13 @@ describe('area word lists', () => {
     expect(subscriptionErrorKey('site_invalid', { field: 'port' })).toBe('site_invalid');
     expect(subscriptionErrorKey('site_invalid', { reason: 'no_cert' })).toBe('site_invalid');
     expect(subscriptionErrorKey('site_invalid_mixed')).toBeUndefined();
+    expect(subscriptionErrorKey('redirect_invalid', { field: 'toUrl', reason: 'loop' })).toBe(
+      'redirect_invalid_loop',
+    );
+    expect(subscriptionErrorKey('redirect_invalid', { field: 'fromPath' })).toBe(
+      'redirect_invalid',
+    );
+    expect(subscriptionErrorKey('redirect_invalid_loop')).toBeUndefined();
     for (const lang of ['en', 'fa'] as const) {
       for (const [key, text] of Object.entries(subscriptionErrorMessages[lang])) {
         expect(text, key).toBeTruthy();
