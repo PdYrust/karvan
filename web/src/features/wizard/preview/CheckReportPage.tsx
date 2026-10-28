@@ -25,6 +25,7 @@ const totals: readonly [keyof CheckReport['totals'], PreviewKey][] = [
   ['users', 'totalUsers'],
   ['moving', 'totalMoving'],
   ['skipped', 'totalSkipped'],
+  ['alreadyMoved', 'totalAlreadyMoved'],
   ['adopted', 'totalAdopted'],
   ['renamed', 'totalRenamed'],
   ['configChanged', 'totalConfig'],
@@ -60,7 +61,7 @@ function Head({ report }: { report: CheckReport }) {
           { label: t('planVersion'), value: fmt.number(report.planVersion) },
         ]}
       />
-      <dl className="grid grid-cols-2 gap-4 rounded-lg p-4 ring ring-kumo-hairline sm:grid-cols-4 print:grid-cols-7">
+      <dl className="grid grid-cols-2 gap-4 rounded-lg p-4 ring ring-kumo-hairline sm:grid-cols-4">
         {totals.map(([k, word]) => (
           <div key={k} className="flex flex-col">
             <dt className="text-sm text-kumo-subtle">{t(word)}</dt>

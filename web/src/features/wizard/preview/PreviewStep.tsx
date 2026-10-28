@@ -48,7 +48,12 @@ export function PreviewStep() {
   }
   return (
     <div className="flex flex-col gap-6">
-      <ImpactBar impact={plan.impact} blockers={groups.data.blockers} saving={plan.saving} />
+      <ImpactBar
+        impact={plan.impact}
+        blockers={groups.data.blockers}
+        saving={plan.saving}
+        view="preview"
+      />
       <ReportCard jobId={jobId} />
       <PreviewList jobId={jobId} impact={plan.impact} />
       <StepActions jobId={jobId} back="changes" next="start" />

@@ -107,6 +107,8 @@ export interface CheckReport {
     users: number;
     moving: number;
     skipped: number;
+    /** Left out because an earlier migration moved them (C16), also in skipped. */
+    alreadyMoved: number;
     adopted: number;
     renamed: number;
     configChanged: number;

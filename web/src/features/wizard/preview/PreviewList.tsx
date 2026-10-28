@@ -16,6 +16,8 @@ import {
 } from '../../../lib/api/preflight';
 import { useFormat } from '../../../lib/preferences/region';
 import { wizardMessages } from '../messages';
+import { isAlreadyMoved } from '../impact';
+import { protocolName } from '../protocols';
 import { expiryOf } from './expiry';
 import { previewMessages } from './messages';
 import { Pager } from '../../../components/data/Pager';
@@ -41,6 +43,7 @@ function Facts({ row }: { row: UserRow }) {
 function Row({ row }: { row: UserRow }) {
   const t = useT(previewMessages);
   const tw = useT(wizardMessages);
+  const added = row.addedProtocols ?? [];
   return (
     <li className="flex min-h-12 flex-col gap-1.5 border-t border-kumo-hairline px-3 py-2.5 first:border-0 sm:flex-row sm:items-center sm:gap-4">
       <span className="flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-0.5 sm:w-2/5">
@@ -60,9 +63,18 @@ function Row({ row }: { row: UserRow }) {
           </>
         ) : null}
       </span>
-      {row.include ? <Facts row={row} /> : <Badge variant="outline">{tw('leftOut')}</Badge>}
-      {row.include && (row.changesConfig || row.changesLink) ? (
+      {row.include ? (
+        <Facts row={row} />
+      ) : (
+        <Badge variant="outline">{tw(isAlreadyMoved(row) ? 'movedBefore' : 'leftOut')}</Badge>
+      )}
+      {row.include && (row.changesConfig || row.changesLink || added.length > 0) ? (
         <span className="flex flex-wrap gap-1.5 sm:ms-auto">
+          {added.map((p) => (
+            <Badge key={p} variant="outline">
+              {t('addedFlag', { protocol: protocolName(p) })}
+            </Badge>
+          ))}
           {row.changesConfig ? <Badge variant="outline">{t('configFlag')}</Badge> : null}
           {row.changesLink ? <Badge variant="outline">{t('linkFlag')}</Badge> : null}
         </span>

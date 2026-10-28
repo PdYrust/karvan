@@ -272,6 +272,8 @@ export interface UserRow {
   changesConfig: boolean;
   changesLink: boolean;
   movedBefore?: boolean;
+  /** Preview only: protocols the user gets that they lacked. */
+  addedProtocols?: string[];
 }
 
 export interface UserPage {
@@ -306,9 +308,13 @@ export interface Impact {
   users: number;
   moving?: number;
   skipped?: number;
+  /** Left out because an earlier migration moved them (C16), also in skipped. */
+  alreadyMoved?: number;
   configChanged?: number;
   renamed?: number;
   changed?: number;
+  /** Users who get protocols they lacked. */
+  protocolsAdded?: number;
 }
 
 export interface PlanState {

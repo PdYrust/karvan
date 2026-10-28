@@ -2,24 +2,21 @@ import { CheckCircleIcon, WarningCircleIcon } from '@phosphor-icons/react';
 import { useT } from '../../i18n/locale';
 import type { Impact } from '../../lib/api/migrations';
 import { useFormat } from '../../lib/preferences/region';
-import { wizardMessages, type WizardKey } from './messages';
-
-const counts: readonly (keyof Impact & WizardKey)[] = [
-  'moving',
-  'skipped',
-  'renamed',
-  'configChanged',
-];
+import { impactCounts } from './impact';
+import { wizardMessages } from './messages';
 
 /** What the plan does now (the last save's impact) and what still stands in the way. */
 export function ImpactBar({
   impact,
   blockers,
   saving,
+  view = 'plan',
 }: {
   impact: Impact | undefined;
   blockers: number;
   saving: boolean;
+  /** The preview splits new users from those moved before (phase 4.1 D9). */
+  view?: 'plan' | 'preview';
 }) {
   const t = useT(wizardMessages);
   const fmt = useFormat();
@@ -28,13 +25,17 @@ export function ImpactBar({
       aria-label={t('impactLabel')}
       className="flex flex-col gap-4 rounded-lg bg-kumo-base px-4 py-4 ring ring-kumo-hairline"
     >
-      <dl className="grid grid-cols-2 gap-4 sm:grid-cols-4">
-        {counts.map((k) => (
+      <dl
+        className={
+          view === 'plan'
+            ? 'grid grid-cols-2 gap-4 sm:grid-cols-4'
+            : 'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6'
+        }
+      >
+        {impactCounts(impact, view).map(([k, n]) => (
           <div key={k} className="flex min-w-0 flex-col">
             <dt className="text-sm text-kumo-subtle">{t(k)}</dt>
-            <dd className="text-heading font-semibold text-kumo-strong tabular">
-              {fmt.number(impact?.[k] ?? 0)}
-            </dd>
+            <dd className="text-heading font-semibold text-kumo-strong tabular">{fmt.number(n)}</dd>
           </div>
         ))}
       </dl>
