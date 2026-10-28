@@ -11,6 +11,7 @@ import (
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/auth"
 	"github.com/PdYrust/karvan/internal/bridge"
+	"github.com/PdYrust/karvan/internal/certorder"
 	"github.com/PdYrust/karvan/internal/dbstats"
 	"github.com/PdYrust/karvan/internal/hoststats"
 	"github.com/PdYrust/karvan/internal/httpapi/address"
@@ -42,6 +43,7 @@ type Deps struct {
 	// Phase 3: migrations, Safe Mode and the subscription bridge.
 	Runs      *run.Service
 	Bridge    *bridge.Bridge
+	Orders    *certorder.Service
 	Settings  *settings.Store
 	ScanRoots []string
 	// Closing is closed when the server shuts down, so long-lived event
@@ -66,7 +68,7 @@ func New(d Deps) (http.Handler, error) {
 	}
 	cookies := middleware.Cookies{Path: "/" + d.BasePath + "/"}
 	api := &handlers.API{Auth: d.Auth, Audit: d.Audit, Cookies: cookies, Version: d.Version,
-		Runs: d.Runs, Bridge: d.Bridge, Settings: d.Settings, ScanRoots: d.ScanRoots, Closing: d.Closing,
+		Runs: d.Runs, Bridge: d.Bridge, Orders: d.Orders, Settings: d.Settings, ScanRoots: d.ScanRoots, Closing: d.Closing,
 		Host: d.Host, HostStore: d.HostStore, HostReader: d.HostReader, DBStats: d.DBStats, Address: d.Address}
 	signedIn := func(h http.HandlerFunc) http.Handler { return middleware.RequireSession(h) }
 
@@ -192,6 +194,12 @@ func subscriptionRoutes(rt *middleware.Router, api *handlers.API, signedIn func(
 		"POST /api/v1/domains":                 api.AddDomain,
 		"DELETE /api/v1/domains/{id}":          api.DeleteDomain,
 		"PUT /api/v1/domains/{id}/certificate": api.SetDomainCertificate,
+		"GET /api/v1/domains/{id}/acme":        api.ACME,
+		"POST /api/v1/domains/{id}/acme":       api.StartACME,
+		"POST /api/v1/domains/{id}/acme/check": api.CheckACME,
+		"DELETE /api/v1/domains/{id}/acme":     api.CancelACME,
+		"GET /api/v1/settings/acme":            api.ACMESettings,
+		"PUT /api/v1/settings/acme":            api.PutACMESettings,
 		"GET /api/v1/certificates":             api.Certificates,
 		"POST /api/v1/certificates":            api.SaveCertificate,
 		"PATCH /api/v1/certificates/{id}":      api.SaveCertificate,

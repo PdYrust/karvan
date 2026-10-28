@@ -24,6 +24,7 @@ import (
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/auth"
 	"github.com/PdYrust/karvan/internal/bridge"
+	"github.com/PdYrust/karvan/internal/certorder"
 	"github.com/PdYrust/karvan/internal/dbstats"
 	"github.com/PdYrust/karvan/internal/hoststats"
 	"github.com/PdYrust/karvan/internal/httpapi"
@@ -139,7 +140,12 @@ func newEnvDeps(t *testing.T) (*env, httpapi.Deps) {
 	svc := auth.NewService(ops, auth.NewSessions(db), auth.NewLimiter(db, auth.DefaultLockout), log)
 	runs := run.New(run.Deps{DB: db, Key: key, DataDir: filepath.Join(dir, "data"), Tools: migrationtest.Tools})
 	br := bridge.New(bridge.Deps{DB: db, Key: key, Log: slog.New(slog.DiscardHandler), DataDir: filepath.Join(dir, "data"),
-		KeyFile: keyPath, EnvRoots: []string{filepath.Join(dir, "opt")}, PanelPorts: func() []int { return []int{testPanelPort} }})
+		KeyFile: keyPath, EnvRoots: []string{filepath.Join(dir, "opt")}, PanelPorts: func() []int { return []int{testPanelPort} },
+		ChallengePort: freePort(t)})
+	// Nothing answers on port 1, so orders end as acme_unreachable.
+	orders := certorder.New(certorder.Deps{DB: db, Key: key, Bridge: br, Settings: settings.New(db), Audit: log,
+		Log: slog.New(slog.DiscardHandler), TestDirectory: "http://127.0.0.1:1/dir",
+		LookupTXT: func(context.Context, string) ([]string, error) { return []string{"seen-value"}, nil }})
 	closing := make(chan struct{})
 	hostStore := hoststats.NewStore(db)
 	host := &hoststats.Sampler{Reader: hoststats.System, Store: hostStore}
@@ -154,7 +160,7 @@ func newEnvDeps(t *testing.T) (*env, httpapi.Deps) {
 	d := httpapi.Deps{
 		BasePath: base, Auth: svc, Audit: log, Web: webBuild, Version: "test",
 		Logger: slog.New(slog.NewTextHandler(testLog, &slog.HandlerOptions{Level: slog.LevelDebug})),
-		Runs:   runs, Bridge: br, Settings: settings.New(db), Closing: closing,
+		Runs:   runs, Bridge: br, Orders: orders, Settings: settings.New(db), Closing: closing,
 		Host: host, HostStore: hostStore, HostReader: hoststats.System, DBStats: dbs,
 	}
 	jar, _ := cookiejar.New(nil)

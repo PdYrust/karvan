@@ -43,6 +43,7 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 		Logger:         a.Logger,
 		Runs:           svc.runs,
 		Bridge:         svc.bridge,
+		Orders:         svc.orders,
 		Settings:       a.Settings,
 		ScanRoots:      scanRoots(),
 		Closing:        closing,

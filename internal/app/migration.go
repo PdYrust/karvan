@@ -2,14 +2,20 @@ package app
 
 import (
 	"context"
+	"crypto/tls"
+	"crypto/x509"
 	"errors"
 	"fmt"
+	"net"
+	"net/http"
+	"os"
 	"path/filepath"
 	"sync"
 	"time"
 
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/bridge"
+	"github.com/PdYrust/karvan/internal/certorder"
 	"github.com/PdYrust/karvan/internal/dbstats"
 	"github.com/PdYrust/karvan/internal/discovery"
 	"github.com/PdYrust/karvan/internal/hoststats"
@@ -55,6 +61,7 @@ func (a *App) newRuns() *run.Service {
 type services struct {
 	runs      *run.Service
 	bridge    *bridge.Bridge
+	orders    *certorder.Service
 	host      *hoststats.Sampler
 	hostStore *hoststats.Store
 	dbstats   *dbstats.Sampler
@@ -66,8 +73,8 @@ type services struct {
 // panelPorts are the web panel's ports, which no rule may take.
 func (a *App) startServices(ctx context.Context, panelPorts func() []int) *services {
 	br := bridge.New(bridge.Deps{DB: a.DB, Key: a.Key, Log: a.Logger, DataDir: a.Config.DataDir, KeyFile: a.Config.KeyFile,
-		EnvRoots: scanRoots(), PanelPorts: panelPorts})
-	s := &services{runs: a.newRuns(), bridge: br, hostStore: hoststats.NewStore(a.DB)}
+		EnvRoots: scanRoots(), PanelPorts: panelPorts, ChallengePort: a.Config.ACMEHTTPPort})
+	s := &services{runs: a.newRuns(), bridge: br, orders: a.newOrders(br), hostStore: hoststats.NewStore(a.DB)}
 	s.host = &hoststats.Sampler{Reader: hoststats.System, Store: s.hostStore, Log: a.Logger}
 	s.dbstats = &dbstats.Sampler{Store: dbstats.NewStore(a.DB), Log: a.Logger, Panels: s.panelRefs}
 	if err := s.runs.Recover(ctx); err != nil {
@@ -76,6 +83,13 @@ func (a *App) startServices(ctx context.Context, panelPorts func() []int) *servi
 	s.wg.Go(func() {
 		if err := s.bridge.Run(ctx); err != nil {
 			a.Logger.Warn("subscription bridge", "err", err)
+		}
+	})
+	s.wg.Go(func() {
+		select { // orders resume once the bridge has filled the domains and listens
+		case <-br.Started():
+			s.orders.Run(ctx)
+		case <-ctx.Done():
 		}
 	})
 	s.wg.Go(func() { s.host.Run(ctx) })
@@ -94,6 +108,29 @@ func (a *App) startServices(ctx context.Context, panelPorts func() []int) *servi
 		}
 	}()
 	return s
+}
+
+// newOrders is the Let's Encrypt service, on the test CA, root and
+// resolver of the config when they are set (D74).
+func (a *App) newOrders(br *bridge.Bridge) *certorder.Service {
+	d := certorder.Deps{DB: a.DB, Key: a.Key, Bridge: br, Settings: a.Settings, Audit: a.Audit, Log: a.Logger,
+		TestDirectory: a.Config.ACMETestDirectory}
+	if path := a.Config.ACMETestRootCA; path != "" {
+		pool := x509.NewCertPool()
+		if data, err := os.ReadFile(path); err != nil || !pool.AppendCertsFromPEM(data) { //nolint:gosec // G304: the operator's config names it
+			a.Logger.Warn("acmeTestRootCA is not a PEM certificate", "path", path, "err", err)
+		}
+		tr := http.DefaultTransport.(*http.Transport).Clone()
+		tr.TLSClientConfig = &tls.Config{RootCAs: pool, MinVersion: tls.VersionTLS12}
+		d.HTTPClient = &http.Client{Transport: tr}
+	}
+	if addr := a.Config.ACMETestResolver; addr != "" {
+		r := &net.Resolver{PreferGo: true, Dial: func(ctx context.Context, network, _ string) (net.Conn, error) {
+			return (&net.Dialer{}).DialContext(ctx, network, addr)
+		}}
+		d.LookupTXT = r.LookupTXT
+	}
+	return certorder.New(d)
 }
 
 // trimDaily trims the events of long ended jobs and the audit events

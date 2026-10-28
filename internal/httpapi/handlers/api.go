@@ -9,6 +9,7 @@ import (
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/auth"
 	"github.com/PdYrust/karvan/internal/bridge"
+	"github.com/PdYrust/karvan/internal/certorder"
 	"github.com/PdYrust/karvan/internal/dbstats"
 	"github.com/PdYrust/karvan/internal/hoststats"
 	"github.com/PdYrust/karvan/internal/httpapi/address"
@@ -38,6 +39,7 @@ type API struct {
 
 	Runs      *run.Service
 	Bridge    *bridge.Bridge
+	Orders    *certorder.Service
 	Settings  *settings.Store
 	ScanRoots []string
 	Closing   <-chan struct{} // closed on shutdown; ends event streams

@@ -115,7 +115,8 @@ func TestDomainRoutes(t *testing.T) {
 
 // A domain's certificate changes by PUT: refused with a code while an
 // HTTPS rule holds the domain and the change is none, or when the
-// certificate does not cover it, or for Let's Encrypt until it is built.
+// certificate does not cover it, or for Let's Encrypt without the
+// subscriber agreement on the first order.
 func TestDomainCertificateRoute(t *testing.T) {
 	m := newMigrationEnv(t, 0)
 	m.certify(t, "tls.example.com")
@@ -133,7 +134,7 @@ func TestDomainCertificateRoute(t *testing.T) {
 	certFails(t, m.do(http.MethodPut, path, map[string]any{"certificate": map[string]any{"kind": "pasted", "certPem": other, "keyPem": otherKey}}),
 		"certificate", "not_covered")
 	m.siteFails(t, http.MethodPut, path, map[string]any{"certificate": map[string]any{"kind": "acme", "method": "http-01"}},
-		http.StatusBadRequest, "acme_invalid", "kind")
+		http.StatusBadRequest, "acme_invalid", "agreeTos")
 	wantError(t, m.do(http.MethodPut, api+"/domains/999/certificate", map[string]any{"certificate": plain}), http.StatusNotFound, "not_found")
 	cert, key := testCert(t, "tls.example.com")
 	res = m.do(http.MethodPut, path, map[string]any{"certificate": map[string]any{"kind": "pasted", "certPem": cert, "keyPem": key}})
