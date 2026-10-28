@@ -159,6 +159,14 @@ type User struct {
 	SubscriptionURL string
 }
 
+// SourceGroup is a group of an old PasarGuard panel with the protocols of
+// its inbounds, so a user's current protocols can be told (D36).
+type SourceGroup struct {
+	ID        int64
+	Disabled  bool
+	Protocols []string
+}
+
 // Target is where moved users are attached on the destination: a group in
 // PasarGuard, or a protocol's inbound tags in Marzban.
 type Target struct {

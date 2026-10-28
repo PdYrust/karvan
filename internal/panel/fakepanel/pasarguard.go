@@ -12,6 +12,10 @@ type PasarGuard struct {
 	*httptest.Server
 	state *panelState
 	mints int
+	// groups and inbounds answer GET /api/groups and
+	// /api/inbounds/details; nil answers 404, as an older panel does.
+	groups, inbounds []map[string]any
+	groupsStatus     int
 }
 
 // PasarGuardAdmin is the reseller. APIKey enables X-Api-Key sign-in;
@@ -50,8 +54,41 @@ func NewPasarGuard(admin PasarGuardAdmin, users []map[string]any, f Faults) *Pas
 			}
 		},
 		"GET /sub/{token}/info": p.subInfo(func(u map[string]any) map[string]any { return g.response(u, false) }),
+		"GET /api/groups": func(w http.ResponseWriter, r *http.Request) {
+			if g.groupsGate(w, r, g.groups) {
+				writeJSON(w, http.StatusOK, map[string]any{"groups": g.groups, "total": len(g.groups)})
+			}
+		},
+		"GET /api/inbounds/details": func(w http.ResponseWriter, r *http.Request) {
+			if g.groupsGate(w, r, g.inbounds) {
+				writeJSON(w, http.StatusOK, g.inbounds)
+			}
+		},
 	})
 	return g
+}
+
+// ServeGroups makes the fake answer its groups and inbound details;
+// status, when set, is the answer instead (403 for a login without the
+// permission).
+func (g *PasarGuard) ServeGroups(groups, inbounds []map[string]any, status int) {
+	g.state.mu.Lock()
+	defer g.state.mu.Unlock()
+	g.groups, g.inbounds, g.groupsStatus = groups, inbounds, status
+}
+
+func (g *PasarGuard) groupsGate(w http.ResponseWriter, r *http.Request, list []map[string]any) bool {
+	switch {
+	case !g.state.gate(w, r):
+		return false
+	case g.groupsStatus != 0:
+		http.Error(w, `{"detail":"no"}`, g.groupsStatus)
+		return false
+	case list == nil:
+		http.NotFound(w, r)
+		return false
+	}
+	return true
 }
 
 func (g *PasarGuard) response(u map[string]any, loadSub bool) map[string]any {
