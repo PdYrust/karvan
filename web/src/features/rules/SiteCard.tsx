@@ -1,12 +1,7 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
-import {
-  CaretDownIcon,
-  CaretRightIcon,
-  DotsThreeIcon,
-  PencilSimpleIcon,
-  TrashIcon,
-} from '@phosphor-icons/react';
+import { CaretDownIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { DotsThreeIcon, PencilSimpleIcon, TrashIcon } from '../../components/icons/regular';
 import { useId, useState, type ReactNode } from 'react';
 import { Collapse } from '../../components/layout/Collapse';
 import { useNavigate } from 'react-router';
@@ -35,7 +30,7 @@ function SiteMenu({ site, onDelete }: { site: LinkSite; onDelete: () => void }) 
             shape="square"
             aria-label={label}
             title={label}
-            icon={<DotsThreeIcon size={20} weight="bold" />}
+            icon={<DotsThreeIcon size={20} />}
             className="shrink-0 pointer-coarse:size-9"
           />
         }
@@ -45,11 +40,11 @@ function SiteMenu({ site, onDelete }: { site: LinkSite; onDelete: () => void }) 
           className="gap-2"
           onClick={() => void navigate(`/rules/${String(site.id)}`)}
         >
-          <PencilSimpleIcon size={16} aria-hidden="true" />
+          <PencilSimpleIcon size={16} />
           {t('edit')}
         </DropdownMenu.Item>
         <DropdownMenu.Item className="gap-2" variant="danger" onClick={onDelete}>
-          <TrashIcon size={16} aria-hidden="true" />
+          <TrashIcon size={16} />
           {t('delete')}
         </DropdownMenu.Item>
       </DropdownMenu.Content>

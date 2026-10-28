@@ -1,7 +1,7 @@
 import { Button } from '@cloudflare/kumo/components/button';
-import { Switch } from '@cloudflare/kumo/components/switch';
 import { useState } from 'react';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
+import { SwitchRow } from '../../components/form/SwitchRow';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
 import type { SiteInput } from '../../lib/api/rules';
@@ -12,41 +12,6 @@ import { siteFormMessages } from './form-messages';
 import { inputOf, isPlainHttp, refusedField, type SiteField, type SiteValues } from './site-form';
 import { AnswerFields, OldPanelFields } from './SiteFields';
 import { TextField } from './TextField';
-
-function SwitchRow({
-  id,
-  label,
-  hint,
-  checked,
-  onChange,
-}: {
-  id: string;
-  label: string;
-  hint: string;
-  checked: boolean;
-  onChange: (on: boolean) => void;
-}) {
-  return (
-    <div className="flex items-start justify-between gap-6">
-      <div className="flex min-w-0 flex-col gap-1">
-        <span id={`${id}-label`} className="font-medium text-kumo-strong">
-          {label}
-        </span>
-        <span id={`${id}-hint`} className="text-sm text-kumo-subtle">
-          {hint}
-        </span>
-      </div>
-      <Switch
-        aria-labelledby={`${id}-label`}
-        aria-describedby={`${id}-hint`}
-        checked={checked}
-        onCheckedChange={onChange}
-        // The switch is 18 px high; the hit area reaches 44 px on touch screens.
-        className="relative shrink-0 pointer-coarse:before:absolute pointer-coarse:before:-inset-x-[9px] pointer-coarse:before:-inset-y-[13px] pointer-coarse:before:content-['']"
-      />
-    </div>
-  );
-}
 
 /** The site's fields in one column; a refused field gets its sentence under it. */
 export function SiteForm({
