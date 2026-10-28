@@ -63,6 +63,11 @@ func (b *Bridge) Reload(ctx context.Context) error {
 	}
 	b.mu.Lock()
 	b.sites, b.olds = sites, map[int64]OldPanel{}
+	for port := range b.errs {
+		if _, ok := want[port]; !ok {
+			delete(b.errs, port) // no rule uses the port any more
+		}
+	}
 	var stop []*listener
 	for port, l := range b.servers {
 		if tlsOn, ok := want[port]; !ok || tlsOn != l.tls {
