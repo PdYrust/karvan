@@ -68,6 +68,7 @@ describe('area word lists', () => {
       [
         'certificate_in_use',
         'certificate_invalid',
+        'certificate_not_adopted',
         'domain_in_use',
         'domain_invalid',
         'plain_http_off',
@@ -92,6 +93,18 @@ describe('area word lists', () => {
       'certificate_invalid',
     );
     expect(subscriptionErrorKey('certificate_invalid_no_cert')).toBeUndefined();
+    expect(subscriptionErrorKey('site_invalid', { field: 'batchIds', reason: 'mixed' })).toBe(
+      'site_invalid_mixed',
+    );
+    expect(subscriptionErrorKey('site_invalid', { field: 'batchIds', reason: 'inactive' })).toBe(
+      'site_invalid_inactive',
+    );
+    expect(subscriptionErrorKey('site_invalid', { field: 'batchIds', reason: 'unknown' })).toBe(
+      'site_invalid_unknown',
+    );
+    expect(subscriptionErrorKey('site_invalid', { field: 'port' })).toBe('site_invalid');
+    expect(subscriptionErrorKey('site_invalid', { reason: 'no_cert' })).toBe('site_invalid');
+    expect(subscriptionErrorKey('site_invalid_mixed')).toBeUndefined();
     for (const lang of ['en', 'fa'] as const) {
       for (const [key, text] of Object.entries(subscriptionErrorMessages[lang])) {
         expect(text, key).toBeTruthy();

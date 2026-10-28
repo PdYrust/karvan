@@ -25,6 +25,12 @@ const en = {
   certificate_invalid_key_mismatch:
     "This key doesn't belong to the certificate. Use the key that was made with it.",
   certificate_in_use: 'A rule still uses this certificate. Pick another one in the rule first.',
+  certificate_not_adopted:
+    "Add this rule's certificate in Domains and certificates, then pick it here.",
+  site_invalid_unknown: 'A batch of this rule is gone. Pick the batches again.',
+  site_invalid_inactive: 'A batch of this rule is not active. Pick only active batches.',
+  site_invalid_mixed:
+    'These batches come from different old panels or destinations. Pick batches of one old panel and one destination.',
 };
 
 export type SubscriptionErrorKey = keyof typeof en;
@@ -50,31 +56,49 @@ const fa: Messages<SubscriptionErrorKey>['fa'] = {
     'این کلید برای این گواهی نیست. کلیدی را بدهید که همراه همین گواهی ساخته شده است.',
   certificate_in_use:
     'یک قانون هنوز از این گواهی استفاده میکند. اول در آن قانون گواهی دیگری انتخاب کنید.',
+  certificate_not_adopted:
+    'گواهی این قانون را در دامنه ها و گواهی ها اضافه کنید و بعد اینجا انتخاب کنید.',
+  site_invalid_unknown: 'یکی از دسته های این قانون دیگر نیست. دسته ها را دوباره انتخاب کنید.',
+  site_invalid_inactive: 'یکی از دسته های این قانون فعال نیست. فقط دسته های فعال را انتخاب کنید.',
+  site_invalid_mixed:
+    'این دسته ها از پنل های قدیمی یا مقصدهای مختلف هستند. دسته های یک پنل قدیمی و یک مقصد را انتخاب کنید.',
 };
 
 export const subscriptionErrorMessages: Messages<SubscriptionErrorKey> = { en, fa };
 
-const reasonKeys: Readonly<Record<string, SubscriptionErrorKey | undefined>> = {
-  unreadable: 'certificate_invalid_unreadable',
-  no_cert: 'certificate_invalid_no_cert',
-  key_mismatch: 'certificate_invalid_key_mismatch',
+/** The sentences for why a field was refused, by code and reason. */
+const reasonKeys: Readonly<Record<string, Readonly<Record<string, SubscriptionErrorKey>>>> = {
+  certificate_invalid: {
+    unreadable: 'certificate_invalid_unreadable',
+    no_cert: 'certificate_invalid_no_cert',
+    key_mismatch: 'certificate_invalid_key_mismatch',
+  },
+  site_invalid: {
+    unknown: 'site_invalid_unknown',
+    inactive: 'site_invalid_inactive',
+    mixed: 'site_invalid_mixed',
+  },
 };
+
+const isReason = (k: string) =>
+  k.startsWith('certificate_invalid_') || k.startsWith('site_invalid_');
 
 /** Every code the server sends that this list words, for the words test. */
 export const subscriptionCodes = (Object.keys(en) as SubscriptionErrorKey[]).filter(
-  (k) => !k.startsWith('certificate_invalid_'),
+  (k) => !isReason(k),
 );
 
 const isCode = (code: string): code is SubscriptionErrorKey =>
-  Object.hasOwn(en, code) && !code.startsWith('certificate_invalid_');
+  Object.hasOwn(en, code) && !isReason(code);
 
 /** The sentence a code and its extras get here, or undefined for a shared code. */
 export function subscriptionErrorKey(
   code: string,
   detail: Readonly<Record<string, unknown>> = {},
 ): SubscriptionErrorKey | undefined {
-  if (code === 'certificate_invalid' && typeof detail.reason === 'string') {
-    return (Object.hasOwn(reasonKeys, detail.reason) && reasonKeys[detail.reason]) || code;
+  const reasons = Object.hasOwn(reasonKeys, code) ? reasonKeys[code] : undefined;
+  if (reasons && typeof detail.reason === 'string' && Object.hasOwn(reasons, detail.reason)) {
+    return reasons[detail.reason];
   }
   return isCode(code) ? code : undefined;
 }
