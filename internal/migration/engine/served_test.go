@@ -86,8 +86,10 @@ func TestNoCurrentProtocolServedIsC10(t *testing.T) {
 	if c := hasConflict(item(t, r, "a"), NoProtocol); c == nil || c.Severity != Blocker {
 		t.Fatalf("C10 = %+v, want a blocker", c)
 	}
+	in.Dest.Targets = append(in.Dest.Targets, panel.Target{ID: "2", Name: "VLESS"})
+	in.Dest.Roles = append(in.Dest.Roles, panel.Role{ID: 7, Name: "vless", Groups: []string{"2"}})
 	p := basePlan()
-	p.Targets = []string{"2"}
+	p.Admin.RoleID = 7
 	if it := item(t, build(t, p, in), "a"); hasConflict(it, NoProtocol) != nil {
 		t.Errorf("into the VLESS group: %+v, want no C10", it.Conflicts)
 	}

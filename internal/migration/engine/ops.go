@@ -19,7 +19,7 @@ var Ops = map[string][]string{
 	"status.set": {"status"}, "status.auto_delete": {"days"}, "status.hwid": {"limit"},
 	"name.prefix": {"text"}, "name.suffix": {"text"}, "name.replace": {"from", "to"},
 	"note.set": {"text"}, "note.append": {"text"}, "note.clear": nil,
-	"tag.add": {"tag"}, "place.targets": {"ids"}, "plan.clear_next": nil, "skip": nil,
+	"tag.add": {"tag"}, "plan.clear_next": nil, "skip": nil,
 	"cred.new": {"protocols"},
 }
 
@@ -29,8 +29,12 @@ type opContext struct {
 	generate func(key, protocol string) panel.Credentials
 }
 
-// checkOp validates an operation before any user sees it.
+// checkOp validates an operation before any user sees it. place.targets
+// is gone (D32): groups come from the role, Marzban gets every inbound.
 func checkOp(o plan.Op) error {
+	if o.Kind == "place.targets" {
+		return &PlanError{Where: "ops", Problem: "place.targets"}
+	}
 	want, ok := Ops[o.Kind]
 	if !ok {
 		return planErr("operation", "unknown operation %q", o.Kind)
@@ -117,8 +121,6 @@ func applyOther(it *Item, o plan.Op, c opContext) {
 		if !slices.Contains(it.Tags, p["tag"]) {
 			it.Tags = append(it.Tags, p["tag"])
 		}
-	case "place.targets":
-		it.Targets = splitList(p["ids"])
 	case "plan.clear_next":
 		u.NextPlan = nil
 	case "skip":

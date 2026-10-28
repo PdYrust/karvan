@@ -16,7 +16,7 @@ const maxPasses = 5
 // Result is the outcome of one build.
 type Result struct {
 	Items     []*Item
-	Targets   []string // where users go unless an operation says otherwise
+	Targets   []string // where users go: the role's groups, or every inbound (D31, D32)
 	Admin     AdminOutcome
 	Conflicts []Conflict // job-level ones (admin, clock, targets, settling)
 	Groups    []Group    // problem groups for the operator
@@ -52,10 +52,7 @@ func Build(p plan.Plan, in Inputs) (*Result, error) {
 	in.now = p.Now
 	res.Admin, res.Conflicts = admin(p, in)
 	res.Conflicts = append(res.Conflicts, chooseRole(p, &in, &res.Admin)...)
-	res.Targets = p.Targets
-	if len(res.Targets) == 0 {
-		res.Targets = defaultTargets(in)
-	}
+	res.Targets = defaultTargets(in) // never p.Targets (D31, D32)
 	items := newItems(in, res.Targets)
 	for _, it := range items {
 		prepare(it, tree, p, in, ctx)
@@ -70,9 +67,6 @@ func Build(p plan.Plan, in Inputs) (*Result, error) {
 	}
 	res.Conflicts = append(res.Conflicts, jobConflicts(res.Targets, in, res.Stable)...)
 	res.Conflicts = append(res.Conflicts, maxUsers(in, res.Admin, items)...)
-	if out := outsideRole(in, items); len(out) > 0 {
-		res.Conflicts = append(res.Conflicts, Conflict{Type: RoleGroups, Severity: Warning, Detail: map[string]string{"targets": joinSorted(out)}})
-	}
 	res.Groups, res.Blockers = groups(items, res.Conflicts)
 	return res, nil
 }

@@ -252,15 +252,34 @@ func TestJobConflicts(t *testing.T) {
 	in := inputs(panel.Marzban, dest(panel.Marzban), mUser("a", 1))
 	in.Dest.Targets = nil
 	in.Source.Skew = 3 * time.Minute
-	p := basePlan()
-	p.Targets = nil
-	r := build(t, p, in)
+	r := build(t, basePlan(), in)
 	types := map[string]bool{}
 	for _, c := range r.Conflicts {
 		types[c.Type] = true
 	}
 	if !types[ClockSkew] || !types[NoTargets] {
 		t.Fatalf("%+v", r.Conflicts)
+	}
+}
+
+// D32: the place.targets operation is gone; a plan that still has it is
+// refused wherever it sits.
+func TestPlaceTargetsRefused(t *testing.T) {
+	op := []plan.Op{{Kind: "place.targets", Params: map[string]string{"ids": "3"}}}
+	cases := map[string]plan.Plan{
+		"category": {Tree: []plan.Node{{ID: "a", Ops: op}}},
+		"problem":  {Problems: map[string][]plan.Op{NoProtocol: op}},
+		"user":     {Users: map[string]plan.UserDecision{"alice": {Ops: op}}},
+	}
+	for name, p := range cases {
+		var pe *PlanError
+		_, err := Build(p, inputs(panel.Marzban, dest(panel.Marzban)))
+		if !errors.As(err, &pe) || pe.Where != "ops" || pe.Problem != "place.targets" {
+			t.Errorf("%s: err = %v", name, err)
+		}
+	}
+	if _, ok := Ops["place.targets"]; ok {
+		t.Error("place.targets is still offered")
 	}
 }
 

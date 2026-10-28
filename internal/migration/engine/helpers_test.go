@@ -82,7 +82,7 @@ func inputs(kind panel.Kind, d Dest, users ...panel.User) Inputs {
 	}
 }
 
-func basePlan() plan.Plan { return plan.Plan{Now: now, Targets: []string{"1"}} }
+func basePlan() plan.Plan { return plan.Plan{Now: now} }
 
 func build(t *testing.T, p plan.Plan, in Inputs) *Result {
 	t.Helper()

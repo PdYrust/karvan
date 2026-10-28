@@ -30,24 +30,18 @@ func vlessOnly(name string, n int) panel.User {
 	return u
 }
 
-func noTargets() plan.Plan {
-	p := basePlan()
-	p.Targets = nil
-	return p
-}
-
 // D65: the source role's name picks the destination role; the owner role
 // never comes by default.
 func TestDefaultRole(t *testing.T) {
 	for source, want := range map[string]int64{"cheap": 7, "owner": operatorRole, "": operatorRole, "gold": operatorRole} {
 		in := inputs(panel.PasarGuard, roleDest(), vlessOnly("alice", 1))
 		in.Source.Admin.RoleName = source
-		if r := build(t, noTargets(), in); r.Admin.RoleID != want {
+		if r := build(t, basePlan(), in); r.Admin.RoleID != want {
 			t.Errorf("source role %q: got %d, want %d", source, r.Admin.RoleID, want)
 		}
 	}
 	in := inputs(panel.PasarGuard, roleDest(), vlessOnly("alice", 1))
-	p := noTargets()
+	p := basePlan()
 	p.Admin.RoleID = 99
 	r := build(t, p, in)
 	if !slices.ContainsFunc(r.Conflicts, func(c Conflict) bool { return c.Type == RoleMissing && c.Severity == Blocker }) {
@@ -66,13 +60,13 @@ func TestAccessFollowsTheRole(t *testing.T) {
 	src := vlessOnly("alice", 1)
 	in := inputs(panel.PasarGuard, roleDest(), src)
 	in.Source.Admin.RoleName = "cheap"
-	r := build(t, noTargets(), in)
+	r := build(t, basePlan(), in)
 	it := item(t, r, "1")
 	if strings.Join(r.Targets, ",") != "1" || strings.Join(it.Targets, ",") != "1" {
 		t.Fatalf("targets %v / %v", r.Targets, it.Targets)
 	}
 	in = inputs(panel.PasarGuard, roleDest(), src) // operator allows all groups
-	it = item(t, build(t, noTargets(), in), "1")
+	it = item(t, build(t, basePlan(), in), "1")
 	c := it.User.Credentials
 	if strings.Join(it.Targets, ",") != "1,3" || c.Trojan == nil || c.VMess != nil || c.VLESS.ID != src.Credentials.VLESS.ID {
 		t.Fatalf("targets %v creds %+v", it.Targets, c)
@@ -89,22 +83,38 @@ func TestMarzbanGetsEveryInbound(t *testing.T) {
 	d := dest(panel.Marzban)
 	d.Targets = []panel.Target{{ID: "vless/A", Protocol: "vless"}, {ID: "vmess/B", Protocol: "vmess"}}
 	d.TargetProtocols = map[string][]string{"vless/A": {"vless"}, "vmess/B": {"vmess"}}
-	it := item(t, build(t, noTargets(), inputs(panel.PasarGuard, d, vlessOnly("alice", 1))), "1")
+	it := item(t, build(t, basePlan(), inputs(panel.PasarGuard, d, vlessOnly("alice", 1))), "1")
 	if strings.Join(it.Targets, ",") != "vless/A,vmess/B" || it.User.Credentials.VMess == nil {
 		t.Fatalf("targets %v creds %+v", it.Targets, it.User.Credentials)
 	}
 }
 
-// A group given by hand outside the role is a warning, not a blocker.
-func TestGroupOutsideTheRole(t *testing.T) {
+// D31: groups come only from the role. Targets in a plan (kept from a
+// draft made before Phase 4.1) never pick groups, and nothing warns.
+func TestPlanTargetsNeverPickGroups(t *testing.T) {
 	in := inputs(panel.PasarGuard, roleDest(), vlessOnly("alice", 1))
 	in.Source.Admin.RoleName = "cheap"
 	p := basePlan()
 	p.Targets = []string{"1", "3"}
 	r := build(t, p, in)
-	i := slices.IndexFunc(r.Conflicts, func(c Conflict) bool { return c.Type == RoleGroups })
-	if i < 0 || r.Conflicts[i].Detail["targets"] != "3" || r.Blockers != 0 {
+	if it := item(t, r, "1"); strings.Join(it.Targets, ",") != "1" || strings.Join(r.Targets, ",") != "1" {
+		t.Fatalf("targets %v / %v, want the role's group 1", r.Targets, it.Targets)
+	}
+	if slices.ContainsFunc(r.Conflicts, func(c Conflict) bool { return c.Severity != Info }) || r.Blockers != 0 {
 		t.Fatalf("%+v", r.Conflicts)
+	}
+}
+
+// D32: a plan's targets never narrow Marzban's inbounds either.
+func TestPlanTargetsNeverNarrowMarzban(t *testing.T) {
+	d := dest(panel.Marzban)
+	d.Targets = []panel.Target{{ID: "vless/A", Protocol: "vless"}, {ID: "vmess/B", Protocol: "vmess"}}
+	d.TargetProtocols = map[string][]string{"vless/A": {"vless"}, "vmess/B": {"vmess"}}
+	p := basePlan()
+	p.Targets = []string{"vless/A"}
+	it := item(t, build(t, p, inputs(panel.PasarGuard, d, vlessOnly("alice", 1))), "1")
+	if strings.Join(it.Targets, ",") != "vless/A,vmess/B" {
+		t.Fatalf("targets %v, want every inbound", it.Targets)
 	}
 }
 
@@ -121,7 +131,7 @@ func TestRoleLimits(t *testing.T) {
 	small.DataLimit, small.Expire = gib, nil
 	in := inputs(panel.PasarGuard, d, big, small)
 	in.Source.Admin.RoleName = "cheap"
-	p := noTargets()
+	p := basePlan()
 	r := build(t, p, in)
 	if c := hasConflict(item(t, r, "1"), RoleLimit); c == nil || c.Fix != OptKeep || c.Detail["fields"] != "data_limit,expire" {
 		t.Fatalf("big: %+v", item(t, r, "1").Conflicts)
@@ -142,7 +152,7 @@ func TestRoleLimits(t *testing.T) {
 		t.Fatalf("fit: %d %v %+v", it.User.DataLimit, it.User.Expire, it.Conflicts)
 	}
 	in.Source.Admin.Overrides = &panel.RoleLimits{DataLimitMax: ptr(200 * gib), ExpireMax: ptr(int64(365 * 24 * 3600))}
-	if c := hasConflict(item(t, build(t, noTargets(), in), "1"), RoleLimit); c != nil {
+	if c := hasConflict(item(t, build(t, basePlan(), in), "1"), RoleLimit); c != nil {
 		t.Errorf("the admin's own limits win: %+v", c)
 	}
 }
@@ -154,7 +164,7 @@ func TestRoleFeatures(t *testing.T) {
 	u.NextPlan = &panel.NextPlan{DataLimit: gib}
 	in := inputs(panel.PasarGuard, d, u)
 	in.Source.Admin.RoleName = "cheap"
-	p := noTargets()
+	p := basePlan()
 	if c := hasConflict(item(t, build(t, p, in), "1"), RoleFeature); c == nil || c.Detail["fields"] != "next_plan" {
 		t.Fatal("a next plan the role forbids is not flagged")
 	}
@@ -170,7 +180,7 @@ func TestMergeKeepsTheAdminsRole(t *testing.T) {
 	d.Roles[3].Limits.MaxUsers = ptr(5)
 	d.Admins = map[string]panel.ExistingAdmin{"shop": {ID: 4, Username: "shop", RoleID: 7, Users: 5}}
 	in := inputs(panel.PasarGuard, d, vlessOnly("alice", 1))
-	p := noTargets()
+	p := basePlan()
 	p.Admin.Mode, p.Admin.RoleID = plan.AdminMerge, 2
 	r := build(t, p, in)
 	if r.Admin.RoleID != 7 || !slices.ContainsFunc(r.Conflicts, func(c Conflict) bool { return c.Type == RoleMaxUsers && c.Detail["users"] == "6" }) {

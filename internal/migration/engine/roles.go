@@ -19,7 +19,6 @@ const (
 	RoleMaxUsers  = "C33" // the admin would own more users than the role allows
 	RoleTemplates = "C34" // the role only lets the admin use templates
 	RoleMissing   = "C35" // the chosen role is not on the destination
-	RoleGroups    = "C36" // users get groups the role does not allow
 	RoleOwner     = "C37" // the owner role bypasses every check
 )
 
@@ -76,9 +75,9 @@ func defaultRole(roles []panel.Role, sourceName string) int64 {
 	return operatorRole
 }
 
-// defaultTargets is where users go when the operator chose nothing (D66):
-// every enabled group the role allows on PasarGuard, every inbound on
-// Marzban.
+// defaultTargets is where users go (D31, D32): every enabled group the
+// role allows on PasarGuard, every inbound on Marzban. There is no other
+// choice.
 func defaultTargets(in Inputs) []string {
 	var out []string
 	for _, t := range in.Dest.Targets {
@@ -90,23 +89,6 @@ func defaultTargets(in Inputs) []string {
 		}
 		out = append(out, t.ID)
 	}
-	return out
-}
-
-// outsideRole lists the targets users got that the role does not allow.
-func outsideRole(in Inputs, items []*Item) []string {
-	if in.role == nil || in.role.IsOwner || in.role.Groups == nil {
-		return nil
-	}
-	var out []string
-	for _, it := range items {
-		for _, t := range it.Targets {
-			if it.Include && !slices.Contains(in.role.Groups, t) && !slices.Contains(out, t) {
-				out = append(out, t)
-			}
-		}
-	}
-	slices.Sort(out)
 	return out
 }
 

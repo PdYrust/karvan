@@ -70,7 +70,7 @@ func dryRun(t *testing.T, from panel.Kind, tg paneldb.Target, to panel.Kind) {
 	}
 	in := engine.Inputs{Source: engine.Source{Kind: from, Admin: a, Users: users}, Dest: facts, Moved: map[string]engine.Moved{},
 		Generate: func(string) panel.Credentials { return panel.Credentials{} }, Generated: map[string]panel.Credentials{}}
-	r, err := engine.Build(plan.Plan{Now: time.Now().UTC(), Targets: []string{facts.Targets[0].ID}}, in)
+	r, err := engine.Build(plan.Plan{Now: time.Now().UTC()}, in)
 	if err != nil {
 		t.Fatal(err)
 	}
