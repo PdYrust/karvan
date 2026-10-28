@@ -61,6 +61,7 @@ func Build(p plan.Plan, in Inputs) (*Result, error) {
 		}
 	}
 	countUsers(res.Admins, items)
+	res.Conflicts = dropIdle(res.Admins, res.Conflicts)
 	res.Conflicts = append(res.Conflicts, jobConflicts(in, res.Stable)...)
 	res.Conflicts = append(res.Conflicts, maxUsers(res.Admins)...)
 	res.Groups, res.Blockers = groups(items, res.Conflicts)

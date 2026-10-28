@@ -33,6 +33,18 @@ func (r *Result) Login() *AdminOutcome {
 	return &r.Admins[0]
 }
 
+// Moves reports whether the run writes the admin: the login's always,
+// another only when it has users to move.
+func (o AdminOutcome) Moves() bool { return o.IsLogin || o.Users > 0 }
+
+// dropIdle drops the conflicts of admins that do not move.
+func dropIdle(admins []AdminOutcome, cs []Conflict) []Conflict {
+	return slices.DeleteFunc(cs, func(c Conflict) bool {
+		i := slices.IndexFunc(admins, func(a AdminOutcome) bool { return a.Source.Username == c.Detail["admin"] })
+		return i >= 0 && !admins[i].Moves()
+	})
+}
+
 // ownerOf is the source admin u belongs to: its owner, else the login's.
 func ownerOf(u panel.User, login string) string { return cmp.Or(u.OwnerUsername, login) }
 

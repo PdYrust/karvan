@@ -74,6 +74,24 @@ func TestLoginAlwaysMovesAndAdminsKeepTheirFacts(t *testing.T) {
 	}
 }
 
+// An admin other than the login's whose users all stay behind is not
+// written, so its own conflicts go too; the login's admin always moves.
+func TestAnAdminWithNothingToMoveIsLeftOut(t *testing.T) {
+	d := dest(panel.Marzban)
+	d.Admins["north"] = panel.ExistingAdmin{ID: 4, Username: "north"}
+	d.Admins["shop"] = panel.ExistingAdmin{ID: 5, Username: "shop"}
+	in := inputs(panel.Marzban, d, owned(mUser("b", 2), "north"))
+	p := basePlan()
+	p.Users = map[string]plan.UserDecision{"b": {Exclude: true}}
+	r := build(t, p, in)
+	if r.Admins[1].Moves() || !r.Login().Moves() {
+		t.Fatalf("moves: %+v", r.Admins)
+	}
+	if adminConflict(r, AdminTaken, "north") != nil || adminConflict(r, AdminTaken, "shop") == nil {
+		t.Fatalf("conflicts %+v", r.Conflicts)
+	}
+}
+
 // C01 and C30 are per admin, and a plan entry fixes only its own admin.
 func TestAdminConflictsPerAdmin(t *testing.T) {
 	d := dest(panel.Marzban)
