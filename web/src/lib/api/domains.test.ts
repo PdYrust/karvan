@@ -1,0 +1,40 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { addDomain, deleteDomain, getDomains } from './domains';
+
+afterEach(() => vi.unstubAllGlobals());
+
+function stubFetch(body: unknown = {}, status = 200) {
+  const f = vi.fn(() =>
+    Promise.resolve(
+      status === 204 ? new Response(null, { status }) : new Response(JSON.stringify(body)),
+    ),
+  );
+  vi.stubGlobal('fetch', f);
+  return () => f.mock.calls.at(-1) as unknown as [string, RequestInit];
+}
+
+describe('domains', () => {
+  it('are listed with their certificates, rules and warnings', async () => {
+    const body = { domains: [{ id: 1, name: 'old.example.com', warnings: [] }] };
+    const last = stubFetch(body);
+    await expect(getDomains()).resolves.toEqual(body);
+    expect(last()[0]).toMatch(/api\/v1\/domains$/);
+  });
+
+  it('are added by name, trimmed', async () => {
+    const last = stubFetch({ id: 2, name: 'sub.example.com' });
+    await addDomain(' sub.example.com ');
+    const [url, init] = last();
+    expect(url).toMatch(/api\/v1\/domains$/);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ name: 'sub.example.com' });
+  });
+
+  it('are deleted by their id', async () => {
+    const last = stubFetch(undefined, 204);
+    await deleteDomain(2);
+    const [url, init] = last();
+    expect(url).toMatch(/domains\/2$/);
+    expect(init.method).toBe('DELETE');
+  });
+});
