@@ -47,6 +47,31 @@ type Summary struct {
 	// CanKeepPassword is true when a run without a typed password keeps
 	// the reseller's own one; otherwise Karvan generates one.
 	CanKeepPassword bool `json:"canKeepPassword"`
+	// Admins has one entry per source admin, the login's first (D34);
+	// RoleID, UserTargets and NewAdmin above are the login's.
+	Admins []AdminInfo `json:"admins"`
+}
+
+// AdminInfo is one source admin as the summary and the roles show it
+// (D34).
+type AdminInfo struct {
+	Username    string              `json:"username"` // its name on the old panel
+	IsLogin     bool                `json:"isLogin"`
+	Users       int                 `json:"users"` // its users the run moves
+	Moves       bool                `json:"moves"` // false: no user of its moves, so it is not written
+	RoleID      int64               `json:"roleId"`
+	RoleFixed   bool                `json:"roleFixed"` // a merge keeps the existing admin's role (D33)
+	NewAdmin    engine.AdminSummary `json:"newAdmin"`
+	UserTargets []string            `json:"userTargets"`
+}
+
+func adminInfos(r *engine.Result) []AdminInfo {
+	out := make([]AdminInfo, 0, len(r.Admins))
+	for _, a := range r.Admins {
+		out = append(out, AdminInfo{Username: a.Source.Username, IsLogin: a.IsLogin, Users: a.Users, Moves: a.Moves(), RoleID: a.RoleID,
+			RoleFixed: a.Merge != nil, NewAdmin: a.Summary(), UserTargets: append([]string{}, a.Targets...)})
+	}
+	return out
 }
 
 // Expiries counts users by when they expire on the old panel.
@@ -113,13 +138,15 @@ type RoleInfo struct {
 	RequireTemplate bool               `json:"requireTemplate"`
 }
 
-// RolesView is the destination's admin roles and the one the moved admin
-// gets now (D65). RoleFixed is true on a merge: the role is the existing
-// admin's own and cannot change (D33). A Marzban destination has none.
+// RolesView is the destination's admin roles and the one each moved
+// admin gets now (D65, D34); RoleID and RoleFixed are the login's admin.
+// RoleFixed is true on a merge: the role is the existing admin's own and
+// cannot change (D33). A Marzban destination has none.
 type RolesView struct {
-	RoleID    int64      `json:"roleId"`
-	RoleFixed bool       `json:"roleFixed"`
-	Roles     []RoleInfo `json:"roles"`
+	RoleID    int64       `json:"roleId"`
+	RoleFixed bool        `json:"roleFixed"`
+	Admins    []AdminInfo `json:"admins"`
+	Roles     []RoleInfo  `json:"roles"`
 }
 
 // Roles lists the destination's admin roles for the final admin step.
@@ -135,7 +162,7 @@ func (s *Service) Roles(jobID string) (RolesView, error) {
 	if j.result == nil {
 		return RolesView{}, ErrNotChecked
 	}
-	out := RolesView{RoleID: j.result.Login().RoleID, RoleFixed: j.result.Login().Merge != nil, Roles: []RoleInfo{}}
+	out := RolesView{RoleID: j.result.Login().RoleID, RoleFixed: j.result.Login().Merge != nil, Admins: adminInfos(j.result), Roles: []RoleInfo{}}
 	for _, r := range j.facts.Roles {
 		ri := RoleInfo{ID: r.ID, Name: r.Name, IsOwner: r.IsOwner, AllGroups: r.Groups == nil || r.IsOwner, Groups: []TargetInfo{},
 			Limits: r.Limits, Features: r.Features, RequireTemplate: r.RequireTemplate}
@@ -164,7 +191,7 @@ func (s *Service) Summary(jobID string) (Summary, error) {
 	}
 	sum := Summary{State: j.state, PlanVersion: j.version, SourceKind: j.kind, Origin: j.origin, DestKind: j.facts.Kind,
 		Statuses: map[string]int{}, Blockers: j.result.Blockers, Stable: j.result.Stable, PanelID: j.PanelID,
-		Protocols: map[string]int{}, NewAdmin: j.result.Login().Summary(), CanKeepPassword: j.ownPassword()}
+		Protocols: map[string]int{}, NewAdmin: j.result.Login().Summary(), CanKeepPassword: j.ownPassword(), Admins: adminInfos(j.result)}
 	if j.snapshot != nil {
 		sum.Admin = j.snapshot.Admin.Username
 	}

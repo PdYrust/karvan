@@ -58,3 +58,32 @@ func TestSummaryWithAnAPIKeyKeepsNoPassword(t *testing.T) {
 		t.Fatalf("summary %+v %v", sum, err)
 	}
 }
+
+// Summary and roles answer per source admin, the login's first (D34).
+func TestSummaryAndRolesPerAdmin(t *testing.T) {
+	tg := pasarGuardDB(t)
+	h := newHarness(t, panel.Marzban, panel.PasarGuard, tg, 6)
+	giveToNorth(h.src)
+	j := h.job(nil)
+	sum, err := h.svc.Summary(j.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	roles, err := h.svc.Roles(j.ID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	checkAdminInfos(t, sum.Admins)
+	checkAdminInfos(t, roles.Admins)
+}
+
+func checkAdminInfos(t *testing.T, got []AdminInfo) {
+	t.Helper()
+	if len(got) != 2 || got[0].Username != "reseller" || !got[0].IsLogin || got[0].Users != 3 {
+		t.Fatalf("login %+v", got)
+	}
+	if n := got[1]; n.Username != "north" || n.IsLogin || n.Users != 3 || !n.Moves || n.NewAdmin.Username != "north" ||
+		n.RoleID == 0 || n.RoleFixed || len(n.UserTargets) == 0 {
+		t.Fatalf("north %+v", n)
+	}
+}
