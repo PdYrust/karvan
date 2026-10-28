@@ -53,13 +53,16 @@ type fakeCA struct {
 	now      func() time.Time
 	life     time.Duration
 	reuse    bool // authorizations are already valid
-	calls    map[string]int
-	gate     chan struct{} // when set, newOrder waits for it
-	inFlight int
-	maxIn    int
-	caKey    *ecdsa.PrivateKey
-	caCert   *x509.Certificate
-	caPEM    []byte
+	// processing makes finalize answer processing, with no Location; the
+	// next read of the order finds it valid.
+	processing bool
+	calls      map[string]int
+	gate       chan struct{} // when set, newOrder waits for it
+	inFlight   int
+	maxIn      int
+	caKey      *ecdsa.PrivateKey
+	caCert     *x509.Certificate
+	caPEM      []byte
 }
 
 func newFakeCA(t *testing.T, now func() time.Time) *fakeCA {
@@ -146,7 +149,14 @@ func (f *fakeCA) post(w http.ResponseWriter, r *http.Request) {
 	case "order":
 		f.newOrder(w, payload)
 	case "orders":
-		f.withOrder(w, id, func(o *fakeOrder) { f.writeOrder(w, 200, o) })
+		f.withOrder(w, id, func(o *fakeOrder) {
+			f.mu.Lock()
+			if o.status == "processing" {
+				o.status = "valid"
+			}
+			f.mu.Unlock()
+			f.writeOrder(w, 200, o)
+		})
 	case "authz":
 		f.withOrder(w, id, func(o *fakeOrder) { f.authz(w, o, payload) })
 	case "chal":
@@ -225,7 +235,7 @@ func (f *fakeCA) writeOrder(w http.ResponseWriter, status int, o *fakeOrder) {
 	body := map[string]any{"status": o.status, "expires": o.expires.Format(time.RFC3339),
 		"identifiers": []map[string]string{{"type": "dns", "value": o.name}}, "authorizations": []string{f.url("/authz/" + o.id)},
 		"finalize": f.url("/finalize/" + o.id)}
-	if o.cert != nil {
+	if o.cert != nil && o.status == "valid" {
 		body["certificate"] = f.url("/cert/" + o.id)
 	}
 	f.mu.Unlock()
@@ -290,6 +300,11 @@ func (f *fakeCA) finalize(w http.ResponseWriter, o *fakeOrder, payload []byte) {
 		return
 	}
 	f.issue(o, csr.DNSNames, csr.PublicKey)
+	f.mu.Lock()
+	if f.processing {
+		o.status = "processing"
+	}
+	f.mu.Unlock()
 	f.writeOrder(w, 200, o)
 }
 

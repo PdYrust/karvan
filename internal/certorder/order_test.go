@@ -37,6 +37,21 @@ func TestHTTP01GetsACertificate(t *testing.T) {
 	e.waitCount("SELECT count(*) FROM audit_events WHERE action = 'acme.issued' AND actor = 'system'", 1)
 }
 
+// A CA that answers finalize with processing and no Location, as Pebble
+// and Let's Encrypt do, still gives the certificate once the order is valid.
+func TestFinalizeStillProcessing(t *testing.T) {
+	e := newOrderEnv(t)
+	e.ca.processing = true
+	d := e.addACME("p.example.com", HTTP01)
+	o := e.waitState(d.ID, "done", "failed")
+	if o.State != "done" {
+		t.Fatalf("order: %+v %+v", o, o.Error)
+	}
+	if c := e.domain(d.ID).Certificate; c == nil || c.Origin != bridge.OriginACME {
+		t.Fatalf("certificate: %+v", c)
+	}
+}
+
 // waitClosed waits until no order holds the challenge port.
 func waitClosed(t *testing.T, e *orderEnv) {
 	t.Helper()

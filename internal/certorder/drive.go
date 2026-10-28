@@ -189,7 +189,8 @@ func (s *Service) issue(ctx context.Context, c *acme.Client, o *orderRow) error 
 	if ord.Status == acme.StatusValid {
 		der, err = timed(ctx, s.call, func(ctx context.Context) ([][]byte, error) { return c.FetchCert(ctx, ord.CertURL, true) })
 	} else {
-		der, err = s.finalize(ctx, c, ord.FinalizeURL, o.domain, key)
+		ord.URI = o.orderURL // a read of the order has no Location
+		der, err = s.finalize(ctx, c, ord, o.domain, key)
 	}
 	if err != nil {
 		return err
@@ -223,13 +224,16 @@ func (s *Service) issue(ctx context.Context, c *acme.Client, o *orderRow) error 
 	return nil
 }
 
-func (s *Service) finalize(ctx context.Context, c *acme.Client, url, name string, key *ecdsa.PrivateKey) ([][]byte, error) {
+// finalize sends the CSR and waits for the chain. The order's own URL is
+// passed on, since a CA may answer finalize still processing and without
+// a Location (Pebble and Let's Encrypt do).
+func (s *Service) finalize(ctx context.Context, c *acme.Client, ord *acme.Order, name string, key *ecdsa.PrivateKey) ([][]byte, error) {
 	csr, err := x509.CreateCertificateRequest(rand.Reader, &x509.CertificateRequest{DNSNames: []string{name}}, key)
 	if err != nil {
 		return nil, err
 	}
 	return timed(ctx, s.wait, func(ctx context.Context) ([][]byte, error) {
-		der, _, err := c.CreateOrderCert(ctx, url, csr, true)
+		der, _, err := c.CreateCertFromOrder(ctx, ord, csr, true)
 		return der, err
 	})
 }

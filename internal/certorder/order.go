@@ -228,7 +228,11 @@ func (s *Service) advance(ctx context.Context, id int64, from, q string, args ..
 func (s *Service) fail(ctx context.Context, o orderRow, err error) {
 	e, problem := classify(err, s.Now())
 	e.Detail = s.redact(ctx, o, e.Detail)
-	s.Log.Warn("certorder: order failed", "domain", o.domain, "code", e.Code, "problem", problem, "detail", e.Detail)
+	if problem == "" { // not the CA's words: the local cause, for the log
+		s.Log.Warn("certorder: order failed", "domain", o.domain, "code", e.Code, "err", err)
+	} else {
+		s.Log.Warn("certorder: order failed", "domain", o.domain, "code", e.Code, "problem", problem, "detail", e.Detail)
+	}
 	var retry int64
 	if e.RetryAt != nil {
 		retry = e.RetryAt.Unix()
