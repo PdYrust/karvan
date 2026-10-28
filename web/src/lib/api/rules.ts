@@ -47,6 +47,8 @@ export interface LinkSite {
   hasKey: boolean;
   lazy: boolean;
   plainHttpOk: boolean;
+  /** Whether the rule answers over HTTPS; its certificate comes from its domains (D63). */
+  https: boolean;
   /** Only with HTTPS. */
   cert?: CertFacts;
   /** Missing when the destination did not answer. */
@@ -68,10 +70,15 @@ export function getLinkSites(): Promise<LinkSites> {
   return api<LinkSites>('GET', 'legacy-sites');
 }
 
-/** A site as sent. `keyPem` goes in and never comes back; empty on a change keeps the saved key. */
-export type SiteInput = Omit<LinkSite, 'id' | 'hasKey' | 'cert' | 'stats' | 'domains'> & {
+/**
+ * A site as sent. `keyPem` goes in and never comes back; empty on a change keeps the saved key.
+ * Without `https`, a new rule answers over HTTPS when every domain has a certificate, and a
+ * change keeps what it was.
+ */
+export type SiteInput = Omit<LinkSite, 'id' | 'hasKey' | 'cert' | 'stats' | 'domains' | 'https'> & {
   domains: string[];
   keyPem?: string;
+  https?: boolean;
 };
 
 /** Adds a site (no id) or replaces one; 400 site_invalid names the field in `detail.field`. */

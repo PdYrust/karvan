@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { addDomain, deleteDomain, getDomains } from './domains';
+import { addDomain, deleteDomain, getDomains, setDomainCertificate } from './domains';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -21,13 +21,27 @@ describe('domains', () => {
     expect(last()[0]).toMatch(/api\/v1\/domains$/);
   });
 
-  it('are added by name, trimmed', async () => {
+  it('are added by name, trimmed, with their certificate', async () => {
     const last = stubFetch({ id: 2, name: 'sub.example.com' });
-    await addDomain(' sub.example.com ');
+    await addDomain(' sub.example.com ', { kind: 'stored', certificateId: 4 });
     const [url, init] = last();
     expect(url).toMatch(/api\/v1\/domains$/);
     expect(init.method).toBe('POST');
-    expect(JSON.parse(init.body as string)).toEqual({ name: 'sub.example.com' });
+    expect(JSON.parse(init.body as string)).toEqual({
+      name: 'sub.example.com',
+      certificate: { kind: 'stored', certificateId: 4 },
+    });
+  });
+
+  it('change their certificate by id', async () => {
+    const last = stubFetch({ id: 2, name: 'sub.example.com' });
+    await setDomainCertificate(2, { kind: 'none', plainOk: true });
+    const [url, init] = last();
+    expect(url).toMatch(/domains\/2\/certificate$/);
+    expect(init.method).toBe('PUT');
+    expect(JSON.parse(init.body as string)).toEqual({
+      certificate: { kind: 'none', plainOk: true },
+    });
   });
 
   it('are deleted by their id', async () => {

@@ -25,6 +25,7 @@ const saved: LinkSite = {
   hasKey: true,
   lazy: true,
   plainHttpOk: false,
+  https: true,
 };
 
 describe('the site form', () => {

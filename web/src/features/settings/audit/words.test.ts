@@ -31,6 +31,7 @@ const serverActions = [
   'batch.show_link',
   'domain.add',
   'domain.delete',
+  'domain.certificate',
   'certificate.add',
   'certificate.save',
   'certificate.delete',

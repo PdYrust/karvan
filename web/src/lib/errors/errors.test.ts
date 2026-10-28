@@ -66,9 +66,10 @@ describe('area word lists', () => {
     }
     expect([...subscriptionCodes].sort()).toEqual(
       [
-        'cert_conflict',
+        'acme_invalid',
         'certificate_in_use',
         'certificate_invalid',
+        'certificate_managed',
         'certificate_not_adopted',
         'domain_in_use',
         'domain_invalid',
@@ -115,6 +116,28 @@ describe('area word lists', () => {
       'redirect_invalid',
     );
     expect(subscriptionErrorKey('redirect_invalid_loop')).toBeUndefined();
+    expect(subscriptionErrorKey('certificate_invalid', { reason: 'not_covered' })).toBe(
+      'certificate_invalid_not_covered',
+    );
+    for (const code of ['site_invalid', 'redirect_invalid']) {
+      expect(subscriptionErrorKey(code, { field: 'domains', reason: 'not_registered' })).toBe(
+        'site_invalid_not_registered',
+      );
+      expect(subscriptionErrorKey(code, { field: 'domains', reason: 'pending' })).toBe(
+        'site_invalid_pending',
+      );
+      expect(subscriptionErrorKey(code, { field: 'https', reason: 'no_certificate' })).toBe(
+        'site_invalid_no_certificate',
+      );
+    }
+    expect(subscriptionErrorKey('domain_invalid', { field: 'plainOk' })).toBe(
+      'domain_invalid_plainOk',
+    );
+    expect(subscriptionErrorKey('domain_invalid', { field: 'certificate' })).toBe(
+      'domain_invalid_certificate',
+    );
+    expect(subscriptionErrorKey('domain_invalid', { field: 'name' })).toBe('domain_invalid');
+    expect(subscriptionErrorKey('domain_invalid_plainOk')).toBeUndefined();
     for (const lang of ['en', 'fa'] as const) {
       for (const [key, text] of Object.entries(subscriptionErrorMessages[lang])) {
         expect(text, key).toBeTruthy();

@@ -14,12 +14,16 @@ export interface Certificate {
   name: string;
   /** Files on this server, or a pasted certificate Karvan keeps. */
   kind: 'file' | 'pasted';
+  /** `acme` for one Karvan got from Let's Encrypt and renews itself. */
+  origin: '' | 'acme';
   certFile?: string;
   keyFile?: string;
   /** Only for a pasted one. */
   certPem?: string;
   hasKey: boolean;
   facts: CertFacts;
+  /** The domains whose certificate it is, each with its domain_mismatch. */
+  domains: { id: number; name: string; warnings: string[] }[];
   /** The rules that use it, each with its domain_mismatch. */
   rules: (RuleRef & { warnings: string[] })[];
 }
@@ -48,7 +52,7 @@ export function saveCertificate(input: CertificateInput, id?: number): Promise<C
     : api('POST', 'certificates', input);
 }
 
-/** 409 certificate_in_use while a rule uses it. */
+/** 409 certificate_in_use while a domain, a pin or a rule uses it. */
 export function deleteCertificate(id: number): Promise<void> {
   return api('DELETE', `certificates/${String(id)}`);
 }

@@ -44,6 +44,7 @@ describe('siteKeywords', () => {
     hasKey: true,
     lazy: false,
     plainHttpOk: false,
+    https: false,
   } as const;
   const sites: CommandGroup[] = [
     {
