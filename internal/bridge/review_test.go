@@ -107,11 +107,11 @@ func TestCatchAllSiteOwnsUnknownNames(t *testing.T) {
 	b := &Bridge{}
 	b.load([]Site{{ID: 1, Port: 443, Domains: []string{"a.example.com"}}, {ID: 2, Port: 443}, {ID: 3, Port: 8443}}, nil)
 	for name, want := range map[string]int64{"a.example.com": 1, "b.example.com": 2, "": 2} {
-		if s, ok := b.siteForName(443, name); !ok || s.ID != want {
-			t.Errorf("%q: site %d", name, s.ID)
+		if r, ok := b.routeForName(443, name); !ok || r.ref.ID != want {
+			t.Errorf("%q: site %d", name, r.ref.ID)
 		}
 	}
-	if _, ok := b.siteForName(80, "x"); ok {
+	if _, ok := b.routeForName(80, "x"); ok {
 		t.Error("a port with no site answered")
 	}
 }

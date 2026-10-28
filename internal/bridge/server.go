@@ -46,7 +46,16 @@ func (b *Bridge) Run(ctx context.Context) error {
 	}
 }
 
-// Reload reads the sites again and listens on exactly their ports.
+func siteRules(sites []Site) []rule {
+	out := make([]rule, len(sites))
+	for i, s := range sites {
+		out[i] = ruleOf(s)
+	}
+	return out
+}
+
+// Reload reads the panel and redirect rules again and listens on exactly
+// their ports.
 func (b *Bridge) Reload(ctx context.Context) error {
 	b.reloadMu.Lock()
 	defer b.reloadMu.Unlock()
@@ -59,11 +68,11 @@ func (b *Bridge) Reload(ctx context.Context) error {
 		return err
 	}
 	want := map[int]bool{} // port -> TLS
-	for _, s := range sites {
-		if tlsOn, ok := want[s.Port]; ok && tlsOn != s.TLS() {
-			return fmt.Errorf("port %d has sites with and without a certificate", s.Port)
+	for _, r := range append(siteRules(sites), redirects...) {
+		if tlsOn, ok := want[r.port]; ok && tlsOn != r.tls {
+			return fmt.Errorf("port %d has rules with and without a certificate", r.port)
 		}
-		want[s.Port] = s.TLS()
+		want[r.port] = r.tls
 	}
 	b.mu.Lock()
 	b.load(sites, redirects)
@@ -154,7 +163,7 @@ func shutdown(l *listener) {
 // changes on disk (a renewed certificate needs no restart).
 type certCache struct {
 	mu sync.Mutex
-	m  map[int64]cachedCert
+	m  map[string]cachedCert // by the rule's certKey
 }
 
 type cachedCert struct {
@@ -164,52 +173,62 @@ type cachedCert struct {
 	files   string // the certificate and key paths: a changed pair is read again
 }
 
-// certificate picks the site certificate for the SNI name on port.
+// certificate picks the rule certificate for the SNI name on port.
 func (b *Bridge) certificate(port int) func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
-	cache := &certCache{m: map[int64]cachedCert{}}
+	cache := &certCache{m: map[string]cachedCert{}}
 	return func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-		site, ok := b.siteForName(port, strings.ToLower(hello.ServerName))
+		rt, ok := b.routeForName(port, strings.ToLower(hello.ServerName))
 		if !ok {
-			return nil, errors.New("no site on this port")
+			return nil, errors.New("no rule on this port")
 		}
-		return b.loadCert(hello.Context(), cache, site)
+		return b.loadCert(hello.Context(), cache, rt.certKey(), rt.tlsSite())
 	}
 }
 
-// siteForName is the first site in id order on port whose domains cover
-// name; else the port's catch-all site (no domains), else its first site
-// (a client without SNI, or an IP address). The save check keeps this
-// pick unambiguous (D53).
-func (b *Bridge) siteForName(port int, name string) (Site, bool) {
+// routeForName is the first rule in table order on port (panel rules by
+// id, then redirect rules by id) whose domains cover name; else the
+// port's first rule with no domains, else its first rule (a client
+// without SNI, or an IP address). The save check keeps this pick
+// unambiguous (D53).
+func (b *Bridge) routeForName(port int, name string) (route, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	var first, catchAll *Site
-	for _, r := range b.routes[port] {
-		s := r.panel
-		if s == nil {
-			continue
-		}
+	routes := b.routes[port]
+	catchAll := -1
+	for i, r := range routes {
 		switch {
-		case len(s.Domains) == 0:
-			if catchAll == nil {
-				catchAll = s
+		case len(r.domains) == 0:
+			if catchAll < 0 {
+				catchAll = i
 			}
-		case name != "" && s.covers(name):
-			return *s, true
-		}
-		if first == nil {
-			first = s
+		case name != "" && r.hostRank(name) != hostNone:
+			return r, true
 		}
 	}
-	for _, s := range []*Site{catchAll, first} {
-		if s != nil {
-			return *s, true
-		}
+	switch {
+	case catchAll >= 0:
+		return routes[catchAll], true
+	case len(routes) > 0:
+		return routes[0], true
 	}
-	return Site{}, false
+	return route{}, false
 }
 
-func (b *Bridge) loadCert(ctx context.Context, cache *certCache, s Site) (*tls.Certificate, error) {
+// tlsSite is what a handshake reads the route's certificate from: the
+// panel rule, or the redirect's certificates row.
+func (r route) tlsSite() Site {
+	if r.panel != nil {
+		return *r.panel
+	}
+	s := Site{Name: r.ref.Name, CertificateID: r.certID}
+	if r.redirect != nil {
+		c := r.redirect.cert
+		s.CertFile, s.KeyFile, s.CertPEM = c.certFile, c.keyFile, c.pem
+	}
+	return s
+}
+
+func (b *Bridge) loadCert(ctx context.Context, cache *certCache, key string, s Site) (*tls.Certificate, error) {
 	var mod time.Time
 	if s.CertFile != "" {
 		info, err := os.Stat(s.CertFile)
@@ -221,23 +240,31 @@ func (b *Bridge) loadCert(ctx context.Context, cache *certCache, s Site) (*tls.C
 	cache.mu.Lock()
 	defer cache.mu.Unlock()
 	files := s.CertFile + "\x00" + s.KeyFile
-	if c, ok := cache.m[s.ID]; ok && c.modTime.Equal(mod) && c.pem == s.CertPEM && c.files == files {
+	if c, ok := cache.m[key]; ok && c.modTime.Equal(mod) && c.pem == s.CertPEM && c.files == files {
 		return c.cert, nil
 	}
 	cert, err := b.readCert(ctx, s)
 	if err != nil {
 		return nil, err
 	}
-	cache.m[s.ID] = cachedCert{cert: cert, modTime: mod, pem: s.CertPEM, files: files}
+	cache.m[key] = cachedCert{cert: cert, modTime: mod, pem: s.CertPEM, files: files}
 	return cert, nil
 }
 
+// readCert reads a pasted key from the certificates row when the rule
+// has one, else from the site's own columns (D54).
 func (b *Bridge) readCert(ctx context.Context, s Site) (*tls.Certificate, error) {
 	if s.CertFile != "" {
 		c, err := tls.LoadX509KeyPair(s.CertFile, s.KeyFile)
 		return &c, err
 	}
-	key, err := b.st.siteKey(ctx, s.ID)
+	var key []byte
+	var err error
+	if s.CertificateID != 0 {
+		key, err = b.st.certificateKey(ctx, s.CertificateID)
+	} else {
+		key, err = b.st.siteKey(ctx, s.ID)
+	}
 	if err != nil {
 		return nil, err
 	}

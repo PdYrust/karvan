@@ -18,13 +18,15 @@ import (
 // /sing-box or /info.
 var restRe = regexp.MustCompile(`^(/[A-Za-z0-9_\-]{1,32})?$`)
 
-// request is one old-link request routed to a site.
+// request is one old-link request routed to a site, or to a redirect
+// rule with rest as its checked tail.
 type request struct {
-	site  Site
-	dest  Destination
-	token string
-	rest  string
-	mac   []byte
+	site     Site
+	redirect *Redirect
+	dest     Destination
+	token    string
+	rest     string
+	mac      []byte
 }
 
 // Handler serves the sites on one port.
@@ -42,8 +44,12 @@ func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 		return
 	}
 	q, ok := b.route(port, r)
-	if !ok {
+	switch {
+	case !ok:
 		answer(w, http.StatusNotFound)
+		return
+	case q.redirect != nil:
+		sendRedirect(w, q.redirect, q.rest) // nothing is fetched (D30)
 		return
 	}
 	held, err := b.st.ruleHeld(r.Context(), q.site)
@@ -69,10 +75,10 @@ func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 	b.lazy(w, r, q)
 }
 
-// route finds the one rule for a request (D52) and, for a panel rule,
-// splits /{old_path}/{token}{rest}. A malformed token or rest on the
-// winner is a 404; no other rule is tried. A redirect rule that wins
-// gets the plain 404 here.
+// route finds the one rule for a request (D52). For a panel rule it
+// splits /{old_path}/{token}{rest}; for a redirect rule rest is the tail
+// after its path. A malformed token, rest or tail on the winner is a 404;
+// no other rule is tried.
 func (b *Bridge) route(port int, r *http.Request) (request, bool) {
 	host := strings.ToLower(r.Host)
 	if h, _, err := net.SplitHostPort(host); err == nil {
@@ -81,8 +87,12 @@ func (b *Bridge) route(port int, r *http.Request) (request, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	rt, rest, ok := b.routes.match(port, host, r.URL.EscapedPath())
-	if !ok || rt.panel == nil {
+	switch {
+	case !ok:
 		return request{}, false
+	case rt.panel == nil:
+		d := rt.redirect
+		return request{redirect: d, rest: rest}, d != nil && d.target != nil && validTail(rest)
 	}
 	token, tail, _ := strings.Cut(rest[1:], "/") // a panel rule's rest starts with its slash
 	if tail != "" {

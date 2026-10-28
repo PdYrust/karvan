@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/x509"
 	"database/sql"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"slices"
@@ -88,14 +87,15 @@ type Certificate struct {
 // rule is a panel or redirect rule as the router and the certificate
 // pages see it.
 type rule struct {
-	ref     RuleRef
-	domains []string
-	port    int
-	certID  int64 // its certificates row, or 0
-	site    *Site // a panel rule still served from its own columns (D54)
-	tls     bool
-	path    string // its path without the outer slashes: a panel rule's old path, a redirect's from path
-	exact   bool   // the path must match exactly; else it is a prefix
+	ref      RuleRef
+	domains  []string
+	port     int
+	certID   int64 // its certificates row, or 0
+	site     *Site // a panel rule still served from its own columns (D54)
+	tls      bool
+	path     string    // its path without the outer slashes: a panel rule's old path, a redirect's from path
+	exact    bool      // the path must match exactly; else it is a prefix
+	redirect *Redirect // the redirect rule it is; nil for a panel rule
 }
 
 // ruleOf is a panel rule as a rule.
@@ -131,30 +131,6 @@ func (st *store) rules(ctx context.Context) ([]rule, error) {
 	}
 	redirects, err := st.redirectRules(ctx)
 	return append(out, redirects...), err
-}
-
-// redirectRules reads every redirect rule by id.
-func (st *store) redirectRules(ctx context.Context) ([]rule, error) {
-	rows, err := st.db.QueryContext(ctx, "SELECT id, name, domains, listen_port, from_path, match = 'exact', "+
-		"COALESCE(certificate_id, 0) FROM link_redirects ORDER BY id")
-	if err != nil {
-		return nil, fmt.Errorf("read redirects: %w", err)
-	}
-	defer rows.Close()
-	var out []rule
-	for rows.Next() {
-		r := rule{ref: RuleRef{Kind: RuleRedirect}}
-		var domains string
-		if err := rows.Scan(&r.ref.ID, &r.ref.Name, &domains, &r.port, &r.path, &r.exact, &r.certID); err != nil {
-			return nil, err
-		}
-		if err := json.Unmarshal([]byte(domains), &r.domains); err != nil {
-			return nil, fmt.Errorf("redirect %d domains: %w", r.ref.ID, err)
-		}
-		r.path, r.tls = strings.Trim(r.path, "/"), r.certID != 0
-		out = append(out, r)
-	}
-	return out, rows.Err()
 }
 
 // usedBy lists the rules that pass keep.
