@@ -4,12 +4,14 @@ import { FactList, type Fact } from '../../../components/layout/FactList';
 import { PanelLabel } from '../../../components/panels/PanelLabel';
 import { CodeText } from '../../../components/text/CodeText';
 import { Machine } from '../../../components/text/Machine';
+import { Link } from 'react-router';
 import { useT } from '../../../i18n/locale';
-import type { JobState } from '../../../lib/api/migrations';
+import type { BatchRef, JobState } from '../../../lib/api/migrations';
 import type { Report } from '../../../lib/api/report';
 import { useFormat } from '../../../lib/preferences/region';
 import { useReload } from '../../live/meaning';
 import { liveMessages } from '../../live/messages';
+import { listMessages } from '../list-messages';
 import { reportsMessages } from './messages';
 
 /** How the admin landed on the new panel, and whose password it has. */
@@ -80,6 +82,20 @@ function ReloadBlock({ report }: { report: Report }) {
   );
 }
 
+/** The batch the job became, as a link to it. */
+function BatchBlock({ batch }: { batch: BatchRef }) {
+  const t = useT(listMessages);
+  return (
+    <AsideBlock title={t('batch')}>
+      <Link
+        to={`/batches/${String(batch.id)}`}
+        className="self-start font-medium text-kumo-strong underline decoration-kumo-line underline-offset-4 hover:decoration-current"
+      >
+        <bdi>{batch.name}</bdi>
+      </Link>
+    </AsideBlock>
+  );
+}
 /** Where the move went and when it started and ended; the header says how long it took. */
 function DetailsBlock({ report }: { report: Report }) {
   const t = useT(reportsMessages);
@@ -105,13 +121,22 @@ function DetailsBlock({ report }: { report: Report }) {
   );
 }
 
-/** The report's aside: the admin, Safe Mode and its backup, the reload, then the details. */
-export function ReportAside({ state, report }: { state: JobState; report: Report }) {
+/** The report's aside: the admin, Safe Mode and its backup, the reload, the batch, then the details. */
+export function ReportAside({
+  state,
+  report,
+  batch,
+}: {
+  state: JobState;
+  report: Report;
+  batch?: BatchRef | null;
+}) {
   return (
     <div className="flex flex-col">
       <AdminBlock report={report} />
       <SafeModeBlock report={report} />
       {state === 'done' ? <ReloadBlock report={report} /> : null}
+      {batch && batch.state !== 'deleted' ? <BatchBlock batch={batch} /> : null}
       <DetailsBlock report={report} />
     </div>
   );

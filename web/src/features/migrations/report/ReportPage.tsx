@@ -15,7 +15,12 @@ import { Machine } from '../../../components/text/Machine';
 import { useT } from '../../../i18n/locale';
 import { errorOf } from '../../../lib/errors/errors';
 import { getReport, type Report } from '../../../lib/api/report';
-import { getJobRow, migrationKeys, type JobState } from '../../../lib/api/migrations';
+import {
+  getJobRow,
+  migrationKeys,
+  type BatchRef,
+  type JobState,
+} from '../../../lib/api/migrations';
 import { useFormat } from '../../../lib/preferences/region';
 import { mayRollBack } from '../../live/live';
 import { liveMessages } from '../../live/messages';
@@ -37,7 +42,17 @@ const linkButton = cn(buttonVariants({ variant: 'secondary' }), 'gap-2 pointer-c
  * every user in the main column, the admin, Safe Mode, the reload and the
  * details in the aside. On phones the aside follows the result.
  */
-function Body({ id, state, report }: { id: string; state: JobState; report: Report }) {
+function Body({
+  id,
+  state,
+  report,
+  batch,
+}: {
+  id: string;
+  state: JobState;
+  report: Report;
+  batch?: BatchRef | null;
+}) {
   const t = useT(reportsMessages);
   return (
     <div className="grid max-w-[1400px] lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr]">
@@ -48,7 +63,7 @@ function Body({ id, state, report }: { id: string; state: JobState; report: Repo
         aria-label={t('facts')}
         className="border-y border-kumo-hairline p-4 sm:p-8 lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:border-s lg:border-y-0"
       >
-        <ReportAside state={state} report={report} />
+        <ReportAside state={state} report={report} batch={batch} />
       </aside>
       <div className="flex min-w-0 flex-col gap-6 p-4 sm:p-8 lg:pt-6">
         {report.stages?.length ? (
@@ -166,7 +181,7 @@ export function ReportPage() {
       />
       {r && !report.isError ? (
         <Reveal on={load.reveal}>
-          <Body id={id} state={state} report={r} />
+          <Body id={id} state={state} report={r} batch={row.data?.batch} />
         </Reveal>
       ) : (
         <div className="flex max-w-[1400px] flex-col gap-6 p-4 sm:p-8">

@@ -1,6 +1,6 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { ArrowCounterClockwiseIcon } from '@phosphor-icons/react';
-import { useNavigate } from 'react-router';
+import { Link, useNavigate } from 'react-router';
 import { DataTable, type Column } from '../../components/data/DataTable';
 import { RowCard } from '../../components/data/RowCard';
 import { useT } from '../../i18n/locale';
@@ -13,7 +13,23 @@ import { listMessages } from './list-messages';
 
 const jobPath = (j: JobRow) => `/migrations/${encodeURIComponent(j.id)}`;
 
-/** The state, and for a draft Karvan signed out of, that it did. */
+/** The batch a done job became, as a link to it. */
+function JobBatch({ job }: { job: JobRow }) {
+  const t = useT(listMessages);
+  if (!job.batch || job.batch.state === 'deleted') return null;
+  return (
+    <span className="relative z-10 flex min-w-0 items-baseline gap-1.5 text-sm text-kumo-subtle">
+      {t('batch')}
+      <Link
+        to={`/batches/${String(job.batch.id)}`}
+        className="truncate text-kumo-default underline decoration-kumo-line underline-offset-4 hover:decoration-current"
+      >
+        <bdi>{job.batch.name}</bdi>
+      </Link>
+    </span>
+  );
+}
+/** The state, and for a draft Karvan signed out of, that it did; a done job's batch under it. */
 function JobState({ job }: { job: JobRow }) {
   const t = useT(listMessages);
   return (
@@ -22,6 +38,7 @@ function JobState({ job }: { job: JobRow }) {
       {loginDropped(job) ? (
         <span className="text-sm text-kumo-subtle">{t('loginDropped')}</span>
       ) : null}
+      <JobBatch job={job} />
     </span>
   );
 }
@@ -62,6 +79,7 @@ function JobCard({ job, now, onDelete }: { job: JobRow; now: Date; onDelete: OnD
       }
     >
       <JobCardName job={job} to={jobPath(job)} />
+      <JobBatch job={job} />
       {dropped ? (
         <div className="flex flex-col items-start gap-2">
           <p className="text-sm text-kumo-subtle">{t('loginDropped')}</p>
