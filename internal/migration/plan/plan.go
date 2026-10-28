@@ -5,6 +5,7 @@
 package plan
 
 import (
+	"maps"
 	"time"
 )
 
@@ -13,7 +14,12 @@ type Plan struct {
 	Version int       `json:"version"`
 	Now     time.Time `json:"now"` // "now" for every time operation, fixed so a rebuild gives the same result
 
-	Admin   AdminPlan `json:"admin"`
+	// Admins is how each source admin lands, by its source username
+	// (D35). An admin with no entry keeps its name and gets the default.
+	Admins map[string]AdminPlan `json:"admins,omitempty"`
+	// Admin is a plan from before Phase 4.1, for the login's admin. It is
+	// read, never written: ForLogin moves it into Admins.
+	Admin   AdminPlan `json:"admin,omitzero"`
 	Targets []string  `json:"targets"` // destination group ids or "<protocol>/<tag>" inbounds
 
 	// Tree is the operator's categories, in display order. Problem groups
@@ -32,7 +38,24 @@ type Plan struct {
 	ResetSchedule string `json:"resetSchedule,omitempty"`
 }
 
-// AdminPlan is how the moved admin lands on the destination.
+// ForLogin returns p with an Admin entry moved to Admins under login, the
+// source admin whose login reads the old panel (D35). Only a client that
+// knows no Admins sends Admin, so it wins over the login's entry. p and
+// its map are left as they were.
+func (p Plan) ForLogin(login string) Plan {
+	if p.Admin == (AdminPlan{}) {
+		return p
+	}
+	admins := maps.Clone(p.Admins)
+	if admins == nil {
+		admins = map[string]AdminPlan{}
+	}
+	admins[login] = p.Admin
+	p.Admins, p.Admin = admins, AdminPlan{}
+	return p
+}
+
+// AdminPlan is how one source admin lands on the destination.
 type AdminPlan struct {
 	// Username is the final name; empty keeps the source name.
 	Username string `json:"username,omitempty"`
