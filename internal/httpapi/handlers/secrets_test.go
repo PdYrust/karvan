@@ -96,7 +96,7 @@ func secretSource(t *testing.T, secrets []string) (migrationtest.Source, []strin
 		users = append(users, fakepanel.MarzbanUser(fmt.Sprintf("user%03d", i), i, map[string]any{"proxies": map[string]any{
 			"vless": map[string]any{"id": vless, "flow": ""}, "vmess": map[string]any{"id": vmess},
 			"trojan": map[string]any{"password": trojan, "flow": ""}, "shadowsocks": map[string]any{"password": ss, "method": "aes-256-gcm"},
-		}}))
+		}, "inbounds": map[string]any{"shadowsocks": []string{"Shadowsocks TCP"}}}))
 		secrets = append(secrets, vless, vmess, trojan, ss)
 	}
 	f := fakepanel.NewMarzban(fakepanel.MarzbanAdmin{Username: "reseller", Password: pw}, users, fakepanel.Faults{})

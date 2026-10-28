@@ -123,6 +123,9 @@ type Source struct {
 	Mutate func(fn func(users *[]map[string]any))
 	// Subscribe makes a subscription token valid for a user ("" revokes).
 	Subscribe func(token, username string)
+	// ServeGroups makes a PasarGuard fake answer its groups and inbound
+	// details (fakepanel.PasarGuard.ServeGroups); nil on Marzban.
+	ServeGroups func(groups, inbounds []map[string]any, status int)
 }
 
 // NewSource starts a fake old panel of kind with n users.
@@ -138,6 +141,8 @@ func NewSource(t *testing.T, kind panel.Kind, n int) Source {
 					"trojan":      map[string]any{"password": fmt.Sprintf("trojan-pass-%d", i), "flow": ""},
 					"shadowsocks": map[string]any{"password": fmt.Sprintf("shadowsocks-password-%04d", i), "method": "aes-256-gcm"},
 				},
+				"inbounds": map[string]any{"vless": []string{"VLESS TCP"}, "vmess": []string{"VMess WS"}, "trojan": []string{"Trojan WS"},
+					"shadowsocks": []string{"Shadowsocks TCP"}},
 			})
 		}
 		f := fakepanel.NewMarzban(fakepanel.MarzbanAdmin{Username: "reseller", Password: "pw"}, users, fakepanel.Faults{})
@@ -147,7 +152,8 @@ func NewSource(t *testing.T, kind panel.Kind, n int) Source {
 		users[i] = fakepanel.PasarGuardUser(int64(i+1), fmt.Sprintf("user%03d", i), nil)
 	}
 	f := fakepanel.NewPasarGuard(fakepanel.PasarGuardAdmin{ID: 7, Username: "shop", Password: "pw", APIKey: testAPIKey}, users, fakepanel.Faults{})
-	return Source{URL: f.URL, Kind: kind, Username: "shop", Password: "pw", APIKey: testAPIKey, Close: f.Close, Mutate: f.Mutate, Subscribe: f.Subscribe}
+	return Source{URL: f.URL, Kind: kind, Username: "shop", Password: "pw", APIKey: testAPIKey, Close: f.Close, Mutate: f.Mutate, Subscribe: f.Subscribe,
+		ServeGroups: f.ServeGroups}
 }
 
 // testAPIKey is the fake PasarGuard admin's API key.

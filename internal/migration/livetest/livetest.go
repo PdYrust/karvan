@@ -26,6 +26,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/PdYrust/karvan/internal/migration/dest"
+	"github.com/PdYrust/karvan/internal/migration/engine"
 	"github.com/PdYrust/karvan/internal/migration/migrationtest"
 	"github.com/PdYrust/karvan/internal/migration/plan"
 	"github.com/PdYrust/karvan/internal/migration/reload"
@@ -263,6 +264,29 @@ func (m *Mover) Run(src migrationtest.Source, o run.Options, edit func(p *plan.P
 		m.t.Fatal(err)
 	}
 	return rep
+}
+
+// Check reads the running panel from as an old panel, signed in as its
+// full admin, and builds the plan edit gives for m's panel. Nothing is
+// written to either panel.
+func (m *Mover) Check(from *Live, edit func(p *plan.Plan)) *engine.Result {
+	m.t.Helper()
+	ctx := context.Background()
+	j, err := m.Svc.Create(ctx, run.Login{URL: from.API.BaseURL, Username: FullAdminName, Password: secret.NewValue(AdminPassword)}, m.Panel,
+		source.Options{Sleep: func(context.Context, time.Duration) error { return nil }})
+	if err != nil {
+		m.t.Fatal(err)
+	}
+	if _, err := m.Svc.Check(ctx, j.ID); err != nil {
+		m.t.Fatal(err)
+	}
+	_, p, v, _ := m.Svc.View(j.ID)
+	edit(&p)
+	r, _, err := m.Svc.SetPlan(ctx, j.ID, v, p)
+	if err != nil {
+		m.t.Fatal(err)
+	}
+	return r
 }
 
 // Targets lists the moved users the way the reload step does.

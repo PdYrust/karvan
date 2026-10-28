@@ -152,6 +152,12 @@ func protocolFor(c Conflict) string {
 func accept(it *Item, c Conflict) bool {
 	creds := &it.User.Credentials
 	switch c.Type {
+	case NoProtocol, WireGuardOnly:
+		// Move anyway: the user gets the new protocols' fresh credentials
+		// and the old config stops working. Nothing is left to rewrite,
+		// so the conflict stays with its fix.
+		it.ChangesConfig = true
+		return false
 	case FlowDropped:
 		if creds.VLESS == nil || creds.VLESS.Flow == "" {
 			return false

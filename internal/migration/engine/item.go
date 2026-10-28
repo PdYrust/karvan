@@ -20,6 +20,10 @@ type Source struct {
 	Admin  panel.Admin
 	Users  []panel.User
 	Skew   time.Duration // the panel's clock minus ours
+	// Groups are an old PasarGuard panel's groups; GroupsRead is false
+	// when the login could not read them (D38).
+	Groups     []panel.SourceGroup
+	GroupsRead bool
 }
 
 // Dest is what the destination already holds.

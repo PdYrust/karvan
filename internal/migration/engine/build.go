@@ -80,6 +80,7 @@ func Build(p plan.Plan, in Inputs) (*Result, error) {
 // prepare runs the categories' and the user's own operations, then gives
 // the user every protocol its targets serve.
 func prepare(it *Item, t *tree, p plan.Plan, in Inputs, ctx opContext) {
+	markLostProtocols(it, in)
 	fitProtocols(it, in.Dest.Kind)
 	t.run(it, ctx)
 	if d, ok := p.Users[it.Key]; ok {
@@ -240,6 +241,9 @@ func jobConflicts(targets []string, in Inputs, stable bool) []Conflict {
 	}
 	if !stable {
 		out = append(out, Conflict{Type: Unsettled, Severity: Blocker})
+	}
+	if in.Source.Kind == panel.PasarGuard && !in.Source.GroupsRead {
+		out = append(out, Conflict{Type: GroupsUnknown, Severity: Info})
 	}
 	return out
 }

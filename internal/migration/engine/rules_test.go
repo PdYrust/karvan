@@ -23,7 +23,7 @@ func TestDefaultsNeverChangeAConfig(t *testing.T) {
 			t.Errorf("%s defaults to %q, which changes a config", typ, o.ID)
 		}
 	}
-	for _, typ := range []string{FlowDropped, ShadowsocksBad, WireGuardIPs, AdminTaken} {
+	for _, typ := range []string{FlowDropped, ShadowsocksBad, WireGuardIPs, AdminTaken, NoProtocol, WireGuardOnly} {
 		if _, ok := defaultFix(typ, rc); ok {
 			t.Errorf("%s must wait for the operator", typ)
 		}
@@ -44,7 +44,7 @@ func TestEveryConfigChangeIsFlagged(t *testing.T) {
 					t.Errorf("%s/%s changes a config but is not flagged", typ, o.ID)
 				}
 			case OptAccept:
-				if (typ == FlowDropped || typ == WireGuardIPs) && !o.ChangesConfig {
+				if !o.ChangesConfig {
 					t.Errorf("%s/accept changes a config but is not flagged", typ)
 				}
 			}

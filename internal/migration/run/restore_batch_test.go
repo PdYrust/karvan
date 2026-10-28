@@ -54,9 +54,11 @@ func (h *harness) addUsers(n int) {
 			n := 100 + i
 			*users = append(*users, fakepanel.MarzbanUser(fmt.Sprintf("late%03d", i), n, map[string]any{
 				"proxies": map[string]any{
-					"vless": map[string]any{"id": fmt.Sprintf("00000000-0000-4000-8000-%012d", n), "flow": ""},
-					"vmess": map[string]any{"id": fmt.Sprintf("00000000-0000-4000-9000-%012d", n)},
+					"vless":       map[string]any{"id": fmt.Sprintf("00000000-0000-4000-8000-%012d", n), "flow": ""},
+					"vmess":       map[string]any{"id": fmt.Sprintf("00000000-0000-4000-9000-%012d", n)},
+					"shadowsocks": map[string]any{"password": fmt.Sprintf("late-shadowsocks-password-%04d", n), "method": "aes-256-gcm"},
 				},
+				"inbounds": map[string]any{"vless": []string{"VLESS TCP"}, "vmess": []string{"VMess WS"}, "shadowsocks": []string{"Shadowsocks TCP"}},
 			}))
 		}
 	})

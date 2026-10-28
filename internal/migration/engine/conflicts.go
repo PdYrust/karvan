@@ -189,10 +189,8 @@ func protocolOf(k panel.CredentialKey) string {
 // shape finds values the destination cannot hold as they are.
 func (d *detector) shape(it *Item) {
 	d.credentialShape(it)
+	d.served(it)
 	u := it.User
-	if !reachable(it, d.in.Dest) {
-		it.add(NoProtocol, Warning, nil)
-	}
 	if u.Status == panel.StatusOnHold && (u.Expire != nil || u.OnHoldExpire == nil || *u.OnHoldExpire <= 0) {
 		it.add(OnHoldInvalid, Warning, nil)
 	}
@@ -228,35 +226,4 @@ func emptySecret(c panel.Credentials) bool {
 	return c.Trojan != nil && c.Trojan.Password.IsZero() ||
 		c.Shadowsocks != nil && c.Shadowsocks.Password.IsZero() ||
 		c.Hysteria != nil && c.Hysteria.Auth.IsZero()
-}
-
-// reachable reports whether the user keeps at least one protocol its
-// targets serve; otherwise it could not connect after the move.
-func reachable(it *Item, dest Dest) bool {
-	for _, t := range it.Targets {
-		for _, p := range dest.TargetProtocols[t] {
-			if hasProtocol(it.User.Credentials, p) {
-				return true
-			}
-		}
-	}
-	return len(it.Targets) == 0 // no targets is the job-level C09
-}
-
-func hasProtocol(c panel.Credentials, p string) bool {
-	switch p {
-	case "vmess":
-		return c.VMess != nil
-	case "vless":
-		return c.VLESS != nil
-	case "trojan":
-		return c.Trojan != nil
-	case "shadowsocks":
-		return c.Shadowsocks != nil
-	case "hysteria":
-		return c.Hysteria != nil
-	case "wireguard":
-		return c.WireGuard != nil
-	}
-	return false
 }

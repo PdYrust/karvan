@@ -52,7 +52,8 @@ var optionTable = map[string][]Option{
 	NameTwice:      {suffix, rename, skip},
 	CredTwice:      {skip, newCred},
 	CredTaken:      {skip, newCred},
-	NoProtocol:     {skip, {ID: OptKeep}},
+	NoProtocol:     {skip, {ID: OptAccept, ChangesConfig: true}},
+	WireGuardOnly:  {skip, {ID: OptAccept, ChangesConfig: true}},
 	FlowDropped:    {{ID: OptAccept, ChangesConfig: true}, skip},
 	ShadowsocksBad: {{ID: OptNewCredential, ChangesConfig: true}, {ID: OptChangeMethod, Params: []string{"method"}, ChangesConfig: true}, {ID: OptDropProtocol, ChangesConfig: true}, skip},
 	AlreadyMoved:   {skip},
@@ -94,7 +95,7 @@ func moveFirst(opts []Option, id string) []Option {
 // silently. Blockers have none.
 func defaultFix(t string, rc rankContext) (Option, bool) {
 	switch t {
-	case NameTaken, CaseOnly, NameInvalid, NameTwice, CredTwice, CredTaken, NoProtocol,
+	case NameTaken, CaseOnly, NameInvalid, NameTwice, CredTwice, CredTaken,
 		AlreadyMoved, MovedGone, OnHoldInvalid, SourceInvalid, ResetEstimated, AlreadyHere, RoleLimit, RoleFeature:
 	default:
 		return Option{}, false

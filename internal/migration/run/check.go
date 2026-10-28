@@ -16,6 +16,7 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/ledger"
 	"github.com/PdYrust/karvan/internal/migration/plan"
 	"github.com/PdYrust/karvan/internal/panel"
+	"github.com/PdYrust/karvan/internal/panel/pasarguardapi"
 	"github.com/PdYrust/karvan/internal/panel/source"
 )
 
@@ -190,7 +191,38 @@ func readSource(ctx context.Context, f readFrom) (*engine.Source, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &engine.Source{Kind: f.kind, Origin: f.origin, Admin: admin, Users: users, Skew: skewOf(f.source)}, nil
+	src := &engine.Source{Kind: f.kind, Origin: f.origin, Admin: admin, Users: users, Skew: skewOf(f.source)}
+	if f.kind == panel.PasarGuard {
+		if err := readGroups(ctx, f.source, src); err != nil {
+			return nil, err
+		}
+	}
+	return src, nil
+}
+
+// groupReader is a source that reads the old panel's groups (PasarGuard).
+type groupReader interface {
+	Groups(ctx context.Context) ([]panel.SourceGroup, error)
+}
+
+// readGroups reads an old PasarGuard panel's groups for the users'
+// current protocols (D36). A login that cannot read them leaves
+// GroupsRead false, and the build says so instead of raising C10 or C38.
+func readGroups(ctx context.Context, from panel.Source, src *engine.Source) error {
+	g, ok := from.(groupReader)
+	if !ok {
+		return nil
+	}
+	groups, err := g.Groups(ctx)
+	switch {
+	case errors.Is(err, pasarguardapi.ErrGroupsUnknown):
+		slog.Info("old panel groups unknown", "origin", src.Origin, "err", err)
+		return nil
+	case err != nil:
+		return err
+	}
+	src.Groups, src.GroupsRead = groups, true
+	return nil
 }
 
 // readDest reads the destination (read only) and the ledger for a fresh
