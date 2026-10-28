@@ -14,7 +14,6 @@ import (
 	"testing"
 	"time"
 
-	"github.com/PdYrust/karvan/internal/migration/migrationtest"
 	"github.com/PdYrust/karvan/internal/migration/run"
 )
 
@@ -125,7 +124,6 @@ func TestFixedUsersStayInTheirGroup(t *testing.T) {
 		Plan map[string]any `json:"plan"`
 	}
 	res.json(t, &got)
-	got.Plan["targets"] = migrationtest.PasarGuardTargets
 	got.Plan["resolutions"] = map[string]any{"C11": map[string]any{"option": "accept"}}
 	if out := m.withHeader("If-Match", res.header.Get("ETag"))(http.MethodPut, api+"/migrations/"+id+"/plan", got.Plan); out.status != http.StatusOK {
 		t.Fatalf("put plan: %d %s", out.status, out.body)
@@ -155,7 +153,6 @@ func TestPreviewFiltersRenamedAndConfigChanged(t *testing.T) {
 	only := func(key string) []map[string]any {
 		return []map[string]any{{"field": "users", "op": "in", "list": []string{key}}}
 	}
-	got.Plan["targets"] = migrationtest.PasarGuardTargets
 	got.Plan["tree"] = []map[string]any{
 		{"id": "a", "name": "A", "conditions": only("user000"), "ops": []map[string]any{{"kind": "name.prefix", "params": map[string]string{"text": "x_"}}}},
 		{"id": "b", "name": "B", "conditions": only("user001"), "ops": []map[string]any{{"kind": "cred.new", "params": map[string]string{"protocols": "vless"}}}},

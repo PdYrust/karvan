@@ -36,7 +36,6 @@ func TestLiveBridgeMarzban(t *testing.T) {
 	})
 	m := livetest.NewMover(t, l)
 	rep := m.Move(src, run.ReloadTouch, func(p *plan.Plan) {
-		p.Targets = []string{"vless/VLESS TCP"}
 		p.Admin.Username = "mb_admin"
 	})
 	b, port := startBridge(t, m, src)

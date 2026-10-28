@@ -81,7 +81,6 @@ func TestLiveBackupRollback(t *testing.T) {
 	}
 	before := users(t, l)
 	rep := m.Run(src, run.Options{Reload: run.ReloadManual, SafeMode: true, Rollback: run.RollbackBackup}, func(p *plan.Plan) {
-		p.Targets = []string{"vless/VLESS TCP"}
 		p.Admin.Username = "rb_admin"
 	})
 	if rep.State != run.StateRolledBack || rep.Counts.Undone != 0 || !restored(rep) {

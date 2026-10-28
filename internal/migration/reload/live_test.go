@@ -9,7 +9,6 @@ import (
 	"encoding/base64"
 	"fmt"
 	"net/http"
-	"strconv"
 	"strings"
 	"sync/atomic"
 	"testing"
@@ -93,7 +92,6 @@ func vlessID(run, i int) string { return fmt.Sprintf("00000000-0000-4%03d-8000-%
 
 func marzbanPlan(admin string) func(p *plan.Plan) {
 	return func(p *plan.Plan) {
-		p.Targets = migrationtest.MarzbanTargets
 		p.Admin.Username = admin
 	}
 }
@@ -226,9 +224,10 @@ func movePasarGuard(t *testing.T, l *livetest.Live, prefix string, group int64, 
 			u["next_plan"] = map[string]any{"user_template_id": nil, "data_limit": 5 << 30, "expire": 86400, "add_remaining_traffic": true}
 		}
 	})
+	role := livetest.EnsureRole(l, "karvan_wireguard", group) // before the read, so the job sees it
 	m := livetest.NewMover(t, l)
 	return m.Move(src, method, func(p *plan.Plan) {
-		p.Targets = []string{strconv.FormatInt(group, 10)}
+		p.Admin.RoleID = role
 		p.Admin.Username = prefix + "admin"
 		p.Resolutions = map[string]plan.Resolution{engine.WireGuardIPs: {Option: engine.OptAccept}}
 	})

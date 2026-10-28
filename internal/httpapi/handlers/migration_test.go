@@ -62,7 +62,8 @@ func (m *migrationEnv) create() string {
 	return job.ID
 }
 
-// plan reads the plan, puts the users in group 1 and returns the new version.
+// plan reads the plan, puts it back and returns the new version; users
+// go to the role's groups, here group 1.
 func (m *migrationEnv) plan(id string) int {
 	m.t.Helper()
 	res := m.do(http.MethodGet, api+"/migrations/"+id+"/plan", nil)
@@ -74,7 +75,6 @@ func (m *migrationEnv) plan(id string) int {
 	if res.header.Get("ETag") != strconv.Quote(strconv.Itoa(got.PlanVersion)) {
 		m.t.Fatalf("etag %q", res.header.Get("ETag"))
 	}
-	got.Plan["targets"] = migrationtest.PasarGuardTargets
 	put := m.withHeader("If-Match", res.header.Get("ETag"))
 	out := put(http.MethodPut, api+"/migrations/"+id+"/plan", got.Plan)
 	if out.status != http.StatusOK {

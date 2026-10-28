@@ -70,13 +70,6 @@ func newHarness(t *testing.T, from, to panel.Kind, tg paneldb.Target, users int)
 	return h
 }
 
-func (h *harness) targets() []string {
-	if h.to == panel.Marzban {
-		return migrationtest.MarzbanTargets
-	}
-	return migrationtest.PasarGuardTargets
-}
-
 // created starts a job; nothing is read yet.
 func (h *harness) created() *Job {
 	h.t.Helper()
@@ -88,7 +81,7 @@ func (h *harness) created() *Job {
 	return j
 }
 
-// job creates and checks a job, and sets a plan with the targets.
+// job creates and checks a job, and sets the plan edit gives.
 func (h *harness) job(edit func(p *plan.Plan)) *Job {
 	h.t.Helper()
 	ctx := context.Background()
@@ -97,7 +90,6 @@ func (h *harness) job(edit func(p *plan.Plan)) *Job {
 		h.t.Fatal(err)
 	}
 	_, p, v, _ := h.svc.View(j.ID)
-	p.Targets = h.targets()
 	if edit != nil {
 		edit(&p)
 	}

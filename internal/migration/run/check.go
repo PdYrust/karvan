@@ -341,6 +341,9 @@ func (s *Service) SetPlan(ctx context.Context, jobID string, version int, p plan
 	if err != nil {
 		return nil, 0, err
 	}
+	if len(p.Targets) > 0 {
+		return nil, 0, &engine.PlanError{Where: "targets", Problem: "not_allowed"} // D32
+	}
 	if !j.lockIdle() {
 		return nil, 0, ErrBusy
 	}
@@ -401,7 +404,9 @@ func (s *Service) askAdmins(ctx context.Context, j *Job, name string) error {
 	return nil
 }
 
-// View returns the job's last build and plan version.
+// View returns the job's last build and plan version. A draft made before
+// Phase 4.1 may hold targets; they are cleared, as no build uses them
+// (D32). A finished job keeps its plan as stored.
 func (s *Service) View(jobID string) (*engine.Result, plan.Plan, int, error) {
 	j, err := s.job(jobID)
 	if err != nil {
@@ -413,5 +418,8 @@ func (s *Service) View(jobID string) (*engine.Result, plan.Plan, int, error) {
 	}
 	defer j.mu.Unlock()
 	j.lastUse = s.now()
+	if j.state == StateCreated || j.state == StateChecked {
+		j.plan.Targets = nil
+	}
 	return j.result, j.plan, j.version, nil
 }

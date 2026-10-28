@@ -91,6 +91,34 @@ func (l *Live) ensureGroup(name, inbound string, port int, core func() map[strin
 	return g.ID
 }
 
+// EnsureRole gives the test PasarGuard a role named name that allows only
+// group, with the operator role's permissions, and returns its id. Users
+// moved under it get only that group (D31). A second call adds nothing.
+func EnsureRole(l *Live, name string, group int64) int64 {
+	l.t.Helper()
+	var roles struct {
+		Roles []struct {
+			ID   int64  `json:"id"`
+			Name string `json:"name"`
+		} `json:"roles"`
+	}
+	l.mustCall(http.MethodGet, "/api/admin-roles", nil, &roles)
+	for _, r := range roles.Roles {
+		if r.Name == name {
+			return r.ID
+		}
+	}
+	var operator map[string]any
+	l.mustCall(http.MethodGet, "/api/admin-role/3", nil, &operator)
+	body := map[string]any{"name": name, "permissions": operator["permissions"], "limits": operator["limits"],
+		"features": operator["features"], "access": map[string]any{"allowed_group_ids": []int64{group}}}
+	var r struct {
+		ID int64 `json:"id"`
+	}
+	l.mustCall(http.MethodPost, "/api/admin-role", body, &r)
+	return r.ID
+}
+
 func anyOf[T any](xs []T, ok func(T) bool) bool {
 	for _, x := range xs {
 		if ok(x) {

@@ -5,7 +5,6 @@ package reload_test
 import (
 	"net/http"
 	"slices"
-	"strconv"
 	"testing"
 
 	"github.com/PdYrust/karvan/internal/migration/engine"
@@ -16,8 +15,8 @@ import (
 
 // D36 to D38 against the running panels, read as old panels over their
 // API: a PasarGuard user in the WireGuard group gets C38 on the way to
-// Marzban, a Marzban user into only the WireGuard group gets C10, and a
-// user into the VLESS group gets neither. Nothing is moved.
+// Marzban, a Marzban user under a role with only the WireGuard group gets
+// C10, and one under a role with only the VLESS group gets neither. Nothing is moved.
 func TestLiveCurrentProtocols(t *testing.T) {
 	pg := livetest.OpenLive(t, panel.PasarGuard)
 	mz := livetest.OpenLive(t, panel.Marzban)
@@ -32,11 +31,11 @@ func TestLiveCurrentProtocols(t *testing.T) {
 	t.Run("marzban-to-pasarguard", func(t *testing.T) {
 		addMarzbanUser(t, mz, "cp_marzban")
 		m := livetest.NewMover(t, pg)
-		into := func(group int64) *engine.Result {
-			return m.Check(mz, func(p *plan.Plan) { p.Targets = []string{strconv.FormatInt(group, 10)} })
+		under := func(role int64) *engine.Result {
+			return m.Check(mz, func(p *plan.Plan) { p.Admin.RoleID = role })
 		}
-		wantTypes(t, into(g.WireGuard), "cp_marzban", engine.NoProtocol)
-		wantTypes(t, into(g.VLESS), "cp_marzban")
+		wantTypes(t, under(livetest.EnsureRole(pg, "karvan_wireguard", g.WireGuard)), "cp_marzban", engine.NoProtocol)
+		wantTypes(t, under(livetest.EnsureRole(pg, "karvan_vless", g.VLESS)), "cp_marzban")
 	})
 }
 

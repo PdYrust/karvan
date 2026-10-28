@@ -16,15 +16,9 @@ import (
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 )
 
-// XrayInbounds are the Marzban test inbounds; MarzbanTargets picks two.
+// XrayInbounds are the Marzban test inbounds. Users get all of them (D32).
 const XrayInbounds = `{"inbounds": [{"tag": "VLESS TCP", "protocol": "vless"}, {"tag": "VMess WS", "protocol": "vmess"},
  {"tag": "Trojan WS", "protocol": "trojan"}, {"tag": "Shadowsocks TCP", "protocol": "shadowsocks"}]}`
-
-// MarzbanTargets and PasarGuardTargets are what tests move users into.
-var (
-	MarzbanTargets    = []string{"vless/VLESS TCP", "vmess/VMess WS", "trojan/Trojan WS", "shadowsocks/Shadowsocks TCP"}
-	PasarGuardTargets = []string{"1"}
-)
 
 // URL turns a test target into the SQLAlchemy URL a panel ENV holds.
 func URL(tg paneldb.Target, kind panel.Kind) string {

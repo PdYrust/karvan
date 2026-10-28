@@ -34,7 +34,7 @@ type Summary struct {
 	Blockers    int            `json:"blockers"`
 	Stable      bool           `json:"stable"`
 	// RoleID is the moved admin's role on a PasarGuard destination, and
-	// UserTargets where its users go unless an operation says otherwise.
+	// UserTargets where its users go: the role's groups, or every inbound.
 	RoleID      int64    `json:"roleId,omitempty"`
 	UserTargets []string `json:"userTargets"`
 	// PanelID is the destination; Expiries and Protocols sum up the old
