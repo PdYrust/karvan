@@ -1,0 +1,22 @@
+# Pebble and its challenge server for `make test-acme` (phase-4.1 D72).
+# Host network: Pebble checks HTTP-01 on 127.0.0.1:5002, where the test's
+# bridge listens, and resolves names through the challenge server's DNS on
+# 127.0.0.1:8053, whose TXT records the test sets on 127.0.0.1:8055.
+name: karvan-acmetest
+services:
+  pebble:
+    image: ghcr.io/letsencrypt/pebble@sha256:ddf230642b1a584f519f32e347de1b05a6e4c1f6c35c1863b33effeab5f78199 # tag 2.10.1
+    command: ["-config", "/karvan/pebble-config.json", "-dnsserver", "127.0.0.1:8053"]
+    network_mode: host
+    restart: "no"
+    environment:
+      PEBBLE_VA_NOSLEEP: "1"
+      PEBBLE_WFE_NONCEREJECT: "0"
+      PEBBLE_AUTHZREUSE: "0"
+    volumes: ["./pebble-config.json:/karvan/pebble-config.json:ro"]
+  challtestsrv:
+    image: ghcr.io/letsencrypt/pebble-challtestsrv@sha256:12ce21884def456bcf9786542113949e1f19dc7738d2c70e156c2d0c38a1405b # tag 2.10.1
+    command: ["-defaultIPv4", "127.0.0.1", "-defaultIPv6", "", "-dnsserver", "127.0.0.1:8053", "-management", "127.0.0.1:8055",
+      "-http01", "", "-https01", "", "-tlsalpn01", "", "-doh", ""]
+    network_mode: host
+    restart: "no"

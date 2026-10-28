@@ -64,9 +64,25 @@ type orderEnv struct {
 	logs  *logBuffer
 	mu    sync.Mutex
 	txt   map[string][]string
+	// dir and client are the CA the service talks to; lookup reads TXT
+	// records for a Check.
+	dir    string
+	client *http.Client
+	lookup func(ctx context.Context, name string) ([]string, error)
 }
 
+// newOrderEnv is an env on the fake CA and a fake resolver.
 func newOrderEnv(t *testing.T) *orderEnv {
+	t.Helper()
+	return newEnvOn(t, freePort(t), func(e *orderEnv) {
+		e.ca = newFakeCA(t, e.clock.now)
+		e.ca.validate = e.validate
+		e.dir, e.client, e.lookup = e.ca.url("/dir"), e.ca.srv.Client(), e.lookupTXT
+	})
+}
+
+// newEnvOn is an env whose bridge has challengePort; ca sets its CA.
+func newEnvOn(t *testing.T, challengePort int, ca func(e *orderEnv)) *orderEnv {
 	t.Helper()
 	ctx := context.Background()
 	dir := t.TempDir()
@@ -84,9 +100,8 @@ func newOrderEnv(t *testing.T) *orderEnv {
 	e := &orderEnv{t: t, db: db, key: key, clock: &clock{t: time.Now().UTC().Truncate(time.Second)}, logs: &logBuffer{},
 		txt: map[string][]string{}}
 	log := slog.New(slog.NewTextHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	e.br = bridge.New(bridge.Deps{DB: db, Key: key, Now: e.clock.now, Log: log, ChallengePort: freePort(t)})
-	e.ca = newFakeCA(t, e.clock.now)
-	e.ca.validate = e.validate
+	e.br = bridge.New(bridge.Deps{DB: db, Key: key, Now: e.clock.now, Log: log, ChallengePort: challengePort})
+	ca(e)
 	runCtx, stop := context.WithCancel(ctx)
 	done := make(chan struct{})
 	go func() { defer close(done); _ = e.br.Run(runCtx) }()
@@ -105,7 +120,7 @@ func newOrderEnv(t *testing.T) *orderEnv {
 // newService is a service on the env, as after a start.
 func (e *orderEnv) newService(log *slog.Logger) *Service {
 	s := New(Deps{DB: e.db, Key: e.key, Bridge: e.br, Settings: settings.New(e.db), Audit: audit.New(e.db), Log: log,
-		Now: e.clock.now, TestDirectory: e.ca.url("/dir"), HTTPClient: e.ca.srv.Client(), LookupTXT: e.lookupTXT})
+		Now: e.clock.now, TestDirectory: e.dir, HTTPClient: e.client, LookupTXT: e.lookup})
 	s.retry, s.wait = time.Millisecond, 5*time.Second
 	return s
 }

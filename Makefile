@@ -16,7 +16,7 @@ TESTDB_ENV := KARVAN_TEST_MYSQL='root:test@tcp(127.0.0.1:33061)/' \
 	KARVAN_TEST_MARIADB='root:test@tcp(127.0.0.1:33062)/' \
 	KARVAN_TEST_POSTGRES='postgres://postgres:test@127.0.0.1:54321/postgres' \
 	KARVAN_TEST_TIMESCALE='postgres://postgres:test@127.0.0.1:54322/postgres'
-.PHONY: build build-go web web-deps test lint lint-web fmt floor cover check check-web check-full vuln audit-web clean test-db testdb-seed testdb-down test-panels testpanels-down bench
+.PHONY: build build-go web web-deps test lint lint-web fmt floor cover check check-web check-full vuln audit-web clean test-db testdb-seed testdb-down test-panels testpanels-down test-acme bench
 
 build: web build-go
 
@@ -74,12 +74,17 @@ testdb-down:
 test-panels:
 	./scripts/testpanels/up.sh
 	go test -tags paneltest -count=1 -p 1 ./internal/migration/reload/ ./internal/bridge/ ./internal/panelctl/
+# Let's Encrypt orders against Pebble by HTTP-01 and DNS-01 (needs Docker;
+# uses ports 5002, 8053, 8055, 14000 and 15000).
+test-acme:
+	./scripts/acmetest/up.sh
+	go test -tags acmetest -count=1 -run TestPebble ./internal/certorder/; s=$$?; ./scripts/acmetest/down.sh; exit $$s
 bench:
 	go test -run x -bench . -benchtime 3x ./internal/migration/...
 testpanels-down:
 	for d in /tmp/karvan-panels/karvan-test-*; do [ -f $$d/docker-compose.yml ] && docker compose -f $$d/docker-compose.yml -p $$(basename $$d) down; done; true
 # Full gate: before a phase ends or a release.
-check-full: check test test-db test-panels vuln audit-web web
+check-full: check test test-db test-panels test-acme vuln audit-web web
 
 clean:
 	rm -rf bin coverage.out web/dist/assets web/dist/.vite web/dist/*.html web/dist/*.js web/dist/*.svg
