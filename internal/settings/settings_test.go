@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"regexp"
+	"strings"
 	"testing"
 
 	"github.com/PdYrust/karvan/internal/store"
@@ -132,5 +133,26 @@ func TestRollbackIsUndoUntilChanged(t *testing.T) {
 	}
 	if err := s.SetRollback(ctx, "both"); !errors.Is(err, ErrRollback) {
 		t.Fatalf("bad value: %v", err)
+	}
+}
+
+func TestACMESettings(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	if a, err := s.ACME(ctx); err != nil || a != (ACME{}) {
+		t.Fatalf("defaults: %+v %v", a, err)
+	}
+	want := ACME{Staging: true, Email: "ops@example.com", KeepPort80: true}
+	if err := s.SetACME(ctx, want); err != nil {
+		t.Fatal(err)
+	}
+	if a, err := s.ACME(ctx); err != nil || a != want {
+		t.Fatalf("stored: %+v %v", a, err)
+	}
+	for _, bad := range []string{"Ops <ops@example.com>", "not an address", "a@example.com, b@example.com",
+		strings.Repeat("a", 250) + "@example.com", " ops@example.com"} {
+		if err := s.SetACME(ctx, ACME{Email: bad}); !errors.Is(err, ErrACMEEmail) {
+			t.Errorf("%q: %v", bad, err)
+		}
 	}
 }

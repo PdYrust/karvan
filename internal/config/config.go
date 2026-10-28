@@ -14,7 +14,9 @@ import (
 	"io"
 	"io/fs"
 	"log/slog"
+	"net"
 	"net/netip"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -33,6 +35,15 @@ type Config struct {
 	// Mode backup back: "auto" (Docker, else sudo -n), "docker", "sudo"
 	// or "off".
 	PanelControl string `json:"panelControl"`
+	// ACMEHTTPPort is where Karvan answers Let's Encrypt HTTP-01
+	// challenges (D74).
+	ACMEHTTPPort int `json:"acmeHttpPort"`
+	// For development and tests only: an ACME directory used instead of
+	// Let's Encrypt, the root that signs its HTTPS, and the DNS server
+	// (host:port) a DNS-01 Check asks.
+	ACMETestDirectory string `json:"acmeTestDirectory"`
+	ACMETestRootCA    string `json:"acmeTestRootCA"`
+	ACMETestResolver  string `json:"acmeTestResolver"`
 
 	level   slog.Level
 	proxies []netip.Prefix
@@ -45,6 +56,7 @@ func Defaults() Config {
 		KeyFile:      "/etc/karvan/secret.key",
 		LogLevel:     "info",
 		PanelControl: "auto",
+		ACMEHTTPPort: 80,
 	}
 }
 
@@ -145,6 +157,9 @@ func (c *Config) validate() error {
 	default:
 		return fmt.Errorf("panelControl %q: use auto, docker, sudo or off", c.PanelControl)
 	}
+	if err := c.validateACME(); err != nil {
+		return err
+	}
 	c.proxies = c.proxies[:0]
 	for _, s := range c.TrustedProxies {
 		p, err := parsePrefix(s)
@@ -152,6 +167,26 @@ func (c *Config) validate() error {
 			return fmt.Errorf("trustedProxies: %q is not an IP address or CIDR", s)
 		}
 		c.proxies = append(c.proxies, p)
+	}
+	return nil
+}
+
+func (c *Config) validateACME() error {
+	if c.ACMEHTTPPort < 1 || c.ACMEHTTPPort > 65535 {
+		return fmt.Errorf("acmeHttpPort %d is out of range 1-65535", c.ACMEHTTPPort)
+	}
+	if d := c.ACMETestDirectory; d != "" {
+		if u, err := url.Parse(d); err != nil || (u.Scheme != "https" && u.Scheme != "http") || u.Host == "" {
+			return fmt.Errorf("acmeTestDirectory %q must be an http or https URL", d)
+		}
+	}
+	if c.ACMETestRootCA != "" && !filepath.IsAbs(c.ACMETestRootCA) {
+		return fmt.Errorf("acmeTestRootCA %q must be an absolute path", c.ACMETestRootCA)
+	}
+	if r := c.ACMETestResolver; r != "" {
+		if _, _, err := net.SplitHostPort(r); err != nil {
+			return fmt.Errorf("acmeTestResolver %q must be host:port", r)
+		}
 	}
 	return nil
 }

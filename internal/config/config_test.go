@@ -100,14 +100,20 @@ func TestRejectsUnknownFields(t *testing.T) {
 
 func TestValidation(t *testing.T) {
 	cases := map[string]string{
-		"relative data dir":    `{"dataDir":"data"}`,
-		"key inside data dir":  `{"dataDir":"/var/lib/karvan","keyFile":"/var/lib/karvan/secret.key"}`,
-		"unknown log level":    `{"logLevel":"loud"}`,
-		"bad trusted proxy":    `{"trustedProxies":["not-an-ip"]}`,
-		"relative key file":    `{"keyFile":"secret.key"}`,
-		"key equals data dir":  `{"dataDir":"/srv/k","keyFile":"/srv/k"}`,
-		"key named ..x inside": `{"dataDir":"/srv/k","keyFile":"/srv/k/..key"}`,
-		"trailing json values": `{} {}`,
+		"relative data dir":     `{"dataDir":"data"}`,
+		"key inside data dir":   `{"dataDir":"/var/lib/karvan","keyFile":"/var/lib/karvan/secret.key"}`,
+		"unknown log level":     `{"logLevel":"loud"}`,
+		"bad trusted proxy":     `{"trustedProxies":["not-an-ip"]}`,
+		"relative key file":     `{"keyFile":"secret.key"}`,
+		"key equals data dir":   `{"dataDir":"/srv/k","keyFile":"/srv/k"}`,
+		"key named ..x inside":  `{"dataDir":"/srv/k","keyFile":"/srv/k/..key"}`,
+		"trailing json values":  `{} {}`,
+		"acme port zero":        `{"acmeHttpPort":0}`,
+		"acme port too high":    `{"acmeHttpPort":70000}`,
+		"acme directory ftp":    `{"acmeTestDirectory":"ftp://ca.test/dir"}`,
+		"acme directory bare":   `{"acmeTestDirectory":"ca.test/dir"}`,
+		"acme root relative":    `{"acmeTestRootCA":"root.pem"}`,
+		"acme resolver no port": `{"acmeTestResolver":"127.0.0.1"}`,
 	}
 	for name, body := range cases {
 		t.Run(name, func(t *testing.T) {
@@ -115,5 +121,21 @@ func TestValidation(t *testing.T) {
 				t.Fatal("Load succeeded, want an error")
 			}
 		})
+	}
+}
+
+func TestACMEValues(t *testing.T) {
+	p := writeFile(t, `{"acmeHttpPort":5002,"acmeTestDirectory":"https://127.0.0.1:14000/dir",`+
+		`"acmeTestRootCA":"/tmp/pebble.pem","acmeTestResolver":"127.0.0.1:8053"}`)
+	cfg, err := parse(t, "-config", p)
+	if err != nil {
+		t.Fatalf("Load: %v", err)
+	}
+	if cfg.ACMEHTTPPort != 5002 || cfg.ACMETestDirectory != "https://127.0.0.1:14000/dir" || cfg.ACMETestRootCA != "/tmp/pebble.pem" ||
+		cfg.ACMETestResolver != "127.0.0.1:8053" {
+		t.Errorf("cfg = %+v", cfg)
+	}
+	if d := Defaults(); d.ACMEHTTPPort != 80 || d.ACMETestDirectory != "" {
+		t.Errorf("defaults = %+v", d)
 	}
 }

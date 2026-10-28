@@ -57,6 +57,12 @@ const (
 	ActionCertScan         = "certificate.scan"
 	ActionRedirectSave     = "redirect.save"
 	ActionRedirectDelete   = "redirect.delete"
+	ActionACMEOrder        = "acme.order"
+	ActionACMECheck        = "acme.check"
+	ActionACMECancel       = "acme.cancel"
+	ActionACMESettings     = "acme.settings"
+	ActionACMEIssued       = "acme.issued"
+	ActionACMERenewFailed  = "acme.renew_failed"
 
 	ActionSessionsEnd   = "sessions.end"
 	ActionLoginRenew    = "account.credentials"
@@ -66,6 +72,10 @@ const (
 
 // ActorCLI is the actor for actions taken from the command line.
 const ActorCLI = "cli"
+
+// ActorSystem is the actor for what Karvan does by itself, such as a
+// Let's Encrypt renewal.
+const ActorSystem = "system"
 
 // Event is one audited action.
 type Event struct {
