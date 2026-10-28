@@ -3,6 +3,7 @@ package handlers_test
 import (
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 )
 
@@ -61,6 +62,9 @@ func TestChangesAfterACompare(t *testing.T) {
 	want := fmt.Sprintf("changed false version %d total 0 map[changed:0 gone:0 new:0] users [] next \"\"", v)
 	if got := changes(t, m, id, ""); got != want {
 		t.Fatalf("after the first compare: %s", got)
+	}
+	if res := m.do(http.MethodGet, api+"/migrations/"+id+"/changes", nil); !strings.Contains(string(res.body), `"admins":[]`) {
+		t.Fatalf("no admins list: %s", res.body)
 	}
 	m.src.Mutate(func(users *[]map[string]any) { (*users)[0]["username"] = "user999" })
 	if res := m.do(http.MethodPost, api+"/migrations/"+id+"/compare", nil); res.status != http.StatusAccepted {
