@@ -147,6 +147,22 @@ export interface AdminSummary {
   roleId: number;
 }
 
+/** One admin of the old panel and how it lands (D34); the login's admin comes first. */
+export interface AdminInfo {
+  /** Its name on the old panel, the key of plan.admins. */
+  username: string;
+  isLogin: boolean;
+  /** Its users the run moves. */
+  users: number;
+  /** False for an admin other than the login's with no user to move: the run leaves it out. */
+  moves: boolean;
+  roleId: number;
+  /** A merge keeps the existing admin's own role (D33). */
+  roleFixed: boolean;
+  newAdmin: AdminSummary;
+  userTargets: string[] | null;
+}
+
 /** The old panel as read and the destination, after a compare (api-migration.md 2.3). */
 export interface JobSummary {
   state: JobState;
@@ -176,6 +192,8 @@ export interface JobSummary {
   newAdmin: AdminSummary;
   /** A run without a typed password keeps the reseller's own one; otherwise Karvan makes one. */
   canKeepPassword: boolean;
+  /** Every admin of the old panel's users; null in the zero summary of a running job. */
+  admins: AdminInfo[] | null;
 }
 
 export interface Job {
@@ -344,7 +362,9 @@ export interface Role {
   requireTemplate: boolean;
 }
 
-export function getRoles(id: string): Promise<{ roleId: number; roles: Role[] }> {
+export function getRoles(
+  id: string,
+): Promise<{ roleId: number; roleFixed: boolean; admins: AdminInfo[] | null; roles: Role[] }> {
   return api('GET', jobPath(id, '/roles'));
 }
 

@@ -25,7 +25,6 @@ const group = (type: string, count: number, open = 0, options = [opt('skip')]): 
 const plan: Plan = {
   version: 0,
   now: '2026-10-17T09:06:00Z',
-  admin: {},
   targets: null,
   tree: null,
 };

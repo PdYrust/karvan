@@ -4,7 +4,15 @@ const en = {
   loading: 'Loading the comparison',
   failed: "The comparison didn't load.",
   adminTitle: 'Admin',
-  adminIntro: 'The users move under this admin on the destination.',
+  adminTitleOf: 'Admin `{name}`',
+  adminUsers: {
+    one: '{count} user moves under this admin on the destination.',
+    other: '{count} users move under this admin on the destination.',
+  },
+  loginAdmin: 'You signed in as this admin',
+  sameRoleTitle: 'Same role for all',
+  sameRoleIntro: 'Gives every admin below this role. You can still change each one after.',
+  sameRoleMixed: 'Roles differ',
   adminTaken:
     'An admin named `{name}` is already on the destination. Give this one another name, or merge the users into it.',
   adminMissing: "There's no admin named `{name}` on the destination to merge into.",
@@ -18,9 +26,10 @@ const en = {
   save: 'Save',
   merged: 'The users join `{name}`. That admin keeps its own role and password.',
   roleLabel: 'Role',
+  roleFixedHint: 'The admin it merges into keeps its own role.',
+  roleAllGroupsNote: 'This role allows every group, so users join every enabled one.',
   roleOwner: '{name} (owner)',
   roleGroups: 'Groups',
-  roleAllGroups: 'Every group',
   roleNoGroups: 'None',
   roleUsers: 'Users at most',
   roleData: 'Data limit',
@@ -49,10 +58,6 @@ const en = {
   hide: 'Hide password',
   passwordEmpty: 'Type a password or press Generate.',
   passwordOk: 'This password meets the panel rules.',
-  targetsTitle: 'Where users go',
-  targetsIntroGroups: 'Moved users join the groups you choose.',
-  targetsIntroInbounds: 'Moved users get the inbounds you choose.',
-  targetsDefault: 'Use the default',
   problemsTitle: 'Problems',
   problemsIntro:
     'Users that need a look, group by group. Each group lists its fixes, the best first.',
@@ -103,13 +108,8 @@ const en = {
   preset_disabled: 'Disabled',
   'preset_on-hold': 'On hold',
   'preset_has-note': 'With a note',
-  targetsNoGroups:
-    'The destination has no groups. Add one in PasarGuard, then start a new migration.',
-  targetsNoInbounds:
-    'The destination has no inbounds. Add one in Marzban, then start a new migration.',
   targetHosts: { one: '{count} host', other: '{count} hosts' },
   targetNoHosts: 'No hosts, so no links',
-  targetDisabled: 'Disabled',
 };
 
 export type CompareKey = keyof typeof en;
@@ -118,7 +118,16 @@ const fa: Messages<CompareKey>['fa'] = {
   loading: 'در حال بارگذاری مقایسه',
   failed: 'مقایسه بارگذاری نشد.',
   adminTitle: 'ادمین',
-  adminIntro: 'کاربرها زیر این ادمین به پنل مقصد منتقل میشوند.',
+  adminTitleOf: 'ادمین `{name}`',
+  adminUsers: {
+    one: '{count} کاربر زیر این ادمین به پنل مقصد منتقل میشود.',
+    other: '{count} کاربر زیر این ادمین به پنل مقصد منتقل میشوند.',
+  },
+  loginAdmin: 'با این ادمین وارد شده اید',
+  sameRoleTitle: 'نقش یکسان برای همه',
+  sameRoleIntro:
+    'این نقش را به همه ادمین های زیر میدهد. بعد هم میتوانید نقش هر کدام را جدا عوض کنید.',
+  sameRoleMixed: 'نقش ها فرق دارند',
   adminTaken:
     'ادمینی با نام `{name}` در پنل مقصد هست. برای این ادمین نام دیگری بگذارید یا کاربرها را به همان ادمین منتقل کنید.',
   adminMissing: 'ادمینی با نام `{name}` در پنل مقصد نیست که کاربرها به آن منتقل شوند.',
@@ -132,9 +141,10 @@ const fa: Messages<CompareKey>['fa'] = {
   save: 'ذخیره',
   merged: 'کاربرها به `{name}` اضافه میشوند. آن ادمین نقش و رمز خودش را نگه میدارد.',
   roleLabel: 'نقش',
+  roleFixedHint: 'ادمینی که با آن ادغام میشود نقش خودش را نگه میدارد.',
+  roleAllGroupsNote: 'این نقش همه گروه ها را مجاز میداند، پس کاربرها عضو همه گروه های فعال میشوند.',
   roleOwner: '{name} (مالک)',
   roleGroups: 'گروه ها',
-  roleAllGroups: 'همه گروه ها',
   roleNoGroups: 'هیچ کدام',
   roleUsers: 'حداکثر کاربر',
   roleData: 'حجم',
@@ -163,10 +173,6 @@ const fa: Messages<CompareKey>['fa'] = {
   hide: 'پنهان کردن رمز',
   passwordEmpty: 'رمزی بنویسید یا ساختن رمز را بزنید.',
   passwordOk: 'این رمز با قوانین پنل جور است.',
-  targetsTitle: 'مقصد کاربرها',
-  targetsIntroGroups: 'کاربرهای منتقل شده به گروه هایی که انتخاب میکنید میروند.',
-  targetsIntroInbounds: 'کاربرهای منتقل شده اینباندهایی را که انتخاب میکنید میگیرند.',
-  targetsDefault: 'همان پیش فرض',
   problemsTitle: 'مشکل ها',
   problemsIntro:
     'کاربرهایی که باید بررسی شوند، گروه به گروه. راه حل های هر گروه از بهترین شروع میشوند.',
@@ -217,13 +223,8 @@ const fa: Messages<CompareKey>['fa'] = {
   preset_disabled: 'غیرفعال',
   'preset_on-hold': 'در انتظار شروع',
   'preset_has-note': 'با یادداشت',
-  targetsNoGroups:
-    'پنل مقصد گروهی ندارد. در پاسارگارد یک گروه بسازید و بعد انتقال جدیدی شروع کنید.',
-  targetsNoInbounds:
-    'پنل مقصد اینباندی ندارد. در مرزبان یک اینباند بسازید و بعد انتقال جدیدی شروع کنید.',
   targetHosts: { one: '{count} هاست', other: '{count} هاست' },
   targetNoHosts: 'بدون هاست، پس بدون لینک',
-  targetDisabled: 'غیرفعال',
 };
 
 export const compareMessages: Messages<CompareKey> = { en, fa };

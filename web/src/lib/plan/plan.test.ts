@@ -8,7 +8,7 @@ import {
   renameCategory,
   setAdmin,
   setFix,
-  setTargets,
+  setRoleForAll,
   setUserFix,
   userFix,
   type Plan,
@@ -17,7 +17,6 @@ import {
 const fresh = (): Plan => ({
   version: 0,
   now: '2026-10-17T09:06:00Z',
-  admin: {},
   targets: null,
   tree: null,
 });
@@ -35,25 +34,50 @@ function frozen(p: Plan): Plan {
 }
 
 describe('setAdmin', () => {
-  it('renames the admin and keeps the role', () => {
-    const p = setAdmin({ username: 'shop_2', mode: 'create' })(
-      frozen({ ...fresh(), admin: { roleId: 3 } }),
+  it('renames one admin and keeps its role and the other admins', () => {
+    const p = setAdmin('shop', { username: 'shop_2', mode: 'create' })(
+      frozen({ ...fresh(), admins: { shop: { roleId: 3 }, north: { mode: 'merge' } } }),
     );
-    expect(p.admin).toEqual({ username: 'shop_2', mode: 'create', roleId: 3 });
+    expect(p.admins).toEqual({
+      shop: { username: 'shop_2', mode: 'create', roleId: 3 },
+      north: { mode: 'merge' },
+    });
   });
 
-  it('drops a field set back to its default', () => {
-    const p = setAdmin({ username: '', roleId: 0 })(
-      frozen({ ...fresh(), admin: { username: 'x', mode: 'merge', roleId: 2 } }),
+  it('drops a field set back to its default, and an entry left empty', () => {
+    const p = setAdmin('shop', { username: '', roleId: 0 })(
+      frozen({ ...fresh(), admins: { shop: { username: 'x', mode: 'merge', roleId: 2 } } }),
     );
-    expect(p.admin).toEqual({ mode: 'merge' });
+    expect(p.admins).toEqual({ shop: { mode: 'merge' } });
+    const q = setAdmin('shop', { roleId: 0 })(
+      frozen({ ...fresh(), admins: { shop: { roleId: 2 } } }),
+    );
+    expect(q.admins).toBeUndefined();
+  });
+
+  it('never sends the old admin field, which the server would read over admins', () => {
+    const p = setAdmin('shop', { roleId: 4 })(frozen({ ...fresh(), admin: { roleId: 2 } }));
+    expect(p).not.toHaveProperty('admin');
+    expect(p.admins).toEqual({ shop: { roleId: 4 } });
   });
 });
 
-describe('setTargets', () => {
-  it('sets the targets, or null for the defaults', () => {
-    expect(setTargets(['3', '5'])(frozen(fresh())).targets).toEqual(['3', '5']);
-    expect(setTargets(null)(frozen({ ...fresh(), targets: ['3'] })).targets).toBeNull();
+describe('setRoleForAll', () => {
+  it('gives every named admin the role and leaves the rest as they are', () => {
+    const p = setRoleForAll(
+      ['shop', 'east'],
+      5,
+    )(
+      frozen({
+        ...fresh(),
+        admins: { shop: { username: 'shop_2', roleId: 3 }, north: { mode: 'merge' } },
+      }),
+    );
+    expect(p.admins).toEqual({
+      shop: { username: 'shop_2', roleId: 5 },
+      east: { roleId: 5 },
+      north: { mode: 'merge' },
+    });
   });
 });
 

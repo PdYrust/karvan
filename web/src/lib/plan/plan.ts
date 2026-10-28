@@ -48,8 +48,11 @@ export interface AdminPlan {
 export interface Plan {
   version: number;
   now: string;
-  admin: AdminPlan;
-  /** Where moved users go; null means the destination's defaults. */
+  /** How each admin lands, keyed by its name on the old panel (D35). */
+  admins?: Record<string, AdminPlan>;
+  /** A plan from before Phase 4.1; read by the server over admins, so an edit drops it. */
+  admin?: AdminPlan;
+  /** Always empty: the role decides where users go (D31, D32). */
   targets: string[] | null;
   tree: PlanNode[] | null;
   problems?: Record<string, Op[]>;
@@ -79,22 +82,29 @@ function withKey<V>(
   return value === undefined ? without(map, key) : { ...map, [key]: value };
 }
 
-/** Renames the admin, merges it or picks its role. An empty name or role 0 goes back to the default. */
-export function setAdmin(patch: AdminPlan): PlanEdit {
+/**
+ * Renames one admin, merges it or picks its role; source is its name on the
+ * old panel. An empty name or role 0 goes back to the default.
+ */
+export function setAdmin(source: string, patch: AdminPlan): PlanEdit {
   return (p) => {
-    const next: AdminPlan = { ...p.admin, ...patch };
+    const next: AdminPlan = { ...p.admins?.[source], ...patch };
     if (!next.username) delete next.username;
     if (!next.mode) delete next.mode;
     if (!next.roleId) delete next.roleId;
-    return { ...p, admin: next };
+    const out: Plan = {
+      ...p,
+      admins: withKey(p.admins, source, Object.keys(next).length ? next : undefined),
+    };
+    if (!out.admins) delete out.admins;
+    delete out.admin;
+    return out;
   };
 }
-
-/** The targets moved users get; null for the destination's defaults. */
-export function setTargets(ids: readonly string[] | null): PlanEdit {
-  return (p) => ({ ...p, targets: ids ? [...ids] : null });
+/** "Same role for all": gives each of these admins the role (D34). */
+export function setRoleForAll(sources: readonly string[], roleId: number): PlanEdit {
+  return (p) => sources.reduce((q, s) => setAdmin(s, { roleId })(q), p);
 }
-
 /** The fix every user with this conflict gets ("apply to all similar"); null for the default. */
 export function setFix(type: string, fix: Resolution | null): PlanEdit {
   return (p) => ({ ...p, resolutions: withKey(p.resolutions, type, fix ?? undefined) });

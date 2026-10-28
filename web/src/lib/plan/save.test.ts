@@ -2,15 +2,17 @@ import { describe, expect, it, vi } from 'vitest';
 import { ApiError } from '../api/client';
 import type { PlanSaved, PlanState } from '../api/migrations';
 import { PlanConflict, saveEdit } from './save';
-import { setTargets, type Plan } from './plan';
+import { setFix, type Plan, type Resolution } from './plan';
 
-const plan = (targets: string[] | null): Plan => ({
+const prefix: Resolution = { option: 'prefix', params: { text: 'old_' } };
+const plan = (resolutions?: Record<string, Resolution>): Plan => ({
   version: 0,
   now: '2026-10-17T09:06:00Z',
-  admin: {},
-  targets,
+  targets: null,
   tree: null,
+  ...(resolutions ? { resolutions } : {}),
 });
+const edit = setFix('C02', prefix);
 const saved = (planVersion: number): PlanSaved => ({
   planVersion,
   blockers: 0,
@@ -25,14 +27,10 @@ describe('saveEdit', () => {
   it('sends the edited plan with the version it was made on', async () => {
     const save = vi.fn(() => Promise.resolve(saved(3)));
     const load = vi.fn<() => Promise<PlanState>>();
-    const out = await saveEdit(
-      setTargets(['3']),
-      { planVersion: 2, plan: plan(null) },
-      { load, save },
-    );
-    expect(save).toHaveBeenCalledWith(2, plan(['3']));
+    const out = await saveEdit(edit, { planVersion: 2, plan: plan() }, { load, save });
+    expect(save).toHaveBeenCalledWith(2, plan({ C02: prefix }));
     expect(load).not.toHaveBeenCalled();
-    expect(out).toEqual({ plan: plan(['3']), saved: saved(3) });
+    expect(out).toEqual({ plan: plan({ C02: prefix }), saved: saved(3) });
   });
 
   it('after a 412 reads the plan again and replays the edit on it once', async () => {
@@ -40,22 +38,18 @@ describe('saveEdit', () => {
       .fn<(v: number, p: Plan) => Promise<PlanSaved>>()
       .mockRejectedValueOnce(stale())
       .mockResolvedValueOnce(saved(6));
-    const other = { ...plan(null), admin: { username: 'shop_2' } };
+    const other = { ...plan(), admins: { shop: { username: 'shop_2' } } };
     const load = vi.fn(() => Promise.resolve({ planVersion: 5, plan: other }));
-    const out = await saveEdit(
-      setTargets(['3']),
-      { planVersion: 2, plan: plan(null) },
-      { load, save },
-    );
-    expect(save).toHaveBeenLastCalledWith(5, { ...other, targets: ['3'] });
+    const out = await saveEdit(edit, { planVersion: 2, plan: plan() }, { load, save });
+    expect(save).toHaveBeenLastCalledWith(5, { ...other, resolutions: { C02: prefix } });
     expect(out.saved.planVersion).toBe(6);
   });
 
   it('asks the operator after a second conflict', async () => {
     const save = vi.fn(() => Promise.reject(stale()));
-    const load = vi.fn(() => Promise.resolve({ planVersion: 5, plan: plan(null) }));
+    const load = vi.fn(() => Promise.resolve({ planVersion: 5, plan: plan() }));
     await expect(
-      saveEdit(setTargets(['3']), { planVersion: 2, plan: plan(null) }, { load, save }),
+      saveEdit(edit, { planVersion: 2, plan: plan() }, { load, save }),
     ).rejects.toBeInstanceOf(PlanConflict);
     expect(save).toHaveBeenCalledTimes(2);
   });
@@ -64,9 +58,9 @@ describe('saveEdit', () => {
     const busy = new ApiError(409, 'busy');
     const save = vi.fn(() => Promise.reject(busy));
     const load = vi.fn<() => Promise<PlanState>>();
-    await expect(
-      saveEdit(setTargets(['3']), { planVersion: 2, plan: plan(null) }, { load, save }),
-    ).rejects.toBe(busy);
+    await expect(saveEdit(edit, { planVersion: 2, plan: plan() }, { load, save })).rejects.toBe(
+      busy,
+    );
     expect(load).not.toHaveBeenCalled();
   });
 });

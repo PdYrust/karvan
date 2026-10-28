@@ -26,7 +26,8 @@ const en = {
   type_C31: "Outside the role's limits",
   type_C32: "Use a setting the role doesn't allow",
   type_unknown: 'Another problem ({type})',
-  job_C09: 'Choose at least one place for the users to go.',
+  job_C09:
+    'Users would get no group or inbound on the destination. Choose another role, or add a group or inbound there.',
   job_C27: "The old panel's clock is off by `{skew}`. Times copied from it are off by as much.",
   job_C29: 'Some fixes keep changing each other. Choose other fixes for the problems below.',
   job_C30: "This admin name can't be used. Use up to 34 characters, with no spaces at the ends.",
@@ -75,7 +76,8 @@ const fa: Messages<ConflictKey>['fa'] = {
   type_C31: 'خارج از محدودیت های نقش',
   type_C32: 'تنظیمی دارند که نقش اجازه نمیدهد',
   type_unknown: 'مشکل دیگر ({type})',
-  job_C09: 'دست کم یک مقصد برای کاربرها انتخاب کنید.',
+  job_C09:
+    'کاربرها در پنل مقصد هیچ گروه یا اینباندی نمیگیرند. نقش دیگری انتخاب کنید یا آنجا گروه یا اینباندی اضافه کنید.',
   job_C27:
     'ساعت پنل قدیمی `{skew}` اختلاف دارد. زمان هایی که از آن کپی میشوند هم همین قدر اختلاف دارند.',
   job_C29:

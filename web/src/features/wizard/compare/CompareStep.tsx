@@ -9,13 +9,12 @@ import { errorOf, useErrorText } from '../../../lib/errors/errors';
 import { wizardMessages } from '../messages';
 import { StepActions } from '../StepActions';
 import { useWizard } from '../wizard-context';
-import { AdminCard } from './AdminCard';
+import { AdminList } from './AdminList';
 import { Categories } from './Categories';
 import { conflictMessages } from './conflict-messages';
 import { ImpactBar } from '../ImpactBar';
 import { compareMessages } from './messages';
 import { ProblemList } from './ProblemList';
-import { TargetsCard } from './TargetsCard';
 import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
 function Loading() {
@@ -30,7 +29,7 @@ function Loading() {
 }
 
 /**
- * Step 3: the admin first, then where users go, the problem groups with
+ * Step 3: the admins first, each with its role, then the problem groups with
  * their fixes, and the categories. Every choice saves the whole plan and
  * shows what it does (D6).
  */
@@ -80,8 +79,7 @@ export function CompareStep() {
             <CodeText text={tc('job_C27', { skew: c.detail?.skew ?? '' })} />
           </InlineAlert>
         ))}
-      <AdminCard summary={summary.data} conflicts={g.conflicts} />
-      <TargetsCard summary={summary.data} conflicts={g.conflicts} />
+      <AdminList summary={summary.data} conflicts={g.conflicts} />
       <ProblemList groups={g.groups} kind={kind} />
       <Categories counts={g.categories} total={summary.data.users} />
       <StepActions jobId={jobId} back="summary" next="changes" />
