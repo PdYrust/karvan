@@ -111,6 +111,24 @@ func TestSiteErrorsAreCodes(t *testing.T) {
 		409, "port_mixed", "")
 }
 
+// Two certificates for one name on one port, and Karvan's own panel
+// port, are 409 codes (D53, section 4).
+func TestRuleConflictsAreCodes(t *testing.T) {
+	m := newMigrationEnv(t, 0)
+	sites := api + "/legacy-sites"
+	first := with(baseSite(m, t, "first"), "certificateId", m.addCertificate(t, "one"))
+	res := m.do(http.MethodPost, sites, first)
+	var s siteOut
+	res.json(t, &s)
+	if res.status != http.StatusCreated {
+		t.Fatalf("add: %d %s", res.status, res.body)
+	}
+	t.Cleanup(func() { _ = m.bridge.DeleteSite(t.Context(), s.ID) })
+	m.siteFails(t, http.MethodPost, sites, with(first, "name", "x", "oldPath", "other", "certificateId", m.addCertificate(t, "two")),
+		409, "cert_conflict", "")
+	m.siteFails(t, http.MethodPost, sites, with(first, "name", "x", "oldPath", "other", "port", testPanelPort), 409, "port_taken", "")
+}
+
 type siteOut struct {
 	ID          int64    `json:"id"`
 	Mode        string   `json:"mode"`

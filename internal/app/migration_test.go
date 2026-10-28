@@ -33,7 +33,7 @@ func TestServicesAndTheDataDirLock(t *testing.T) {
 		t.Fatalf("restore while running: %v", err)
 	}
 	sctx, cancel := context.WithCancel(ctx)
-	s := a.startServices(sctx)
+	s := a.startServices(sctx, nil)
 	cancel()
 	s.stop()
 	unlock()
@@ -63,7 +63,7 @@ func TestServicesTrimOldAuditEvents(t *testing.T) {
 		return n
 	}
 	sctx, cancel := context.WithCancel(ctx)
-	s := a.startServices(sctx)
+	s := a.startServices(sctx, nil)
 	deadline := time.Now().Add(5 * time.Second)
 	for count() > 0 && time.Now().Before(deadline) {
 		time.Sleep(20 * time.Millisecond)

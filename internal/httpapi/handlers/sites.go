@@ -26,6 +26,10 @@ func writeSiteError(w http.ResponseWriter, r *http.Request, err error) {
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeNameTaken})
 	case errors.Is(err, bridge.ErrPortMixed):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "port_mixed"})
+	case errors.Is(err, bridge.ErrCertConflict):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "cert_conflict"})
+	case errors.Is(err, bridge.ErrPortTaken):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "port_taken"})
 	case errors.Is(err, bridge.ErrUploadBusy):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeBusy})
 	case errors.Is(err, bridge.ErrNoCert):

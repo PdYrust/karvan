@@ -38,6 +38,8 @@ const (
 	base     = "abcDEF2345ghijkm"
 	username = "owner"
 	password = "correct horse battery"
+	// testPanelPort stands for the web panel's own port in the bridge.
+	testPanelPort = 9
 )
 
 var passwordHash = sync.OnceValue(func() string {
@@ -137,7 +139,7 @@ func newEnvDeps(t *testing.T) (*env, httpapi.Deps) {
 	svc := auth.NewService(ops, auth.NewSessions(db), auth.NewLimiter(db, auth.DefaultLockout), log)
 	runs := run.New(run.Deps{DB: db, Key: key, DataDir: filepath.Join(dir, "data"), Tools: migrationtest.Tools})
 	br := bridge.New(bridge.Deps{DB: db, Key: key, Log: slog.New(slog.DiscardHandler), DataDir: filepath.Join(dir, "data"),
-		KeyFile: keyPath, EnvRoots: []string{filepath.Join(dir, "opt")}})
+		KeyFile: keyPath, EnvRoots: []string{filepath.Join(dir, "opt")}, PanelPorts: func() []int { return []int{testPanelPort} }})
 	closing := make(chan struct{})
 	hostStore := hoststats.NewStore(db)
 	host := &hoststats.Sampler{Reader: hoststats.System, Store: hostStore}

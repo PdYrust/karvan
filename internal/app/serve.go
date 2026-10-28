@@ -31,7 +31,8 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 	defer unlock()
 	ctx, cancel := context.WithCancel(ctx)
 	closing := make(chan struct{})
-	svc := a.startServices(ctx)
+	srv := a.addressServer(h.Bind, func() { close(closing) })
+	svc := a.startServices(ctx, panelPorts(srv))
 	defer func() { cancel(); svc.stop() }()
 	deps := httpapi.Deps{
 		TrustedProxies: a.Config.Proxies(),
@@ -50,7 +51,6 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 		HostReader:     hoststats.System,
 		DBStats:        svc.dbstats,
 	}
-	srv := a.addressServer(h.Bind, func() { close(closing) })
 	deps.Address = srv
 	srv.Handler = func(base string) (http.Handler, error) {
 		d := deps
@@ -75,6 +75,19 @@ func (a *App) addressServer(bind string, onShutdown func()) *address.Server {
 		HTTP:       a.httpServer,
 		OnShutdown: onShutdown,
 		Log:        a.Logger,
+	}
+}
+
+// panelPorts lists the ports srv serves the panel on: the current one and
+// a new one waiting for its confirmation.
+func panelPorts(srv *address.Server) func() []int {
+	return func() []int {
+		st := srv.Status()
+		ports := []int{st.Current.Port}
+		if st.Pending != nil {
+			ports = append(ports, st.Pending.Port)
+		}
+		return ports
 	}
 }
 
