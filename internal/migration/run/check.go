@@ -1,7 +1,6 @@
 package run
 
 import (
-	"cmp"
 	"context"
 	"crypto/rand"
 	"encoding/hex"
@@ -232,22 +231,15 @@ func (s *Service) readDest(ctx context.Context, f readFrom, src *engine.Source) 
 	if err != nil {
 		return reading{}, err
 	}
-	moved, movedAdmin, err := s.readLedger(ctx, src, d.Target.String())
+	moved, movedAdmins, err := s.readLedger(ctx, src, d.Target.String())
 	if err != nil {
 		return reading{}, err
 	}
-	name := cmp.Or(f.planAdmin, src.Admin.Username)
-	names := append([]string{name}, engine.AdminSuggestions(name)...)
-	for _, n := range []string{src.Admin.Username, movedAdmin} {
-		if n != "" && !slices.Contains(names, n) {
-			names = append(names, n)
-		}
-	}
-	facts, err := d.Facts(ctx, names)
+	facts, err := d.Facts(ctx, engine.LookupNames(f.plan, *src, movedAdmins))
 	if err != nil {
 		return reading{}, err
 	}
-	return reading{snapshot: src, facts: facts, moved: moved, movedAdmin: movedAdmin}, nil
+	return reading{snapshot: src, facts: facts, moved: moved, movedAdmins: movedAdmins}, nil
 }
 
 // skewOf reads the clock skew the HTTP client saw, when it has one.
@@ -259,22 +251,22 @@ func skewOf(src panel.Source) time.Duration {
 }
 
 // readLedger maps live ledger rows to the users of a source read, and
-// finds the admin an earlier run moved. A row only counts if the source
+// finds the admins earlier runs moved, by source admin. A row only counts if the source
 // user still has the same created_at; otherwise it is someone new with a
 // reused id or name (D31).
-func (s *Service) readLedger(ctx context.Context, src *engine.Source, destID string) (map[string]engine.Moved, string, error) {
+func (s *Service) readLedger(ctx context.Context, src *engine.Source, destID string) (map[string]engine.Moved, map[string]string, error) {
 	live, err := s.ledger.Live(ctx, src.Origin, destID)
 	if err != nil {
-		return nil, "", err
+		return nil, nil, err
 	}
 	created := map[string]time.Time{}
 	for _, u := range src.Users {
 		created[engine.KeyOf(src.Kind, u)] = u.CreatedAt
 	}
-	moved, movedAdmin := map[string]engine.Moved{}, ""
+	moved, movedAdmins := map[string]engine.Moved{}, map[string]string{}
 	for _, e := range live {
-		if e.Kind == ledger.KindAdmin && e.SourceKey == src.Admin.Username && e.State == ledger.Done {
-			movedAdmin = e.Username
+		if e.Kind == ledger.KindAdmin && e.State == ledger.Done {
+			movedAdmins[e.SourceKey] = e.Username
 		}
 		if e.Kind != ledger.KindUser || !e.SourceCreated.Equal(created[e.SourceKey].UTC()) {
 			continue
@@ -285,7 +277,7 @@ func (s *Service) readLedger(ctx context.Context, src *engine.Source, destID str
 		}
 		moved[e.SourceKey] = engine.Moved{State: state, DestID: e.Row.ID, Username: e.Username, Created: e.CreatedAt}
 	}
-	return moved, movedAdmin, nil
+	return moved, movedAdmins, nil
 }
 
 // install builds the plan over a fresh reading and makes both the job's
@@ -301,7 +293,7 @@ func (s *Service) install(j *Job, r reading) (engine.Changes, error) {
 	if changes.Changed() {
 		j.version++
 	}
-	j.snapshot, j.facts, j.moved, j.movedAdmin, j.result = r.snapshot, r.facts, r.moved, r.movedAdmin, res
+	j.snapshot, j.facts, j.moved, j.movedAdmins, j.result = r.snapshot, r.facts, r.moved, r.movedAdmins, res
 	j.changes, j.checkedAt = changes, s.now().UTC()
 	return changes, nil
 }
@@ -357,7 +349,8 @@ func (s *Service) SetPlan(ctx context.Context, jobID string, version int, p plan
 		return nil, j.version, ErrNotChecked
 	}
 	p.Now = j.plan.Now
-	if err := s.askAdmins(ctx, j, p.Admin.Username); err != nil {
+	p = p.ForLogin(j.snapshot.Admin.Username) // D35
+	if err := s.askAdmins(ctx, j, p); err != nil {
 		return nil, j.version, err
 	}
 	old := j.plan
@@ -371,14 +364,14 @@ func (s *Service) SetPlan(ctx context.Context, jobID string, version int, p plan
 	return j.result, j.version, s.save(ctx, j)
 }
 
-// askAdmins looks up an admin name a plan edit uses, and its suggestions,
-// when the last check did not, so a rename to a taken name or a merge
-// into another admin shows at once instead of at the next read. The
-// caller holds j.mu.
-func (s *Service) askAdmins(ctx context.Context, j *Job, name string) error {
+// askAdmins looks up the admin names a plan edit uses, and their
+// suggestions, when the last check did not, so a rename to a taken name
+// or a merge into another admin shows at once instead of at the next
+// read. The caller holds j.mu.
+func (s *Service) askAdmins(ctx context.Context, j *Job, p plan.Plan) error {
 	var missing []string
-	for _, n := range append([]string{name}, engine.AdminSuggestions(name)...) {
-		if n != "" && !slices.Contains(j.facts.Asked, n) {
+	for _, n := range engine.LookupNames(p, *j.snapshot, j.movedAdmins) {
+		if !slices.Contains(j.facts.Asked, n) {
 			missing = append(missing, n)
 		}
 	}

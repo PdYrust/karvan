@@ -205,11 +205,11 @@ func TestAdmin(t *testing.T) {
 	}
 	p := basePlan()
 	p.Admin = plan.AdminPlan{Username: "shop2"}
-	if r := build(t, p, inputs(panel.Marzban, d, mUser("a", 1))); r.Admin.Username != "shop2" || len(r.Conflicts) != 0 {
+	if r := build(t, p, inputs(panel.Marzban, d, mUser("a", 1))); r.Login().Username != "shop2" || len(r.Conflicts) != 0 {
 		t.Fatalf("rename: %+v", r.Conflicts)
 	}
 	p.Admin = plan.AdminPlan{Mode: plan.AdminMerge, Username: "shop"}
-	if r := build(t, p, inputs(panel.Marzban, d, mUser("a", 1))); r.Admin.Merge == nil || r.Admin.Merge.ID != 4 {
+	if r := build(t, p, inputs(panel.Marzban, d, mUser("a", 1))); r.Login().Merge == nil || r.Login().Merge.ID != 4 {
 		t.Fatal("merge")
 	}
 }

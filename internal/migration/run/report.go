@@ -121,7 +121,7 @@ func newReport(j *Job, start time.Time) *Report {
 		r.NotUndoable = append(r.NotUndoable, UndoInboundRows)
 	}
 	r.Conflicts = j.result.Conflicts
-	r.Admin.Username, r.Admin.RoleID, r.Admin.Password = j.result.Admin.Username, j.result.Admin.RoleID, j.passwordFrom
+	r.Admin.Username, r.Admin.RoleID, r.Admin.Password = j.result.Login().Username, j.result.Login().RoleID, j.passwordFrom
 	for _, it := range j.result.Items {
 		line := UserLine{Key: it.Key, SourceUsername: it.Source.Username, Username: it.User.Username, Applied: it.Applied,
 			ChangesConfig: it.ChangesConfig, ChangesLink: it.ChangesLink}

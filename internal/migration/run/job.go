@@ -51,22 +51,22 @@ type Job struct {
 	// previous build meanwhile; whatever would change the job is busy.
 	checking atomic.Bool
 
-	mu         sync.Mutex
-	state      string
-	envPath    string
-	login      Login
-	source     panel.Source
-	client     *source.Client // source's connection, for the address it dialed
-	kind       panel.Kind
-	origin     string
-	snapshot   *engine.Source
-	facts      engine.Dest
-	moved      map[string]engine.Moved
-	movedAdmin string
-	plan       plan.Plan
-	version    int
-	generated  map[string]panel.Credentials
-	result     *engine.Result
+	mu          sync.Mutex
+	state       string
+	envPath     string
+	login       Login
+	source      panel.Source
+	client      *source.Client // source's connection, for the address it dialed
+	kind        panel.Kind
+	origin      string
+	snapshot    *engine.Source
+	facts       engine.Dest
+	moved       map[string]engine.Moved
+	movedAdmins map[string]string // by source admin
+	plan        plan.Plan
+	version     int
+	generated   map[string]panel.Credentials
+	result      *engine.Result
 	// changes is what the last read changed in the outcome, and checkedAt
 	// when the panels were read.
 	changes   engine.Changes
@@ -91,34 +91,34 @@ type frozenView struct {
 // readFrom is what reading the panels needs from a job, copied under its
 // lock so a compare can read without holding it.
 type readFrom struct {
-	source    panel.Source
-	kind      panel.Kind
-	origin    string
-	envPath   string
-	planAdmin string // the admin's name in the plan, when it renames it
+	source  panel.Source
+	kind    panel.Kind
+	origin  string
+	envPath string
+	plan    plan.Plan // for the admin names it uses
 }
 
 func (j *Job) readFrom() readFrom {
-	return readFrom{source: j.source, kind: j.kind, origin: j.origin, envPath: j.envPath, planAdmin: j.plan.Admin.Username}
+	return readFrom{source: j.source, kind: j.kind, origin: j.origin, envPath: j.envPath, plan: j.plan}
 }
 
 // reading is one read of both panels: the old panel's admin and users,
 // the destination's facts, and who the ledger says moved before.
 type reading struct {
-	snapshot   *engine.Source
-	facts      engine.Dest
-	moved      map[string]engine.Moved
-	movedAdmin string
+	snapshot    *engine.Source
+	facts       engine.Dest
+	moved       map[string]engine.Moved
+	movedAdmins map[string]string
 }
 
 // current is the job's last reading.
 func (j *Job) current() reading {
-	return reading{snapshot: j.snapshot, facts: j.facts, moved: j.moved, movedAdmin: j.movedAdmin}
+	return reading{snapshot: j.snapshot, facts: j.facts, moved: j.moved, movedAdmins: j.movedAdmins}
 }
 
 // inputs are what a build of the job's plan over r reads.
 func (j *Job) inputs(r reading) engine.Inputs {
-	return engine.Inputs{Source: *r.snapshot, Dest: r.facts, Moved: r.moved, MovedAdmin: r.movedAdmin, Generate: generate, Generated: j.generated}
+	return engine.Inputs{Source: *r.snapshot, Dest: r.facts, Moved: r.moved, MovedAdmins: r.movedAdmins, Generate: generate, Generated: j.generated}
 }
 
 func (j *Job) rollbackOrUndo() string {

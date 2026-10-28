@@ -79,7 +79,7 @@ func (s *Service) CheckReport(ctx context.Context, jobID string) (*CheckReport, 
 	if j.result == nil {
 		return nil, ErrNotChecked
 	}
-	r := &CheckReport{Schema: CheckSchema, JobID: j.ID, PlanVersion: j.version, CheckedAt: j.checkedAt, Admin: j.result.Admin.Summary(),
+	r := &CheckReport{Schema: CheckSchema, JobID: j.ID, PlanVersion: j.version, CheckedAt: j.checkedAt, Admin: j.result.Login().Summary(),
 		Blockers: j.result.Blockers, Stable: j.result.Stable, Conflicts: append([]engine.Conflict{}, j.result.Conflicts...), Users: []CheckLine{}}
 	r.Source.Kind, r.Source.Origin = string(j.kind), j.origin
 	if j.snapshot != nil {

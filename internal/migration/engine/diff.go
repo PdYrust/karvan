@@ -8,22 +8,29 @@ import (
 
 // Changes is how the outcome of a build differs from an earlier build's
 // (D29): who moves, under which name, with which credentials and targets,
-// which conflicts were fixed how, and where the admin lands. Traffic,
+// which conflicts were fixed how, and where each admin lands. Traffic,
 // online times and derived status are left out: they change all the time
 // and are read fresh when the run writes.
 type Changes struct {
+	// Admin is the login's admin, for a client that reads no Admins.
 	Admin     *AdminChange    `json:"admin"`
+	Admins    []AdminChange   `json:"admins"` // every admin whose outcome differs, by source name
 	Conflicts *ConflictChange `json:"conflicts"`
 	Users     []UserChange    `json:"users"`
 }
 
 // Changed reports whether the outcome differs at all.
-func (c Changes) Changed() bool { return c.Admin != nil || c.Conflicts != nil || len(c.Users) > 0 }
+func (c Changes) Changed() bool {
+	return c.Admin != nil || len(c.Admins) > 0 || c.Conflicts != nil || len(c.Users) > 0
+}
 
-// AdminChange is where the admin lands before and after. Fields names
-// what differs: username, merged, roleId.
+// AdminChange is where a source admin lands before and after. Change is
+// new, gone or changed, as for users; Fields names what differs for a
+// changed one: username, merged, roleId.
 type AdminChange struct {
-	Fields []string     `json:"fields"`
+	Source string       `json:"source"`
+	Change string       `json:"change"`
+	Fields []string     `json:"fields,omitempty"`
 	Before AdminSummary `json:"before"`
 	After  AdminSummary `json:"after"`
 }
@@ -50,7 +57,7 @@ const (
 )
 
 // UserChange is one user whose outcome differs. Fields names what differs
-// for a changed user: include, adopted, username, targets, credentials,
+// for a changed user: include, admin, adopted, username, targets, credentials,
 // conflicts.
 type UserChange struct {
 	Key    string       `json:"key"`
@@ -64,6 +71,7 @@ type UserChange struct {
 // credential; Protocols names the ones the user has.
 type UserOutcome struct {
 	SourceUsername string     `json:"sourceUsername"`
+	Admin          string     `json:"admin"` // the source admin
 	Username       string     `json:"username"`
 	Include        bool       `json:"include"`
 	Adopted        bool       `json:"adopted"`
@@ -78,11 +86,36 @@ func Diff(before, after *Result) Changes {
 	if before == nil || after == nil {
 		return Changes{}
 	}
-	c := Changes{Admin: adminChange(before.Admin, after.Admin), Users: userChanges(before.Items, after.Items)}
+	c := Changes{Admins: adminChanges(before.Admins, after.Admins), Users: userChanges(before.Items, after.Items)}
+	for i := range c.Admins {
+		if a, l := &c.Admins[i], after.Login(); l != nil && a.Source == l.Source.Username && a.Change == UserChanged {
+			c.Admin = a
+		}
+	}
 	if !slices.Equal(conflictKinds(before.Conflicts), conflictKinds(after.Conflicts)) {
 		c.Conflicts = &ConflictChange{Before: append([]Conflict{}, before.Conflicts...), After: append([]Conflict{}, after.Conflicts...)}
 	}
 	return c
+}
+
+func adminChanges(before, after []AdminOutcome) []AdminChange {
+	var out []AdminChange
+	for _, b := range after {
+		i := slices.IndexFunc(before, func(a AdminOutcome) bool { return a.Source.Username == b.Source.Username })
+		switch {
+		case i < 0:
+			out = append(out, AdminChange{Source: b.Source.Username, Change: UserNew, After: b.Summary()})
+		case adminChange(before[i], b) != nil:
+			out = append(out, *adminChange(before[i], b))
+		}
+	}
+	for _, a := range before {
+		if !slices.ContainsFunc(after, func(b AdminOutcome) bool { return b.Source.Username == a.Source.Username }) {
+			out = append(out, AdminChange{Source: a.Source.Username, Change: UserGone, Before: a.Summary()})
+		}
+	}
+	slices.SortFunc(out, func(a, b AdminChange) int { return strings.Compare(a.Source, b.Source) })
+	return out
 }
 
 func adminChange(a, b AdminOutcome) *AdminChange {
@@ -99,7 +132,7 @@ func adminChange(a, b AdminOutcome) *AdminChange {
 	if fields == nil {
 		return nil
 	}
-	return &AdminChange{Fields: fields, Before: a.Summary(), After: b.Summary()}
+	return &AdminChange{Source: b.Source.Username, Change: UserChanged, Fields: fields, Before: a.Summary(), After: b.Summary()}
 }
 
 func mergeID(a AdminOutcome) int64 {
@@ -114,11 +147,12 @@ func (a AdminOutcome) Summary() AdminSummary {
 	return AdminSummary{Username: a.Username, Merged: a.Merge != nil, RoleID: a.RoleID}
 }
 
-// conflictKinds is the job-level conflicts as compared: type and severity.
+// conflictKinds is the job-level conflicts as compared: type, severity
+// and source admin.
 func conflictKinds(cs []Conflict) []string {
 	out := make([]string, len(cs))
 	for i, c := range cs {
-		out[i] = c.Type + "|" + c.Severity
+		out[i] = c.Type + "|" + c.Severity + "|" + c.Detail["admin"]
 	}
 	slices.Sort(out)
 	return out
@@ -161,6 +195,7 @@ func differs(a, b *Item) []string {
 		same bool
 	}{
 		{"include", a.Include == b.Include},
+		{"admin", a.Admin == b.Admin},
 		{"adopted", adoptID(a) == adoptID(b)},
 		{"username", a.User.Username == b.User.Username},
 		{"targets", slices.Equal(a.Targets, b.Targets)},
@@ -217,6 +252,6 @@ func outcomeOf(it *Item) *UserOutcome {
 		}
 	}
 	slices.Sort(protocols)
-	return &UserOutcome{SourceUsername: it.Source.Username, Username: it.User.Username, Include: it.Include, Adopted: it.Adopt != nil,
+	return &UserOutcome{SourceUsername: it.Source.Username, Admin: it.Admin, Username: it.User.Username, Include: it.Include, Adopted: it.Adopt != nil,
 		Targets: append([]string{}, it.Targets...), Protocols: protocols, Conflicts: marks(it)}
 }

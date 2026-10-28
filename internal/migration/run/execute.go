@@ -132,8 +132,8 @@ const (
 // the old panel's login, else generates one. A generated one is kept
 // until the operator downloads it once (D22).
 func (s *Service) adminPassword(j *Job, typed secret.Value) (secret.Value, error) {
-	name := j.result.Admin.Username
-	if j.result.Admin.Merge != nil {
+	name := j.result.Login().Username
+	if j.result.Login().Merge != nil {
 		j.passwordFrom = ""
 		return secret.NewValue("unused-for-a-merged-admin"), nil
 	}

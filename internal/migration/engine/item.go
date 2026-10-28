@@ -16,8 +16,11 @@ import (
 // Source is what was read from the old panel.
 type Source struct {
 	Kind   panel.Kind
-	Origin string // normalized panel address, the ledger's source panel
-	Admin  panel.Admin
+	Origin string      // normalized panel address, the ledger's source panel
+	Admin  panel.Admin // the login's admin
+	// Admins are the other admins the login can read; a user's owner
+	// missing here moves by its name only (D34).
+	Admins []panel.Admin
 	Users  []panel.User
 	Skew   time.Duration // the panel's clock minus ours
 	// Groups are an old PasarGuard panel's groups; GroupsRead is false
@@ -59,9 +62,9 @@ type Inputs struct {
 	Dest   Dest
 	// Moved are ledger entries for this source and destination, by Key.
 	Moved map[string]Moved
-	// MovedAdmin is the destination admin an earlier run created or merged
-	// into for this source admin; a re-run merges into it by default.
-	MovedAdmin string
+	// MovedAdmins are the destination admins earlier runs created or
+	// merged into, by source admin; a re-run merges into them by default.
+	MovedAdmins map[string]string
 	// Generate makes new credentials when a resolution asks for them.
 	// Values it returns are kept in Generated, so a rebuild reuses them.
 	Generate func(protocol string) panel.Credentials
@@ -69,16 +72,15 @@ type Inputs struct {
 	// job keeps it in memory between builds; it holds secrets.
 	Generated map[string]panel.Credentials
 
-	// Set by Build: the role the moved admin gets, its limits with the
-	// admin's own overrides, and the plan's "now".
-	role   *panel.Role
-	limits panel.RoleLimits
+	// Set by Build: where each source admin lands, and the plan's "now".
+	admins map[string]*AdminOutcome
 	now    time.Time
 }
 
 // Item is one user on its way through the build.
 type Item struct {
 	Key     string     // source identity: PasarGuard id or Marzban username
+	Admin   string     // the source admin it belongs to (D34)
 	Source  panel.User // as read; never changed
 	User    panel.User // the working copy that will be written
 	Include bool
@@ -102,15 +104,17 @@ func KeyOf(k panel.Kind, u panel.User) string {
 	return u.Username
 }
 
-func newItems(in Inputs, targets []string) []*Item {
+func newItems(in Inputs) []*Item {
 	out := make([]*Item, 0, len(in.Source.Users))
 	for _, u := range in.Source.Users {
+		owner := ownerOf(u, in.Source.Admin.Username)
 		out = append(out, &Item{
 			Key:     KeyOf(in.Source.Kind, u),
+			Admin:   owner,
 			Source:  u,
 			User:    clone(u),
 			Include: true,
-			Targets: slices.Clone(targets),
+			Targets: slices.Clone(in.admins[owner].Targets),
 		})
 	}
 	slices.SortFunc(out, func(a, b *Item) int { return compareKeys(a.Key, b.Key) })

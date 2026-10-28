@@ -16,19 +16,11 @@ const maxPasses = 5
 // Result is the outcome of one build.
 type Result struct {
 	Items     []*Item
-	Targets   []string // where users go: the role's groups, or every inbound (D31, D32)
-	Admin     AdminOutcome
-	Conflicts []Conflict // job-level ones (admin, clock, targets, settling)
-	Groups    []Group    // problem groups for the operator
+	Admins    []AdminOutcome // the login's first (D34)
+	Conflicts []Conflict     // job-level ones (admins, clock, targets, settling)
+	Groups    []Group        // problem groups for the operator
 	Stable    bool
 	Blockers  int
-}
-
-// AdminOutcome is where the moved admin lands.
-type AdminOutcome struct {
-	Username string
-	Merge    *panel.ExistingAdmin // set when merging into an existing admin
-	RoleID   int64
 }
 
 // Group is one problem type with its users and ranked options.
@@ -46,14 +38,17 @@ func Build(p plan.Plan, in Inputs) (*Result, error) {
 	if err != nil {
 		return nil, err
 	}
+	p = p.ForLogin(in.Source.Admin.Username)
 	gen := generator(in)
 	ctx := opContext{now: p.Now, generate: gen}
 	res := &Result{}
 	in.now = p.Now
-	res.Admin, res.Conflicts = admin(p, in)
-	res.Conflicts = append(res.Conflicts, chooseRole(p, &in, &res.Admin)...)
-	res.Targets = defaultTargets(in) // never p.Targets (D31, D32)
-	items := newItems(in, res.Targets)
+	res.Admins, res.Conflicts = landAdmins(p, in) // targets never from p.Targets (D31, D32)
+	in.admins = map[string]*AdminOutcome{}
+	for i := range res.Admins {
+		in.admins[res.Admins[i].Source.Username] = &res.Admins[i]
+	}
+	items := newItems(in)
 	for _, it := range items {
 		prepare(it, tree, p, in, ctx)
 	}
@@ -65,8 +60,9 @@ func Build(p plan.Plan, in Inputs) (*Result, error) {
 			it.note("reset:restart")
 		}
 	}
-	res.Conflicts = append(res.Conflicts, jobConflicts(res.Targets, in, res.Stable)...)
-	res.Conflicts = append(res.Conflicts, maxUsers(in, res.Admin, items)...)
+	countUsers(res.Admins, items)
+	res.Conflicts = append(res.Conflicts, jobConflicts(in, res.Stable)...)
+	res.Conflicts = append(res.Conflicts, maxUsers(res.Admins)...)
 	res.Groups, res.Blockers = groups(items, res.Conflicts)
 	return res, nil
 }
@@ -160,36 +156,6 @@ func generator(in Inputs) func(key, protocol string) panel.Credentials {
 	}
 }
 
-func admin(p plan.Plan, in Inputs) (AdminOutcome, []Conflict) {
-	name := in.Source.Admin.Username
-	if p.Admin.Username != "" {
-		name = p.Admin.Username
-	}
-	out := AdminOutcome{Username: name, RoleID: p.Admin.RoleID}
-	if p.Admin.Mode == "" && p.Admin.Username == "" && in.MovedAdmin != "" {
-		if a, ok := in.Dest.Admins[in.MovedAdmin]; ok {
-			out.Username, out.Merge = a.Username, &a
-			return out, nil
-		}
-	}
-	existing, taken := in.Dest.Admins[name]
-	switch {
-	case len(name) == 0 || len(name) > 34 || panel.HasControl(name) || strings.TrimSpace(name) != name:
-		return out, []Conflict{{Type: AdminInvalid, Severity: Blocker, Detail: map[string]string{"username": name}}}
-	case p.Admin.Mode == plan.AdminMerge && taken:
-		out.Merge = &existing
-	case p.Admin.Mode == plan.AdminMerge:
-		return out, []Conflict{{Type: AdminTaken, Severity: Blocker, Detail: map[string]string{"username": name, "missing": "true"}}}
-	case taken:
-		d := map[string]string{"username": existing.Username}
-		if s := freeAdminName(name, in.Dest); s != "" {
-			d["suggestion"] = s
-		}
-		return out, []Conflict{{Type: AdminTaken, Severity: Blocker, Detail: d}}
-	}
-	return out, nil
-}
-
 // maxAdminName is the longest admin name the destination takes.
 const maxAdminName = 34
 
@@ -210,11 +176,11 @@ func AdminSuggestions(name string) []string {
 	return out
 }
 
-// freeAdminName is the first suggestion for name that was looked up and
-// is free, or "".
-func freeAdminName(name string, d Dest) string {
+// freeAdminName is the first suggestion for name that was looked up, is
+// free and no admin of the job uses (used holds lower case names), or "".
+func freeAdminName(name string, d Dest, used map[string]bool) string {
 	for _, s := range AdminSuggestions(name) {
-		if _, taken := d.Admins[s]; !taken && slices.Contains(d.Asked, s) {
+		if _, taken := d.Admins[s]; !taken && !used[strings.ToLower(s)] && slices.Contains(d.Asked, s) {
 			return s
 		}
 	}
@@ -225,11 +191,8 @@ func freeAdminName(name string, d Dest) string {
 // lie in the destination's future (D12).
 const clockSkewLimit = time.Minute
 
-func jobConflicts(targets []string, in Inputs, stable bool) []Conflict {
+func jobConflicts(in Inputs, stable bool) []Conflict {
 	var out []Conflict
-	if len(targets) == 0 {
-		out = append(out, Conflict{Type: NoTargets, Severity: Blocker})
-	}
 	if in.Source.Skew > clockSkewLimit || in.Source.Skew < -clockSkewLimit {
 		out = append(out, Conflict{Type: ClockSkew, Severity: Warning, Detail: map[string]string{"skew": in.Source.Skew.Round(time.Second).String()}})
 	}

@@ -139,7 +139,7 @@ func (s *Service) supersede(ctx context.Context, j *Job, p *prepared, destIDs []
 
 // writeAdmin creates the admin in chunk 0, or records the merge.
 func (s *Service) writeAdmin(ctx context.Context, j *Job, p *prepared, hash string, rep *Report) error {
-	out := j.result.Admin
+	out := *j.result.Login()
 	admin := j.snapshot.Admin
 	admin.Username = out.Username
 	e := ledger.Entry{Kind: ledger.KindAdmin, JobID: j.ID, SourceOrigin: j.origin, SourceKey: j.snapshot.Admin.Username,

@@ -131,9 +131,10 @@ func (r *resolver) apply(it *Item, c Conflict, res plan.Resolution) bool {
 	case OptNormalize:
 		return normalizeOnHold(u)
 	case OptFit:
-		return fitLimits(u, r.in.limits, r.in.now)
+		return fitLimits(u, r.in.admins[it.Admin].limits, r.in.now)
 	case OptRemove:
-		return r.in.role != nil && removeForbidden(u, r.in.role.Features)
+		a := r.in.admins[it.Admin] // every item's admin is there
+		return a.role != nil && removeForbidden(u, a.role.Features)
 	}
 	// keep, move_again: nothing to change.
 	return false

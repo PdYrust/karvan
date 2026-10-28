@@ -81,7 +81,7 @@ func TestDiffSeesTheAdminAndJobConflicts(t *testing.T) {
 	}
 	// An earlier run moved this admin, so the next one merges into it.
 	in := inputs(panel.Marzban, taken, mUser("ali", 1))
-	in.MovedAdmin = "shop"
+	in.MovedAdmins = map[string]string{"shop": "shop"}
 	c = Diff(before, build(t, basePlan(), in))
 	if c.Admin == nil || !slices.Equal(c.Admin.Fields, []string{"merged"}) || c.Admin.Before.Merged || !c.Admin.After.Merged {
 		t.Fatalf("merge: %+v", c.Admin)

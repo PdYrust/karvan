@@ -25,27 +25,27 @@ const (
 // operatorRole is PasarGuard's built-in reseller role.
 const operatorRole = 3
 
-// chooseRole picks the moved admin's role on a PasarGuard destination
-// (D65): an admin merged into keeps its own; else the operator's choice;
-// else the role with the source role's name; else operator. The owner
-// role is never picked by default.
-func chooseRole(p plan.Plan, in *Inputs, out *AdminOutcome) []Conflict {
-	if in.Dest.Kind != panel.PasarGuard {
+// chooseRole picks an admin's role on a PasarGuard destination (D65): an
+// admin merged into keeps its own; else the operator's choice; else the
+// role with the source role's name; else operator. The owner role is
+// never picked by default.
+func chooseRole(ap plan.AdminPlan, out *AdminOutcome, d Dest) []Conflict {
+	if d.Kind != panel.PasarGuard {
 		return nil
 	}
-	id, overrides := p.Admin.RoleID, in.Source.Admin.Overrides
+	id, overrides := ap.RoleID, out.Source.Overrides
 	if out.Merge != nil {
 		id, overrides = out.Merge.RoleID, out.Merge.Overrides
 	}
 	if id == 0 {
-		id = defaultRole(in.Dest.Roles, in.Source.Admin.RoleName)
+		id = defaultRole(d.Roles, out.Source.RoleName)
 	}
-	i := slices.IndexFunc(in.Dest.Roles, func(r panel.Role) bool { return r.ID == id })
+	i := slices.IndexFunc(d.Roles, func(r panel.Role) bool { return r.ID == id })
 	if i < 0 {
 		return []Conflict{{Type: RoleMissing, Severity: Blocker, Detail: map[string]string{"role": strconv.FormatInt(id, 10)}}}
 	}
-	r := in.Dest.Roles[i]
-	in.role, in.limits, out.RoleID = &r, r.Limits.With(overrides), r.ID
+	r := d.Roles[i]
+	out.role, out.limits, out.RoleID = &r, r.Limits.With(overrides), r.ID
 	var c []Conflict
 	if r.IsOwner {
 		c = append(c, Conflict{Type: RoleOwner, Severity: Warning, Detail: map[string]string{"role": r.Name}})
@@ -75,16 +75,16 @@ func defaultRole(roles []panel.Role, sourceName string) int64 {
 	return operatorRole
 }
 
-// defaultTargets is where users go (D31, D32): every enabled group the
-// role allows on PasarGuard, every inbound on Marzban. There is no other
-// choice.
-func defaultTargets(in Inputs) []string {
+// defaultTargets is where an admin's users go (D31, D32): every enabled
+// group its role allows on PasarGuard, every inbound on Marzban. There is
+// no other choice.
+func defaultTargets(d Dest, role *panel.Role) []string {
 	var out []string
-	for _, t := range in.Dest.Targets {
+	for _, t := range d.Targets {
 		if t.Disabled {
 			continue
 		}
-		if in.role != nil && in.role.Groups != nil && !in.role.IsOwner && !slices.Contains(in.role.Groups, t.ID) {
+		if role != nil && role.Groups != nil && !role.IsOwner && !slices.Contains(role.Groups, t.ID) {
 			continue
 		}
 		out = append(out, t.ID)
@@ -92,37 +92,42 @@ func defaultTargets(in Inputs) []string {
 	return out
 }
 
-// maxUsers is C33: the admin's users after the move against the role.
-func maxUsers(in Inputs, admin AdminOutcome, items []*Item) []Conflict {
-	if in.role == nil || in.role.IsOwner || in.limits.MaxUsers == nil {
-		return nil
-	}
-	n := 0
-	if admin.Merge != nil {
-		n = admin.Merge.Users
-	}
-	for _, it := range items {
-		if it.Include {
-			n++
+// maxUsers is C33: each admin's users after the move against its role.
+// Admins merged into one existing admin count together.
+func maxUsers(admins []AdminOutcome) []Conflict {
+	var out []Conflict
+	for _, a := range admins {
+		if a.role == nil || a.role.IsOwner || a.limits.MaxUsers == nil {
+			continue
 		}
+		n := a.Users
+		if a.Merge != nil {
+			n = a.Merge.Users
+			for _, b := range admins {
+				if b.Merge != nil && b.Merge.ID == a.Merge.ID {
+					n += b.Users
+				}
+			}
+		}
+		if int64(n) <= *a.limits.MaxUsers {
+			continue
+		}
+		out = append(out, Conflict{Type: RoleMaxUsers, Severity: Warning, Detail: map[string]string{
+			"admin": a.Source.Username, "max": strconv.FormatInt(*a.limits.MaxUsers, 10), "users": strconv.Itoa(n)}})
 	}
-	if int64(n) <= *in.limits.MaxUsers {
-		return nil
-	}
-	return []Conflict{{Type: RoleMaxUsers, Severity: Warning, Detail: map[string]string{
-		"max": strconv.FormatInt(*in.limits.MaxUsers, 10), "users": strconv.Itoa(n)}}}
+	return out
 }
 
 // roleChecks finds the user values the role's limits or features forbid.
 func (d *detector) roleChecks(it *Item) {
-	in := d.in
-	if in.role == nil || in.role.IsOwner {
+	a := d.in.admins[it.Admin]
+	if a.role == nil || a.role.IsOwner {
 		return
 	}
-	if fields := beyondLimits(it.User, in.limits, in.now); len(fields) > 0 {
+	if fields := beyondLimits(it.User, a.limits, d.in.now); len(fields) > 0 {
 		it.add(RoleLimit, Warning, map[string]string{"fields": joinSorted(fields)})
 	}
-	if fields := forbidden(it.User, in.role.Features); len(fields) > 0 {
+	if fields := forbidden(it.User, a.role.Features); len(fields) > 0 {
 		it.add(RoleFeature, Warning, map[string]string{"fields": joinSorted(fields)})
 	}
 }

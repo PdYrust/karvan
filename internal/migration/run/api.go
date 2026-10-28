@@ -135,7 +135,7 @@ func (s *Service) Roles(jobID string) (RolesView, error) {
 	if j.result == nil {
 		return RolesView{}, ErrNotChecked
 	}
-	out := RolesView{RoleID: j.result.Admin.RoleID, RoleFixed: j.result.Admin.Merge != nil, Roles: []RoleInfo{}}
+	out := RolesView{RoleID: j.result.Login().RoleID, RoleFixed: j.result.Login().Merge != nil, Roles: []RoleInfo{}}
 	for _, r := range j.facts.Roles {
 		ri := RoleInfo{ID: r.ID, Name: r.Name, IsOwner: r.IsOwner, AllGroups: r.Groups == nil || r.IsOwner, Groups: []TargetInfo{},
 			Limits: r.Limits, Features: r.Features, RequireTemplate: r.RequireTemplate}
@@ -164,14 +164,14 @@ func (s *Service) Summary(jobID string) (Summary, error) {
 	}
 	sum := Summary{State: j.state, PlanVersion: j.version, SourceKind: j.kind, Origin: j.origin, DestKind: j.facts.Kind,
 		Statuses: map[string]int{}, Blockers: j.result.Blockers, Stable: j.result.Stable, PanelID: j.PanelID,
-		Protocols: map[string]int{}, NewAdmin: j.result.Admin.Summary(), CanKeepPassword: j.ownPassword()}
+		Protocols: map[string]int{}, NewAdmin: j.result.Login().Summary(), CanKeepPassword: j.ownPassword()}
 	if j.snapshot != nil {
 		sum.Admin = j.snapshot.Admin.Username
 	}
 	for _, t := range j.facts.Targets {
 		sum.Targets = append(sum.Targets, targetInfo(j.facts, t))
 	}
-	sum.RoleID, sum.UserTargets = j.result.Admin.RoleID, j.result.Targets
+	sum.RoleID, sum.UserTargets = j.result.Login().RoleID, j.result.Login().Targets
 	now := s.now()
 	for _, it := range j.result.Items {
 		sum.Users++

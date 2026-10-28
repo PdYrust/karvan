@@ -36,8 +36,8 @@ func TestDefaultRole(t *testing.T) {
 	for source, want := range map[string]int64{"cheap": 7, "owner": operatorRole, "": operatorRole, "gold": operatorRole} {
 		in := inputs(panel.PasarGuard, roleDest(), vlessOnly("alice", 1))
 		in.Source.Admin.RoleName = source
-		if r := build(t, basePlan(), in); r.Admin.RoleID != want {
-			t.Errorf("source role %q: got %d, want %d", source, r.Admin.RoleID, want)
+		if r := build(t, basePlan(), in); r.Login().RoleID != want {
+			t.Errorf("source role %q: got %d, want %d", source, r.Login().RoleID, want)
 		}
 	}
 	in := inputs(panel.PasarGuard, roleDest(), vlessOnly("alice", 1))
@@ -62,8 +62,8 @@ func TestAccessFollowsTheRole(t *testing.T) {
 	in.Source.Admin.RoleName = "cheap"
 	r := build(t, basePlan(), in)
 	it := item(t, r, "1")
-	if strings.Join(r.Targets, ",") != "1" || strings.Join(it.Targets, ",") != "1" {
-		t.Fatalf("targets %v / %v", r.Targets, it.Targets)
+	if strings.Join(r.Login().Targets, ",") != "1" || strings.Join(it.Targets, ",") != "1" {
+		t.Fatalf("targets %v / %v", r.Login().Targets, it.Targets)
 	}
 	in = inputs(panel.PasarGuard, roleDest(), src) // operator allows all groups
 	it = item(t, build(t, basePlan(), in), "1")
@@ -97,8 +97,8 @@ func TestPlanTargetsNeverPickGroups(t *testing.T) {
 	p := basePlan()
 	p.Targets = []string{"1", "3"}
 	r := build(t, p, in)
-	if it := item(t, r, "1"); strings.Join(it.Targets, ",") != "1" || strings.Join(r.Targets, ",") != "1" {
-		t.Fatalf("targets %v / %v, want the role's group 1", r.Targets, it.Targets)
+	if it := item(t, r, "1"); strings.Join(it.Targets, ",") != "1" || strings.Join(r.Login().Targets, ",") != "1" {
+		t.Fatalf("targets %v / %v, want the role's group 1", r.Login().Targets, it.Targets)
 	}
 	if slices.ContainsFunc(r.Conflicts, func(c Conflict) bool { return c.Severity != Info }) || r.Blockers != 0 {
 		t.Fatalf("%+v", r.Conflicts)
@@ -183,7 +183,7 @@ func TestMergeKeepsTheAdminsRole(t *testing.T) {
 	p := basePlan()
 	p.Admin.Mode, p.Admin.RoleID = plan.AdminMerge, 2
 	r := build(t, p, in)
-	if r.Admin.RoleID != 7 || !slices.ContainsFunc(r.Conflicts, func(c Conflict) bool { return c.Type == RoleMaxUsers && c.Detail["users"] == "6" }) {
-		t.Fatalf("role %d conflicts %+v", r.Admin.RoleID, r.Conflicts)
+	if r.Login().RoleID != 7 || !slices.ContainsFunc(r.Conflicts, func(c Conflict) bool { return c.Type == RoleMaxUsers && c.Detail["users"] == "6" }) {
+		t.Fatalf("role %d conflicts %+v", r.Login().RoleID, r.Conflicts)
 	}
 }
