@@ -161,6 +161,13 @@ export function useCommands(onShortcuts: () => void, open: boolean): CommandGrou
       run: () => void navigate('/rules/new'),
     },
     {
+      id: 'domain:new',
+      title: t('actionNewDomain'),
+      keywords: "domain certificate tls https ssl let's encrypt دامنه گواهی",
+      icon: <PlusIcon className={icon} />,
+      run: () => void navigate('/domains/new'),
+    },
+    {
       id: 'scan',
       title: t('actionScan'),
       icon: <ArrowsClockwiseIcon className={icon} />,

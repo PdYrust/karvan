@@ -5,6 +5,7 @@ export const recentSections = {
   panels: 'navPanels',
   migrations: 'navMigrations',
   batches: 'navBatches',
+  domains: 'navDomains',
   rules: 'navRules',
   backups: 'navBackups',
   settings: 'settings',

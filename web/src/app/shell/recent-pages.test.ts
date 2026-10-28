@@ -10,6 +10,8 @@ describe('recentPage', () => {
     expect(recentPage('/migrations')).toEqual({ section: 'migrations' });
     expect(recentPage('/migrations/new')).toEqual({ section: 'migrations', page: 'new' });
     expect(recentPage('/batches')).toEqual({ section: 'batches' });
+    expect(recentPage('/domains')).toEqual({ section: 'domains' });
+    expect(recentPage('/domains/new')).toEqual({ section: 'domains', page: 'new' });
     expect(recentPage('/rules')).toEqual({ section: 'rules' });
     expect(recentPage('/rules/new')).toEqual({ section: 'rules', page: 'new' });
     expect(recentPage('/backups')).toEqual({ section: 'backups' });
@@ -39,6 +41,8 @@ describe('recentPage', () => {
       '/reports/9f1c2b3a4d5e6f7081920a1b',
       '/migrations/9f1c2b3a4d5e6f7081920a1b/report',
       '/rules/3',
+      '/domains/certificates/3',
+      '/domains/3/certificate',
       '/links',
       '/links/new',
       '/links/3',

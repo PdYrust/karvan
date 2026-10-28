@@ -9,11 +9,11 @@ describe('built routes', () => {
     expect(new Set(items.map((i) => i.key)).size).toBe(items.length);
     expect(items.every((i) => i.to.startsWith('/'))).toBe(true);
   });
-  it('puts Rules in the Subscriptions group, after Migrations and Batches', () => {
+  it('puts Domains and certificates, then Rules, in the Subscriptions group', () => {
     expect(nav.map((g) => [g.label, g.items.map((i) => i.to)])).toEqual([
       [undefined, ['/', '/analytics']],
       ['groupMove', ['/migrations', '/batches']],
-      ['groupSubscriptions', ['/rules']],
+      ['groupSubscriptions', ['/domains', '/rules']],
       ['groupServer', ['/panels', '/backups']],
     ]);
   });
@@ -24,6 +24,7 @@ describe('built routes', () => {
       a: targets.KeyA,
       m: targets.KeyM,
       r: targets.KeyR,
+      d: targets.KeyD,
       l: targets.KeyL,
       p: targets.KeyP,
       s: targets.KeyS,
@@ -32,6 +33,7 @@ describe('built routes', () => {
       a: '/analytics',
       m: '/migrations',
       r: undefined,
+      d: '/domains',
       l: '/rules',
       p: '/panels',
       s: '/settings',

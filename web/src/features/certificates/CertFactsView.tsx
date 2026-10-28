@@ -3,7 +3,7 @@ import { FactList } from '../../components/layout/FactList';
 import { useT } from '../../i18n/locale';
 import type { CertFacts, CertWarning } from '../../lib/api/rules';
 import { useFormat } from '../../lib/preferences/region';
-import { rulesMessages } from '../rules/messages';
+import { certFactMessages } from './fact-messages';
 
 /** A certificate that cannot serve is a danger; one that soon cannot, or misses a domain, a warning. */
 const toneOf: Record<CertWarning, StatusTone> = {
@@ -18,7 +18,7 @@ const toneOf: Record<CertWarning, StatusTone> = {
 
 /** What Karvan read from a certificate, then each problem as a status line. */
 export function CertFactsView({ facts }: { facts: CertFacts }) {
-  const t = useT(rulesMessages);
+  const t = useT(certFactMessages);
   const fmt = useFormat();
   const ends = facts.notAfter ? new Date(facts.notAfter) : undefined;
   const rows = facts.warnings.includes('unreadable')

@@ -103,6 +103,17 @@ const BatchPage = lazy(() =>
 const BackupsPage = lazy(() =>
   import('../features/backups/BackupsPage').then((m) => ({ default: m.BackupsPage })),
 );
+const DomainsPage = lazy(() =>
+  import('../features/certificates/DomainsPage').then((m) => ({ default: m.DomainsPage })),
+);
+const DomainFormPage = lazy(() =>
+  import('../features/certificates/DomainFormPage').then((m) => ({ default: m.DomainFormPage })),
+);
+const CertificateFormPage = lazy(() =>
+  import('../features/certificates/CertificateFormPage').then((m) => ({
+    default: m.CertificateFormPage,
+  })),
+);
 const RulesPage = lazy(() =>
   import('../features/rules/RulesPage').then((m) => ({ default: m.RulesPage })),
 );
@@ -205,6 +216,10 @@ export function App() {
                       <Route path="batches" element={<BatchesPage />} />
                       <Route path="batches/:id" element={<BatchPage />} />
                       <Route path="backups" element={<BackupsPage />} />
+                      <Route path="domains" element={<DomainsPage />} />
+                      <Route path="domains/new" element={<DomainFormPage />} />
+                      <Route path="domains/:id/certificate" element={<DomainFormPage />} />
+                      <Route path="domains/certificates/:id" element={<CertificateFormPage />} />
                       <Route path="rules" element={<RulesPage />} />
                       <Route path="rules/new" element={<SiteFormPage />} />
                       <Route path="rules/:id" element={<SiteFormPage />} />

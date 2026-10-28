@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { filterCommands, type CommandGroup } from './commands';
-import { batchKeywords, siteKeywords } from './job-commands';
+import { batchKeywords, certificateKeywords, siteKeywords } from './job-commands';
 
 const item = (id: string, title: string, keywords?: string) => ({
   id,
@@ -83,6 +83,26 @@ describe('batchKeywords', () => {
       updatedAt: '2026-10-25T00:00:00Z',
     });
     for (const w of ['resellers', 'ali_2', 'old.example.com', 'pg-main', 'مرزبان']) {
+      expect(words).toContain(w);
+    }
+  });
+});
+
+describe('certificateKeywords', () => {
+  it('finds a certificate by its name, the names it covers and its files', () => {
+    const words = certificateKeywords({
+      id: 1,
+      name: 'le-main',
+      kind: 'file',
+      origin: '',
+      certFile: '/etc/letsencrypt/live/a.example.com/fullchain.pem',
+      keyFile: '/etc/letsencrypt/live/a.example.com/privkey.pem',
+      hasKey: true,
+      facts: { domains: ['a.example.com', '*.cdn.example.com'], issuer: 'R11', warnings: [] },
+      domains: [],
+      rules: [],
+    });
+    for (const w of ['le-main', '*.cdn.example.com', '/etc/letsencrypt/live/a.example.com']) {
       expect(words).toContain(w);
     }
   });

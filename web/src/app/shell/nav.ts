@@ -4,6 +4,7 @@ import {
   ChartLineIcon,
   HardDrivesIcon,
   LinkSimpleIcon,
+  ShieldCheckIcon,
   SquaresFourIcon,
   StackIcon,
   type Icon,
@@ -43,7 +44,10 @@ export const nav: NavGroup[] = [
   },
   {
     label: 'groupSubscriptions',
-    items: [{ label: 'navRules', icon: LinkSimpleIcon, to: '/rules', key: 'KeyL' }],
+    items: [
+      { label: 'navDomains', icon: ShieldCheckIcon, to: '/domains', key: 'KeyD' },
+      { label: 'navRules', icon: LinkSimpleIcon, to: '/rules', key: 'KeyL' },
+    ],
   },
   {
     label: 'groupServer',

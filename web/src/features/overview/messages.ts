@@ -43,6 +43,7 @@ const en = {
   linksPending: { one: '{count} pending', other: '{count} pending' },
   linksOpen: 'All rules',
   newRule: 'Add a rule',
+  newDomain: 'Add domain',
   cardFailed: "Couldn't load this.",
 
   analyticsTitle: 'Analytics',
@@ -97,6 +98,7 @@ const fa: Messages<OverviewKey>['fa'] = {
   linksPending: { one: '{count} در انتظار', other: '{count} در انتظار' },
   linksOpen: 'همه قانون ها',
   newRule: 'افزودن قانون',
+  newDomain: 'افزودن دامنه',
   cardFailed: 'بارگذاری نشد.',
 
   analyticsTitle: 'آمار',
