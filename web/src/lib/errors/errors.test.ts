@@ -66,6 +66,7 @@ describe('area word lists', () => {
     }
     expect([...subscriptionCodes].sort()).toEqual(
       [
+        'cert_conflict',
         'certificate_in_use',
         'certificate_invalid',
         'certificate_not_adopted',
@@ -73,6 +74,7 @@ describe('area word lists', () => {
         'domain_invalid',
         'plain_http_off',
         'port_mixed',
+        'port_taken',
         'site_invalid',
         'site_overlap',
       ].sort(),

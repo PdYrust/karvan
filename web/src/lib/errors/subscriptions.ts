@@ -9,7 +9,9 @@ import { errorOf, useErrorText } from './errors';
  */
 const en = {
   site_invalid: "A field of this site has a value Karvan can't use. Check the fields.",
-  site_overlap: 'Another site already serves this domain and port.',
+  site_overlap: 'Another rule already answers this domain and path on this port.',
+  cert_conflict: 'Rules for one domain on one port must use the same certificate.',
+  port_taken: "Karvan's own panel uses this port. Pick another port.",
   plain_http_off: 'Plain HTTP is off for old links. Turn it on or use HTTPS.',
   port_mixed:
     'This port already has sites the other way. All sites on one port use HTTPS, or none do.',
@@ -38,7 +40,9 @@ export type SubscriptionErrorKey = keyof typeof en;
 const fa: Messages<SubscriptionErrorKey>['fa'] = {
   site_invalid:
     'یکی از فیلدهای این سایت مقداری دارد که کاروان نمیتواند استفاده کند. فیلدها را بررسی کنید.',
-  site_overlap: 'سایت دیگری همین دامنه و پورت را دارد.',
+  site_overlap: 'قانون دیگری روی این پورت به همین دامنه و مسیر جواب میدهد.',
+  cert_conflict: 'قانون های یک دامنه روی یک پورت باید از یک گواهی استفاده کنند.',
+  port_taken: 'پنل خود کاروان از این پورت استفاده میکند. پورت دیگری انتخاب کنید.',
   plain_http_off:
     'HTTP ساده برای لینک های قدیمی خاموش است. آن را روشن کنید یا از HTTPS استفاده کنید.',
   port_mixed:
