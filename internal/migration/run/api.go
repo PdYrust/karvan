@@ -113,21 +113,29 @@ type RoleInfo struct {
 	RequireTemplate bool               `json:"requireTemplate"`
 }
 
-// Roles lists the destination's admin roles and the one the moved admin
-// gets now (D65). A Marzban destination has none.
-func (s *Service) Roles(jobID string) (int64, []RoleInfo, error) {
+// RolesView is the destination's admin roles and the one the moved admin
+// gets now (D65). RoleFixed is true on a merge: the role is the existing
+// admin's own and cannot change (D33). A Marzban destination has none.
+type RolesView struct {
+	RoleID    int64      `json:"roleId"`
+	RoleFixed bool       `json:"roleFixed"`
+	Roles     []RoleInfo `json:"roles"`
+}
+
+// Roles lists the destination's admin roles for the final admin step.
+func (s *Service) Roles(jobID string) (RolesView, error) {
 	j, err := s.job(jobID)
 	if err != nil {
-		return 0, nil, err
+		return RolesView{}, err
 	}
 	if !j.lockIdle() {
-		return 0, nil, ErrBusy
+		return RolesView{}, ErrBusy
 	}
 	defer j.mu.Unlock()
 	if j.result == nil {
-		return 0, nil, ErrNotChecked
+		return RolesView{}, ErrNotChecked
 	}
-	out := []RoleInfo{}
+	out := RolesView{RoleID: j.result.Admin.RoleID, RoleFixed: j.result.Admin.Merge != nil, Roles: []RoleInfo{}}
 	for _, r := range j.facts.Roles {
 		ri := RoleInfo{ID: r.ID, Name: r.Name, IsOwner: r.IsOwner, AllGroups: r.Groups == nil || r.IsOwner, Groups: []TargetInfo{},
 			Limits: r.Limits, Features: r.Features, RequireTemplate: r.RequireTemplate}
@@ -136,9 +144,9 @@ func (s *Service) Roles(jobID string) (int64, []RoleInfo, error) {
 				ri.Groups = append(ri.Groups, targetInfo(j.facts, t))
 			}
 		}
-		out = append(out, ri)
+		out.Roles = append(out.Roles, ri)
 	}
-	return j.result.Admin.RoleID, out, nil
+	return out, nil
 }
 
 // Summary sums up a checked job.

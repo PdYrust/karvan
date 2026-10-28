@@ -96,6 +96,20 @@ func impact(res *engine.Result) map[string]int {
 		if it.Include && len(it.Applied) > 0 {
 			out["changed"]++
 		}
+		if it.Include && len(addedProtocols(it)) > 0 {
+			out["protocolsAdded"]++
+		}
+	}
+	return out
+}
+
+// addedProtocols lists the protocols a user gets that it lacked (D67).
+func addedProtocols(it *engine.Item) []string {
+	var out []string
+	for _, a := range it.Applied {
+		if p, ok := strings.CutPrefix(a, "added:"); ok {
+			out = append(out, p)
+		}
 	}
 	return out
 }
@@ -179,13 +193,14 @@ func (a *API) RollbackMigration(w http.ResponseWriter, r *http.Request) {
 }
 
 // Roles lists the destination's admin roles for the final admin step:
-// each with its groups, host counts, limits and features, and the role
-// the moved admin gets now (D65). Empty on a Marzban destination.
+// each with its groups, host counts, limits and features, the role the
+// moved admin gets now (D65) and whether a merge fixes it (D33). Empty on
+// a Marzban destination.
 func (a *API) Roles(w http.ResponseWriter, r *http.Request) {
-	chosen, roles, err := a.Runs.Roles(r.PathValue("id"))
+	roles, err := a.Runs.Roles(r.PathValue("id"))
 	if err != nil {
 		writeRunError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, map[string]any{"roleId": chosen, "roles": roles})
+	respond.JSON(w, http.StatusOK, roles)
 }

@@ -239,6 +239,7 @@ type userJSON struct {
 	Note           string         `json:"note,omitempty"`
 	Categories     []string       `json:"categories"`
 	Targets        []string       `json:"targets,omitempty"`
+	AddedProtocols []string       `json:"addedProtocols,omitempty"`
 	Conflicts      []conflictJSON `json:"conflicts"`
 	Applied        []string       `json:"applied"`
 	ChangesConfig  bool           `json:"changesConfig"`
@@ -262,7 +263,7 @@ func toUserJSON(it *engine.Item, final bool) userJSON {
 		Applied: orEmpty(it.Applied), ChangesConfig: it.ChangesConfig, ChangesLink: it.ChangesLink, Conflicts: []conflictJSON{},
 		MovedBefore: it.Adopt != nil}
 	if final {
-		out.Targets = it.Targets
+		out.Targets, out.AddedProtocols = it.Targets, addedProtocols(it)
 	}
 	for _, c := range it.Conflicts {
 		out.Conflicts = append(out.Conflicts, conflictJSON{Type: c.Type, Severity: c.Severity, Fix: c.Fix})
