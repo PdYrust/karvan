@@ -9,12 +9,7 @@ type T = Translate<ChangesKey>;
 const statusWords = ['active', 'disabled', 'limited', 'expired', 'on_hold'] as const;
 
 /** An operation in words for the list of changes, such as "Add 10 GB" or "Expires on 1 Farvardin 1406". */
-export function opWords(
-  op: Op,
-  t: T,
-  fmt: Format,
-  ctx: { now: string; targetName: (id: string) => string },
-): string {
+export function opWords(op: Op, t: T, fmt: Format, ctx: { now: string }): string {
   const p = op.params ?? {};
   const n = Number(p.gb ?? p.days ?? 0);
   const amount = fmt.number(Math.abs(n), 2);
@@ -42,10 +37,6 @@ export function opWords(
     case 'note.set':
     case 'note.append':
       return t(`w_${op.kind.replace('.', '_')}` as ChangesKey, { text: p.text ?? '' });
-    case 'place.targets':
-      return t('w_place_targets', {
-        names: (p.ids ?? '').split(',').filter(Boolean).map(ctx.targetName).join(', '),
-      });
     case 'cred.new':
       return t('w_cred_new', {
         protocols: (p.protocols ?? '').split(',').map(protocolName).join(', '),

@@ -4,7 +4,6 @@ import { TrashIcon } from '@phosphor-icons/react';
 import { Section } from '../../../components/layout/Section';
 import { CodeText } from '../../../components/text/CodeText';
 import { useT } from '../../../i18n/locale';
-import type { JobSummary } from '../../../lib/api/migrations';
 import { opFlags, removeChange } from '../../../lib/plan/changes';
 import { useFormat } from '../../../lib/preferences/region';
 import { useWizard } from '../wizard-context';
@@ -13,21 +12,14 @@ import { changesMessages } from './messages';
 import { opWords } from './words';
 
 /** The changes already in the plan, by the category they reach, each with Remove. */
-export function ChangeList({
-  summary,
-  counts,
-}: {
-  summary: JobSummary;
-  counts: Readonly<Record<string, number>>;
-}) {
+export function ChangeList({ counts }: { counts: Readonly<Record<string, number>> }) {
   const t = useT(changesMessages);
   const fmt = useFormat();
   const { plan } = useWizard();
   const title = useCategoryTitle();
   const p = plan.plan;
   const nodes = (p?.tree ?? []).filter((n) => n.ops?.length);
-  const names = new Map((summary.targets ?? []).map((g) => [g.id, g.name]));
-  const ctx = { now: p?.now ?? '', targetName: (id: string) => names.get(id) ?? id };
+  const ctx = { now: p?.now ?? '' };
   return (
     <Section title={t('listTitle')}>
       <div className="flex flex-col gap-4 px-4 pb-4">

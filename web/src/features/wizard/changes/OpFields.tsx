@@ -210,15 +210,6 @@ export function OpFields({
           />
         </div>
       );
-    case 'place.targets':
-      return (
-        <Picks
-          legend={t(summary.destKind === 'marzban' ? 'targetsLabelInbounds' : 'targetsLabelGroups')}
-          items={(summary.targets ?? []).map((g) => [g.id, g.name])}
-          chosen={form.ids}
-          onPick={(ids) => set({ ids })}
-        />
-      );
     case 'cred.new':
       return (
         <div className="flex flex-col gap-4">

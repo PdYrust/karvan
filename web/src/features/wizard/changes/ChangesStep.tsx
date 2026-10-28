@@ -63,7 +63,7 @@ export function ChangesStep() {
       {plan.failure ? (
         <InlineAlert>{`${tw('saveFailed')} ${errorText(plan.failure)}`}</InlineAlert>
       ) : null}
-      <ChangeList summary={summary.data} counts={counts} />
+      <ChangeList counts={counts} />
       <AddChange summary={summary.data} counts={counts} />
       <StepActions jobId={jobId} back="compare" next="preview" />
     </div>

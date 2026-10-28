@@ -24,7 +24,6 @@ export const opKinds = [
   'note.set',
   'note.append',
   'note.clear',
-  'place.targets',
   'skip',
   'cred.new',
 ] as const;
@@ -39,7 +38,6 @@ export interface OpForm {
   text: string;
   from: string;
   to: string;
-  ids: readonly string[];
   protocols: readonly string[];
   /** The operator read the new credentials warning. */
   understood: boolean;
@@ -52,7 +50,6 @@ export const emptyOpForm: OpForm = {
   text: '',
   from: '',
   to: '',
-  ids: [],
   protocols: [],
   understood: false,
 };
@@ -94,8 +91,6 @@ export function buildOp(kind: OpKind, f: OpForm, timeZone: string): Op | null {
       return op(kind, { text });
     case 'name.replace':
       return op(kind, { from: f.from.trim() ? f.from : null, to: f.to });
-    case 'place.targets':
-      return op(kind, { ids: f.ids.length ? f.ids.join(',') : null });
     case 'cred.new':
       return f.understood ? op(kind, { protocols: f.protocols.join(',') || null }) : null;
     default:

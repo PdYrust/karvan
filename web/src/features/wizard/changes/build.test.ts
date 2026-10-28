@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buildOp, buildScope, emptyOpForm, emptyScopeForm, type OpForm } from './build';
+import { buildOp, buildScope, emptyOpForm, emptyScopeForm, opKinds, type OpForm } from './build';
 
 const form = (over: Partial<OpForm>): OpForm => ({ ...emptyOpForm, ...over });
 
@@ -41,11 +41,11 @@ describe('buildOp', () => {
     expect(buildOp('name.replace', form({ to: 'x' }), 'UTC')).toBeNull();
   });
 
-  it('needs targets, and protocols plus the warning read for new credentials', () => {
-    expect(buildOp('place.targets', form({}), 'UTC')).toBeNull();
-    expect(buildOp('place.targets', form({ ids: ['3', '5'] }), 'UTC')?.params).toEqual({
-      ids: '3,5',
-    });
+  it('offers no way to change where users go, which the role decides', () => {
+    expect(opKinds).not.toContain('place.targets');
+  });
+
+  it('needs protocols plus the warning read for new credentials', () => {
     expect(buildOp('cred.new', form({ protocols: ['vless'] }), 'UTC')).toBeNull();
     expect(
       buildOp('cred.new', form({ protocols: ['vless', 'trojan'], understood: true }), 'UTC'),
