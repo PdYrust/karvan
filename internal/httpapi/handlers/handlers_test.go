@@ -183,7 +183,8 @@ func TestPagesAndAssets(t *testing.T) {
 func TestDeepLinksOpenTheApp(t *testing.T) {
 	e := newEnv(t)
 	e.login("")
-	for _, deep := range []string{"/settings", "/settings/safe-mode", "/migrations/abc/live", "/migrations/abc/report", "/migrations/abc/report/print"} {
+	for _, deep := range []string{"/settings", "/settings/safe-mode", "/migrations/abc/live", "/migrations/abc/report", "/migrations/abc/report/print",
+		"/batches", "/batches/3"} {
 		page := e.do(http.MethodGet, "/"+base+deep, nil)
 		if page.status != http.StatusOK || !bytes.Contains(page.body, []byte("app")) || page.header.Get("Cache-Control") != "no-store" {
 			t.Fatalf("deep link %s: %d %v %s", deep, page.status, page.header, page.body)

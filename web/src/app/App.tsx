@@ -94,6 +94,12 @@ const ReportPage = lazy(() =>
 const ReportPrint = lazy(() =>
   import('../features/migrations/report/ReportPrint').then((m) => ({ default: m.ReportPrint })),
 );
+const BatchesPage = lazy(() =>
+  import('../features/batches/BatchesPage').then((m) => ({ default: m.BatchesPage })),
+);
+const BatchPage = lazy(() =>
+  import('../features/batches/BatchPage').then((m) => ({ default: m.BatchPage })),
+);
 const BackupsPage = lazy(() =>
   import('../features/backups/BackupsPage').then((m) => ({ default: m.BackupsPage })),
 );
@@ -196,6 +202,8 @@ export function App() {
                         <Route path="live" element={<LivePage />} />
                         <Route path="report" element={<ReportPage />} />
                       </Route>
+                      <Route path="batches" element={<BatchesPage />} />
+                      <Route path="batches/:id" element={<BatchPage />} />
                       <Route path="backups" element={<BackupsPage />} />
                       <Route path="links" element={<LinksPage />} />
                       <Route path="links/new" element={<SiteFormPage />} />

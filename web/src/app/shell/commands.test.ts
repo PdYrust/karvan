@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { filterCommands, type CommandGroup } from './commands';
-import { siteKeywords } from './job-commands';
+import { batchKeywords, siteKeywords } from './job-commands';
 
 const item = (id: string, title: string, keywords?: string) => ({
   id,
@@ -60,5 +60,29 @@ describe('siteKeywords', () => {
   });
   it('lists no site before something is typed', () => {
     expect(filterCommands(sites, '')).toEqual([]);
+  });
+});
+
+describe('batchKeywords', () => {
+  it('finds a batch by its name, admins, old address and panels', () => {
+    const words = batchKeywords({
+      id: 4,
+      name: 'resellers',
+      state: 'active',
+      inactiveReason: '',
+      inactiveAt: null,
+      jobId: 'j1',
+      panel: { id: 2, name: 'pg-main', kind: 'pasarguard' },
+      source: { kind: 'marzban', origin: 'https://old.example.com' },
+      admins: [{ source: 'ali', dest: 'ali_2', users: 3 }],
+      oldLinks: { path: '', hosts: [], port: 0 },
+      counts: { users: 3, verified: 0, closed: 0 },
+      rules: [],
+      createdAt: '2026-10-25T00:00:00Z',
+      updatedAt: '2026-10-25T00:00:00Z',
+    });
+    for (const w of ['resellers', 'ali_2', 'old.example.com', 'pg-main', 'مرزبان']) {
+      expect(words).toContain(w);
+    }
   });
 });

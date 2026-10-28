@@ -9,6 +9,7 @@ describe('recentPage', () => {
     expect(recentPage('/panels/12')).toEqual({ section: 'panels', panelId: 12 });
     expect(recentPage('/migrations')).toEqual({ section: 'migrations' });
     expect(recentPage('/migrations/new')).toEqual({ section: 'migrations', page: 'new' });
+    expect(recentPage('/batches')).toEqual({ section: 'batches' });
     expect(recentPage('/links')).toEqual({ section: 'links' });
     expect(recentPage('/links/new')).toEqual({ section: 'links', page: 'new' });
     expect(recentPage('/backups')).toEqual({ section: 'backups' });
@@ -38,6 +39,7 @@ describe('recentPage', () => {
       '/reports/9f1c2b3a4d5e6f7081920a1b',
       '/migrations/9f1c2b3a4d5e6f7081920a1b/report',
       '/links/3',
+      '/batches/3',
       '/templates',
       '/nope',
     ]) {

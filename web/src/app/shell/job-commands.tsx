@@ -4,6 +4,7 @@ import { PanelMark } from '../../components/panels/PanelLabel';
 import { panelSearchNames } from '../../components/panels/PanelLogo';
 import { useT } from '../../i18n/locale';
 import { useFormat } from '../../lib/preferences/region';
+import { batchKeys, listBatches, type Batch } from '../../lib/api/batches';
 import { getLinkSites, linkKeys, type LinkSite } from '../../lib/api/links';
 import { listJobs, originHost, type JobRow } from '../../lib/api/migrations';
 import type { CommandGroup } from './commands';
@@ -18,6 +19,17 @@ function keywordsOf(j: JobRow): string {
   return [j.source.admin, j.source.origin, j.panel.name, ...kinds].join(' ');
 }
 
+/** A batch's name, admins, old address and both panels' names. */
+export function batchKeywords(b: Batch): string {
+  const kinds = [b.source.kind, b.panel.kind].map((k) => (k ? panelSearchNames[k] : ''));
+  return [
+    b.name,
+    ...b.admins.flatMap((a) => [a.source, a.dest]),
+    b.source.origin,
+    b.panel.name,
+    ...kinds,
+  ].join(' ');
+}
 /** A site's name, old address, domains and port, and the old panel's names. */
 export function siteKeywords(s: LinkSite): string {
   return [
@@ -30,7 +42,7 @@ export function siteKeywords(s: LinkSite): string {
 }
 
 /**
- * The latest migrations in the palette, found by admin
+ * The latest migrations and batches in the palette, found by admin, name
  * and address, and the old link sites by name, address, domain and port. They are read only while the palette is open.
  */
 export function useJobCommands(open: boolean): CommandGroup[] {
@@ -40,6 +52,11 @@ export function useJobCommands(open: boolean): CommandGroup[] {
   const jobs = useQuery({
     queryKey: ['migrations', 'palette', paletteJobs],
     queryFn: () => listJobs({ limit: paletteJobs }),
+    enabled: open,
+  });
+  const batches = useQuery({
+    queryKey: batchKeys.list({ limit: paletteJobs }),
+    queryFn: () => listBatches({ limit: paletteJobs }),
     enabled: open,
   });
   const sites = useQuery({ queryKey: linkKeys.all, queryFn: getLinkSites, enabled: open });
@@ -61,6 +78,19 @@ export function useJobCommands(open: boolean): CommandGroup[] {
         // The old panel's logo: the palette's icon slot holds one mark.
         icon: <PanelMark kind={j.source.kind} size={18} />,
         run: () => void navigate(`/migrations/${encodeURIComponent(j.id)}`),
+      })),
+    },
+    {
+      id: 'batches',
+      label: t('navBatches'),
+      searchOnly: true,
+      items: (batches.data?.batches ?? []).map((b) => ({
+        id: `batch:${String(b.id)}`,
+        title: b.name,
+        hint: format.dateTime(new Date(b.createdAt)),
+        keywords: batchKeywords(b),
+        icon: <PanelMark kind={b.source.kind} size={18} />,
+        run: () => void navigate(`/batches/${String(b.id)}`),
       })),
     },
     {

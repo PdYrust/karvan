@@ -5,6 +5,7 @@ import {
   HardDrivesIcon,
   LinkSimpleIcon,
   SquaresFourIcon,
+  StackIcon,
   type Icon,
 } from '@phosphor-icons/react';
 import type { ShellKey } from './messages';
@@ -37,6 +38,7 @@ export const nav: NavGroup[] = [
     label: 'groupMove',
     items: [
       { label: 'navMigrations', icon: ArrowsLeftRightIcon, to: '/migrations', key: 'KeyM' },
+      { label: 'navBatches', icon: StackIcon, to: '/batches', key: 'KeyH' },
       { label: 'navLinks', icon: LinkSimpleIcon, to: '/links', key: 'KeyL' },
     ],
   },

@@ -4,6 +4,7 @@ export const recentSections = {
   analytics: 'navAnalytics',
   panels: 'navPanels',
   migrations: 'navMigrations',
+  batches: 'navBatches',
   links: 'navLinks',
   backups: 'navBackups',
   settings: 'settings',
