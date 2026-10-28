@@ -146,6 +146,13 @@ func compareKeys(a, b string) int {
 
 func (it *Item) note(s string) { it.Applied = append(it.Applied, s) }
 
+// AlreadyMoved reports whether an earlier migration moved the user (C16),
+// so a re-run leaves it as it is (phase 4.1 D9).
+func (it *Item) AlreadyMoved() bool {
+	is := func(c Conflict) bool { return c.Type == AlreadyMoved }
+	return slices.ContainsFunc(it.Conflicts, is) || slices.ContainsFunc(it.Resolved, is)
+}
+
 // clone deep-copies the parts of u that operations change.
 func clone(u panel.User) panel.User {
 	c := u

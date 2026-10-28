@@ -170,3 +170,13 @@ func TestGroupsUnknownRaisesNoBlocker(t *testing.T) {
 		}
 	}
 }
+
+// D9: a user is already moved when C16 was raised for it, open or fixed.
+func TestItemAlreadyMoved(t *testing.T) {
+	open := &Item{Conflicts: []Conflict{{Type: AlreadyMoved, Fix: OptSkip}}}
+	fixed := &Item{Resolved: []Conflict{{Type: AlreadyMoved, Fix: OptSkip}}}
+	gone := &Item{Conflicts: []Conflict{{Type: MovedGone}}}
+	if !open.AlreadyMoved() || !fixed.AlreadyMoved() || gone.AlreadyMoved() || (&Item{}).AlreadyMoved() {
+		t.Fatalf("open %v fixed %v gone %v", open.AlreadyMoved(), fixed.AlreadyMoved(), gone.AlreadyMoved())
+	}
+}

@@ -67,10 +67,12 @@ type Counts struct {
 	Read    int `json:"read"`
 	Moved   int `json:"moved"`
 	Skipped int `json:"skipped"`
-	Adopted int `json:"adopted"`
-	Undone  int `json:"undone"`
-	Changed int `json:"configChanged"`
-	Renamed int `json:"renamed"`
+	// AlreadyMoved counts users an earlier migration moved (C16, D9), also in Skipped.
+	AlreadyMoved int `json:"alreadyMoved"`
+	Adopted      int `json:"adopted"`
+	Undone       int `json:"undone"`
+	Changed      int `json:"configChanged"`
+	Renamed      int `json:"renamed"`
 	// ProtocolsAdded counts users who got protocols they lacked (D67).
 	ProtocolsAdded int `json:"protocolsAdded"`
 	Verified       int `json:"verified"`
@@ -150,6 +152,9 @@ func newReport(j *Job, start time.Time) *Report {
 			r.Counts.Adopted++
 		case !it.Include:
 			r.Counts.Skipped++
+		}
+		if !it.Include && it.AlreadyMoved() {
+			r.Counts.AlreadyMoved++
 		}
 		if it.ChangesConfig && it.Include {
 			r.Counts.Changed++

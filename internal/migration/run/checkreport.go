@@ -41,7 +41,8 @@ type CheckTotals struct {
 	Users         int `json:"users"`
 	Moving        int `json:"moving"`
 	Skipped       int `json:"skipped"`
-	Adopted       int `json:"adopted"` // already on the destination: recorded, not written
+	AlreadyMoved  int `json:"alreadyMoved"` // moved by an earlier migration (C16), also in Skipped
+	Adopted       int `json:"adopted"`      // already on the destination: recorded, not written
 	Renamed       int `json:"renamed"`
 	ConfigChanged int `json:"configChanged"`
 	Changed       int `json:"changed"` // moving with an operation or a fix applied
@@ -115,6 +116,9 @@ func (t *CheckTotals) count(it *engine.Item) {
 		t.Skipped++
 	default:
 		t.Moving++
+	}
+	if !it.Include && it.AlreadyMoved() {
+		t.AlreadyMoved++
 	}
 	if !it.Include {
 		return

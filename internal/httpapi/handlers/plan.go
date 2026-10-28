@@ -87,6 +87,9 @@ func impact(res *engine.Result) map[string]int {
 		default:
 			out["moving"]++
 		}
+		if !it.Include && it.AlreadyMoved() {
+			out["alreadyMoved"]++
+		}
 		if it.Include && it.ChangesConfig {
 			out["configChanged"]++
 		}

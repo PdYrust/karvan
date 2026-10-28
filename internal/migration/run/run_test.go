@@ -161,7 +161,7 @@ func TestMoveAndMoveAgain(t *testing.T) {
 		checkLinks(t, rep, to)
 		// The same migration again creates nothing and merges into the admin.
 		again := h.run(h.job(nil), true)
-		if again.State != StateDone || again.Counts.Moved != 0 || !again.Admin.Merged {
+		if again.State != StateDone || again.Counts.Moved != 0 || again.Counts.AlreadyMoved != 12 || !again.Admin.Merged {
 			t.Fatalf("re-run: state %s counts %+v merged %v error %q", again.State, again.Counts, again.Admin.Merged, again.Error)
 		}
 		if n := h.count("users"); n != 12 {

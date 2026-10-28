@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/PdYrust/karvan/internal/migration/engine"
 	"github.com/PdYrust/karvan/internal/migration/plan"
 	"github.com/PdYrust/karvan/internal/panel"
 )
@@ -45,5 +46,15 @@ func TestCheckReportNeedsACheck(t *testing.T) {
 	}
 	if _, err := h.svc.CheckReport(context.Background(), "nope"); !errors.Is(err, ErrNoJob) {
 		t.Fatalf("an unknown job: %v", err)
+	}
+}
+
+// D9: users moved before count as skipped and as already moved.
+func TestCheckTotalsAlreadyMoved(t *testing.T) {
+	var tt CheckTotals
+	tt.count(&engine.Item{Conflicts: []engine.Conflict{{Type: engine.AlreadyMoved, Fix: engine.OptSkip}}})
+	tt.count(&engine.Item{Include: true})
+	if tt != (CheckTotals{Users: 2, Moving: 1, Skipped: 1, AlreadyMoved: 1}) {
+		t.Fatalf("totals %+v", tt)
 	}
 }
