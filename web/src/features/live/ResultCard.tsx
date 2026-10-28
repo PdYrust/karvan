@@ -5,7 +5,7 @@ import { StatusLabel } from '../../components/feedback/StatusBadge';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
-import { newSitePath } from '../../lib/api/links';
+import { newSitePath } from '../../lib/api/rules';
 import type { JobRow } from '../../lib/api/migrations';
 import type { Report } from '../../lib/api/report';
 import { useFormat } from '../../lib/preferences/region';

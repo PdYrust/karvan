@@ -16,25 +16,25 @@ import { ListToolbar } from '../../components/data/ListToolbar';
 import { dataMessages } from '../../components/data/messages';
 import { sortChoice } from '../../components/data/sort-choice';
 import { matchesTerm, sortRows, type ListSort } from '../../lib/lists/choices';
-import { deleteSite, getLinkSites, linkKeys, type LinkSite } from '../../lib/api/links';
+import { deleteSite, getLinkSites, linkKeys, type LinkSite } from '../../lib/api/rules';
 import { useErrorText } from '../../lib/errors/errors';
 import { useFormat } from '../../lib/preferences/region';
 import { usePanels } from '../panels/use-panels';
-import { linksMessages } from './messages';
+import { rulesMessages } from './messages';
 import { SiteCard } from './SiteCard';
 import { Reveal } from '../../components/feedback/Reveal';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
 import { useLingering } from '../../lib/motion/use-lingering';
 
 function AddButton() {
-  const t = useT(linksMessages);
+  const t = useT(rulesMessages);
   const navigate = useNavigate();
   return (
     <Button
       variant="primary"
       icon={<PlusIcon size={16} />}
       className="pointer-coarse:h-9"
-      onClick={() => void navigate('/links/new')}
+      onClick={() => void navigate('/rules/new')}
     >
       {t('add')}
     </Button>
@@ -42,8 +42,8 @@ function AddButton() {
 }
 
 /** One card per old link site, with ports that could not open first (4.9). */
-export function LinksPage() {
-  const t = useT(linksMessages);
+export function RulesPage() {
+  const t = useT(rulesMessages);
   usePageTitle(t('title'));
   const fmt = useFormat();
   const qc = useQueryClient();

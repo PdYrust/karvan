@@ -5,9 +5,9 @@ import { useRef } from 'react';
 import { Bar } from '../../components/charts/Bar';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { useT } from '../../i18n/locale';
-import { getUpload, linkKeys, uploadTokens, type UploadProgress } from '../../lib/api/links';
+import { getUpload, linkKeys, uploadTokens, type UploadProgress } from '../../lib/api/rules';
 import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
-import { linksMessages, type LinksKey } from './messages';
+import { rulesMessages, type RulesKey } from './messages';
 
 const outcomes = ['stored', 'known', 'noUser', 'refused', 'failed'] as const;
 
@@ -31,7 +31,7 @@ function useUpload(siteId: number) {
 }
 
 function Progress({ p }: { p: UploadProgress }) {
-  const t = useT(linksMessages);
+  const t = useT(rulesMessages);
   if (p.state === 'running') {
     return (
       <div className="flex flex-col gap-2">
@@ -52,7 +52,7 @@ function Progress({ p }: { p: UploadProgress }) {
         {outcomes
           .filter((o) => p[o] > 0)
           .map((o) => (
-            <li key={o}>{t(`up_${o}` as LinksKey, { count: p[o] })}</li>
+            <li key={o}>{t(`up_${o}` as RulesKey, { count: p[o] })}</li>
           ))}
       </ul>
     </div>
@@ -61,7 +61,7 @@ function Progress({ p }: { p: UploadProgress }) {
 
 /** Upload a file of old links; the checks run on the server and their counter shows here. */
 export function TokenUpload({ siteId }: { siteId: number }) {
-  const t = useT(linksMessages);
+  const t = useT(rulesMessages);
   const errorText = useSubscriptionErrorText();
   const qc = useQueryClient();
   const input = useRef<HTMLInputElement>(null);

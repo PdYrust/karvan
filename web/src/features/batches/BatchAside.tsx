@@ -52,7 +52,7 @@ function RulesBlock({ batch }: { batch: Batch }) {
         <ul className="flex flex-col gap-1.5">
           {batch.rules.map((r) => (
             <li key={r.id}>
-              <Link to={`/links/${String(r.id)}`} className={link}>
+              <Link to={`/rules/${String(r.id)}`} className={link}>
                 <bdi>{r.name}</bdi>
               </Link>
             </li>

@@ -154,11 +154,11 @@ export function useCommands(onShortcuts: () => void, open: boolean): CommandGrou
       run: () => void navigate(newMigrationPath),
     },
     {
-      id: 'site:new',
-      title: t('actionNewSite'),
-      keywords: 'old links legacy site لینک قدیمی سایت',
+      id: 'rule:new',
+      title: t('actionNewRule'),
+      keywords: 'rule old links subscription site قانون لینک قدیمی اشتراک',
       icon: <PlusIcon className={icon} />,
-      run: () => void navigate('/links/new'),
+      run: () => void navigate('/rules/new'),
     },
     {
       id: 'scan',

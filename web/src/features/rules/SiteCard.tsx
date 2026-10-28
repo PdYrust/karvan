@@ -14,16 +14,16 @@ import { FactList } from '../../components/layout/FactList';
 import { MoveLabel } from '../../components/panels/PanelLabel';
 import { panelNames } from '../../components/panels/PanelLogo';
 import { useT } from '../../i18n/locale';
-import { pendingOf, type LinkSite } from '../../lib/api/links';
+import { pendingOf, type LinkSite } from '../../lib/api/rules';
 import { panelKind, type Panel } from '../../lib/api/panels';
-import { CertFactsView } from './CertFactsView';
-import { linksMessages } from './messages';
+import { CertFactsView } from '../certificates/CertFactsView';
+import { rulesMessages } from './messages';
 import { NewLinks } from './NewLinks';
 import { SiteUsers } from './SiteUsers';
 import { TokenUpload } from './TokenUpload';
 
 function SiteMenu({ site, onDelete }: { site: LinkSite; onDelete: () => void }) {
-  const t = useT(linksMessages);
+  const t = useT(rulesMessages);
   const navigate = useNavigate();
   const label = t('moreFor', { name: site.name });
   return (
@@ -43,7 +43,7 @@ function SiteMenu({ site, onDelete }: { site: LinkSite; onDelete: () => void }) 
       <DropdownMenu.Content align="end" className="min-w-44">
         <DropdownMenu.Item
           className="gap-2"
-          onClick={() => void navigate(`/links/${String(site.id)}`)}
+          onClick={() => void navigate(`/rules/${String(site.id)}`)}
         >
           <PencilSimpleIcon size={16} aria-hidden="true" />
           {t('edit')}
@@ -78,7 +78,7 @@ const mono = (text: string) => (
 
 /** The closed card's one line: the domains, HTTPS or plain HTTP, proven and pending users. */
 function Summary({ site, tls }: { site: LinkSite; tls: boolean }) {
-  const t = useT(linksMessages);
+  const t = useT(rulesMessages);
   const domains = site.domains ?? [];
   const stats = site.stats;
   return (
@@ -111,7 +111,7 @@ export function SiteCard({
   panel: Panel | undefined;
   onDelete: () => void;
 }) {
-  const t = useT(linksMessages);
+  const t = useT(rulesMessages);
   const id = useId();
   const [open, setOpen] = useState(false);
   const Caret = open ? CaretDownIcon : CaretRightIcon;

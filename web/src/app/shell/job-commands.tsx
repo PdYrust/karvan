@@ -5,7 +5,7 @@ import { panelSearchNames } from '../../components/panels/PanelLogo';
 import { useT } from '../../i18n/locale';
 import { useFormat } from '../../lib/preferences/region';
 import { batchKeys, listBatches, type Batch } from '../../lib/api/batches';
-import { getLinkSites, linkKeys, type LinkSite } from '../../lib/api/links';
+import { getLinkSites, linkKeys, type LinkSite } from '../../lib/api/rules';
 import { listJobs, originHost, type JobRow } from '../../lib/api/migrations';
 import type { CommandGroup } from './commands';
 import { shellMessages } from './messages';
@@ -95,7 +95,7 @@ export function useJobCommands(open: boolean): CommandGroup[] {
     },
     {
       id: 'sites',
-      label: t('navLinks'),
+      label: t('navRules'),
       searchOnly: true,
       items: (sites.data?.sites ?? []).map((s) => ({
         id: `site:${String(s.id)}`,
@@ -103,7 +103,7 @@ export function useJobCommands(open: boolean): CommandGroup[] {
         keywords: siteKeywords(s),
         // The old panel's logo, as on the site's card.
         icon: <PanelMark kind={s.sourceKind} size={18} />,
-        run: () => void navigate(`/links/${String(s.id)}`),
+        run: () => void navigate(`/rules/${String(s.id)}`),
       })),
     },
   ];

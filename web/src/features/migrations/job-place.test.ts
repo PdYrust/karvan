@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { sitePrefill } from '../../lib/api/links';
+import { sitePrefill } from '../../lib/api/rules';
 import type { JobRow } from '../../lib/api/migrations';
 import { againPath, jobPlace, loginDropped, matchesJob, statesOf } from './job-place';
 

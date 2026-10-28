@@ -4,12 +4,12 @@ import { DownloadSimpleIcon } from '@phosphor-icons/react';
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { useT } from '../../i18n/locale';
-import { originOf, type LinkSite } from '../../lib/api/links';
+import { originOf, type LinkSite } from '../../lib/api/rules';
 import { jobOutcome, listJobs, migrationKeys, originHost } from '../../lib/api/migrations';
 import { reportFiles } from '../../lib/api/report';
 import { useErrorText } from '../../lib/errors/errors';
 import { useFormat } from '../../lib/preferences/region';
-import { linksMessages } from './messages';
+import { rulesMessages } from './messages';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
 
 /** Done migrations into the site's panel, the latest 100: the ones from its old panel have its new links. */
@@ -27,7 +27,7 @@ function useSiteJobs(site: LinkSite) {
 
 /** Each done migration from this old panel, with its new links file. */
 export function NewLinks({ site }: { site: LinkSite }) {
-  const t = useT(linksMessages);
+  const t = useT(rulesMessages);
   const fmt = useFormat();
   const errorText = useErrorText();
   const toasts = useKumoToastManager();

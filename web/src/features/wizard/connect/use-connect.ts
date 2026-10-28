@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { compareStatus, useJobEvents } from '../../../lib/api/events';
-import { sitePrefill } from '../../../lib/api/links';
+import { sitePrefill } from '../../../lib/api/rules';
 import {
   cancelJob,
   compareJob,

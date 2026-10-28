@@ -150,10 +150,10 @@ export interface SitePrefill {
   sourceUrl?: string;
 }
 
-/** The new site form, prefilled from a migration: `/links/new?panel=2&kind=marzban&from=...`. */
+/** The new site form, prefilled from a migration: `/rules/new?panel=2&kind=marzban&from=...`. */
 export function newSitePath(p: SitePrefill): string {
   const query = prefillQuery(p);
-  return query ? `/links/new?${query}` : '/links/new';
+  return query ? `/rules/new?${query}` : '/rules/new';
 }
 
 /** The prefill as a query string; Connect reads the same one to start a migration again. */

@@ -10,8 +10,8 @@ describe('recentPage', () => {
     expect(recentPage('/migrations')).toEqual({ section: 'migrations' });
     expect(recentPage('/migrations/new')).toEqual({ section: 'migrations', page: 'new' });
     expect(recentPage('/batches')).toEqual({ section: 'batches' });
-    expect(recentPage('/links')).toEqual({ section: 'links' });
-    expect(recentPage('/links/new')).toEqual({ section: 'links', page: 'new' });
+    expect(recentPage('/rules')).toEqual({ section: 'rules' });
+    expect(recentPage('/rules/new')).toEqual({ section: 'rules', page: 'new' });
     expect(recentPage('/backups')).toEqual({ section: 'backups' });
     expect(recentPage('/settings')).toEqual({ section: 'settings', tab: 'general' });
     expect(recentPage('/settings/safe-mode')).toEqual({ section: 'settings', tab: 'safe-mode' });
@@ -38,6 +38,9 @@ describe('recentPage', () => {
       '/reports',
       '/reports/9f1c2b3a4d5e6f7081920a1b',
       '/migrations/9f1c2b3a4d5e6f7081920a1b/report',
+      '/rules/3',
+      '/links',
+      '/links/new',
       '/links/3',
       '/batches/3',
       '/templates',

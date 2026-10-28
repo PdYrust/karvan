@@ -27,7 +27,7 @@ var staticFiles = []string{"favicon.svg", "boot.js", "manifest.webmanifest",
 	"icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"}
 
 // appPages are the first path segments of the web panel's own pages.
-var appPages = []string{"analytics", "migrations", "batches", "links", "panels", "backups", "settings"}
+var appPages = []string{"analytics", "migrations", "batches", "rules", "panels", "backups", "settings"}
 
 // Deps is everything the handler needs.
 type Deps struct {

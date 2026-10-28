@@ -1,23 +1,23 @@
 import type { Messages } from '../../i18n/locale';
 
 const en = {
-  title: 'Old links',
-  description: 'A site answers the old subscription links of moved users from the new panel.',
-  add: 'Add a site',
-  list: 'Sites',
+  title: 'Rules',
+  description: 'A rule answers the old subscription links of moved users from the new panel.',
+  add: 'Add a rule',
+  list: 'Rules',
   portsFailed:
     "These ports couldn't open: {ports}. Another program may be using them, or Karvan may need the right to use ports under 1024.",
-  emptyTitle: 'No sites yet',
-  emptyBody: 'A site keeps the old subscription links of the users you moved working.',
-  loadFailed: "Couldn't load the sites.",
+  emptyTitle: 'No rules yet',
+  emptyBody: 'A rule keeps the old subscription links of the users you moved working.',
+  loadFailed: "Couldn't load the rules.",
   moreFor: 'More for {name}',
   edit: 'Edit',
   delete: 'Delete',
-  deleteTitle: 'Delete this site?',
+  deleteTitle: 'Delete this rule?',
   deleteBody:
     'Its old links stop working. Proven links are forgotten; users closed for good stay closed.',
-  deleteFailed: "Couldn't delete the site.",
-  deleted: 'Site deleted',
+  deleteFailed: "Couldn't delete the rule.",
+  deleted: 'Rule deleted',
   move: '{from} to {to}',
   oldPanel: 'Old panel',
   domains: 'Domains',
@@ -38,7 +38,7 @@ const en = {
   warn_unreadable: "Karvan can't read this certificate.",
   warn_no_key: 'Karvan has no private key it can read for it.',
   warn_key_mismatch: "The private key doesn't belong to this certificate.",
-  warn_domain_mismatch: "It doesn't cover every domain of this site.",
+  warn_domain_mismatch: "It doesn't cover every domain of this rule.",
   warn_expired: 'It has ended. Renew it.',
   warn_not_yet_valid: "It isn't valid yet.",
   warn_expires_soon: 'It ends within 14 days. Renew it soon.',
@@ -65,7 +65,7 @@ const en = {
     one: "{count} the old panel didn't answer for. Upload the file again later.",
     other: "{count} the old panel didn't answer for. Upload the file again later.",
   },
-  upNone: 'The file has no old links of this site.',
+  upNone: 'The file has no old links of this rule.',
   uploadFailed: "Couldn't upload the file.",
   newLinksTitle: 'New links',
   noNewLinks: 'No finished migration from this old panel into this panel yet.',
@@ -73,30 +73,30 @@ const en = {
   downloadOf: 'Download the new links of {admin}, {date}',
   newLinksFailed: "Couldn't load the migrations.",
   downloadFailed: "Couldn't download the file.",
-  search: 'Search sites',
-  noMatch: 'No site matches.',
+  search: 'Search rules',
+  noMatch: 'No rule matches.',
 };
 
-export type LinksKey = keyof typeof en;
+export type RulesKey = keyof typeof en;
 
-const fa: Messages<LinksKey>['fa'] = {
-  title: 'لینک های قدیمی',
-  description: 'هر سایت لینک های اشتراک قدیمی کاربرهای منتقل شده را از پنل جدید پاسخ میدهد.',
-  add: 'افزودن سایت',
-  list: 'سایت ها',
+const fa: Messages<RulesKey>['fa'] = {
+  title: 'قانون ها',
+  description: 'هر قانون لینک های اشتراک قدیمی کاربرهای منتقل شده را از پنل جدید پاسخ میدهد.',
+  add: 'افزودن قانون',
+  list: 'قانون ها',
   portsFailed:
     'این پورت ها باز نشدند: {ports}. شاید برنامه دیگری از آنها استفاده میکند، یا کاروان برای پورت های زیر ۱۰۲۴ اجازه لازم دارد.',
-  emptyTitle: 'هنوز سایتی نیست',
-  emptyBody: 'با یک سایت، لینک های اشتراک قدیمی کاربرهایی که منتقل کردید کار میکنند.',
-  loadFailed: 'سایت ها بارگذاری نشدند.',
+  emptyTitle: 'هنوز قانونی نیست',
+  emptyBody: 'با یک قانون، لینک های اشتراک قدیمی کاربرهایی که منتقل کردید کار میکنند.',
+  loadFailed: 'قانون ها بارگذاری نشدند.',
   moreFor: 'گزینه های بیشتر برای {name}',
   edit: 'ویرایش',
   delete: 'حذف',
-  deleteTitle: 'این سایت حذف شود؟',
+  deleteTitle: 'این قانون حذف شود؟',
   deleteBody:
-    'لینک های قدیمی این سایت دیگر کار نمیکنند. لینک های تایید شده فراموش میشوند و کاربرهای بسته شده بسته میمانند.',
-  deleteFailed: 'سایت حذف نشد.',
-  deleted: 'سایت حذف شد',
+    'لینک های قدیمی این قانون دیگر کار نمیکنند. لینک های تایید شده فراموش میشوند و کاربرهای بسته شده بسته میمانند.',
+  deleteFailed: 'قانون حذف نشد.',
+  deleted: 'قانون حذف شد',
   move: '{from} به {to}',
   oldPanel: 'پنل قدیمی',
   domains: 'دامنه ها',
@@ -117,7 +117,7 @@ const fa: Messages<LinksKey>['fa'] = {
   warn_unreadable: 'کاروان نمیتواند این گواهی را بخواند.',
   warn_no_key: 'کاروان کلید خصوصی خوانایی برای آن ندارد.',
   warn_key_mismatch: 'کلید خصوصی مال این گواهی نیست.',
-  warn_domain_mismatch: 'همه دامنه های این سایت را پوشش نمیدهد.',
+  warn_domain_mismatch: 'همه دامنه های این قانون را پوشش نمیدهد.',
   warn_expired: 'اعتبارش تمام شده است. آن را تمدید کنید.',
   warn_not_yet_valid: 'هنوز معتبر نشده است.',
   warn_expires_soon: 'تا ۱۴ روز دیگر اعتبارش تمام میشود. زودتر تمدیدش کنید.',
@@ -147,7 +147,7 @@ const fa: Messages<LinksKey>['fa'] = {
     one: '{count} بدون جواب پنل قدیمی ماند. بعدا فایل را دوباره بارگذاری کنید.',
     other: '{count} بدون جواب پنل قدیمی ماندند. بعدا فایل را دوباره بارگذاری کنید.',
   },
-  upNone: 'در این فایل لینک قدیمی این سایت نیست.',
+  upNone: 'در این فایل لینک قدیمی این قانون نیست.',
   uploadFailed: 'فایل بارگذاری نشد.',
   newLinksTitle: 'لینک های جدید',
   noNewLinks: 'هنوز انتقال تمام شده ای از این پنل قدیمی به این پنل نیست.',
@@ -155,8 +155,8 @@ const fa: Messages<LinksKey>['fa'] = {
   downloadOf: 'دانلود لینک های جدید {admin}، {date}',
   newLinksFailed: 'انتقال ها بارگذاری نشدند.',
   downloadFailed: 'فایل دانلود نشد.',
-  search: 'جستجوی سایت ها',
-  noMatch: 'سایتی پیدا نشد.',
+  search: 'جستجوی قانون ها',
+  noMatch: 'قانونی پیدا نشد.',
 };
 
-export const linksMessages: Messages<LinksKey> = { en, fa };
+export const rulesMessages: Messages<RulesKey> = { en, fa };

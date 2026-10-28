@@ -1,5 +1,5 @@
 import { panelSearchNames } from '../../components/panels/PanelLogo';
-import { prefillQuery } from '../../lib/api/links';
+import { prefillQuery } from '../../lib/api/rules';
 import type { JobRow, JobState } from '../../lib/api/migrations';
 import { newMigrationPath, stepPath } from '../wizard/steps';
 

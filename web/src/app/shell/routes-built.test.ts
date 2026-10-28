@@ -9,6 +9,14 @@ describe('built routes', () => {
     expect(new Set(items.map((i) => i.key)).size).toBe(items.length);
     expect(items.every((i) => i.to.startsWith('/'))).toBe(true);
   });
+  it('puts Rules in the Subscriptions group, after Migrations and Batches', () => {
+    expect(nav.map((g) => [g.label, g.items.map((i) => i.to)])).toEqual([
+      [undefined, ['/', '/analytics']],
+      ['groupMove', ['/migrations', '/batches']],
+      ['groupSubscriptions', ['/rules']],
+      ['groupServer', ['/panels', '/backups']],
+    ]);
+  });
   it('opens each page the spec names with g then its letter', () => {
     const targets = gotoTargets();
     expect({
@@ -24,7 +32,7 @@ describe('built routes', () => {
       a: '/analytics',
       m: '/migrations',
       r: undefined,
-      l: '/links',
+      l: '/rules',
       p: '/panels',
       s: '/settings',
     });

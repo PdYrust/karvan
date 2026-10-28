@@ -1,5 +1,5 @@
 import { ApiError } from '../../lib/api/client';
-import type { CertInput, LinkSite, SiteInput, SitePrefill } from '../../lib/api/links';
+import type { CertInput, LinkSite, SiteInput, SitePrefill } from '../../lib/api/rules';
 import type { PanelKind } from '../../lib/api/panels';
 
 /** How the site gets its certificate. Upload and paste both send PEM text. */

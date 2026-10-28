@@ -6,13 +6,13 @@ import { useRef, useState } from 'react';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
-import { inspectCert } from '../../lib/api/links';
+import { inspectCert } from '../../lib/api/rules';
 import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
 import { CertFactsView } from './CertFactsView';
-import { siteFormMessages } from './form-messages';
-import { canCheckCert, certInputOf, type CertMode } from './site-form';
-import type { FieldsProps } from './SiteFields';
-import { TextField } from './TextField';
+import { siteFormMessages } from '../rules/form-messages';
+import { canCheckCert, certInputOf, type CertMode } from '../rules/site-form';
+import type { FieldsProps } from '../rules/SiteFields';
+import { TextField } from '../rules/TextField';
 
 const modes: readonly CertMode[] = ['files', 'upload', 'paste', 'none'];
 

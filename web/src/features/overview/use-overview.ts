@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import { getLinkSites, linkKeys } from '../../lib/api/links';
+import { getLinkSites, linkKeys } from '../../lib/api/rules';
 import { listJobs } from '../../lib/api/migrations';
 import type { Panel } from '../../lib/api/panels';
 import { getOverview } from '../../lib/api/overview';

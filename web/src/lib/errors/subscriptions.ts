@@ -8,13 +8,13 @@ import { errorOf, useErrorText } from './errors';
  * keeps the codes every page can meet.
  */
 const en = {
-  site_invalid: "A field of this site has a value Karvan can't use. Check the fields.",
+  site_invalid: "A field of this rule has a value Karvan can't use. Check the fields.",
   site_overlap: 'Another rule already answers this domain and path on this port.',
   cert_conflict: 'Rules for one domain on one port must use the same certificate.',
   port_taken: "Karvan's own panel uses this port. Pick another port.",
   plain_http_off: 'Plain HTTP is off for old links. Turn it on or use HTTPS.',
   port_mixed:
-    'This port already has sites the other way. All sites on one port use HTTPS, or none do.',
+    'This port already has rules the other way. All rules on one port use HTTPS, or none do.',
   domain_invalid:
     'Enter a domain like sub.example.com, a wildcard like *.example.com, or an IP address.',
   domain_in_use: 'A rule still uses this domain. Remove it from the rule first.',
@@ -42,14 +42,14 @@ export type SubscriptionErrorKey = keyof typeof en;
 
 const fa: Messages<SubscriptionErrorKey>['fa'] = {
   site_invalid:
-    'یکی از فیلدهای این سایت مقداری دارد که کاروان نمیتواند استفاده کند. فیلدها را بررسی کنید.',
+    'یکی از فیلدهای این قانون مقداری دارد که کاروان نمیتواند استفاده کند. فیلدها را بررسی کنید.',
   site_overlap: 'قانون دیگری روی این پورت به همین دامنه و مسیر جواب میدهد.',
   cert_conflict: 'قانون های یک دامنه روی یک پورت باید از یک گواهی استفاده کنند.',
   port_taken: 'پنل خود کاروان از این پورت استفاده میکند. پورت دیگری انتخاب کنید.',
   plain_http_off:
     'HTTP ساده برای لینک های قدیمی خاموش است. آن را روشن کنید یا از HTTPS استفاده کنید.',
   port_mixed:
-    'این پورت سایت هایی به روش دیگر دارد. یا همه سایت های یک پورت HTTPS هستند یا هیچ کدام.',
+    'این پورت قانون هایی به روش دیگر دارد. یا همه قانون های یک پورت HTTPS هستند یا هیچ کدام.',
   domain_invalid:
     'دامنه ای مثل sub.example.com، دامنه ستاره دار مثل *.example.com یا یک IP وارد کنید.',
   domain_in_use: 'یک قانون هنوز از این دامنه استفاده میکند. اول آن را از قانون بردارید.',

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { ApiError } from '../../lib/api/client';
-import type { LinkSite } from '../../lib/api/links';
+import type { LinkSite } from '../../lib/api/rules';
 import {
   canCheckCert,
   certInputOf,

@@ -24,8 +24,8 @@ function RecentName({ page, panel }: { page: RecentPage; panel: Panel | undefine
     name = t(recentTab[page.tab]);
   } else if (page.section === 'migrations') {
     name = page.page ? t('newMigration') : undefined;
-  } else if (page.section === 'links') {
-    name = page.page ? t('newSite') : undefined;
+  } else if (page.section === 'rules') {
+    name = page.page ? t('newRule') : undefined;
   } else if (panel) {
     name = (
       <span className="inline-flex max-w-full items-center gap-1.5">

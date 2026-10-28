@@ -3,7 +3,7 @@ import { Link } from 'react-router';
 import { Bar } from '../../../components/charts/Bar';
 import { StatusLabel } from '../../../components/feedback/StatusBadge';
 import { useT } from '../../../i18n/locale';
-import { originOf, pendingOf, type LinkSites } from '../../../lib/api/links';
+import { originOf, pendingOf, type LinkSites } from '../../../lib/api/rules';
 import { useFormat } from '../../../lib/preferences/region';
 import { overviewMessages } from '../messages';
 import { PartFailed } from '../PartFailed';
@@ -78,7 +78,7 @@ export function LinksCard() {
     <SummaryCard title={t('linksTitle')}>
       <Reveal on={load.reveal}>{body}</Reveal>
       <Link
-        to="/links"
+        to="/rules"
         className="mt-auto inline-flex items-center gap-1 self-start text-sm text-kumo-link hover:underline pointer-coarse:min-h-9"
       >
         {t('linksOpen')}

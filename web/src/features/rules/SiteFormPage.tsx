@@ -16,19 +16,19 @@ import {
   sitePrefill,
   type LinkSite,
   type SiteInput,
-} from '../../lib/api/links';
+} from '../../lib/api/rules';
 import { useCurrentPanel } from '../panels/current-panel';
 import { siteFormMessages } from './form-messages';
-import { linksMessages } from './messages';
+import { rulesMessages } from './messages';
 import { newValues, valuesOf } from './site-form';
 import { SiteForm } from './SiteForm';
 import { Reveal } from '../../components/feedback/Reveal';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
 
-/** Adds a site (`/links/new`, maybe prefilled from a migration) or changes one (`/links/:id`). */
+/** Adds a site (`/rules/new`, maybe prefilled from a migration) or changes one (`/rules/:id`). */
 export function SiteFormPage() {
   const t = useT(siteFormMessages);
-  const tl = useT(linksMessages);
+  const tl = useT(rulesMessages);
   const { id } = useParams();
   const siteId = id ? Number(id) : undefined;
   const [query] = useSearchParams();
@@ -46,10 +46,10 @@ export function SiteFormPage() {
     onSuccess: () => {
       toasts.add({ title: siteId ? t('saved') : t('added') });
       void qc.invalidateQueries({ queryKey: linkKeys.all });
-      void navigate('/links');
+      void navigate('/rules');
     },
   });
-  const back = () => void navigate('/links');
+  const back = () => void navigate('/rules');
   let body;
   if (siteId && list.isError) {
     body = (
@@ -93,7 +93,7 @@ export function SiteFormPage() {
       <PageHeader
         eyebrow={
           <Link
-            to="/links"
+            to="/rules"
             className="inline-flex items-center hover:text-kumo-default pointer-coarse:min-h-9"
           >
             {tl('title')}

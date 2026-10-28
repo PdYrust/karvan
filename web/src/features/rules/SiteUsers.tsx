@@ -1,11 +1,11 @@
 import { Bar } from '../../components/charts/Bar';
 import { useT } from '../../i18n/locale';
-import { pendingOf, type SiteStats } from '../../lib/api/links';
-import { linksMessages } from './messages';
+import { pendingOf, type SiteStats } from '../../lib/api/rules';
+import { rulesMessages } from './messages';
 
 /** Proven users over moved ones, with pending and closed as quiet numbers. */
 export function SiteUsers({ stats }: { stats: SiteStats | undefined }) {
-  const t = useT(linksMessages);
+  const t = useT(rulesMessages);
   if (!stats) return <p className="text-sm text-kumo-subtle">{t('statsFailed')}</p>;
   if (stats.moved === 0) return <p className="text-sm text-kumo-subtle">{t('noUsers')}</p>;
   const pending = pendingOf(stats);

@@ -103,11 +103,11 @@ const BatchPage = lazy(() =>
 const BackupsPage = lazy(() =>
   import('../features/backups/BackupsPage').then((m) => ({ default: m.BackupsPage })),
 );
-const LinksPage = lazy(() =>
-  import('../features/links/LinksPage').then((m) => ({ default: m.LinksPage })),
+const RulesPage = lazy(() =>
+  import('../features/rules/RulesPage').then((m) => ({ default: m.RulesPage })),
 );
 const SiteFormPage = lazy(() =>
-  import('../features/links/SiteFormPage').then((m) => ({ default: m.SiteFormPage })),
+  import('../features/rules/SiteFormPage').then((m) => ({ default: m.SiteFormPage })),
 );
 const LivePage = lazy(() =>
   import('../features/live/LivePage').then((m) => ({ default: m.LivePage })),
@@ -205,9 +205,9 @@ export function App() {
                       <Route path="batches" element={<BatchesPage />} />
                       <Route path="batches/:id" element={<BatchPage />} />
                       <Route path="backups" element={<BackupsPage />} />
-                      <Route path="links" element={<LinksPage />} />
-                      <Route path="links/new" element={<SiteFormPage />} />
-                      <Route path="links/:id" element={<SiteFormPage />} />
+                      <Route path="rules" element={<RulesPage />} />
+                      <Route path="rules/new" element={<SiteFormPage />} />
+                      <Route path="rules/:id" element={<SiteFormPage />} />
                       <Route path="panels" element={<PanelsPage />} />
                       <Route path="panels/:id" element={<PanelPage />} />
                       <Route path="settings" element={<SettingsPage />}>

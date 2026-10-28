@@ -7,7 +7,7 @@ import {
   pendingOf,
   sitePrefill,
   uploadTokens,
-} from './links';
+} from './rules';
 
 afterEach(() => vi.unstubAllGlobals());
 
@@ -29,12 +29,12 @@ describe('a new site prefilled from a migration', () => {
       sourceUrl: 'https://old.example.com:8443',
     } as const;
     const path = newSitePath(p);
-    expect(path).toBe('/links/new?panel=2&kind=marzban&from=https%3A%2F%2Fold.example.com%3A8443');
+    expect(path).toBe('/rules/new?panel=2&kind=marzban&from=https%3A%2F%2Fold.example.com%3A8443');
     expect(sitePrefill(new URL(path, 'http://x').searchParams)).toEqual(p);
   });
 
   it('opens an empty form without a prefill', () => {
-    expect(newSitePath({})).toBe('/links/new');
+    expect(newSitePath({})).toBe('/rules/new');
     expect(sitePrefill(new URLSearchParams())).toEqual({});
   });
 
