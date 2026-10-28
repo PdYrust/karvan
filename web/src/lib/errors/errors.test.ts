@@ -66,7 +66,6 @@ describe('area word lists', () => {
     }
     expect([...subscriptionCodes].sort()).toEqual(
       [
-        'acme_invalid',
         'certificate_in_use',
         'certificate_invalid',
         'certificate_managed',

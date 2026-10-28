@@ -1,3 +1,4 @@
+import type { AcmeError, AcmeMethod, AcmeOrder } from './acme';
 import type { RuleRef } from './certificates';
 import { api } from './client';
 import type { CertFacts } from './rules';
@@ -7,6 +8,8 @@ export type DomainWarning =
   | 'no_certificate'
   | 'cert_conflict'
   | 'certificate_not_adopted'
+  | 'renewal_failed'
+  | 'renewal_waiting_dns'
   | 'unreadable'
   | 'no_key'
   | 'key_mismatch'
@@ -25,6 +28,14 @@ export interface Domain {
   certificates: { id: number; name: string }[];
   /** Ports that keep serving another certificate for it since the move (D62). */
   pins: { port: number; certificate: { id: number; name: string } }[];
+  /** Its Let's Encrypt state (D69, D70); null unless its certificate or an order is from Let's Encrypt. */
+  acme: {
+    method: AcmeMethod | '';
+    nextRenewal: string | null;
+    tries: number;
+    lastError: AcmeError | null;
+    order: AcmeOrder | null;
+  } | null;
   rules: RuleRef[];
   warnings: DomainWarning[];
 }
@@ -34,7 +45,8 @@ export type CertChoice =
   | { kind: 'stored'; certificateId: number }
   | { kind: 'file'; certFile: string; keyFile: string; name?: string }
   | { kind: 'pasted'; certPem: string; keyPem: string; name?: string }
-  | { kind: 'none'; plainOk: true };
+  | { kind: 'none'; plainOk: true }
+  | { kind: 'acme'; method: AcmeMethod; agreeTos?: boolean };
 
 export const domainKeys = {
   all: ['domains'] as const,
@@ -49,7 +61,10 @@ export function addDomain(name: string, certificate: CertChoice): Promise<Domain
   return api('POST', 'domains', { name: name.trim(), certificate });
 }
 
-/** Changes a domain's certificate; 409 domain_in_use for none while an HTTPS rule holds it (D65). */
+/**
+ * Changes a domain's certificate; 409 domain_in_use for none while an HTTPS rule holds it (D65).
+ * The acme way starts an order (202) and keeps the current certificate until it is done.
+ */
 export function setDomainCertificate(id: number, certificate: CertChoice): Promise<Domain> {
   return api('PUT', `domains/${String(id)}/certificate`, { certificate });
 }

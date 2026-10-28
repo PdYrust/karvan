@@ -4,8 +4,8 @@ import { errorOf, useErrorText } from './errors';
 
 /**
  * Sentences for the codes only the Rules and Domains and certificates
- * pages meet (D58), the Let's Encrypt ones included. They load with those pages; errors.ts
- * keeps the codes every page can meet.
+ * pages meet (D58). They load with those pages; errors.ts keeps the codes
+ * every page can meet, and acme.ts the Let's Encrypt ones.
  */
 const en = {
   site_invalid: "A field of this rule has a value Karvan can't use. Check the fields.",
@@ -35,8 +35,6 @@ const en = {
     "Karvan renews this Let's Encrypt certificate itself, so it can't be changed by hand.",
   certificate_not_adopted:
     "Give this rule's domains their certificates in Domains and certificates, then save it again.",
-  acme_invalid:
-    "Karvan can't start this Let's Encrypt order. Check the domain and the way you picked.",
   site_invalid_unknown: 'A batch of this rule is gone. Pick the batches again.',
   site_invalid_inactive: 'A batch of this rule is not active. Pick only active batches.',
   site_invalid_mixed:
@@ -50,6 +48,7 @@ const en = {
   redirect_invalid: "A field of this redirect has a value Karvan can't use. Check the fields.",
   redirect_invalid_loop:
     'This address leads back to a redirect rule of Karvan. Enter an address outside Karvan.',
+  redirect_invalid_reserved: "This path is kept for Let's Encrypt checks. Pick another path.",
 };
 
 export type SubscriptionErrorKey = keyof typeof en;
@@ -84,8 +83,6 @@ const fa: Messages<SubscriptionErrorKey>['fa'] = {
     "کاروان این گواهی Let's Encrypt را خودش تمدید میکند و نمیشود آن را دستی تغییر داد.",
   certificate_not_adopted:
     'در دامنه ها و گواهی ها به دامنه های این قانون گواهی بدهید و بعد قانون را دوباره ذخیره کنید.',
-  acme_invalid:
-    "کاروان نمیتواند این سفارش Let's Encrypt را شروع کند. دامنه و روشی را که انتخاب کرده اید بررسی کنید.",
   site_invalid_unknown: 'یکی از دسته های این قانون دیگر نیست. دسته ها را دوباره انتخاب کنید.',
   site_invalid_inactive: 'یکی از دسته های این قانون فعال نیست. فقط دسته های فعال را انتخاب کنید.',
   site_invalid_mixed:
@@ -100,6 +97,8 @@ const fa: Messages<SubscriptionErrorKey>['fa'] = {
     'یکی از فیلدهای این ریدایرکت مقداری دارد که کاروان نمیتواند استفاده کند. فیلدها را بررسی کنید.',
   redirect_invalid_loop:
     'این آدرس دوباره به یک قانون ریدایرکت کاروان میرسد. آدرسی بیرون از کاروان وارد کنید.',
+  redirect_invalid_reserved:
+    "این مسیر برای بررسی های Let's Encrypt نگه داشته شده است. مسیر دیگری انتخاب کنید.",
 };
 
 export const subscriptionErrorMessages: Messages<SubscriptionErrorKey> = { en, fa };
@@ -125,7 +124,11 @@ const reasonKeys: Readonly<Record<string, Readonly<Record<string, SubscriptionEr
     mixed: 'site_invalid_mixed',
     ...domainReasons,
   },
-  redirect_invalid: { loop: 'redirect_invalid_loop', ...domainReasons },
+  redirect_invalid: {
+    loop: 'redirect_invalid_loop',
+    reserved: 'redirect_invalid_reserved',
+    ...domainReasons,
+  },
 };
 
 /** The sentences for a refused field that has no reason, by code and field. */
