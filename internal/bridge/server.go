@@ -25,6 +25,7 @@ func (b *Bridge) Run(ctx context.Context) error {
 	if err := b.Reload(ctx); err != nil {
 		return err
 	}
+	b.startedOnce.Do(func() { close(b.started) })
 	t := time.NewTicker(SweepEvery)
 	defer t.Stop()
 	for {
@@ -69,14 +70,14 @@ func (b *Bridge) Reload(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	want := map[int]bool{} // port -> TLS
-	for _, r := range append(siteRules(sites), redirects...) {
-		if tlsOn, ok := want[r.port]; ok && tlsOn != r.tls {
-			return fmt.Errorf("port %d has rules with and without a certificate", r.port)
-		}
-		want[r.port] = r.tls
+	want, err := portModes(append(siteRules(sites), redirects...))
+	if err != nil {
+		return err
 	}
 	b.mu.Lock()
+	if _, ok := want[b.ChallengePort]; !ok && len(b.chal.holders) > 0 {
+		want[b.ChallengePort] = false // plain HTTP for Let's Encrypt only (D67)
+	}
 	b.load(sites, redirects)
 	b.shakes, b.certRows = buildShakes(b.routes, facts), facts.certs
 	b.olds = map[int64]OldPanel{}
@@ -104,13 +105,25 @@ func (b *Bridge) Reload(ctx context.Context) error {
 	return nil
 }
 
+// portModes is whether each port of rules serves TLS.
+func portModes(rules []rule) (map[int]bool, error) {
+	want := map[int]bool{}
+	for _, r := range rules {
+		if tlsOn, ok := want[r.port]; ok && tlsOn != r.tls {
+			return nil, fmt.Errorf("port %d has rules with and without a certificate", r.port)
+		}
+		want[r.port] = r.tls
+	}
+	return want, nil
+}
+
 // Status lists ports that could not listen, with the reason.
 func (b *Bridge) Status() map[int]string {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	out := make(map[int]string, len(b.errs))
 	for k, v := range b.errs {
-		out[k] = v
+		out[k] = v.Error()
 	}
 	return out
 }
@@ -125,7 +138,7 @@ func (b *Bridge) listen(port int, tlsOn bool) {
 		WriteTimeout: 60 * time.Second, MaxHeaderBytes: 16 << 10}
 	ln, err := net.Listen("tcp", ":"+strconv.Itoa(port))
 	if err != nil {
-		b.errs[port] = err.Error()
+		b.errs[port] = err
 		b.Log.Warn("bridge: listen", "port", port, "err", err)
 		return
 	}

@@ -38,6 +38,9 @@ func (b *Bridge) Handler(port int) http.Handler {
 // one lazy check against the old panel. Users in an inactive or deleted
 // batch get the plain 404 before the panel is asked (D22).
 func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
+	if port == b.ChallengePort && b.serveChallenge(w, r) {
+		return
+	}
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		w.Header().Set("Allow", "GET, HEAD")
 		answer(w, http.StatusMethodNotAllowed)
@@ -80,10 +83,7 @@ func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 // after its path. A malformed token, rest or tail on the winner is a 404;
 // no other rule is tried.
 func (b *Bridge) route(port int, r *http.Request) (request, bool) {
-	host := strings.ToLower(r.Host)
-	if h, _, err := net.SplitHostPort(host); err == nil {
-		host = h
-	}
+	host := requestHost(r)
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	rt, rest, ok := b.routes.match(port, host, r.URL.EscapedPath())

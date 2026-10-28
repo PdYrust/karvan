@@ -78,15 +78,19 @@ func (st *store) saveRedirect(ctx context.Context, d Redirect) (Redirect, error)
 	st.saveMu.Lock()
 	defer st.saveMu.Unlock()
 	in := ruleCert{self: RuleRef{Kind: RuleRedirect, ID: d.ID}, https: d.HTTPS}
+	storedFrom := ""
 	if d.ID != 0 {
 		stored, err := st.redirect(ctx, d.ID)
 		if err != nil {
 			return d, err
 		}
-		in.stored = stored.HTTPS
+		in.stored, storedFrom = stored.HTTPS, stored.FromPath
 	}
 	if err := d.normalize(); err != nil {
 		return d, err
+	}
+	if d.FromPath != storedFrom && reservedPath(d.FromPath) { // a stored one stays editable (D67)
+		return d, &RedirectInvalidError{Field: "fromPath", Reason: ReasonReserved}
 	}
 	in.port, in.domains = d.Port, d.Domains
 	id, err := st.derive(ctx, in)
@@ -110,6 +114,9 @@ func (st *store) saveRedirect(ctx context.Context, d Redirect) (Redirect, error)
 func (st *store) checkRedirect(ctx context.Context, d Redirect) error {
 	if st.panelPorts != nil && slices.Contains(st.panelPorts(), d.Port) {
 		return ErrPortTaken
+	}
+	if err := st.checkChallenge(d.Port, d.CertificateID != 0); err != nil {
+		return err
 	}
 	all, err := st.rules(ctx)
 	if err != nil {

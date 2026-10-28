@@ -29,6 +29,9 @@ type Deps struct {
 	// PanelPorts are the ports Karvan's own web panel listens on; no rule
 	// may take them.
 	PanelPorts func() []int
+	// ChallengePort is where Let's Encrypt asks for HTTP-01 tokens
+	// (acmeHttpPort, D67); 0 means 80.
+	ChallengePort int
 }
 
 // destTTL is how long an opened destination is reused before its ENV is
@@ -58,7 +61,8 @@ type Bridge struct {
 	dests    map[int64]*openDest // by panel id
 	olds     map[int64]OldPanel  // by site id
 	servers  map[int]*listener   // by port
-	errs     map[int]string      // ports that could not listen
+	errs     map[int]error       // ports that could not listen
+	chal     challenges          // the challenge port's holders and live tokens (D67)
 	wg       sync.WaitGroup
 	// bg is cancelled when Run ends, which stops token lists in the background.
 	bg     context.Context
@@ -69,6 +73,9 @@ type Bridge struct {
 
 	scanMu sync.Mutex // held while a certificate scan runs
 	scanT  scanTest
+
+	started     chan struct{} // closed once Run has filled the domains and listens
+	startedOnce sync.Once
 }
 
 type openDest struct {
@@ -90,11 +97,21 @@ func New(d Deps) *Bridge {
 	if d.OpenOld == nil {
 		d.OpenOld = openOldPanel
 	}
+	if d.ChallengePort == 0 {
+		d.ChallengePort = 80
+	}
 	bg, stop := context.WithCancel(context.Background())
-	return &Bridge{Deps: d, st: &store{db: d.DB, key: d.Key, now: d.Now, panelPorts: d.PanelPorts}, macKey: d.Key.Derive("bridge/token-mac"),
+	b := &Bridge{Deps: d, st: &store{db: d.DB, key: d.Key, now: d.Now, panelPorts: d.PanelPorts}, macKey: d.Key.Derive("bridge/token-mac"),
 		lim: newLimits(d.Now), neg: newNegative(d.Now), dests: map[int64]*openDest{}, olds: map[int64]OldPanel{},
-		servers: map[int]*listener{}, errs: map[int]string{}, bg: bg, stopBg: stop, ups: map[int64]*UploadProgress{}}
+		servers: map[int]*listener{}, errs: map[int]error{}, bg: bg, stopBg: stop, ups: map[int64]*UploadProgress{},
+		chal: challenges{holders: map[string]bool{}, tokens: map[string]challenge{}}, started: make(chan struct{})}
+	b.st.challengeOpen = b.challengeOpen
+	return b
 }
+
+// Started is closed once Run has adopted the certificates, filled the
+// domains and listened for the first time.
+func (b *Bridge) Started() <-chan struct{} { return b.started }
 
 // Sites lists every site.
 func (b *Bridge) Sites(ctx context.Context) ([]Site, error) { return b.st.Sites(ctx) }

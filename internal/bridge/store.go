@@ -35,6 +35,9 @@ type store struct {
 	key        *secret.Key
 	now        func() time.Time
 	panelPorts func() []int // Karvan's own web panel ports; nil: none known
+	// challengeOpen reports whether the Let's Encrypt challenge port is
+	// port and held open (D63, D67); nil: never.
+	challengeOpen func(port int) bool
 	// saveMu runs one save of rules, domains, their certificates and pins
 	// at a time, so no two can both pass their checks before either is
 	// written.
@@ -219,6 +222,9 @@ func (st *store) checkSave(ctx context.Context, s Site) error {
 	if st.panelPorts != nil && slices.Contains(st.panelPorts(), s.Port) {
 		return ErrPortTaken
 	}
+	if err := st.checkChallenge(s.Port, s.TLS()); err != nil {
+		return err
+	}
 	all, err := st.rules(ctx)
 	if err != nil {
 		return err
@@ -231,6 +237,15 @@ func (st *store) checkSave(ctx context.Context, s Site) error {
 		if err := r.conflict(o); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// checkChallenge refuses an HTTPS rule on the challenge port while it is
+// held open: the open listener is a plain user of the port (D63, D67).
+func (st *store) checkChallenge(port int, tls bool) error {
+	if tls && st.challengeOpen != nil && st.challengeOpen(port) {
+		return fmt.Errorf("%w: the Let's Encrypt challenge port is open", ErrPortMixed)
 	}
 	return nil
 }
