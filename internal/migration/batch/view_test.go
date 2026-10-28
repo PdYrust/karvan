@@ -83,6 +83,37 @@ func TestGetCountsAdminsAndRules(t *testing.T) {
 	}
 }
 
+// D34: each user counts under the admin row of its own source admin, and
+// a link is built with that admin.
+func TestGetSplitsAJobsAdmins(t *testing.T) {
+	s, db := open(t)
+	job(t, db, "a", "done", origin, "shop", 1000)
+	ids := map[string]int64{
+		"shop":  row(t, db, "admin", "a", "done", origin, dest, 900),
+		"north": row(t, db, "admin", "a", "merged", origin, dest, 900),
+		"u1":    row(t, db, "user", "a", "done", origin, dest, 900),
+		"u2":    row(t, db, "user", "a", "done", origin, dest, 900),
+		"u3":    row(t, db, "user", "a", "done", origin, dest, 900),
+	}
+	exec(t, db, "UPDATE ledger SET source_key = 'shop', source_username = 'shop', dest_username = 'shop', dest_id = 70 WHERE id = ?", ids["shop"])
+	exec(t, db, "UPDATE ledger SET source_key = 'north', source_username = 'north', dest_username = 'north_2', dest_id = 71 WHERE id = ?", ids["north"])
+	exec(t, db, "UPDATE ledger SET source_admin = 'north' WHERE id IN (?, ?)", ids["u1"], ids["u3"])
+	exec(t, db, "UPDATE ledger SET source_admin = 'shop' WHERE id = ?", ids["u2"])
+	b := ensure(t, s, "a", dest, Facts{})
+	got, err := s.Get(context.Background(), b)
+	if err != nil {
+		t.Fatal(err)
+	}
+	want := []Admin{{Source: "north", Dest: "north_2", Users: 2}, {Source: "shop", Dest: "shop", Users: 1}}
+	if !slices.Equal(got.Admins, want) {
+		t.Fatalf("admins %+v", got.Admins)
+	}
+	m, err := s.Member(context.Background(), b, ids["u3"])
+	if err != nil || m.AdminDestID != 71 {
+		t.Fatalf("member %+v %v", m, err)
+	}
+}
+
 func TestGetHidesDeletedAndUnknown(t *testing.T) {
 	s, ids := twoBatches(t)
 	exec(t, s.db, "UPDATE batches SET state = 'deleted' WHERE id = ?", ids["b"])

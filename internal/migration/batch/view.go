@@ -208,9 +208,11 @@ func scanBatch(rows *sql.Rows) (Batch, error) {
 	return b, nil
 }
 
-// adminOf is a user row's admin row: the admin its own job wrote or
-// merged into. A row's job may have none (a run that failed before).
-const adminOf = `LEFT JOIN ledger a ON a.id = (SELECT min(x.id) FROM ledger x WHERE x.kind = 'admin' AND x.job_id = l.job_id)
+// adminOf is a user row's admin row: the row its own job wrote or merged
+// into for the user's source admin (D34), or the job's only admin row for
+// a row from before. A row's job may have none (a run that failed before).
+const adminOf = `LEFT JOIN ledger a ON a.id = (SELECT min(x.id) FROM ledger x WHERE x.kind = 'admin' AND x.job_id = l.job_id
+		AND (l.source_admin = '' OR x.source_key = l.source_admin))
 	JOIN jobs j ON j.id = l.job_id`
 
 // details fills in a batch's admins, counts and rules.

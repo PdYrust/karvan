@@ -51,6 +51,7 @@ type Entry struct {
 	SourceCreated  time.Time
 	SourceUsername string
 	CredPrint      string // Fingerprint of the source credentials
+	SourceAdmin    string // a user's source admin (D34); '' on admin rows and rows from before
 	Dest           string
 	panel.Row                // destination id, username, created_at
 	Written        time.Time // when the row was added
@@ -70,7 +71,7 @@ func micro(t time.Time) int64 { return t.UTC().UnixMicro() }
 // Columns is the column list ScanEntry reads, over the ledger as table
 // l, so a query can join it with other tables.
 const Columns = "l.id, l.kind, l.job_id, l.state, l.chunk, l.source_origin, l.source_key, l.source_created, " +
-	"l.source_username, l.cred_fingerprint, l.dest, l.dest_id, l.dest_username, l.dest_created, l.created_at"
+	"l.source_username, l.cred_fingerprint, l.dest, l.dest_id, l.dest_username, l.dest_created, l.created_at, l.source_admin"
 
 // ScanEntry reads one row of the ledger's columns, then extra columns
 // that follow them in the row.
@@ -78,7 +79,7 @@ func ScanEntry(row interface{ Scan(...any) error }, extra ...any) (Entry, error)
 	var e Entry
 	var src, dst, written int64
 	dest := []any{&e.ID, &e.Kind, &e.JobID, &e.State, &e.Chunk, &e.SourceOrigin, &e.SourceKey, &src,
-		&e.SourceUsername, &e.CredPrint, &e.Dest, &e.Row.ID, &e.Username, &dst, &written}
+		&e.SourceUsername, &e.CredPrint, &e.Dest, &e.Row.ID, &e.Username, &dst, &written, &e.SourceAdmin}
 	if err := row.Scan(append(dest, extra...)...); err != nil {
 		return e, fmt.Errorf("read ledger: %w", err)
 	}
@@ -187,10 +188,10 @@ func (l *Ledger) Add(ctx context.Context, entries []Entry) ([]int64, error) {
 	ids := make([]int64, 0, len(entries))
 	for _, e := range entries {
 		res, err := tx.ExecContext(ctx, "INSERT INTO ledger (kind, job_id, state, chunk, source_origin, source_key, "+
-			"source_created, source_username, cred_fingerprint, dest, dest_id, dest_username, dest_created, created_at, updated_at) "+
-			"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+			"source_created, source_username, cred_fingerprint, dest, dest_id, dest_username, dest_created, created_at, updated_at, source_admin) "+
+			"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
 			e.Kind, e.JobID, e.State, e.Chunk, e.SourceOrigin, e.SourceKey, micro(e.SourceCreated), e.SourceUsername,
-			e.CredPrint, e.Dest, e.Row.ID, e.Username, micro(e.CreatedAt), now, now)
+			e.CredPrint, e.Dest, e.Row.ID, e.Username, micro(e.CreatedAt), now, now, e.SourceAdmin)
 		if err != nil {
 			if strings.Contains(err.Error(), "UNIQUE") {
 				return nil, fmt.Errorf("%w: %s %s", ErrClaimed, e.Kind, e.SourceKey)
