@@ -7,10 +7,13 @@ import (
 	"slices"
 	"time"
 
+	"golang.org/x/crypto/bcrypt"
+
 	"github.com/PdYrust/karvan/internal/migration/engine"
 	"github.com/PdYrust/karvan/internal/migration/ledger"
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
+	"github.com/PdYrust/karvan/internal/panel/pasarguard"
 	"github.com/PdYrust/karvan/internal/safemode"
 )
 
@@ -51,14 +54,14 @@ func (s *Service) backup(ctx context.Context, j *Job, p *prepared) error {
 	return err
 }
 
-// write creates the admin and the users, chunk by chunk, with the ledger
+// write creates the admins and the users, chunk by chunk, with the ledger
 // protocol of D32.
 func (s *Service) write(ctx context.Context, j *Job, p *prepared, hash string, rep *Report) error {
 	return s.stage(j, rep, StageExecute, func() error {
 		if err := s.adopt(ctx, j, p); err != nil {
 			return err
 		}
-		if err := s.writeAdmin(ctx, j, p, hash, rep); err != nil {
+		if err := s.writeAdmins(ctx, j, p, hash, rep); err != nil {
 			return err
 		}
 		items := movable(j.result)
@@ -92,7 +95,7 @@ func movable(r *engine.Result) []*engine.Item {
 func (s *Service) entry(j *Job, p *prepared, it *engine.Item, state string, chunk int) ledger.Entry {
 	return ledger.Entry{Kind: ledger.KindUser, JobID: j.ID, State: state, Chunk: chunk, SourceOrigin: j.origin,
 		SourceKey: it.Key, SourceCreated: it.Source.CreatedAt, SourceUsername: it.Source.Username,
-		CredPrint: ledger.Fingerprint(it.Source.Credentials), Dest: p.dest,
+		CredPrint: ledger.Fingerprint(it.Source.Credentials), Dest: p.dest, SourceAdmin: it.Admin,
 		Row: panel.Row{Username: it.User.Username, CreatedAt: paneldb.Stored(p.db.Server().Dialect, it.User.CreatedAt)}}
 }
 
@@ -137,32 +140,91 @@ func (s *Service) supersede(ctx context.Context, j *Job, p *prepared, destIDs []
 	return s.ledger.Set(ctx, ledger.Superseded, ids)
 }
 
-// writeAdmin creates the admin in chunk 0, or records the merge.
-func (s *Service) writeAdmin(ctx context.Context, j *Job, p *prepared, hash string, rep *Report) error {
-	out := *j.result.Login()
-	admin := j.snapshot.Admin
-	admin.Username = out.Username
-	e := ledger.Entry{Kind: ledger.KindAdmin, JobID: j.ID, SourceOrigin: j.origin, SourceKey: j.snapshot.Admin.Username,
-		SourceCreated: zeroTime, SourceUsername: j.snapshot.Admin.Username, Dest: p.dest}
-	if out.Merge != nil {
-		p.adminID, rep.Admin.Merged, rep.Admin.ID = out.Merge.ID, true, out.Merge.ID
-		e.State, e.Row = ledger.Merged, panel.Row{ID: out.Merge.ID, Username: out.Merge.Username}
-		_, err := s.ledger.Add(ctx, []ledger.Entry{e})
-		return err
-	}
+// newAdmin is an admin the job creates, with its password hash.
+type newAdmin struct {
+	out   *engine.AdminOutcome
+	hash  string
+	entry ledger.Entry
+}
+
+// writeAdmins records the merges and creates every other admin that
+// moves in chunk 0, one ledger row each (D34). The login's admin gets
+// hash; every other one a generated password, kept for passwords.csv.
+func (s *Service) writeAdmins(ctx context.Context, j *Job, p *prepared, hash string, rep *Report) error {
+	p.admins = map[string]int64{}
+	var merged []ledger.Entry
+	var created []newAdmin
 	now := s.now().UTC()
-	e.State, e.Username, e.CreatedAt = ledger.Pending, admin.Username, paneldb.Stored(p.db.Server().Dialect, now)
+	for i := range j.result.Admins {
+		out := &j.result.Admins[i]
+		if !out.Moves() {
+			continue
+		}
+		e := ledger.Entry{Kind: ledger.KindAdmin, JobID: j.ID, SourceOrigin: j.origin, SourceKey: out.Source.Username,
+			SourceCreated: zeroTime, SourceUsername: out.Source.Username, Dest: p.dest}
+		if out.Merge != nil {
+			p.admins[out.Source.Username] = out.Merge.ID
+			rep.wroteAdmin(out.Source.Username, out.Merge.ID, true)
+			e.State, e.Row = ledger.Merged, panel.Row{ID: out.Merge.ID, Username: out.Merge.Username}
+			merged = append(merged, e)
+			continue
+		}
+		h, err := s.adminHash(j, out, hash)
+		if err != nil {
+			return err
+		}
+		e.State, e.Username, e.CreatedAt = ledger.Pending, out.Username, paneldb.Stored(p.db.Server().Dialect, now)
+		created = append(created, newAdmin{out: out, hash: h, entry: e})
+	}
+	if len(merged) > 0 {
+		if _, err := s.ledger.Add(ctx, merged); err != nil {
+			return err
+		}
+	}
+	return s.createAdmins(ctx, j, p, created, now, rep)
+}
+
+// adminHash is the password hash of an admin the job creates: hash for
+// the login's, a generated password's for any other (D34).
+func (s *Service) adminHash(j *Job, out *engine.AdminOutcome, hash string) (string, error) {
+	if out.IsLogin {
+		return hash, nil
+	}
+	pw, err := pasarguard.GeneratePassword(out.Username)
+	if err != nil {
+		return "", err
+	}
+	h, err := bcrypt.GenerateFromPassword([]byte(pw), bcryptCost)
+	if err != nil {
+		return "", err
+	}
+	j.passwords[out.Username] = pw
+	return string(h), nil
+}
+
+// createAdmins writes the new admins and their ledger rows in one chunk.
+func (s *Service) createAdmins(ctx context.Context, j *Job, p *prepared, created []newAdmin, now time.Time, rep *Report) error {
+	if len(created) == 0 {
+		return nil
+	}
 	var ids []int64
+	entries := make([]ledger.Entry, len(created))
 	err := p.db.Chunk(ctx, func(x paneldb.Execer) error {
 		if err := p.writer.Prepare(ctx, x); err != nil {
 			return err
 		}
-		id, err := p.writer.InsertAdmin(ctx, x, admin, hash, out.RoleID, now)
-		if err != nil {
-			return err
+		for i, c := range created {
+			admin := c.out.Source
+			admin.Username = c.out.Username
+			id, err := p.writer.InsertAdmin(ctx, x, admin, c.hash, c.out.RoleID, now)
+			if err != nil {
+				return err
+			}
+			entries[i] = c.entry
+			entries[i].Row.ID = id
 		}
-		e.Row.ID = id
-		if ids, err = s.ledger.Add(ctx, []ledger.Entry{e}); err != nil {
+		var err error
+		if ids, err = s.ledger.Add(ctx, entries); err != nil {
 			return err
 		}
 		p.wrote = true
@@ -171,7 +233,10 @@ func (s *Service) writeAdmin(ctx context.Context, j *Job, p *prepared, hash stri
 	if err != nil {
 		return s.afterFailedChunk(ctx, j, p, ids, err)
 	}
-	p.adminID, p.created, rep.Admin.ID = e.Row.ID, true, e.Row.ID
+	for i, c := range created {
+		p.admins[c.out.Source.Username] = entries[i].Row.ID
+		rep.wroteAdmin(c.out.Source.Username, entries[i].Row.ID, false)
+	}
 	return s.ledger.Set(ctx, ledger.Done, ids)
 }
 
@@ -184,7 +249,7 @@ func (s *Service) writeChunk(ctx context.Context, j *Job, p *prepared, n int, it
 	entries := make([]ledger.Entry, len(items))
 	err := p.db.Chunk(ctx, func(x paneldb.Execer) error {
 		for i, it := range items {
-			id, err := p.writer.InsertUser(ctx, x, it, p.adminID, usageLog(it.User, j.plan.ResetSchedule, now), now)
+			id, err := p.writer.InsertUser(ctx, x, it, p.admins[it.Admin], usageLog(it.User, j.plan.ResetSchedule, now), now)
 			if err != nil {
 				return err
 			}

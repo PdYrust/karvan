@@ -43,7 +43,8 @@ type Report struct {
 		Merged   bool   `json:"merged"`
 		RoleID   int64  `json:"roleId,omitempty"`
 		Password string `json:"password,omitempty"` // kept, typed or generated
-	} `json:"admin"`
+	} `json:"admin"` // the login's admin, as in Admins
+	Admins      []AdminLine       `json:"admins"` // every admin that moved, the login's first (D34)
 	Counts      Counts            `json:"counts"`
 	Users       []UserLine        `json:"users"`
 	Conflicts   []engine.Conflict `json:"conflicts,omitempty"`
@@ -75,9 +76,22 @@ type Counts struct {
 	Verified       int `json:"verified"`
 }
 
+// AdminLine is where one source admin went (D34).
+type AdminLine struct {
+	Source   string `json:"source"`   // its name on the old panel
+	Username string `json:"username"` // its name on the destination
+	IsLogin  bool   `json:"isLogin"`
+	ID       int64  `json:"id,omitempty"`
+	Merged   bool   `json:"merged"`
+	RoleID   int64  `json:"roleId,omitempty"`
+	Password string `json:"password,omitempty"` // kept, typed or generated; none on a merge
+	Users    int    `json:"users"`              // its users the run moves
+}
+
 // UserLine is one user's outcome.
 type UserLine struct {
 	Key            string   `json:"key"`
+	Admin          string   `json:"admin"` // its source admin
 	SourceUsername string   `json:"sourceUsername"`
 	Username       string   `json:"username"`
 	Moved          bool     `json:"moved"`
@@ -122,8 +136,9 @@ func newReport(j *Job, start time.Time) *Report {
 	}
 	r.Conflicts = j.result.Conflicts
 	r.Admin.Username, r.Admin.RoleID, r.Admin.Password = j.result.Login().Username, j.result.Login().RoleID, j.passwordFrom
+	r.Admins = reportAdmins(j)
 	for _, it := range j.result.Items {
-		line := UserLine{Key: it.Key, SourceUsername: it.Source.Username, Username: it.User.Username, Applied: it.Applied,
+		line := UserLine{Key: it.Key, Admin: it.Admin, SourceUsername: it.Source.Username, Username: it.User.Username, Applied: it.Applied,
 			ChangesConfig: it.ChangesConfig, ChangesLink: it.ChangesLink}
 		for _, c := range it.Resolved {
 			line.Fixed = append(line.Fixed, c.Type+":"+c.Fix)
@@ -147,6 +162,72 @@ func newReport(j *Job, start time.Time) *Report {
 		}
 	}
 	return r
+}
+
+// wroteAdmin records where source admin src went: its destination id,
+// and whether that admin was there already.
+func (r *Report) wroteAdmin(src string, id int64, merged bool) {
+	for i := range r.Admins {
+		if a := &r.Admins[i]; a.Source == src {
+			a.ID, a.Merged = id, merged
+			if a.IsLogin {
+				r.Admin.ID, r.Admin.Merged = id, merged
+			}
+		}
+	}
+}
+
+// adminID is the destination id of a user's admin. A report from before
+// several admins has one admin, its Admin.
+func (r *Report) adminID(src string) int64 {
+	for _, a := range r.Admins {
+		if a.Source == src {
+			return a.ID
+		}
+	}
+	return r.Admin.ID
+}
+
+// addLinks mints a new link for every moved user that has none, with
+// its own admin's link settings.
+func (r *Report) addLinks(ctx context.Context, d *dest.Panel, now time.Time) error {
+	byAdmin := map[int64]dest.Links{}
+	for i := range r.Users {
+		u := &r.Users[i]
+		if !u.Moved || u.NewLink != "" {
+			continue
+		}
+		id := r.adminID(u.Admin)
+		l, ok := byAdmin[id]
+		if !ok {
+			var err error
+			if l, err = d.Links(ctx, id); err != nil {
+				return err
+			}
+			byAdmin[id] = l
+		}
+		u.NewLink = l.Link(u.DestID, u.Username, now)
+	}
+	return nil
+}
+
+// reportAdmins lists the admins the run writes; IDs come as they are.
+func reportAdmins(j *Job) []AdminLine {
+	out := []AdminLine{}
+	for _, a := range j.result.Admins {
+		if !a.Moves() {
+			continue
+		}
+		line := AdminLine{Source: a.Source.Username, Username: a.Username, IsLogin: a.IsLogin, RoleID: a.RoleID, Users: a.Users}
+		switch {
+		case a.IsLogin:
+			line.Password = j.passwordFrom
+		case a.Merge == nil:
+			line.Password = PasswordGenerated
+		}
+		out = append(out, line)
+	}
+	return out
 }
 
 func (r *Report) stage(name string, start time.Time, ok bool, now time.Time) {
@@ -212,16 +293,10 @@ func (s *Service) WithLinks(ctx context.Context, jobID string) (*Report, error) 
 	if err != nil {
 		return nil, err
 	}
-	l, err := d.Links(ctx, rep.Admin.ID)
-	if err != nil {
-		return nil, err
-	}
 	out := *rep
 	out.Users = slices.Clone(rep.Users)
-	for i := range out.Users {
-		if u := &out.Users[i]; u.Moved && u.NewLink == "" {
-			u.NewLink = l.Link(u.DestID, u.Username, s.now())
-		}
+	if err := out.addLinks(ctx, d, s.now()); err != nil {
+		return nil, err
 	}
 	return &out, nil
 }

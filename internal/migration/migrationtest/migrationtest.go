@@ -125,6 +125,16 @@ type Source struct {
 // NewSource starts a fake old panel of kind with n users.
 func NewSource(t *testing.T, kind panel.Kind, n int) Source {
 	t.Helper()
+	return newSource(kind, n, false)
+}
+
+// NewSudoMarzban is NewSource for a Marzban whose login is a sudo admin.
+func NewSudoMarzban(t *testing.T, n int) Source {
+	t.Helper()
+	return newSource(panel.Marzban, n, true)
+}
+
+func newSource(kind panel.Kind, n int, sudo bool) Source {
 	users := make([]map[string]any, n)
 	if kind == panel.Marzban {
 		for i := range users {
@@ -139,7 +149,7 @@ func NewSource(t *testing.T, kind panel.Kind, n int) Source {
 					"shadowsocks": []string{"Shadowsocks TCP"}},
 			})
 		}
-		f := fakepanel.NewMarzban(fakepanel.MarzbanAdmin{Username: "reseller", Password: "pw"}, users, fakepanel.Faults{})
+		f := fakepanel.NewMarzban(fakepanel.MarzbanAdmin{Username: "reseller", Password: "pw", Sudo: sudo}, users, fakepanel.Faults{})
 		return Source{URL: f.URL, Kind: kind, Username: "reseller", Password: "pw", Close: f.Close, Mutate: f.Mutate, Subscribe: f.Subscribe}
 	}
 	for i := range users {

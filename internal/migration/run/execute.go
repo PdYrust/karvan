@@ -237,32 +237,25 @@ func (s *Service) backToChecked(j *Job) {
 	s.emit(j, "", EventDone, map[string]any{"state": StateChecked})
 }
 
-// links adds each moved user's new subscription link to the report. A
-// failure here only leaves the links out; the move itself is done.
+// links adds each moved user's new subscription link to the report, as
+// its own admin's link (D34). A failure here only leaves the links out;
+// the move itself is done.
 func (s *Service) links(ctx context.Context, j *Job, p *prepared, rep *Report) {
-	l, err := p.panel.Links(ctx, p.adminID)
-	if err != nil {
+	if err := rep.addLinks(ctx, p.panel, s.now()); err != nil {
 		s.emit(j, StageVerify, EventLog, map[string]any{"code": "links_unavailable"})
-		return
-	}
-	for i := range rep.Users {
-		if u := &rep.Users[i]; u.Moved {
-			u.NewLink = l.Link(u.DestID, u.Username, s.now())
-		}
 	}
 }
 
 // prepared holds what the write stages share.
 type prepared struct {
-	panel   *dest.Panel
-	db      *paneldb.Writer
-	target  paneldb.Target
-	writer  dest.Writer
-	dest    string
-	unlock  func()
-	wrote   bool
-	adminID int64
-	created bool // the job created the admin (not a merge)
+	panel  *dest.Panel
+	db     *paneldb.Writer
+	target paneldb.Target
+	writer dest.Writer
+	dest   string
+	unlock func()
+	wrote  bool
+	admins map[string]int64 // destination admin id by source admin
 }
 
 func (p *prepared) release() {

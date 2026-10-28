@@ -70,10 +70,10 @@ func (s *Service) compensate(ctx context.Context, j *Job, p *prepared, rep *Repo
 	rows = slices.DeleteFunc(rows, func(e ledger.Entry) bool { return held[e.ID] })
 	chunks := map[int][]ledger.Entry{}
 	var order []int
-	var admin *ledger.Entry
-	for i, e := range rows {
+	var admins []ledger.Entry
+	for _, e := range rows {
 		if e.Kind == ledger.KindAdmin {
-			admin = &rows[i]
+			admins = append(admins, e)
 			continue
 		}
 		if _, ok := chunks[e.Chunk]; !ok {
@@ -84,10 +84,7 @@ func (s *Service) compensate(ctx context.Context, j *Job, p *prepared, rep *Repo
 	slices.Sort(order)
 	slices.Reverse(order)
 	// Progress counts user rows handled: removed, or found gone already.
-	total, handled := len(rows), 0
-	if admin != nil {
-		total--
-	}
+	total, handled := len(rows)-len(admins), 0
 	s.emit(j, StageUndo, EventProgress, map[string]any{"done": 0, "total": total})
 	for _, n := range order {
 		if err := s.removeChunk(ctx, p, chunks[n], rep); err != nil {
@@ -96,8 +93,11 @@ func (s *Service) compensate(ctx context.Context, j *Job, p *prepared, rep *Repo
 		handled += len(chunks[n])
 		s.emit(j, StageUndo, EventProgress, map[string]any{"done": handled, "total": total})
 	}
-	if admin != nil {
-		return s.removeAdmin(ctx, p, *admin)
+	// Each created admin goes once it owns nothing else (D34).
+	for _, a := range admins {
+		if err := s.removeAdmin(ctx, p, a); err != nil {
+			return err
+		}
 	}
 	return nil
 }

@@ -58,6 +58,8 @@ func TestNoSecretLeavesTheRun(t *testing.T) {
 	}
 	m.runs.Wait()
 	secrets = append(secrets, csvColumn(t, m.do(http.MethodGet, api+"/migrations/"+id+"/links.csv", nil).body, 2, true)...)
+	// The second admin's generated password (D34), from its one download.
+	secrets = append(secrets, csvColumn(t, m.do(http.MethodPost, api+"/migrations/"+id+"/passwords.csv", nil).body, 1, false)...)
 	secrets = append(secrets, uploadOldToken(t, m))
 	if len(secrets) < 10 {
 		t.Fatalf("only %d secrets to look for", len(secrets))
@@ -85,7 +87,7 @@ func TestNoSecretLeavesTheRun(t *testing.T) {
 }
 
 // secretSource is an old Marzban whose password and user secrets are long
-// enough to find anywhere.
+// enough to find anywhere. Its last user belongs to a second admin.
 func secretSource(t *testing.T, secrets []string) (migrationtest.Source, []string) {
 	t.Helper()
 	pw := "old-panel-login-password-0123456789"
@@ -97,6 +99,9 @@ func secretSource(t *testing.T, secrets []string) (migrationtest.Source, []strin
 			"vless": map[string]any{"id": vless, "flow": ""}, "vmess": map[string]any{"id": vmess},
 			"trojan": map[string]any{"password": trojan, "flow": ""}, "shadowsocks": map[string]any{"password": ss, "method": "aes-256-gcm"},
 		}, "inbounds": map[string]any{"shadowsocks": []string{"Shadowsocks TCP"}}}))
+		if i == 2 {
+			users[i]["admin"] = map[string]any{"username": "north", "is_sudo": false}
+		}
 		secrets = append(secrets, vless, vmess, trojan, ss)
 	}
 	f := fakepanel.NewMarzban(fakepanel.MarzbanAdmin{Username: "reseller", Password: pw}, users, fakepanel.Faults{})

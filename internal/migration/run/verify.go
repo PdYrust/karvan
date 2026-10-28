@@ -54,7 +54,7 @@ func (s *Service) verify(ctx context.Context, j *Job, p *prepared, rep *Report) 
 					continue
 				}
 				rb, found := back[e.Row.ID]
-				if !matches(byKey[e.SourceKey], rb, found, j.facts.Kind, p.adminID, p.db.Server().Dialect) {
+				if !matches(byKey[e.SourceKey], rb, found, j.facts.Kind, p.admins[e.SourceAdmin], p.db.Server().Dialect) {
 					bad = append(bad, e.SourceKey)
 				}
 			}

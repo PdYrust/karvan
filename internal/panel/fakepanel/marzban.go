@@ -18,6 +18,7 @@ type Marzban struct {
 type MarzbanAdmin struct {
 	Username, Password string
 	UsersUsage         int64
+	Sudo               bool
 }
 
 // NewMarzban serves admin and users (built with MarzbanUser) until Close.
@@ -28,7 +29,7 @@ func NewMarzban(admin MarzbanAdmin, users []map[string]any, f Faults) *Marzban {
 		"POST /api/admin/token": p.login,
 		"GET /api/admin": func(w http.ResponseWriter, r *http.Request) {
 			if p.gate(w, r) {
-				writeJSON(w, http.StatusOK, map[string]any{"username": admin.Username, "is_sudo": false,
+				writeJSON(w, http.StatusOK, map[string]any{"username": admin.Username, "is_sudo": admin.Sudo,
 					"telegram_id": nil, "discord_webhook": nil, "users_usage": admin.UsersUsage})
 			}
 		},
