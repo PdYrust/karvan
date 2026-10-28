@@ -56,8 +56,9 @@ func TestRedirectRoutes(t *testing.T) {
 	t.Cleanup(func() { _ = m.bridge.DeleteRedirect(t.Context(), d.ID) })
 	m.wantRedirects(t, d.ID)
 	path := list + "/" + strconv.FormatInt(d.ID, 10)
-	cert := m.addCertificate(t, "tls")
-	res = m.do(http.MethodPatch, path, with(body, "name", "go", "toUrl", "https://other.example.com/x", "certificateId", cert))
+	cert := m.certify(t, "tls.example.com")
+	res = m.do(http.MethodPatch, path, with(body, "name", "go", "toUrl", "https://other.example.com/x", "domains", []string{"tls.example.com"},
+		"https", true))
 	res.json(t, &d)
 	if res.status != http.StatusOK || d.ToURL != "https://other.example.com/x" || d.Certificate == nil || d.Certificate.ID != cert {
 		t.Fatalf("change: %d %s", res.status, res.body)
@@ -120,7 +121,10 @@ func TestRedirectErrorsAreCodes(t *testing.T) {
 	m.redirectFails(t, http.MethodPost, list, with(first, "x", 1), 400, "bad_request", "", "")
 	m.redirectFails(t, http.MethodPost, list, with(first, "fromPath", "/other"), 409, "name_taken", "", "")
 	m.redirectFails(t, http.MethodPost, list, with(first, "name", "x"), 409, "site_overlap", "", "")
-	m.redirectFails(t, http.MethodPost, list, with(first, "name", "x", "fromPath", "/t", "certificateId", m.addCertificate(t, "tls")),
+	m.certify(t, "tls.example.com")
+	m.redirectFails(t, http.MethodPost, list, with(first, "name", "x", "fromPath", "/t", "domains", []string{"tls.example.com"}),
 		409, "port_mixed", "", "")
+	m.redirectFails(t, http.MethodPost, list, with(first, "name", "x", "domains", []string{"new.example.org"}),
+		400, "redirect_invalid", "domains", "not_registered")
 	m.redirectFails(t, http.MethodPost, list, with(first, "name", "x", "port", testPanelPort), 409, "port_taken", "", "")
 }

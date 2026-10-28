@@ -139,6 +139,13 @@ func newAdoptCase(t *testing.T) *adoptCase {
 	} {
 		e.seedOldSite(s)
 	}
+	// 0012 leaves every domain from before waiting for the fill.
+	for _, q := range []string{"INSERT INTO domains (name, created_at, updated_at) SELECT DISTINCT j.value, 1, 1 FROM legacy_sites s, " +
+		"json_each(s.domains) j WHERE true ON CONFLICT (name) DO NOTHING", "UPDATE domains SET cert_filled = 0"} {
+		if _, err := e.b.DB.Exec(q); err != nil {
+			t.Fatal(err)
+		}
+	}
 	c.names = map[int][]string{
 		c.tlsA: {"a.example.com", "p.example.com", "b.example.com", "", "unknown.example.org"},
 		c.tlsB: {"x.example.net", "y.example.net", "", "other.example.org"},
@@ -292,8 +299,7 @@ func TestAdoptionFailureLeavesTheSite(t *testing.T) {
 		t.Fatal(err)
 	}
 	v := e.b.View(context.Background(), s)
-	// Both sites serve p.example.com on one port with other certificates (D53).
-	if !slices.Equal(v.Warnings, []string{WarnNotAdopted, WarnCertConflict}) || v.Cert == nil || !slices.Contains(v.Cert.Warnings, WarnKeyMismatch) {
+	if !slices.Equal(v.Warnings, []string{WarnNotAdopted}) || v.Cert == nil || !slices.Contains(v.Cert.Warnings, WarnKeyMismatch) {
 		t.Fatalf("view warnings %v, cert %+v", v.Warnings, v.Cert)
 	}
 }
@@ -309,7 +315,8 @@ func TestAdoptionRunsOnce(t *testing.T) {
 	if got := e.strs("SELECT id || ' ' || name || ' ' || updated_at FROM certificates ORDER BY id"); !slices.Equal(got, first) {
 		t.Fatalf("second start: %v, want %v", got, first)
 	}
-	if v := e.b.View(context.Background(), mustSite(t, e, 10)); len(v.Warnings) != 0 || v.Cert == nil {
+	// The env's clock is before the test certificates, so only their own warning shows.
+	if v := e.b.View(context.Background(), mustSite(t, e, 10)); !slices.Equal(v.Warnings, []string{WarnNotYetValid}) || v.Cert == nil {
 		t.Fatalf("adopted view: warnings %v, cert %+v", v.Warnings, v.Cert)
 	}
 }

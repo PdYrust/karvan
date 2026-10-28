@@ -1,13 +1,11 @@
 package bridge
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
 	"log/slog"
 	"slices"
-	"strings"
 	"testing"
 )
 
@@ -24,7 +22,7 @@ func (e *env) addRedirectOn(name, domains string, port int, fromPath, match stri
 // saveAs saves a copy of the env's site with edit applied.
 func (e *env) saveAs(name string, edit func(s *Site)) (Site, error) {
 	s := e.site
-	s.ID, s.Name = 0, name
+	s.ID, s.Name, s.HTTPS = 0, name, nil // a new rule, as the web panel sends it
 	edit(&s)
 	return e.b.st.Save(context.Background(), s)
 }
@@ -33,6 +31,9 @@ func (e *env) saveAs(name string, edit func(s *Site)) (Site, error) {
 // against panel and redirect rules alike.
 func TestSaveRefusesASecondRuleForTheSameRequests(t *testing.T) {
 	e := newEnv(t)
+	for _, d := range []string{"z.example.com", "*.example.com", "r.example.com", "x.example.com"} {
+		e.addDomain(d)
+	}
 	e.addRedirectOn("prefix", `["r.example.com"]`, e.port, "/sub", "prefix", nil)
 	e.addRedirectOn("exact", `["x.example.com"]`, e.port, "/sub", "exact", nil)
 	for _, c := range []struct {
@@ -58,43 +59,37 @@ func TestSaveRefusesASecondRuleForTheSameRequests(t *testing.T) {
 	}
 }
 
-// Rules on one port that one name can reach, and rules with no domains on
-// one port, must use one certificate (D53).
-func TestSaveRefusesTwoCertificatesForOneName(t *testing.T) {
+// Rules on one port that one name can reach may take other certificates
+// now: each domain has its own, and an exact name beats a wildcard (D53).
+func TestSaveTakesOtherCertificatesForOneName(t *testing.T) {
 	e := newCertEnv(t)
-	cert, key := longCert(t, "a.example.com")
-	c1 := e.addCert(CertificateInput{Name: "one", CertPEM: cert, KeyPEM: key})
-	c2 := e.addCert(CertificateInput{Name: "two", CertPEM: cert, KeyPEM: key})
-	const port = 7443
-	e.addRedirectOn("q", `["q.example.com"]`, port, "/q", "exact", c1.ID)
+	t.Cleanup(e.b.stopAll)
+	a, aKey := longCert(t, "a.example.com")
+	w, wKey := longCert(t, "*.example.com")
+	e.addDomainWith("a.example.com", CertChoice{Kind: ChoicePasted, CertPEM: a, KeyPEM: aKey})
+	e.addDomainWith("*.example.com", CertChoice{Kind: ChoicePasted, CertPEM: w, KeyPEM: wKey})
+	port := freePort(t)
 	for _, c := range []struct {
 		name    string
 		domains []string
-		cert    int64
-		want    error
-	}{
-		{"a", []string{"a.example.com"}, c1.ID, nil},
-		{"wild other", []string{"*.example.com"}, c2.ID, ErrCertConflict},
-		{"wild same", []string{"*.example.com"}, c1.ID, nil},
-		{"far", []string{"z.example.org"}, c2.ID, nil},
-		{"deeper", []string{"*.z.example.org"}, c1.ID, nil}, // a wildcard and a name it does not cover
-		{"all", nil, c1.ID, nil},
-		{"all other", nil, c2.ID, ErrCertConflict},
-		{"all same", nil, c1.ID, nil},
-		{"meets the redirect", []string{"q.example.com"}, c2.ID, ErrCertConflict},
-	} {
-		_, err := e.saveAs(c.name, func(s *Site) {
-			s.Domains, s.OldPath, s.Port, s.CertificateID = c.domains, strings.ReplaceAll(c.name, " ", "-"), port, c.cert
-		})
-		if !errors.Is(err, c.want) || c.want == nil && err != nil {
-			t.Errorf("%s: %v, want %v", c.name, err, c.want)
+	}{{"a", []string{"a.example.com"}}, {"wild", []string{"*.example.com"}}} {
+		if _, err := e.saveAs(c.name, func(s *Site) { s.Domains, s.OldPath, s.Port = c.domains, c.name, port }); err != nil {
+			t.Fatalf("%s: %v", c.name, err)
 		}
+	}
+	if err := e.b.Reload(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	exact, wild := handshake(t, port, "a.example.com"), handshake(t, port, "b.example.com")
+	if exact == wild || exact == "error" || wild == "error" {
+		t.Fatalf("handshakes %s %s", exact, wild)
 	}
 }
 
 // Saves that race for the same requests store one rule.
 func TestRacingSavesStoreOneRule(t *testing.T) {
 	e := newEnv(t)
+	e.addDomain("race.example.com")
 	errs := make(chan error, 8)
 	for i := range 8 {
 		go func() {
@@ -130,9 +125,10 @@ func TestSaveRefusesKarvansPanelPort(t *testing.T) {
 	}
 }
 
-// Rows stored before D53 that break it keep today's handshake pick, are
-// logged at Reload and carry cert_conflict on their cards.
-func TestStoredConflictIsServedAsBeforeAndFlagged(t *testing.T) {
+// Rows stored before the move whose rules on one port use other
+// certificates keep today's handshake pick, and their cards no longer
+// carry cert_conflict: only a pin does (D50).
+func TestStoredRulesWithOtherCertificatesServeAsBefore(t *testing.T) {
 	e := newCertEnv(t)
 	port := freePort(t)
 	first, firstKey := longCert(t, "first.example.com")
@@ -142,26 +138,18 @@ func TestStoredConflictIsServedAsBeforeAndFlagged(t *testing.T) {
 	before := e.restartWithoutAdoption()
 	want := handshake(t, port, "")
 	before.stopAll()
-	var buf bytes.Buffer
-	b := e.restart(slog.New(slog.NewTextHandler(&buf, nil)))
+	b := e.restart(slog.New(slog.DiscardHandler))
 	t.Cleanup(b.stopAll)
 	if got := handshake(t, port, "any.example.net"); got != want || want == "error" {
 		t.Fatalf("handshake %s, before %s", got, want)
-	}
-	if !strings.Contains(buf.String(), `level=WARN msg="bridge: rules on one port use different certificates" port=`) ||
-		!strings.Contains(buf.String(), "rule=first other=second") {
-		t.Errorf("no Warn line in %s", buf.String())
 	}
 	views, err := b.Views(context.Background())
 	if err != nil {
 		t.Fatal(err)
 	}
 	for _, v := range views {
-		if v.ID >= 30 && !slices.Contains(v.Warnings, WarnCertConflict) {
+		if slices.Contains(v.Warnings, WarnCertConflict) {
 			t.Errorf("%s: warnings %v", v.Name, v.Warnings)
 		}
-	}
-	if v := views[0]; v.ID != e.site.ID || slices.Contains(v.Warnings, WarnCertConflict) {
-		t.Errorf("a rule on another port: %+v", v.Warnings)
 	}
 }

@@ -73,19 +73,23 @@ func with(s map[string]any, kv ...any) map[string]any {
 	return out
 }
 
-// addCertificate stores a pasted certificate for name and returns its id.
-func (m *migrationEnv) addCertificate(t *testing.T, name string) int64 {
+// certify registers domain with a pasted certificate and returns the
+// certificate's id.
+func (m *migrationEnv) certify(t *testing.T, domain string) int64 {
 	t.Helper()
-	cert, key := testCert(t, "old.example.com")
-	res := m.do(http.MethodPost, api+"/certificates", map[string]any{"name": name, "certPem": cert, "keyPem": key})
-	var c struct {
-		ID int64 `json:"id"`
+	cert, key := testCert(t, domain)
+	res := m.do(http.MethodPost, api+"/domains", map[string]any{"name": domain,
+		"certificate": map[string]any{"kind": "pasted", "certPem": cert, "keyPem": key}})
+	var d struct {
+		Certificate struct {
+			ID int64 `json:"id"`
+		} `json:"certificate"`
 	}
-	res.json(t, &c)
-	if res.status != http.StatusCreated || c.ID == 0 {
-		t.Fatalf("add certificate: %d %s", res.status, res.body)
+	res.json(t, &d)
+	if res.status != http.StatusCreated || d.Certificate.ID == 0 {
+		t.Fatalf("certify %s: %d %s", domain, res.status, res.body)
 	}
-	return c.ID
+	return d.Certificate.ID
 }
 
 // A wrong site names its field as a code; a taken name, a port that
@@ -107,16 +111,18 @@ func TestSiteErrorsAreCodes(t *testing.T) {
 		m.siteFails(t, http.MethodPost, sites, with(first, "name", "x", field, "/c.pem"), 400, "bad_request", "")
 	}
 	m.siteFails(t, http.MethodPost, sites, with(first, "oldPath", "other"), 409, "name_taken", "")
-	m.siteFails(t, http.MethodPost, sites, with(first, "name", "tls", "oldPath", "other", "certificateId", m.addCertificate(t, "tls")),
+	m.certify(t, "tls.example.com")
+	m.siteFails(t, http.MethodPost, sites, with(first, "name", "tls", "oldPath", "other", "domains", []string{"tls.example.com"}),
 		409, "port_mixed", "")
 }
 
-// Two certificates for one name on one port, and Karvan's own panel
-// port, are 409 codes (D53, section 4).
+// Domains that are not registered, HTTPS without a certificate and
+// Karvan's own panel port are codes (D48, D63, section 4).
 func TestRuleConflictsAreCodes(t *testing.T) {
 	m := newMigrationEnv(t, 0)
 	sites := api + "/legacy-sites"
-	first := with(baseSite(m, t, "first"), "certificateId", m.addCertificate(t, "one"))
+	m.certify(t, "tls.example.com")
+	first := with(baseSite(m, t, "first"), "domains", []string{"tls.example.com"})
 	res := m.do(http.MethodPost, sites, first)
 	var s siteOut
 	res.json(t, &s)
@@ -124,9 +130,30 @@ func TestRuleConflictsAreCodes(t *testing.T) {
 		t.Fatalf("add: %d %s", res.status, res.body)
 	}
 	t.Cleanup(func() { _ = m.bridge.DeleteSite(t.Context(), s.ID) })
-	m.siteFails(t, http.MethodPost, sites, with(first, "name", "x", "oldPath", "other", "certificateId", m.addCertificate(t, "two")),
-		409, "cert_conflict", "")
 	m.siteFails(t, http.MethodPost, sites, with(first, "name", "x", "oldPath", "other", "port", testPanelPort), 409, "port_taken", "")
+	for _, c := range []struct {
+		body          map[string]any
+		field, reason string
+		names         []string
+	}{
+		{with(first, "name", "x", "domains", []string{"new.example.org"}), "domains", "not_registered", []string{"new.example.org"}},
+		{with(first, "name", "x", "port", freePort(t), "domains", []string{"old.example.com"}, "https", true), "domains", "no_certificate",
+			[]string{"old.example.com"}},
+		{with(first, "name", "x", "port", freePort(t), "domains", []string{}, "https", true), "https", "no_certificate", nil},
+	} {
+		var e struct {
+			Error struct {
+				Code, Field, Reason string
+				Names               []string
+			} `json:"error"`
+		}
+		res := m.do(http.MethodPost, sites, c.body)
+		res.json(t, &e)
+		if res.status != 400 || e.Error.Code != "site_invalid" || e.Error.Field != c.field || e.Error.Reason != c.reason ||
+			!slices.Equal(e.Error.Names, c.names) {
+			t.Errorf("%v: %d %s", c.body, res.status, res.body)
+		}
+	}
 }
 
 type siteOut struct {
@@ -150,27 +177,36 @@ type certOut struct {
 	Warnings []string `json:"warnings"`
 }
 
-// A site picks its certificate by id; the answer carries the
-// certificate's facts and never a key, a PEM or a path.
-func TestSiteCertificateByID(t *testing.T) {
+// noLeaks fails when a rule answer carries a key, a PEM or a path.
+func noLeaks(t *testing.T, body []byte) {
+	t.Helper()
+	for _, leak := range []string{"PRIVATE KEY", "CERTIFICATE-----", "keyPem", "certPem", "certFile", "hasKey"} {
+		if strings.Contains(string(body), leak) {
+			t.Fatalf("answer carries %s: %s", leak, body)
+		}
+	}
+}
+
+// A site takes its certificate from its domains; the answer carries the
+// certificate's facts and https, and never a key, a PEM or a path.
+func TestSiteCertificateFromItsDomain(t *testing.T) {
 	m := newMigrationEnv(t, 0)
-	id := m.addCertificate(t, "tls")
-	res := m.do(http.MethodPost, api+"/legacy-sites", with(baseSite(m, t, "tls"), "certificateId", id))
+	id := m.certify(t, "tls.example.com")
+	res := m.do(http.MethodPost, api+"/legacy-sites", with(baseSite(m, t, "tls"), "domains", []string{"tls.example.com"}))
 	var s siteOut
 	res.json(t, &s)
 	t.Cleanup(func() { _ = m.bridge.DeleteSite(t.Context(), s.ID) })
-	for _, leak := range []string{"PRIVATE KEY", "CERTIFICATE-----", "keyPem", "certPem", "certFile", "hasKey"} {
-		if strings.Contains(string(res.body), leak) {
-			t.Fatalf("answer carries %s: %s", leak, res.body)
-		}
-	}
+	noLeaks(t, res.body)
 	if res.status != http.StatusCreated || s.Mode != "manual" || s.Certificate == nil || s.Certificate.ID != id ||
-		s.Certificate.Name != "tls" || !slices.Equal(s.Certificate.Facts.Warnings, []string{"expires_soon"}) ||
-		s.Cert == nil || s.Cert.Issuer != "old.example.com" || len(s.Batches) != 0 || len(s.Warnings) != 0 {
+		s.Certificate.Name != "tls.example.com" || !slices.Equal(s.Certificate.Facts.Warnings, []string{"expires_soon"}) {
 		t.Fatalf("add: %d %s", res.status, res.body)
 	}
+	if s.Cert == nil || s.Cert.Issuer != "tls.example.com" || len(s.Batches) != 0 || !slices.Equal(s.Warnings, []string{"expires_soon"}) ||
+		!strings.Contains(string(res.body), `"https":true`) {
+		t.Fatalf("add: %s", res.body)
+	}
 	list := m.do(http.MethodGet, api+"/legacy-sites", nil)
-	if strings.Contains(string(list.body), "PRIVATE KEY") || !strings.Contains(string(list.body), `"certificateId":`) {
+	if strings.Contains(string(list.body), "PRIVATE KEY") || strings.Contains(string(list.body), `"certificateId":`) {
 		t.Fatalf("list: %s", list.body)
 	}
 }
@@ -221,9 +257,9 @@ func TestBatchRuleAnswers(t *testing.T) {
 	}
 }
 
-// A site whose certificate was not adopted answers 409 until a save
-// picks a certificate; the refused save changes nothing and is audited
-// as a failure (D54).
+// A site whose certificate was not adopted answers 409 until its domains
+// have certificates; the refused save changes nothing and is audited as
+// a failure (D54).
 func TestSiteNotAdoptedAnswers409(t *testing.T) {
 	m := newMigrationEnv(t, 0)
 	cert, _ := testCert(t, "old.example.com")
@@ -237,18 +273,29 @@ func TestSiteNotAdoptedAnswers409(t *testing.T) {
 	path := api + "/legacy-sites/5"
 	body := baseSite(m, t, "renamed")
 	m.siteFails(t, http.MethodPatch, path, body, 409, "certificate_not_adopted", "")
-	m.siteFails(t, http.MethodPatch, path, with(body, "certificateId", 0), 409, "certificate_not_adopted", "")
+	m.siteFails(t, http.MethodPatch, path, with(body, "https", true), 409, "certificate_not_adopted", "")
 	if _ = m.db.QueryRow(cols).Scan(&after); after != before {
 		t.Fatalf("a refused save changed the row: %q", after)
 	}
 	if got := m.audited("legacy_site.save", "failure"); len(got) != 2 {
 		t.Fatalf("failure audits %v", got)
 	}
-	id := m.addCertificate(t, "picked")
-	res := m.do(http.MethodPatch, path, with(body, "certificateId", id))
+	var domain int64
+	_ = m.db.QueryRow("SELECT id FROM domains WHERE name = 'old.example.com'").Scan(&domain)
+	cert, key := testCert(t, "old.example.com")
+	res := m.do(http.MethodPut, api+"/domains/"+strconv.FormatInt(domain, 10)+"/certificate",
+		map[string]any{"certificate": map[string]any{"kind": "pasted", "certPem": cert, "keyPem": key, "name": "picked"}})
+	var d struct {
+		Certificate struct {
+			ID int64 `json:"id"`
+		} `json:"certificate"`
+	}
+	res.json(t, &d)
+	id := d.Certificate.ID
+	res = m.do(http.MethodPatch, path, body)
 	var s siteOut
 	res.json(t, &s)
-	if res.status != http.StatusOK || s.Certificate == nil || s.Certificate.ID != id || len(s.Warnings) != 0 {
+	if res.status != http.StatusOK || id == 0 || s.Certificate == nil || s.Certificate.ID != id || slices.Contains(s.Warnings, "certificate_not_adopted") {
 		t.Fatalf("pick: %d %s", res.status, res.body)
 	}
 	if _ = m.db.QueryRow(cols).Scan(&after); after != "renamed"+strconv.FormatInt(id, 10) {

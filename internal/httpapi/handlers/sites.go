@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -26,8 +27,6 @@ func writeSiteError(w http.ResponseWriter, r *http.Request, err error) {
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeNameTaken})
 	case errors.Is(err, bridge.ErrPortMixed):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "port_mixed"})
-	case errors.Is(err, bridge.ErrCertConflict):
-		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "cert_conflict"})
 	case errors.Is(err, bridge.ErrPortTaken):
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "port_taken"})
 	case errors.Is(err, bridge.ErrUploadBusy):
@@ -54,26 +53,47 @@ func (a *API) Sites(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusOK, map[string]any{"sites": vs, "portErrors": a.Bridge.Status()})
 }
 
-// siteInvalid is the field a site_invalid answer names, and its reason
-// when there is one.
+// siteInvalid is the field a site_invalid answer names, its reason when
+// there is one and the domain names it is about.
 func siteInvalid(err error) map[string]any {
 	extra := map[string]any{"field": bridge.FieldOf(err)}
 	var e *bridge.InvalidError
-	if errors.As(err, &e) && e.Reason != "" {
-		extra["reason"] = e.Reason
+	if errors.As(err, &e) {
+		withReason(extra, e.Reason, e.Names)
 	}
 	return extra
 }
 
+// withReason adds a reason and names to an answer's extra fields, when
+// they are set.
+func withReason(extra map[string]any, reason string, names []string) {
+	if reason != "" {
+		extra["reason"] = reason
+	}
+	if len(names) > 0 {
+		extra["names"] = names
+	}
+}
+
 // SaveSite adds (POST) or changes (PATCH /{id}) a panel rule. A change
-// sends the whole rule. The certificate is certificateId; certificate
-// files and PEM are not part of the body (they are certificates rows).
+// sends the whole rule. The certificate comes from the rule's domains and
+// https (D63): certificateId, certificate files and PEM are not part of
+// the body.
 func (a *API) SaveSite(w http.ResponseWriter, r *http.Request) {
-	var s bridge.Site
-	if err := respond.DecodeLimit(w, r, &s, 256<<10); err != nil {
+	var in struct {
+		bridge.Site
+		CertificateID json.RawMessage `json:"certificateId"`
+	}
+	if err := respond.DecodeLimit(w, r, &in, 256<<10); err != nil {
 		respond.BadRequest(w)
 		return
 	}
+	if in.CertificateID != nil {
+		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: "site_invalid",
+			Extra: map[string]any{"field": "certificateId"}})
+		return
+	}
+	s := in.Site
 	s.ID = 0
 	status := http.StatusCreated
 	if v := r.PathValue("id"); v != "" {

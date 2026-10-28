@@ -145,6 +145,9 @@ func newEnv(t *testing.T, names ...string) *env {
 	if _, err := db.ExecContext(ctx, "INSERT INTO panels (id, env_path, name, kind, scanned_at) VALUES (1, '/opt/new/.env', 'new', 'pasarguard', 0)"); err != nil {
 		t.Fatal(err)
 	}
+	if _, err := db.ExecContext(ctx, "INSERT INTO domains (name, created_at, updated_at) VALUES ('old.example.com', 1, 1)"); err != nil {
+		t.Fatal(err)
+	}
 	e.b = New(Deps{DB: db, Key: key, Now: e.clock.now, Log: slog.New(slog.DiscardHandler),
 		OpenDest: func(context.Context, string) (Destination, error) { return e.dest, nil }})
 	e.site, err = e.b.st.Save(ctx, Site{Name: "old", PanelID: 1, SourceKind: panel.Marzban, SourceURL: e.old.URL,

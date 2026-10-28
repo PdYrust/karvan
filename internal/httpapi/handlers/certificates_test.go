@@ -48,34 +48,51 @@ func (m *migrationEnv) addSite(t *testing.T) int64 {
 	return s.ID
 }
 
-// Domains are added in their normal form, refused with a field when
-// wrong, and kept while a rule holds them.
+// plain is the certificate choice of a domain without one.
+var plain = map[string]any{"kind": "none", "plainOk": true}
+
+// domainID is the id of a registered domain.
+func (m *migrationEnv) domainID(t *testing.T, name string) int64 {
+	t.Helper()
+	var id int64
+	if err := m.db.QueryRow("SELECT id FROM domains WHERE name = ?", name).Scan(&id); err != nil {
+		t.Fatal(err)
+	}
+	return id
+}
+
+// Domains are added in their normal form with their certificate, refused
+// with a field when wrong, and kept while a rule holds them.
 func TestDomainRoutes(t *testing.T) {
 	m := newMigrationEnv(t, 0)
 	domains := api + "/domains"
-	res := m.do(http.MethodPost, domains, map[string]any{"name": " Old.Example.COM. "})
+	res := m.do(http.MethodPost, domains, map[string]any{"name": " New.Example.COM. ", "certificate": plain})
 	var d struct {
-		ID       int64    `json:"id"`
-		Name     string   `json:"name"`
-		Warnings []string `json:"warnings"`
+		ID          int64    `json:"id"`
+		Name        string   `json:"name"`
+		Certificate any      `json:"certificate"`
+		Pins        []any    `json:"pins"`
+		Warnings    []string `json:"warnings"`
 	}
 	res.json(t, &d)
-	if res.status != http.StatusCreated || d.Name != "old.example.com" || len(d.Warnings) != 1 || d.Warnings[0] != "no_certificate" {
+	if res.status != http.StatusCreated || d.Name != "new.example.com" || d.Certificate != nil || d.Pins == nil ||
+		len(d.Warnings) != 1 || d.Warnings[0] != "no_certificate" {
 		t.Fatalf("add: %d %s", res.status, res.body)
 	}
-	wantError(t, m.do(http.MethodPost, domains, map[string]any{"name": "old.example.com"}), http.StatusConflict, "name_taken")
-	m.siteFails(t, http.MethodPost, domains, map[string]any{"name": "a..b"}, http.StatusBadRequest, "domain_invalid", "name")
+	wantError(t, m.do(http.MethodPost, domains, map[string]any{"name": "new.example.com", "certificate": plain}), http.StatusConflict, "name_taken")
+	m.siteFails(t, http.MethodPost, domains, map[string]any{"name": "a..b", "certificate": plain}, http.StatusBadRequest, "domain_invalid", "name")
+	m.siteFails(t, http.MethodPost, domains, map[string]any{"name": "a.com"}, http.StatusBadRequest, "domain_invalid", "certificate")
+	m.siteFails(t, http.MethodPost, domains, map[string]any{"name": "a.com", "certificate": map[string]any{"kind": "none"}},
+		http.StatusBadRequest, "domain_invalid", "plainOk")
 	wantError(t, m.do(http.MethodPost, domains, map[string]any{"name": "a.com", "x": 1}), http.StatusBadRequest, "bad_request")
 	site := m.addSite(t)
-	wantInUse(t, m.do(http.MethodDelete, domains+"/"+strconv.FormatInt(d.ID, 10), nil), "domain_in_use", site)
-	var free struct {
-		ID int64 `json:"id"`
-	}
-	m.do(http.MethodPost, domains, map[string]any{"name": "free.example.com"}).json(t, &free)
-	path := domains + "/" + strconv.FormatInt(free.ID, 10)
+	old := domains + "/" + strconv.FormatInt(m.domainID(t, "old.example.com"), 10)
+	wantInUse(t, m.do(http.MethodDelete, old, nil), "domain_in_use", site)
+	path := domains + "/" + strconv.FormatInt(d.ID, 10)
 	token := m.csrf
 	m.csrf = ""
-	wantError(t, m.do(http.MethodPost, domains, map[string]any{"name": "b.example.com"}), http.StatusForbidden, "csrf")
+	wantError(t, m.do(http.MethodPost, domains, map[string]any{"name": "b.example.com", "certificate": plain}), http.StatusForbidden, "csrf")
+	wantError(t, m.do(http.MethodPut, path+"/certificate", map[string]any{"certificate": plain}), http.StatusForbidden, "csrf")
 	wantError(t, m.do(http.MethodDelete, path, nil), http.StatusForbidden, "csrf")
 	m.csrf = token
 	if res := m.do(http.MethodDelete, path, nil); res.status != http.StatusNoContent {
@@ -85,14 +102,46 @@ func TestDomainRoutes(t *testing.T) {
 	wantError(t, m.do(http.MethodDelete, domains+"/x", nil), http.StatusBadRequest, "bad_request")
 	list := m.do(http.MethodGet, domains, nil)
 	if list.status != http.StatusOK || !strings.Contains(string(list.body), `"rules":[{"kind":"panel","id":`) ||
-		strings.Contains(string(list.body), "free.example.com") {
+		strings.Contains(string(list.body), "new.example.com") {
 		t.Fatalf("list: %d %s", list.status, list.body)
 	}
-	if ok, failed := len(m.audited("domain.add", "success")), len(m.audited("domain.add", "failure")); ok != 2 || failed != 2 {
+	if ok, failed := len(m.audited("domain.add", "success")), len(m.audited("domain.add", "failure")); ok != 1 || failed != 4 {
 		t.Fatalf("add audits %d %d", ok, failed)
 	}
 	if ok, failed := len(m.audited("domain.delete", "success")), len(m.audited("domain.delete", "failure")); ok != 1 || failed != 2 {
 		t.Fatalf("delete audits %d %d", ok, failed)
+	}
+}
+
+// A domain's certificate changes by PUT: refused with a code while an
+// HTTPS rule holds the domain and the change is none, or when the
+// certificate does not cover it, or for Let's Encrypt until it is built.
+func TestDomainCertificateRoute(t *testing.T) {
+	m := newMigrationEnv(t, 0)
+	m.certify(t, "tls.example.com")
+	res := m.do(http.MethodPost, api+"/legacy-sites", with(baseSite(m, t, "tls"), "domains", []string{"tls.example.com"}))
+	var s siteOut
+	res.json(t, &s)
+	t.Cleanup(func() { _ = m.bridge.DeleteSite(t.Context(), s.ID) })
+	path := api + "/domains/" + strconv.FormatInt(m.domainID(t, "tls.example.com"), 10) + "/certificate"
+	var inUse inUseOut
+	m.do(http.MethodPut, path, map[string]any{"certificate": plain}).json(t, &inUse)
+	if inUse.Error.Code != "domain_in_use" || len(inUse.Error.Rules) != 1 || inUse.Error.Rules[0].ID != s.ID {
+		t.Fatalf("none under an HTTPS rule: %+v", inUse)
+	}
+	other, otherKey := testCert(t, "other.example.com")
+	certFails(t, m.do(http.MethodPut, path, map[string]any{"certificate": map[string]any{"kind": "pasted", "certPem": other, "keyPem": otherKey}}),
+		"certificate", "not_covered")
+	m.siteFails(t, http.MethodPut, path, map[string]any{"certificate": map[string]any{"kind": "acme", "method": "http-01"}},
+		http.StatusBadRequest, "acme_invalid", "kind")
+	wantError(t, m.do(http.MethodPut, api+"/domains/999/certificate", map[string]any{"certificate": plain}), http.StatusNotFound, "not_found")
+	cert, key := testCert(t, "tls.example.com")
+	res = m.do(http.MethodPut, path, map[string]any{"certificate": map[string]any{"kind": "pasted", "certPem": cert, "keyPem": key}})
+	if res.status != http.StatusOK || !strings.Contains(string(res.body), `"name":"tls.example.com 2"`) {
+		t.Fatalf("change: %d %s", res.status, res.body)
+	}
+	if ok, failed := len(m.audited("domain.certificate", "success")), len(m.audited("domain.certificate", "failure")); ok != 1 || failed != 4 {
+		t.Fatalf("audits %d %d", ok, failed)
 	}
 }
 
@@ -171,7 +220,10 @@ func TestCertificateRoutes(t *testing.T) {
 		t.Fatalf("delete: %d %s", res.status, res.body)
 	}
 	wantError(t, m.do(http.MethodDelete, path, nil), http.StatusNotFound, "not_found")
-	for action, want := range map[string][2]int{"certificate.add": {2, 5}, "certificate.save": {1, 2}, "certificate.delete": {1, 2}} {
+	m.exec("UPDATE certificates SET origin = 'acme' WHERE id = ?", file.ID)
+	wantError(t, m.do(http.MethodPatch, certs+"/"+strconv.FormatInt(file.ID, 10), map[string]any{"name": "file", "certFile": certFile,
+		"keyFile": keyFile}), http.StatusConflict, "certificate_managed")
+	for action, want := range map[string][2]int{"certificate.add": {2, 5}, "certificate.save": {1, 3}, "certificate.delete": {1, 2}} {
 		if ok, failed := len(m.audited(action, "success")), len(m.audited(action, "failure")); ok != want[0] || failed != want[1] {
 			t.Errorf("%s audits %d %d", action, ok, failed)
 		}
@@ -218,8 +270,15 @@ func TestCertificateKeysStayOutOfAnswersLogsAndAudit(t *testing.T) {
 		m.do(http.MethodPost, api+"/certificates/inspect", map[string]any{"certificateId": c.ID}),
 		m.do(http.MethodPost, api+"/certificates/inspect", map[string]any{"certPem": cert, "keyPem": key}))
 	m.addSite(t)
-	m.do(http.MethodPost, api+"/domains", map[string]any{"name": "old.example.com"})
+	answers = append(answers, m.do(http.MethodPost, api+"/domains", map[string]any{"name": "new.example.com",
+		"certificate": map[string]any{"kind": "pasted", "certPem": cert, "keyPem": key}}))
+	answers = append(answers, m.do(http.MethodPut, api+"/domains/"+strconv.FormatInt(m.domainID(t, "old.example.com"), 10)+"/certificate",
+		map[string]any{"certificate": map[string]any{"kind": "pasted", "certPem": cert, "keyPem": key}}))
 	answers = append(answers, m.do(http.MethodGet, api+"/domains", nil))
+	domainAudit := strings.Join(append(m.audited("domain.add", "failure"), m.audited("domain.certificate", "success")...), "\n")
+	if strings.Contains(domainAudit, "PRIVATE KEY") || strings.Contains(domainAudit, keyBody) {
+		t.Fatalf("a key is in the domain audit entries:\n%s", domainAudit)
+	}
 	audit := strings.Join(append(m.audited("certificate.add", "success"), m.audited("certificate.save", "failure")...), "\n")
 	for _, text := range []string{logs.String(), audit} {
 		if strings.Contains(text, "PRIVATE KEY") || strings.Contains(text, keyBody) {

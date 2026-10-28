@@ -80,7 +80,8 @@ func TestBatchRuleTakesItsFieldsFromTheBatches(t *testing.T) {
 	a := e.batch("active", "", "ali")
 	b := e.batch("active", "", "bob")
 	e.factsOf(a, "sub", `["old.example.com"]`, 8443, "127.0.0.1", "")
-	e.factsOf(b, "sub", `["cdn.example.com","old.example.com"]`, 2096, "127.0.0.2", strings.Repeat("ab", 32))
+	e.factsOf(b, "sub", `["cdn.example.com","old.example.com","new.example.org"]`, 2096, "127.0.0.2", strings.Repeat("ab", 32))
+	e.addDomain("cdn.example.com") // new.example.org is not registered, so the rule leaves it out (D56)
 	s, err := e.b.st.Save(ctx, fromBatches("both", b, a))
 	if err != nil {
 		t.Fatal(err)
@@ -94,9 +95,6 @@ func TestBatchRuleTakesItsFieldsFromTheBatches(t *testing.T) {
 	}
 	if ids := e.ruleBatchIDs(s.ID); !slices.Equal(ids, []int64{a, b}) {
 		t.Fatalf("batches %v", ids)
-	}
-	if d := e.domainNames(); !slices.Equal(d, []string{"cdn.example.com", "old.example.com"}) {
-		t.Fatalf("domain rows %v", d)
 	}
 	picked := fromBatches("picked", a)
 	picked.Domains, picked.Port = []string{}, 9000
@@ -176,7 +174,7 @@ func TestBatchRuleValidation(t *testing.T) {
 		"known sourceIp":  {func(s *Site) { s.SourceIP = "127.0.0.1" }, "sourceIp", ""},
 		"mode":            {func(s *Site) { s.Mode = "both" }, "mode", ""},
 		"manual batches":  {func(s *Site) { s.Mode = ModeManual }, "batchIds", ""},
-		"certificate":     {func(s *Site) { s.CertificateID = 999 }, "certificateId", ""},
+		"not registered":  {func(s *Site) { s.Domains = []string{"new.example.org"} }, "domains", ReasonNotRegistered},
 	} {
 		s := fromBatches("refused", a)
 		c.edit(&s)
@@ -306,7 +304,7 @@ func TestNewerBatchJoinsTheRule(t *testing.T) {
 	}
 }
 
-// A manual rule reads and saves as before, and its domains get rows.
+// A manual rule reads and saves as before; its domains must have rows.
 func TestManualRuleSavesAsBefore(t *testing.T) {
 	e := newEnv(t, "ali")
 	ctx := context.Background()
@@ -322,6 +320,10 @@ func TestManualRuleSavesAsBefore(t *testing.T) {
 	}
 	if !reflect.DeepEqual(after, before) {
 		t.Fatalf("after %+v, before %+v", after, before)
+	}
+	body.Domains = []string{"new.example.org"}
+	if _, err := e.b.st.Save(ctx, body); FieldOf(err) != "domains" || reasonOf(err) != ReasonNotRegistered {
+		t.Fatalf("a domain without a row: %v", err)
 	}
 	if d := e.domainNames(); !slices.Equal(d, []string{"old.example.com"}) {
 		t.Fatalf("domain rows %v", d)
@@ -345,9 +347,10 @@ func (e *env) ownColumns(id int64) string {
 	return fmt.Sprintf("%q %q %d %v %v", certFile, keyFile, len(certPEM), sealed != nil, certID)
 }
 
-// A site whose certificate was not adopted cannot be saved without a
-// certificate; picking one clears its own columns in the same save, and
-// the handshake then serves the picked certificate (D54).
+// A site whose certificate was not adopted cannot be saved while its
+// domains have no certificate; once they have one, the save takes it,
+// clears its own columns in the same transaction, and the handshake then
+// serves the domain's certificate (D54).
 func TestSiteNotAdoptedNeedsACertificate(t *testing.T) {
 	e := newCertEnv(t)
 	ctx := context.Background()
@@ -365,57 +368,56 @@ func TestSiteNotAdoptedNeedsACertificate(t *testing.T) {
 	columns := e.ownColumns(7)
 	s.Name = "renamed"
 	if _, err := b.SaveSite(ctx, s); !errors.Is(err, ErrNotAdopted) {
-		t.Fatalf("save without a certificate: %v", err)
+		t.Fatalf("save while its domain has no certificate: %v", err)
 	}
 	if got := e.ownColumns(7); got != columns || mustSite(t, e, 7).Name != "pasted" {
 		t.Fatalf("refused save changed the row: %s", got)
 	}
 	other, otherKey := longCert(t, "old.example.com")
-	replaced := e.addCert(CertificateInput{Name: "replaced", CertPEM: other, KeyPEM: otherKey})
-	s.CertificateID = replaced.ID
+	d := e.certify("old.example.com", other, otherKey)
+	s.HTTPS = nil // kept: the site serves HTTPS
 	saved, err := b.SaveSite(ctx, s)
-	if err != nil || saved.CertificateID != replaced.ID || saved.Name != "renamed" {
-		t.Fatalf("save with a certificate: %+v %v", saved, err)
+	if err != nil || saved.CertificateID != d.Certificate.ID || saved.Name != "renamed" || !*saved.HTTPS {
+		t.Fatalf("save once the domain has a certificate: %+v %v", saved, err)
 	}
-	if got := e.ownColumns(7); got != fmt.Sprintf(`"" "" 0 false {%d true}`, replaced.ID) {
-		t.Fatalf("own columns after the pick: %s", got)
+	if got := e.ownColumns(7); got != fmt.Sprintf(`"" "" 0 false {%d true}`, d.Certificate.ID) {
+		t.Fatalf("own columns after the save: %s", got)
 	}
 	if after := handshake(t, port, "old.example.com"); after == before || after == "error" {
-		t.Fatalf("handshake after the pick: %s", after)
+		t.Fatalf("handshake after the save: %s", after)
 	}
-	if v := b.View(ctx, saved); v.Certificate == nil || v.Certificate.ID != replaced.ID || v.Certificate.Name != "replaced" ||
-		slices.Contains(v.Warnings, WarnNotAdopted) {
+	if v := b.View(ctx, saved); v.Certificate == nil || v.Certificate.ID != d.Certificate.ID || slices.Contains(v.Warnings, WarnNotAdopted) {
 		t.Fatalf("view %+v", v)
 	}
 }
 
-// A site served over TLS takes its certificate by id; the handshake
-// serves it, and plain HTTP is a site without one.
-func TestRuleCertificateByID(t *testing.T) {
+// A rule's HTTPS comes from its domains: the handshake serves the domain's
+// certificate, and plain HTTP cannot join the port.
+func TestRuleCertificateFromItsDomain(t *testing.T) {
 	e := newCertEnv(t)
 	ctx := context.Background()
 	t.Cleanup(e.b.stopAll)
-	cert, key := longCert(t, "old.example.com")
-	c := e.addCert(CertificateInput{Name: "tls", CertPEM: cert, KeyPEM: key})
+	cert, key := longCert(t, "tls.example.com")
+	d := e.addDomainWith("tls.example.com", CertChoice{Kind: ChoicePasted, CertPEM: cert, KeyPEM: key})
 	s := e.site
-	s.ID, s.Name, s.OldPath, s.Port, s.CertificateID = 0, "tls", "tls", freePort(t), c.ID
+	s.ID, s.Name, s.OldPath, s.Port, s.Domains, s.HTTPS = 0, "tls", "tls", freePort(t), []string{"tls.example.com"}, nil
 	saved, err := e.b.SaveSite(ctx, s)
-	if err != nil || !saved.TLS() || saved.CertificateID != c.ID {
+	if err != nil || !saved.TLS() || saved.CertificateID != d.Certificate.ID {
 		t.Fatalf("save %+v %v", saved, err)
 	}
-	if got := e.ownColumns(saved.ID); got != fmt.Sprintf(`"" "" 0 false {%d true}`, c.ID) {
+	if got := e.ownColumns(saved.ID); got != fmt.Sprintf(`"" "" 0 false {%d true}`, d.Certificate.ID) {
 		t.Fatalf("own columns %s", got)
 	}
-	if h := handshake(t, saved.Port, "old.example.com"); h == "error" {
+	if h := handshake(t, saved.Port, "tls.example.com"); h == "error" {
 		t.Fatal("no handshake")
 	}
 	plain := e.site
-	plain.ID, plain.Name, plain.OldPath, plain.Port = 0, "plain", "plain", saved.Port
+	plain.ID, plain.Name, plain.OldPath, plain.Port, plain.HTTPS = 0, "plain", "plain", saved.Port, nil
 	if _, err := e.b.SaveSite(ctx, plain); !errors.Is(err, ErrPortMixed) {
 		t.Fatalf("plain on a TLS port: %v", err)
 	}
 	v := e.b.View(ctx, saved)
-	if v.Certificate == nil || v.Certificate.Name != "tls" || v.Cert == nil || len(v.Cert.Warnings) != 0 {
+	if v.Certificate == nil || v.Certificate.Name != "tls.example.com" || v.Cert == nil || len(v.Cert.Warnings) != 0 || len(v.Warnings) != 0 {
 		t.Fatalf("view %+v", v)
 	}
 }

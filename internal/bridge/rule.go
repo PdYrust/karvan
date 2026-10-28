@@ -78,7 +78,31 @@ func (st *store) fromBatches(ctx context.Context, s *Site) error {
 		return err
 	}
 	s.BatchIDs = ids
-	return s.takeFacts(bs)
+	defaulted := s.Domains == nil
+	if err := s.takeFacts(bs); err != nil || !defaulted {
+		return err
+	}
+	return st.keepRegistered(ctx, s)
+}
+
+// keepRegistered keeps the domains of s that are registered: the batches'
+// old hosts a rule of batches takes by default (D56).
+func (st *store) keepRegistered(ctx context.Context, s *Site) error {
+	raw, err := json.Marshal(s.Domains)
+	if err != nil {
+		return err
+	}
+	s.Domains = []string{}
+	err = st.each(ctx, "SELECT name FROM domains WHERE name IN (SELECT value FROM json_each(?)) ORDER BY name", func(r *sql.Rows) error {
+		var n string
+		err := r.Scan(&n)
+		s.Domains = append(s.Domains, n)
+		return err
+	}, string(raw))
+	if err != nil {
+		return fmt.Errorf("read registered domains: %w", err)
+	}
+	return nil
 }
 
 // checkBatches checks the batches read for n ids.
@@ -206,34 +230,162 @@ func linkBatches(ctx context.Context, tx *sql.Tx, s Site) error {
 	return nil
 }
 
-// addDomains inserts the rule's domain names that have no row (D48).
-func addDomains(ctx context.Context, tx *sql.Tx, domains []string, now int64) error {
-	if len(domains) == 0 {
-		return nil // json_each of null would give one NULL name
-	}
-	raw, err := json.Marshal(domains)
+// Why a rule's domains or https were refused (D48, D63).
+const (
+	ReasonNotRegistered = "not_registered" // a domain that is not a domains row
+	ReasonPending       = "pending"        // a domain whose Let's Encrypt order runs and that has no certificate yet
+	ReasonNoCert        = "no_certificate" // HTTPS asked for while a domain, or the port, has no certificate
+)
+
+// ruleCert is what a rule save derives its certificate from (D63).
+type ruleCert struct {
+	self       RuleRef  // the rule; ID 0 on POST
+	port       int      // as saved
+	domains    []string // normalized, sorted
+	https      *bool    // as sent; nil when absent
+	stored     *bool    // the stored https on PATCH; nil on POST
+	notAdopted bool     // the stored rule is served from its own certificate (D54)
+}
+
+// derive is the rule's certificate (D63): none for plain HTTP; with
+// domains, for the first one, the port's pin of it, else its
+// certificate; with no domains, the port's fallback. Every domain must be
+// registered, and HTTPS needs a certificate for every domain, or the
+// port's fallback without domains. Absent https is the stored value on
+// PATCH, and on POST true only when those certificates are there.
+func (st *store) derive(ctx context.Context, in ruleCert) (int64, error) {
+	certs, lacking, err := st.ruleDomains(ctx, in.domains)
 	if err != nil {
-		return err
+		return 0, err
 	}
-	_, err = tx.ExecContext(ctx, "INSERT INTO domains (name, created_at, updated_at) SELECT value, ?, ? FROM json_each(?) "+
-		"WHERE true ON CONFLICT (name) DO NOTHING", now, now, string(raw))
+	var fallback int64
+	if len(in.domains) == 0 {
+		if fallback, err = st.portFallback(ctx, in.port, in.self); err != nil {
+			return 0, err
+		}
+	}
+	ready := len(lacking) == 0 && (len(in.domains) > 0 || fallback != 0)
+	if in.notAdopted && !ready {
+		return 0, ErrNotAdopted // its own certificate stays until its domains have certificates
+	}
+	switch {
+	case !in.wantsHTTPS(ready):
+		return 0, nil
+	case len(in.domains) == 0 && fallback == 0:
+		return 0, &InvalidError{Field: "https", Reason: ReasonNoCert}
+	case len(in.domains) == 0:
+		return fallback, nil
+	case len(lacking) > 0:
+		reason := ReasonPending
+		if slices.ContainsFunc(lacking, func(d string) bool { return !certs[d].pending }) {
+			reason = ReasonNoCert
+		}
+		return 0, &InvalidError{Field: "domains", Reason: reason, Names: lacking}
+	}
+	return domainsCert(ctx, st.db, in.port, in.domains)
+}
+
+// wantsHTTPS is https as sent, else the stored value on PATCH, else ready
+// (every certificate the rule needs is there).
+func (in ruleCert) wantsHTTPS(ready bool) bool {
+	switch {
+	case in.https != nil:
+		return *in.https
+	case in.stored != nil:
+		return *in.stored
+	}
+	return ready
+}
+
+// domainState is a rule domain's certificate and whether a Let's Encrypt
+// order for it runs.
+type domainState struct {
+	certID  int64
+	pending bool
+}
+
+// ruleDomains reads the domains of a rule; every one must be registered
+// (D48). lacking are those without a certificate, sorted.
+func (st *store) ruleDomains(ctx context.Context, names []string) (map[string]domainState, []string, error) {
+	out := map[string]domainState{}
+	raw, err := json.Marshal(names)
 	if err != nil {
-		return fmt.Errorf("add domains: %w", err)
+		return nil, nil, err
+	}
+	rows, err := st.db.QueryContext(ctx, "SELECT name, COALESCE(certificate_id, 0), EXISTS (SELECT 1 FROM acme_orders o "+
+		"WHERE o.domain_id = d.id AND o.state IN ('starting', 'waiting_dns', 'validating', 'issuing')) FROM domains d "+
+		"WHERE name IN (SELECT value FROM json_each(?))", string(raw))
+	if err != nil {
+		return nil, nil, fmt.Errorf("read rule domains: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var name string
+		var d domainState
+		if err := rows.Scan(&name, &d.certID, &d.pending); err != nil {
+			return nil, nil, err
+		}
+		out[name] = d
+	}
+	if err := rows.Err(); err != nil {
+		return nil, nil, err
+	}
+	var missing, lacking []string
+	for _, n := range names {
+		d, ok := out[n]
+		switch {
+		case !ok:
+			missing = append(missing, n)
+		case d.certID == 0:
+			lacking = append(lacking, n)
+		}
+	}
+	if len(missing) > 0 {
+		return nil, nil, &InvalidError{Field: "domains", Reason: ReasonNotRegistered, Names: missing}
+	}
+	return out, lacking, nil
+}
+
+// portFallback is the certificate a handshake without SNI on port gets
+// now (the D53 order with each rule's certificate). The rule being saved
+// takes part as stored, and only while it has a certificate, so a save
+// that changes nothing keeps it and a plain rule never hides the others.
+func (st *store) portFallback(ctx context.Context, port int, self RuleRef) (int64, error) {
+	all, err := st.rules(ctx)
+	if err != nil {
+		return 0, err
+	}
+	var routes []route
+	for _, r := range all {
+		if r.port == port && (r.ref.Kind != self.Kind || r.ref.ID != self.ID || r.certID != 0) {
+			routes = append(routes, route{rule: r})
+		}
+	}
+	pick, _ := d53(routes, "")
+	return pick.certID, nil
+}
+
+// prunePins deletes the pins of (port, domain) pairs no rule holds any
+// more (D62).
+func prunePins(ctx context.Context, tx *sql.Tx) error {
+	_, err := tx.ExecContext(ctx, "DELETE FROM domain_pins WHERE NOT EXISTS (SELECT 1 FROM domains d, legacy_sites s, "+
+		"json_each(s.domains) j WHERE d.id = domain_pins.domain_id AND s.listen_port = domain_pins.port AND j.value = d.name) "+
+		"AND NOT EXISTS (SELECT 1 FROM domains d, link_redirects r, json_each(r.domains) j WHERE d.id = domain_pins.domain_id "+
+		"AND r.listen_port = domain_pins.port AND j.value = d.name)")
+	if err != nil {
+		return fmt.Errorf("delete pins: %w", err)
 	}
 	return nil
 }
 
-// pickCertificate reads the certificate a save picks into s, so TLS() and
-// the port checks see it; 0 is plain HTTP.
+// pickCertificate reads the certificate a save derived into s, so TLS()
+// and the port checks see it; 0 is plain HTTP.
 func (st *store) pickCertificate(ctx context.Context, s *Site) error {
 	s.CertFile, s.KeyFile, s.CertPEM, s.KeyPEM, s.HasKey, s.certName = "", "", "", "", false, ""
 	if s.CertificateID == 0 {
 		return nil
 	}
 	r, err := scanCertRow(st.db.QueryRowContext(ctx, certRowColumns+" WHERE id = ?", s.CertificateID))
-	if errors.Is(err, sql.ErrNoRows) {
-		return invalid("certificateId")
-	}
 	if err != nil {
 		return fmt.Errorf("read certificate: %w", err)
 	}

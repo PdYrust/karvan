@@ -21,13 +21,15 @@ type SiteStats struct {
 }
 
 // WarnNotAdopted flags a site whose certificate is still in its own
-// columns: its adoption failed (D54, D50).
+// columns, since its adoption failed, and the domains it keeps unfilled
+// (D54, D50, D64).
 const WarnNotAdopted = "certificate_not_adopted"
 
 // SiteView is a site with its batches, certificate, warnings and numbers.
 // Cert is nil for a plain HTTP site and holds the facts of the
-// certificate it is served with; Certificate is its certificates row, nil
-// for plain HTTP and for a site not adopted (D54). Stats is nil when the
+// certificate it is served with; Certificate is its derived fallback
+// certificates row (D63), nil for plain HTTP and for a site not adopted
+// (D54). Warnings are its domains' (D50). Stats is nil when the
 // destination cannot be read.
 type SiteView struct {
 	Site
@@ -51,27 +53,52 @@ func (b *Bridge) Views(ctx context.Context) ([]SiteView, error) {
 	if err != nil {
 		return nil, err
 	}
-	rules, err := b.st.rules(ctx)
+	warns, err := b.domainWarnings(ctx)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]SiteView, 0, len(sites))
 	for _, s := range sites {
-		out = append(out, b.view(ctx, s, rules))
+		out = append(out, b.view(ctx, s, warns))
 	}
 	return out, nil
 }
 
 // View adds a site's batches, certificate facts, warnings and numbers.
 func (b *Bridge) View(ctx context.Context, s Site) SiteView {
-	rules, err := b.st.rules(ctx)
+	warns, err := b.domainWarnings(ctx)
 	if err != nil {
-		b.Log.Warn("bridge: read rules", "site", s.Name, "err", err)
+		b.Log.Warn("bridge: read domains", "site", s.Name, "err", err)
 	}
-	return b.view(ctx, s, rules)
+	return b.view(ctx, s, warns)
 }
 
-func (b *Bridge) view(ctx context.Context, s Site, rules []rule) SiteView {
+// domainWarnings is the warnings of every domain, by name (D50).
+func (b *Bridge) domainWarnings(ctx context.Context) (map[string][]string, error) {
+	list, err := b.Domains(ctx)
+	out := make(map[string][]string, len(list))
+	for _, d := range list {
+		out[d.Name] = d.Warnings
+	}
+	return out, err
+}
+
+// ruleWarnings is the warnings of a rule's domains, and
+// certificate_not_adopted for a rule served from its own certificate
+// (D50, D54), sorted.
+func ruleWarnings(domains []string, warns map[string][]string, notAdopted bool) []string {
+	out := []string{}
+	if notAdopted {
+		out = append(out, WarnNotAdopted)
+	}
+	for _, d := range domains {
+		out = append(out, warns[d]...)
+	}
+	slices.Sort(out)
+	return slices.Compact(out)
+}
+
+func (b *Bridge) view(ctx context.Context, s Site, warns map[string][]string) SiteView {
 	v := SiteView{Site: s, Batches: []BatchRef{}, Cert: b.siteCert(ctx, s), Warnings: []string{}}
 	if bs, err := b.st.siteBatches(ctx, s.ID); err != nil {
 		b.Log.Warn("bridge: read rule batches", "site", s.Name, "err", err)
@@ -82,21 +109,10 @@ func (b *Bridge) view(ctx context.Context, s Site, rules []rule) SiteView {
 	for _, r := range v.Batches {
 		v.BatchIDs = append(v.BatchIDs, r.ID)
 	}
-	switch {
-	case s.CertificateID != 0 && v.Cert != nil:
+	if s.CertificateID != 0 && v.Cert != nil {
 		v.Certificate = &SiteCertificate{ID: s.CertificateID, Name: s.certName, Facts: *v.Cert}
-	case s.TLS():
-		v.Warnings = append(v.Warnings, WarnNotAdopted)
 	}
-	if v.Cert != nil && slices.Contains(v.Cert.Warnings, WarnDomain) {
-		v.Warnings = append(v.Warnings, WarnDomain)
-	}
-	self := ruleOf(s)
-	if slices.ContainsFunc(rules, func(o rule) bool {
-		return (o.ref.Kind != RulePanel || o.ref.ID != s.ID) && self.tls && o.tls && self.certClash(o)
-	}) {
-		v.Warnings = append(v.Warnings, WarnCertConflict)
-	}
+	v.Warnings = ruleWarnings(s.Domains, warns, s.TLS() && s.CertificateID == 0)
 	st, err := b.stats(ctx, s)
 	if err != nil {
 		b.Log.Warn("bridge: site numbers", "site", s.Name, "err", err)

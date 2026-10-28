@@ -83,12 +83,10 @@ func TestServesOverTLS(t *testing.T) {
 	e := newEnv(t, "ali")
 	ctx := context.Background()
 	certPEM, keyPEM := selfSigned(t, "old.example.com")
-	stored, err := e.b.SaveCertificate(ctx, 0, CertificateInput{Name: "tls", CertPEM: certPEM, KeyPEM: keyPEM})
-	if err != nil {
-		t.Fatal(err)
-	}
+	e.certify("old.example.com", certPEM, keyPEM)
 	s := e.site
-	s.Port, s.CertificateID = freePort(t), stored.ID
+	on := true
+	s.Port, s.HTTPS = freePort(t), &on
 	if _, err := e.b.SaveSite(ctx, s); err != nil {
 		t.Fatal(err)
 	}

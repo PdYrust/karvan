@@ -26,6 +26,8 @@ func scanRedirect(row interface{ Scan(...any) error }) (Redirect, error) {
 		return d, fmt.Errorf("redirect %d domains: %w", d.ID, err)
 	}
 	d.cert.id = d.CertificateID
+	https := d.CertificateID != 0
+	d.HTTPS = &https
 	if u, ok := parseTarget(d.ToURL); ok {
 		d.target = u
 	}
@@ -69,19 +71,33 @@ func (st *store) redirect(ctx context.Context, id int64) (Redirect, error) {
 }
 
 // saveRedirect creates (ID 0) or changes a redirect: the fields, its
-// certificate, Karvan's own port, every other rule (D52, D53) and a loop,
-// in that order; then it and its domain rows are written (D48).
+// registered domains and derived certificate (D48, D63), Karvan's own
+// port, every other rule (D52) and a loop, in that order; then it is
+// written.
 func (st *store) saveRedirect(ctx context.Context, d Redirect) (Redirect, error) {
 	st.saveMu.Lock()
 	defer st.saveMu.Unlock()
+	in := ruleCert{self: RuleRef{Kind: RuleRedirect, ID: d.ID}, https: d.HTTPS}
 	if d.ID != 0 {
-		if _, err := st.redirect(ctx, d.ID); err != nil {
+		stored, err := st.redirect(ctx, d.ID)
+		if err != nil {
 			return d, err
 		}
+		in.stored = stored.HTTPS
 	}
 	if err := d.normalize(); err != nil {
 		return d, err
 	}
+	in.port, in.domains = d.Port, d.Domains
+	id, err := st.derive(ctx, in)
+	var ie *InvalidError
+	if errors.As(err, &ie) {
+		return d, &RedirectInvalidError{Field: ie.Field, Reason: ie.Reason, Names: ie.Names}
+	}
+	if err != nil {
+		return d, err
+	}
+	d.CertificateID = id
 	if err := st.checkRedirect(ctx, d); err != nil {
 		return d, err
 	}
@@ -92,16 +108,6 @@ func (st *store) saveRedirect(ctx context.Context, d Redirect) (Redirect, error)
 }
 
 func (st *store) checkRedirect(ctx context.Context, d Redirect) error {
-	if d.CertificateID != 0 {
-		var found bool
-		err := st.db.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM certificates WHERE id = ?)", d.CertificateID).Scan(&found)
-		if err != nil {
-			return fmt.Errorf("read certificate: %w", err)
-		}
-		if !found {
-			return redirectInvalid("certificateId")
-		}
-	}
 	if st.panelPorts != nil && slices.Contains(st.panelPorts(), d.Port) {
 		return ErrPortTaken
 	}
@@ -126,12 +132,12 @@ func (st *store) checkRedirect(ctx context.Context, d Redirect) error {
 	return nil
 }
 
-// writeRedirect stores a checked redirect and its domain rows in one
-// transaction.
+// writeRedirect stores a checked redirect, and drops the pins no rule
+// holds any more, in one transaction.
 func (st *store) writeRedirect(ctx context.Context, d *Redirect) error {
 	domains, _ := json.Marshal(d.Domains)
 	now := st.now().Unix()
-	certID := sql.NullInt64{Int64: d.CertificateID, Valid: d.CertificateID != 0}
+	certID := nullID(d.CertificateID)
 	tx, err := st.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
@@ -157,7 +163,7 @@ func (st *store) writeRedirect(ctx context.Context, d *Redirect) error {
 			return ErrNotFound
 		}
 	}
-	if err := addDomains(ctx, tx, d.Domains, now); err != nil {
+	if err := prunePins(ctx, tx); err != nil {
 		return err
 	}
 	return tx.Commit()
@@ -169,13 +175,13 @@ func (b *Bridge) Redirects(ctx context.Context) ([]RedirectView, error) {
 	if err != nil {
 		return nil, err
 	}
-	rules, err := b.st.rules(ctx)
+	warns, err := b.domainWarnings(ctx)
 	if err != nil {
 		return nil, err
 	}
 	out := make([]RedirectView, 0, len(list))
 	for _, d := range list {
-		out = append(out, b.redirectView(d, rules))
+		out = append(out, b.redirectView(d, warns))
 	}
 	return out, nil
 }
@@ -189,40 +195,28 @@ func (b *Bridge) SaveRedirect(ctx context.Context, d Redirect) (RedirectView, er
 	if err := b.Reload(ctx); err != nil {
 		return RedirectView{}, err
 	}
-	rules, err := b.st.rules(ctx)
+	warns, err := b.domainWarnings(ctx)
 	if err != nil {
 		return RedirectView{}, err
 	}
-	return b.redirectView(saved, rules), nil
+	return b.redirectView(saved, warns), nil
 }
 
 // DeleteRedirect removes a redirect rule and stops serving it.
 func (b *Bridge) DeleteRedirect(ctx context.Context, id int64) error {
-	res, err := b.DB.ExecContext(ctx, "DELETE FROM link_redirects WHERE id = ?", id)
-	if err != nil {
-		return fmt.Errorf("delete redirect: %w", err)
-	}
-	if n, _ := res.RowsAffected(); n == 0 {
-		return ErrNotFound
+	if err := b.st.deleteRule(ctx, "DELETE FROM link_redirects WHERE id = ?", id); err != nil {
+		return err
 	}
 	return b.Reload(ctx)
 }
 
-func (b *Bridge) redirectView(d Redirect, rules []rule) RedirectView {
-	v := RedirectView{Redirect: d, Warnings: []string{}}
+// redirectView is a redirect with its fallback certificate and its
+// domains' warnings (D50, D63).
+func (b *Bridge) redirectView(d Redirect, warns map[string][]string) RedirectView {
+	v := RedirectView{Redirect: d, Warnings: ruleWarnings(d.Domains, warns, false)}
 	if d.CertificateID != 0 {
 		certPEM, keyPEM := b.material(d.cert)
-		f := inspect(certPEM, keyPEM, d.Domains, b.Now())
-		v.Certificate = &SiteCertificate{ID: d.CertificateID, Name: d.cert.name, Facts: f}
-		if slices.Contains(f.Warnings, WarnDomain) {
-			v.Warnings = append(v.Warnings, WarnDomain)
-		}
-	}
-	self := d.rule()
-	if slices.ContainsFunc(rules, func(o rule) bool {
-		return (o.ref.Kind != RuleRedirect || o.ref.ID != d.ID) && self.tls && o.tls && self.certClash(o)
-	}) {
-		v.Warnings = append(v.Warnings, WarnCertConflict)
+		v.Certificate = &SiteCertificate{ID: d.CertificateID, Name: d.cert.name, Facts: inspect(certPEM, keyPEM, d.Domains, b.Now())}
 	}
 	return v
 }

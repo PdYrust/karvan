@@ -16,18 +16,30 @@ const maxCertBody = 256 << 10
 // writeCertError answers a domain or certificate failure; the rest are
 // site codes.
 func writeCertError(w http.ResponseWriter, r *http.Request, err error) {
+	var domain *bridge.DomainInvalidError
+	var acme *bridge.ACMEInvalidError
 	var invalid *bridge.CertInvalidError
 	var inUse *bridge.InUseError
 	switch {
-	case errors.Is(err, bridge.ErrInvalidDomain):
+	case errors.As(err, &domain):
 		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: "domain_invalid",
-			Extra: map[string]any{"field": "name"}})
+			Extra: map[string]any{"field": domain.Field}})
+	case errors.As(err, &acme):
+		extra := map[string]any{"field": acme.Field}
+		withReason(extra, acme.Reason, nil)
+		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: "acme_invalid", Extra: extra})
 	case errors.As(err, &invalid):
-		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: "certificate_invalid",
-			Extra: map[string]any{"field": invalid.Field, "reason": invalid.Reason}})
+		extra := map[string]any{"field": invalid.Field}
+		withReason(extra, invalid.Reason, nil)
+		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: "certificate_invalid", Extra: extra})
 	case errors.As(err, &inUse):
-		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: inUse.What + "_in_use",
-			Extra: map[string]any{"rules": inUse.Rules}})
+		extra := map[string]any{"rules": inUse.Rules}
+		if inUse.What == "certificate" {
+			extra["domains"] = inUse.Domains
+		}
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: inUse.What + "_in_use", Extra: extra})
+	case errors.Is(err, bridge.ErrManaged):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "certificate_managed"})
 	default:
 		writeSiteError(w, r, err)
 	}

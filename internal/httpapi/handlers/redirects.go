@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -22,9 +23,7 @@ func writeRedirectError(w http.ResponseWriter, r *http.Request, err error) {
 		return
 	}
 	extra := map[string]any{"field": invalid.Field}
-	if invalid.Reason != "" {
-		extra["reason"] = invalid.Reason
-	}
+	withReason(extra, invalid.Reason, invalid.Names)
 	respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: "redirect_invalid", Extra: extra})
 }
 
@@ -39,13 +38,23 @@ func (a *API) Redirects(w http.ResponseWriter, r *http.Request) {
 }
 
 // SaveRedirect adds (POST) or changes (PATCH /{id}) a redirect rule. A
-// change sends the whole rule.
+// change sends the whole rule. Its certificate comes from its domains and
+// https (D63), so certificateId is not part of the body.
 func (a *API) SaveRedirect(w http.ResponseWriter, r *http.Request) {
-	var in bridge.Redirect
-	if err := respond.DecodeLimit(w, r, &in, maxRedirectBody); err != nil {
+	var body struct {
+		bridge.Redirect
+		CertificateID json.RawMessage `json:"certificateId"`
+	}
+	if err := respond.DecodeLimit(w, r, &body, maxRedirectBody); err != nil {
 		respond.BadRequest(w)
 		return
 	}
+	if body.CertificateID != nil {
+		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: "redirect_invalid",
+			Extra: map[string]any{"field": "certificateId"}})
+		return
+	}
+	in := body.Redirect
 	in.ID = 0
 	status := http.StatusCreated
 	if v := r.PathValue("id"); v != "" {

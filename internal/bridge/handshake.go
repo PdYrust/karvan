@@ -87,9 +87,9 @@ func (st *store) shakeFacts(ctx context.Context) (shakeFacts, error) {
 	return f, nil
 }
 
-// each runs q and calls fn on every row.
-func (st *store) each(ctx context.Context, q string, fn func(*sql.Rows) error) error {
-	rows, err := st.db.QueryContext(ctx, q)
+// each runs q with args and calls fn on every row.
+func (st *store) each(ctx context.Context, q string, fn func(*sql.Rows) error, args ...any) error {
+	rows, err := st.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return err
 	}

@@ -39,9 +39,13 @@ var segmentRe = regexp.MustCompile(`^[A-Za-z0-9._~=-]{1,1000}$`)
 // *RedirectInvalidError says which.
 var ErrInvalidRedirect = errors.New("invalid redirect")
 
-// RedirectInvalidError names the wrong field by its JSON key, and the
-// reason when there is one (ReasonLoop).
-type RedirectInvalidError struct{ Field, Reason string }
+// RedirectInvalidError names the wrong field by its JSON key, the reason
+// when there is one (ReasonLoop, and the domain and https reasons of
+// panel rules) and, for domains, the names it is about.
+type RedirectInvalidError struct {
+	Field, Reason string
+	Names         []string
+}
 
 func (e *RedirectInvalidError) Error() string {
 	return fmt.Sprintf("%v: %s", ErrInvalidRedirect, e.Field)
@@ -55,14 +59,19 @@ func redirectInvalid(field string) error { return &RedirectInvalidError{Field: f
 // Redirect is a redirect rule: a request on its port, domains and path is
 // sent to ToURL with a 302 (D28, D29). Karvan never fetches the target (D30).
 type Redirect struct {
-	ID            int64    `json:"id"`
-	Name          string   `json:"name"`
-	Domains       []string `json:"domains"`
-	Port          int      `json:"port"`
-	FromPath      string   `json:"fromPath"`
-	Match         string   `json:"match"`
-	ToURL         string   `json:"toUrl"`
-	CertificateID int64    `json:"certificateId"`
+	ID       int64    `json:"id"`
+	Name     string   `json:"name"`
+	Domains  []string `json:"domains"`
+	Port     int      `json:"port"`
+	FromPath string   `json:"fromPath"`
+	Match    string   `json:"match"`
+	ToURL    string   `json:"toUrl"`
+	// HTTPS is whether the rule answers over HTTPS, as for panel rules: nil
+	// in a body keeps the stored value on PATCH and takes the D63 default
+	// on POST.
+	HTTPS *bool `json:"https"`
+	// CertificateID is derived from the domains on every save (D63).
+	CertificateID int64    `json:"-"`
 	cert          certRow  // its certificates row, when CertificateID is set
 	target        *url.URL // ToURL parsed; nil when the stored value no longer passes the check
 }

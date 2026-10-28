@@ -8,10 +8,6 @@ import (
 	"strings"
 )
 
-// ErrCertConflict means rules on one port that one name can reach, or
-// rules with no domains on one port, would use different certificates.
-var ErrCertConflict = errors.New("rules for one name on one port use different certificates")
-
 // ErrPortTaken means the port is Karvan's own web panel.
 var ErrPortTaken = errors.New("the port is Karvan's web panel")
 
@@ -115,24 +111,6 @@ func (r rule) sameRequests(o rule) bool {
 	return slices.ContainsFunc(r.domains, func(d string) bool { return slices.Contains(o.domains, d) })
 }
 
-// sameNames reports whether one TLS name on the port can pick r or o for
-// its handshake: patterns that can meet, or both no domains (D53).
-func (r rule) sameNames(o rule) bool {
-	if r.port != o.port {
-		return false
-	}
-	if len(r.domains) == 0 || len(o.domains) == 0 {
-		return len(r.domains) == len(o.domains)
-	}
-	return slices.ContainsFunc(r.domains, func(a string) bool {
-		return slices.ContainsFunc(o.domains, func(b string) bool { return canMeet(a, b) })
-	})
-}
-
-// certClash reports whether r and o would serve one name with different
-// certificates.
-func (r rule) certClash(o rule) bool { return r.sameNames(o) && r.certKey() != o.certKey() }
-
 // conflict is why r cannot be saved next to the stored rule o, or nil.
 func (r rule) conflict(o rule) error {
 	switch {
@@ -144,24 +122,18 @@ func (r rule) conflict(o rule) error {
 		return fmt.Errorf("%w: %s", ErrPortMixed, o.ref.Name)
 	case r.sameRequests(o):
 		return fmt.Errorf("%w: %s", ErrOverlap, o.ref.Name)
-	case r.certClash(o):
-		return fmt.Errorf("%w: %s", ErrCertConflict, o.ref.Name)
 	}
 	return nil
 }
 
-// logConflicts warns about stored rules that break D52 or D53. They are
-// served in today's order: the first rule wins a tie and a handshake.
+// logConflicts warns about stored rules that break D52. They are served
+// in today's order: the first rule wins a tie.
 func (t table) logConflicts(log *slog.Logger) {
 	for port, routes := range t {
 		for i, r := range routes {
 			for _, o := range routes[i+1:] {
-				switch {
-				case r.sameRequests(o.rule):
+				if r.sameRequests(o.rule) {
 					log.Warn("bridge: rules answer the same requests", "port", port, "rule", r.ref.Name, "other", o.ref.Name)
-				case r.tls && o.tls && r.certClash(o.rule):
-					log.Warn("bridge: rules on one port use different certificates", "port", port, "rule", r.ref.Name,
-						"other", o.ref.Name)
 				}
 			}
 		}

@@ -188,19 +188,20 @@ func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(htt
 // subscriptionRoutes are the domains, certificates and redirect rules of the bridge (phase-4.1 section 4).
 func subscriptionRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.HandlerFunc) http.Handler) {
 	for pattern, h := range map[string]http.HandlerFunc{
-		"GET /api/v1/domains":                api.Domains,
-		"POST /api/v1/domains":               api.AddDomain,
-		"DELETE /api/v1/domains/{id}":        api.DeleteDomain,
-		"GET /api/v1/certificates":           api.Certificates,
-		"POST /api/v1/certificates":          api.SaveCertificate,
-		"PATCH /api/v1/certificates/{id}":    api.SaveCertificate,
-		"DELETE /api/v1/certificates/{id}":   api.DeleteCertificate,
-		"POST /api/v1/certificates/inspect":  api.InspectCert,
-		"POST /api/v1/certificates/scan":     api.ScanCertificates,
-		"GET /api/v1/link-redirects":         api.Redirects,
-		"POST /api/v1/link-redirects":        api.SaveRedirect,
-		"PATCH /api/v1/link-redirects/{id}":  api.SaveRedirect,
-		"DELETE /api/v1/link-redirects/{id}": api.DeleteRedirect,
+		"GET /api/v1/domains":                  api.Domains,
+		"POST /api/v1/domains":                 api.AddDomain,
+		"DELETE /api/v1/domains/{id}":          api.DeleteDomain,
+		"PUT /api/v1/domains/{id}/certificate": api.SetDomainCertificate,
+		"GET /api/v1/certificates":             api.Certificates,
+		"POST /api/v1/certificates":            api.SaveCertificate,
+		"PATCH /api/v1/certificates/{id}":      api.SaveCertificate,
+		"DELETE /api/v1/certificates/{id}":     api.DeleteCertificate,
+		"POST /api/v1/certificates/inspect":    api.InspectCert,
+		"POST /api/v1/certificates/scan":       api.ScanCertificates,
+		"GET /api/v1/link-redirects":           api.Redirects,
+		"POST /api/v1/link-redirects":          api.SaveRedirect,
+		"PATCH /api/v1/link-redirects/{id}":    api.SaveRedirect,
+		"DELETE /api/v1/link-redirects/{id}":   api.DeleteRedirect,
 	} {
 		rt.Handle(pattern, signedIn(h))
 	}

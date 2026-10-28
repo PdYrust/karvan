@@ -39,9 +39,14 @@ type Site struct {
 	Port        int        `json:"port"`
 	Lazy        bool       `json:"lazy"`
 	PlainHTTPOK bool       `json:"plainHttpOk"`
+	// HTTPS is whether the rule answers over HTTPS: in a body, nil keeps
+	// the stored value on PATCH and takes the D63 default on POST; read
+	// back, whether it has a certificate.
+	HTTPS *bool `json:"https"`
 	// CertificateID is the certificates row the site is served with, or 0:
 	// plain HTTP, or its own certificate columns when not adopted (D54).
-	CertificateID int64 `json:"certificateId"`
+	// It is derived from the domains on every save (D63), never sent.
+	CertificateID int64 `json:"-"`
 	// The certificate the site is served with, read from its certificates
 	// row, else from its own columns. Never sent or taken as JSON.
 	CertFile string `json:"-"`
@@ -72,8 +77,12 @@ var (
 )
 
 // InvalidError names the first site field that is wrong, by its JSON key,
-// and for batchIds the reason (Reason* constants).
-type InvalidError struct{ Field, Reason string }
+// the reason when there is one (Reason* constants) and, for domains, the
+// names it is about.
+type InvalidError struct {
+	Field, Reason string
+	Names         []string
+}
 
 func (e *InvalidError) Error() string { return fmt.Sprintf("%v: %s", ErrInvalidSite, e.Field) }
 

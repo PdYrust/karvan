@@ -23,6 +23,7 @@ func TestPasarGuardOldPanel(t *testing.T) {
 	old := fakepanel.NewPasarGuard(fakepanel.PasarGuardAdmin{ID: 7, Username: "shop", Password: "pw"},
 		[]map[string]any{fakepanel.PasarGuardUser(42, "sara", nil)}, fakepanel.Faults{})
 	t.Cleanup(old.Close)
+	e.addDomain("pg.example.com")
 	site, err := e.b.st.Save(ctx, Site{Name: "pg", PanelID: 1, SourceKind: panel.PasarGuard, SourceURL: old.URL,
 		SourceIP: "127.0.0.1", OldPath: "sub", Domains: []string{"pg.example.com"}, Port: e.port, Lazy: true, PlainHTTPOK: true})
 	if err != nil {

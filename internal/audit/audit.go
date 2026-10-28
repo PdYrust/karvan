@@ -50,6 +50,7 @@ const (
 	ActionBatchShowLink    = "batch.show_link"
 	ActionDomainAdd        = "domain.add"
 	ActionDomainDelete     = "domain.delete"
+	ActionDomainCert       = "domain.certificate"
 	ActionCertAdd          = "certificate.add"
 	ActionCertSave         = "certificate.save"
 	ActionCertDelete       = "certificate.delete"

@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -79,7 +80,6 @@ func TestRedirectFieldsAreChecked(t *testing.T) {
 		{func(r *Redirect) { r.ToURL = "https://new.example.com:0/" }, "toUrl"},
 		{func(r *Redirect) { r.ToURL = "https://new.example.com:/" }, "toUrl"},
 		{func(r *Redirect) { r.ToURL = "https://new.example.com/" + strings.Repeat("p", 2048) }, "toUrl"},
-		{func(r *Redirect) { r.CertificateID = 999 }, "certificateId"},
 	} {
 		r := e.redirectFor("r", "/go", MatchPrefix, "https://new.example.com/")
 		c.edit(&r)
@@ -92,7 +92,7 @@ func TestRedirectFieldsAreChecked(t *testing.T) {
 	v := e.saveRedirect(Redirect{Name: " go ", Domains: []string{"Old.Example.com."}, Port: e.port, FromPath: "go/a", Match: MatchExact,
 		ToURL: "HTTPS://New.Example.COM:8443/x%2Fy"})
 	if v.Name != "go" || v.Domains[0] != "old.example.com" || v.FromPath != "/go/a" || v.ToURL != "https://new.example.com:8443/x%2Fy" ||
-		v.Certificate != nil || len(v.Warnings) != 0 {
+		v.Certificate != nil || !slices.Equal(v.Warnings, []string{WarnNoCertificate}) {
 		t.Fatalf("stored %+v", v)
 	}
 	var n int
@@ -138,11 +138,8 @@ func TestRedirectLoopIsRefused(t *testing.T) {
 func TestRedirectConflicts(t *testing.T) {
 	e := newEnv(t)
 	first := e.saveRedirect(e.redirectFor("first", "/go", MatchPrefix, "https://new.example.com/"))
-	certPEM, keyPEM := selfSigned(t, "old.example.com")
-	cert, err := e.b.SaveCertificate(t.Context(), 0, CertificateInput{Name: "tls", CertPEM: certPEM, KeyPEM: keyPEM})
-	if err != nil {
-		t.Fatal(err)
-	}
+	certPEM, keyPEM := selfSigned(t, "t.example.com")
+	e.certify("t.example.com", certPEM, keyPEM)
 	for _, c := range []struct {
 		r    Redirect
 		want error
@@ -152,7 +149,7 @@ func TestRedirectConflicts(t *testing.T) {
 		{e.redirectFor("panel", "/sub", MatchPrefix, "https://new.example.com/b"), ErrOverlap},
 		{func() Redirect {
 			r := e.redirectFor("tls", "/t", MatchExact, "https://new.example.com/")
-			r.CertificateID = cert.ID
+			r.Domains = []string{"t.example.com"} // HTTPS by default: its domain has a certificate
 			return r
 		}(),
 			ErrPortMixed},
@@ -280,15 +277,27 @@ func TestRedirectOverTLS(t *testing.T) {
 	ctx := context.Background()
 	t.Cleanup(e.b.stopAll)
 	certPEM, keyPEM := selfSigned(t, "old.example.com")
-	c, err := e.b.SaveCertificate(ctx, 0, CertificateInput{Name: "tls", CertPEM: certPEM, KeyPEM: keyPEM})
-	if err != nil {
-		t.Fatal(err)
-	}
+	c := e.certify("old.example.com", certPEM, keyPEM).Certificate
+	e.addDomain("other.example.com")
 	r := e.redirectFor("tls", "/go", MatchPrefix, "https://new.example.com/")
-	r.Port, r.CertificateID, r.Domains = freePort(t), c.ID, []string{"old.example.com", "other.example.com"}
+	on := true
+	r.Port, r.Domains, r.HTTPS = freePort(t), []string{"old.example.com", "other.example.com"}, &on
+	var invalid *RedirectInvalidError
+	if _, err := e.b.SaveRedirect(ctx, r); !errors.As(err, &invalid) || invalid.Field != "domains" || invalid.Reason != ReasonNoCert ||
+		!slices.Equal(invalid.Names, []string{"other.example.com"}) {
+		t.Fatalf("https with a domain without a certificate: %v", err)
+	}
+	r.Domains, r.HTTPS = []string{"old.example.com"}, nil
+	e.redirectServesItsDomainCertificate(r, c.ID, certPEM)
+}
+
+// redirectServesItsDomainCertificate saves r, checks it serves certPEM
+// (certificate id) over TLS, then deletes it and checks the route goes.
+func (e *env) redirectServesItsDomainCertificate(r Redirect, id int64, certPEM string) {
+	t := e.t
+	ctx := context.Background()
 	v := e.saveRedirect(r)
-	if v.Certificate == nil || v.Certificate.ID != c.ID || v.Certificate.Name != "tls" || len(v.Warnings) != 1 ||
-		v.Warnings[0] != WarnDomain {
+	if v.Certificate == nil || v.Certificate.ID != id || slices.Contains(v.Warnings, WarnDomain) || !*v.HTTPS {
 		t.Fatalf("view %+v", v)
 	}
 	block, _ := pem.Decode([]byte(certPEM))

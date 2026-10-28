@@ -42,7 +42,9 @@ func newMigrationEnv(t *testing.T, users int) *migrationEnv {
 	if res := e.login(""); res.status != http.StatusOK {
 		t.Fatalf("login: %d", res.status)
 	}
-	return &migrationEnv{env: e, src: src, panelID: id}
+	m := &migrationEnv{env: e, src: src, panelID: id}
+	m.exec("INSERT INTO domains (name, created_at, updated_at) VALUES ('old.example.com', 1, 1)") // the domain the rule tests use
+	return m
 }
 
 // create starts and checks a job and returns its id.

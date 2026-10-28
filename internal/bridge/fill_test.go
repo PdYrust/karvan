@@ -2,6 +2,10 @@ package bridge
 
 import (
 	"bytes"
+	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"encoding/pem"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -218,5 +222,89 @@ func TestDomainFillWaitsForTheAdoption(t *testing.T) {
 	if got := e.strs("SELECT d.name || ' ' || c.name || ' ' || d.cert_filled FROM domains d JOIN certificates c ON c.id = d.certificate_id " +
 		"WHERE d.name = 'bad.example.org'"); !slices.Equal(got, []string{"bad.example.org e-bad 1"}) {
 		t.Fatalf("domain after the adoption: %v", got)
+	}
+}
+
+// D63: a save that changes nothing, or only the name, of every migrated
+// rule keeps every handshake, the pinned port's included.
+func TestNoOpSavesKeepHandshakes(t *testing.T) {
+	m := newMoveCase(t)
+	e := m.e
+	ctx := context.Background()
+	b := e.restart(slog.New(slog.DiscardHandler))
+	shakes := m.handshakes(t)
+	for _, id := range []int64{10, 11, 12, 13, 14, 15, 16} {
+		s := mustSite(t, e, id)
+		if _, err := b.SaveSite(ctx, s); err != nil {
+			t.Fatalf("save %s unchanged: %v", s.Name, err)
+		}
+		s.Name, s.HTTPS = s.Name+" renamed", nil
+		if _, err := b.SaveSite(ctx, s); err != nil {
+			t.Fatalf("rename %s: %v", s.Name, err)
+		}
+	}
+	r, err := b.st.redirect(ctx, 1)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{r.Name, "r-b renamed"} {
+		r.Name = name
+		if _, err := b.SaveRedirect(ctx, r); err != nil {
+			t.Fatalf("save the redirect as %s: %v", name, err)
+		}
+	}
+	if got := m.handshakes(t); !slices.Equal(got, shakes) {
+		t.Errorf("handshakes changed:\n%v\nwant\n%v", got, shakes)
+	}
+	if got := m.moved(); !slices.Contains(got, "pin b conf.example.com b-conf") {
+		t.Errorf("the pin went with a save that changed nothing: %v", got)
+	}
+}
+
+// certHash is the hash handshake gives for the certificate in certPEM.
+func certHash(certPEM string) string {
+	block, _ := pem.Decode([]byte(certPEM))
+	sum := sha256.Sum256(block.Bytes)
+	return hex.EncodeToString(sum[:])
+}
+
+// D65 on the moved database: a new certificate for the conflicting domain
+// drops its pin and every port serves it; the plain rule stays plain; a
+// rule with no domains on a new port is plain unless it asks for HTTPS,
+// which is refused; a file pair a row has is that row.
+func TestMovedDomainTakesANewCertificate(t *testing.T) {
+	m := newMoveCase(t)
+	e := m.e
+	ctx := context.Background()
+	b := e.restart(slog.New(slog.DiscardHandler))
+	var conf int64
+	if err := e.b.DB.QueryRow("SELECT id FROM domains WHERE name = 'conf.example.com'").Scan(&conf); err != nil {
+		t.Fatal(err)
+	}
+	cert, key := selfSigned(t, "conf.example.com")
+	d, err := b.SetDomainCertificate(ctx, conf, CertChoice{Kind: ChoicePasted, CertPEM: cert, KeyPEM: key})
+	if err != nil || len(d.Pins) != 0 || slices.Contains(d.Warnings, WarnCertConflict) {
+		t.Fatalf("set: %+v %v", d, err)
+	}
+	for _, port := range []int{m.a, m.b} {
+		if got := handshake(t, port, "conf.example.com"); got != certHash(cert) {
+			t.Errorf("port %d serves %s", port, got)
+		}
+	}
+	plain := mustSite(t, e, 17)
+	plain.HTTPS = nil
+	if s, err := b.SaveSite(ctx, plain); err != nil || *s.HTTPS {
+		t.Fatalf("the plain rule after a save: %+v %v", s, err)
+	}
+	on := true
+	_, err = b.SaveSite(ctx, e.rule("bare", freePort(t), &on))
+	wantSiteInvalid(t, err, "https", ReasonNoCert)
+	if s, err := b.SaveSite(ctx, e.rule("bare", freePort(t), nil)); err != nil || *s.HTTPS {
+		t.Fatalf("no domains on a new port: %+v %v", s, err)
+	}
+	one := m.certs["one.example.com"]
+	got, err := b.AddDomain(ctx, "one.example.com", CertChoice{Kind: ChoiceFile, CertFile: one[0], KeyFile: one[1]})
+	if err != nil || got.Certificate == nil || got.Certificate.Name != "a-main" {
+		t.Fatalf("a stored pair: %+v %v", got, err)
 	}
 }

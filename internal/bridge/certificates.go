@@ -4,6 +4,7 @@ import (
 	"cmp"
 	"context"
 	"crypto/tls"
+	"crypto/x509"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -51,18 +52,22 @@ type CertificateInput struct {
 
 // certRow is a certificates row as stored.
 type certRow struct {
-	id                           int64
-	name, certFile, keyFile, pem string
-	sealed                       []byte
+	id                                   int64
+	name, certFile, keyFile, pem, origin string
+	sealed                               []byte
 }
 
 func scanCertRow(row interface{ Scan(...any) error }) (certRow, error) {
 	var r certRow
-	err := row.Scan(&r.id, &r.name, &r.certFile, &r.keyFile, &r.pem, &r.sealed)
+	err := row.Scan(&r.id, &r.name, &r.certFile, &r.keyFile, &r.pem, &r.sealed, &r.origin)
 	return r, err
 }
 
-const certRowColumns = "SELECT id, name, cert_file, key_file, cert_pem, key_sealed FROM certificates"
+const certRowColumns = "SELECT id, name, cert_file, key_file, cert_pem, key_sealed, origin FROM certificates"
+
+// ErrManaged means a Let's Encrypt certificate was to be changed by hand;
+// Karvan renews it in place (D49).
+var ErrManaged = errors.New("the certificate is renewed by Karvan")
 
 // material reads a certificate and its key: the files, or the pasted
 // certificate with its key opened. What cannot be read is nil.
@@ -103,8 +108,9 @@ func (b *Bridge) certificates(ctx context.Context) ([]Certificate, error) {
 	out := make([]Certificate, 0, len(list))
 	for _, r := range list {
 		certPEM, keyPEM := b.material(r)
-		c := Certificate{ID: r.id, Name: r.name, Kind: CertKindFile, CertFile: r.certFile, KeyFile: r.keyFile,
-			HasKey: len(keyPEM) > 0, Facts: inspect(certPEM, keyPEM, nil, b.Now()), Rules: []CertRule{}, leaf: firstCert(certPEM)}
+		c := Certificate{ID: r.id, Name: r.name, Kind: CertKindFile, Origin: r.origin, CertFile: r.certFile, KeyFile: r.keyFile,
+			HasKey: len(keyPEM) > 0, Facts: inspect(certPEM, keyPEM, nil, b.Now()), Domains: []CertDomain{}, Rules: []CertRule{},
+			leaf: firstCert(certPEM)}
 		if r.certFile == "" {
 			c.Kind, c.CertPEM = CertKindPasted, r.pem
 		}
@@ -113,8 +119,9 @@ func (b *Bridge) certificates(ctx context.Context) ([]Certificate, error) {
 	return out, nil
 }
 
-// Certificates lists every certificate by name, with its facts and the
-// rules that use it; a rule's warnings carry its domain_mismatch (D50).
+// Certificates lists every certificate by name, with its facts, the
+// domains whose certificate it is and the rules that use it; each domain
+// and rule carries its domain_mismatch (D50).
 func (b *Bridge) Certificates(ctx context.Context) ([]Certificate, error) {
 	certs, err := b.certificates(ctx)
 	if err != nil {
@@ -124,8 +131,27 @@ func (b *Bridge) Certificates(ctx context.Context) ([]Certificate, error) {
 	if err != nil {
 		return nil, err
 	}
+	byCert := map[int64][]Ref{}
+	err = b.st.each(ctx, "SELECT certificate_id, id, name FROM domains WHERE certificate_id IS NOT NULL ORDER BY name",
+		func(r *sql.Rows) error {
+			var id int64
+			var d Ref
+			err := r.Scan(&id, &d.ID, &d.Name)
+			byCert[id] = append(byCert[id], d)
+			return err
+		})
+	if err != nil {
+		return nil, fmt.Errorf("read domain certificates: %w", err)
+	}
 	for i := range certs {
 		c := &certs[i]
+		for _, d := range byCert[c.ID] {
+			w := []string{}
+			if c.leaf != nil && !certCovers(c.leaf, d.Name) {
+				w = append(w, WarnDomain)
+			}
+			c.Domains = append(c.Domains, CertDomain{Ref: d, Warnings: w})
+		}
 		for _, r := range rules {
 			if r.certID != c.ID {
 				continue
@@ -162,11 +188,16 @@ func (b *Bridge) SaveCertificate(ctx context.Context, id int64, in CertificateIn
 	return Certificate{}, ErrNotFound
 }
 
-// DeleteCertificate removes a certificate no rule uses, in one statement.
+// DeleteCertificate removes a certificate no domain, pin or rule uses, in
+// one statement.
 func (b *Bridge) DeleteCertificate(ctx context.Context, id int64) error {
+	b.st.saveMu.Lock() // a domain or rule save may be about to point at it
+	defer b.st.saveMu.Unlock()
 	res, err := b.DB.ExecContext(ctx, "DELETE FROM certificates WHERE id = ? "+
 		"AND NOT EXISTS (SELECT 1 FROM legacy_sites WHERE certificate_id = certificates.id) "+
-		"AND NOT EXISTS (SELECT 1 FROM link_redirects WHERE certificate_id = certificates.id)", id)
+		"AND NOT EXISTS (SELECT 1 FROM link_redirects WHERE certificate_id = certificates.id) "+
+		"AND NOT EXISTS (SELECT 1 FROM domains WHERE certificate_id = certificates.id) "+
+		"AND NOT EXISTS (SELECT 1 FROM domain_pins WHERE certificate_id = certificates.id)", id)
 	if err != nil {
 		return fmt.Errorf("delete certificate: %w", err)
 	}
@@ -184,14 +215,26 @@ func (b *Bridge) DeleteCertificate(ctx context.Context, id int64) error {
 	if err != nil {
 		return err
 	}
-	return &InUseError{What: "certificate", Rules: usedBy(rules, func(r rule) bool { return r.certID == id })}
+	domains := []Ref{}
+	err = b.st.each(ctx, fmt.Sprintf("SELECT id, name FROM domains WHERE certificate_id = %d OR id IN "+
+		"(SELECT domain_id FROM domain_pins WHERE certificate_id = %d) ORDER BY name", id, id), func(r *sql.Rows) error {
+		var d Ref
+		err := r.Scan(&d.ID, &d.Name)
+		domains = append(domains, d)
+		return err
+	})
+	if err != nil {
+		return fmt.Errorf("read domains of certificate: %w", err)
+	}
+	return &InUseError{What: "certificate", Rules: usedBy(rules, func(r rule) bool { return r.certID == id }), Domains: domains}
 }
 
 // certParts is a checked certificate: a file pair, or a pasted one with
-// the key to seal (nil: keep the stored key).
+// the key to seal (nil: keep the stored key), and its first certificate.
 type certParts struct {
 	certFile, keyFile, certPEM string
 	key                        []byte
+	leaf                       *x509.Certificate
 }
 
 // saveCertificate checks in and writes it; a pasted key is sealed under
@@ -224,16 +267,26 @@ func (st *store) saveCertificate(ctx context.Context, id int64, in CertificateIn
 	if id, err = writeCertificate(ctx, tx, id, name, p, st.now().Unix()); err != nil {
 		return 0, err
 	}
-	if p.key != nil {
-		sealed, err := st.key.Seal(p.key, secret.AAD("certificates", "key_sealed", id))
-		if err != nil {
-			return 0, err
-		}
-		if _, err := tx.ExecContext(ctx, "UPDATE certificates SET key_sealed = ? WHERE id = ?", sealed, id); err != nil {
-			return 0, fmt.Errorf("store certificate key: %w", err)
-		}
+	if err := st.sealCertKey(ctx, tx, id, p.key); err != nil {
+		return 0, err
 	}
 	return id, tx.Commit()
+}
+
+// sealCertKey seals key under certificates row id and stores it; nil
+// keeps the stored key.
+func (st *store) sealCertKey(ctx context.Context, tx *sql.Tx, id int64, key []byte) error {
+	if key == nil {
+		return nil
+	}
+	sealed, err := st.key.Seal(key, secret.AAD("certificates", "key_sealed", id))
+	if err != nil {
+		return err
+	}
+	if _, err := tx.ExecContext(ctx, "UPDATE certificates SET key_sealed = ? WHERE id = ?", sealed, id); err != nil {
+		return fmt.Errorf("store certificate key: %w", err)
+	}
+	return nil
 }
 
 // storedKey reads the key of certificate id when need is set and it is
@@ -245,6 +298,8 @@ func (st *store) storedKey(ctx context.Context, tx *sql.Tx, id int64, need bool)
 		return nil, ErrNotFound
 	case err != nil:
 		return nil, err
+	case r.origin == OriginACME:
+		return nil, ErrManaged
 	case !need || r.pem == "" || r.sealed == nil:
 		return nil, nil
 	}
@@ -320,7 +375,7 @@ func checkCertFiles(certFile, keyFile string) (certParts, error) {
 	if _, err := tls.X509KeyPair(certPEM, keyPEM); err != nil {
 		return certParts{}, certInvalid("keyFile", "key_mismatch")
 	}
-	return certParts{certFile: certFile, keyFile: keyFile}, nil
+	return certParts{certFile: certFile, keyFile: keyFile, leaf: firstCert(certPEM)}, nil
 }
 
 func checkPasted(certPEM, keyPEM string, stored []byte) (certParts, error) {
@@ -332,7 +387,7 @@ func checkPasted(certPEM, keyPEM string, stored []byte) (certParts, error) {
 	case firstCert([]byte(certPEM)) == nil:
 		return certParts{}, certInvalid("certPem", "no_cert")
 	}
-	p := certParts{certPEM: certPEM}
+	p := certParts{certPEM: certPEM, leaf: firstCert([]byte(certPEM))}
 	key := stored
 	if keyPEM != "" {
 		key, p.key = []byte(keyPEM), []byte(keyPEM)

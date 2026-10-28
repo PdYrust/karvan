@@ -46,10 +46,17 @@ func longCertFiles(t *testing.T, dir, name string) (string, string) {
 	return cf, kf
 }
 
-func (e *env) addDomain(name string) Domain {
+// plainOK is the choice of a domain without a certificate.
+var plainOK = CertChoice{Kind: ChoiceNone, PlainOK: true}
+
+// addDomain registers name without a certificate, or finds its row.
+func (e *env) addDomain(name string) Domain { return e.addDomainWith(name, plainOK) }
+
+// addDomainWith registers name with the certificate ch, or finds its row.
+func (e *env) addDomainWith(name string, ch CertChoice) Domain {
 	e.t.Helper()
-	d, err := e.b.AddDomain(context.Background(), name)
-	if errors.Is(err, ErrNameTaken) { // a rule's domain has its row already (D48)
+	d, err := e.b.AddDomain(context.Background(), name, ch)
+	if errors.Is(err, ErrNameTaken) { // registered already
 		list, _ := e.b.Domains(context.Background())
 		for _, d := range list {
 			if d.Name == name {
@@ -114,11 +121,11 @@ func TestAddDomainChecksTheName(t *testing.T) {
 	long := strings.Repeat("a.", 125) + "com" // 253 bytes after "*."
 	for _, bad := range []string{"", " ", "a..b", "*.*.example.com", "-a.example.com", "a_b.example.com", "*." + long,
 		"exa mple.com", "*"} {
-		if _, err := e.b.AddDomain(context.Background(), bad); !errors.Is(err, ErrInvalidDomain) {
+		if _, err := e.b.AddDomain(context.Background(), bad, plainOK); !errors.Is(err, ErrInvalidDomain) || domainField(err) != "name" {
 			t.Errorf("add %q: %v", bad, err)
 		}
 	}
-	if _, err := e.b.AddDomain(context.Background(), "SUB.example.com"); !errors.Is(err, ErrNameTaken) {
+	if _, err := e.b.AddDomain(context.Background(), "SUB.example.com", plainOK); !errors.Is(err, ErrNameTaken) {
 		t.Errorf("a taken name: %v", err)
 	}
 }
@@ -253,13 +260,13 @@ func TestCertificateChangeKeepsOrDropsTheKey(t *testing.T) {
 	}
 }
 
-// The list says what each certificate covers and which rules use it,
-// with a rule domain the certificate does not cover.
+// The list says what each certificate covers and which domains and rules
+// use it, with a domain the certificate does not cover.
 func TestCertificatesListFactsAndRules(t *testing.T) {
 	e := newCertEnv(t)
 	cf, kf := longCertFiles(t, t.TempDir(), "old.example.com")
 	c := e.addCert(CertificateInput{Name: "file", CertFile: cf, KeyFile: kf})
-	other, otherKey := longCert(t, "b.example.com")
+	other, otherKey := longCert(t, "other.example.com")
 	unused := e.addCert(CertificateInput{Name: "unused", CertPEM: other, KeyPEM: otherKey})
 	e.pointSite(e.site.ID, c.ID)
 	e.addRedirect("to new", `["x.example.com"]`, 8443, c.ID)
@@ -282,7 +289,7 @@ func TestCertificatesListFactsAndRules(t *testing.T) {
 	}
 }
 
-// A certificate a rule uses stays; an unused one goes.
+// A certificate a rule, a domain or a pin uses stays; an unused one goes.
 func TestCertificateInUseIsNotDeleted(t *testing.T) {
 	e := newCertEnv(t)
 	ctx := context.Background()
@@ -300,6 +307,21 @@ func TestCertificateInUseIsNotDeleted(t *testing.T) {
 	if err := e.b.DeleteCertificate(ctx, redirected.ID); !errors.As(err, &inUse) || inUse.Rules[0].Kind != RuleRedirect {
 		t.Fatalf("delete a redirect's certificate: %v", err)
 	}
+	ofDomain := e.addCert(CertificateInput{Name: "of a domain", CertPEM: cert, KeyPEM: key})
+	pinned := e.addCert(CertificateInput{Name: "pinned", CertPEM: cert, KeyPEM: key})
+	d := e.addDomainWith("old.example.com", CertChoice{Kind: ChoiceNone, PlainOK: true})
+	if _, err := e.b.DB.Exec("UPDATE domains SET certificate_id = ? WHERE id = ?", ofDomain.ID, d.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.b.DB.Exec("INSERT INTO domain_pins (port, domain_id, certificate_id) VALUES (443, ?, ?)", d.ID, pinned.ID); err != nil {
+		t.Fatal(err)
+	}
+	for _, id := range []int64{ofDomain.ID, pinned.ID} {
+		if err := e.b.DeleteCertificate(ctx, id); !errors.As(err, &inUse) || !slices.Equal(inUse.Domains, []Ref{{d.ID, "old.example.com"}}) ||
+			len(inUse.Rules) != 0 {
+			t.Fatalf("delete a domain's or pin's certificate: %v", err)
+		}
+	}
 	if err := e.b.DeleteCertificate(ctx, free.ID); err != nil {
 		t.Fatal(err)
 	}
@@ -308,56 +330,60 @@ func TestCertificateInUseIsNotDeleted(t *testing.T) {
 	}
 }
 
-// A domain lists the certificates that cover it, the rules that hold it
-// and the warnings of D50.
+// A domain shows its certificate, the stored certificates that cover it,
+// its pins, the rules that hold it and the warnings of D50.
 func TestDomainsShowCertificatesRulesAndWarnings(t *testing.T) {
 	e := newCertEnv(t)
-	ctx := context.Background()
 	wild, wildKey := longCert(t, "*.example.com")
 	exact, exactKey := longCert(t, "old.example.com")
 	w := e.addCert(CertificateInput{Name: "wild", CertPEM: wild, KeyPEM: wildKey})
 	x := e.addCert(CertificateInput{Name: "exact", CertPEM: exact, KeyPEM: exactKey})
-	e.pointSite(e.site.ID, x.ID) // old.example.com on port 1 with "exact"
+	old := e.addDomain("old.example.com")
+	e.addDomainWith("*.example.com", CertChoice{Kind: ChoiceStored, CertificateID: w.ID})
+	e.addDomain("z.example.net")
 	e.addRedirect("wild rule", `["*.example.com"]`, e.site.Port, w.ID)
-	e.addRedirect("bare", `["bare.example.org"]`, 9000, w.ID)
-	for _, n := range []string{"old.example.com", "*.example.com", "bare.example.org", "z.example.net"} {
-		e.addDomain(n)
+	if _, err := e.b.DB.Exec("UPDATE domains SET certificate_id = ? WHERE id = ?", x.ID, old.ID); err != nil {
+		t.Fatal(err)
 	}
-	list, err := e.b.Domains(ctx)
-	if err != nil || len(list) != 4 {
-		t.Fatalf("domains %+v %v", list, err)
+	if _, err := e.b.DB.Exec("INSERT INTO domain_pins (port, domain_id, certificate_id) VALUES (8443, ?, ?)", old.ID, w.ID); err != nil {
+		t.Fatal(err)
 	}
-	by := map[string]Domain{}
-	for _, d := range list {
-		by[d.Name] = d
+	if _, err := e.b.DB.Exec("INSERT INTO domains (name, cert_filled, certificate_id, created_at, updated_at) VALUES ('wait.example.com', 0, NULL, 1, 1), "+
+		"('bare.example.org', 1, ?, 1, 1)", w.ID); err != nil {
+		t.Fatal(err)
 	}
-	if names := []string{list[0].Name, list[1].Name, list[2].Name, list[3].Name}; !slices.IsSorted(names) {
-		t.Errorf("order %v", names)
-	}
-	check := func(name string, certs []Ref, rules []RuleRef, warnings []string) {
+	by := e.domainsByName(5)
+	check := func(name, cert string, certs []Ref, pins []DomainPin, rules []RuleRef, warnings []string) {
 		t.Helper()
 		d := by[name]
-		if !slices.Equal(d.Certificates, certs) || !slices.Equal(d.Rules, rules) || !slices.Equal(d.Warnings, warnings) {
+		got := "-"
+		if d.Certificate != nil {
+			got = d.Certificate.Name
+		}
+		if got != cert || !slices.Equal(d.Certificates, certs) || !slices.Equal(d.Pins, pins) || !slices.Equal(d.Rules, rules) ||
+			!slices.Equal(d.Warnings, warnings) {
 			t.Errorf("%s: %+v", name, d)
 		}
 	}
-	check("old.example.com", []Ref{{x.ID, "exact"}, {w.ID, "wild"}}, []RuleRef{{RulePanel, e.site.ID, "old"}},
-		[]string{WarnCertConflict})
-	check("*.example.com", []Ref{{w.ID, "wild"}}, []RuleRef{{RuleRedirect, 1, "wild rule"}}, []string{WarnCertConflict})
-	check("bare.example.org", []Ref{}, []RuleRef{{RuleRedirect, 2, "bare"}}, []string{WarnDomain, WarnNoCertificate})
-	check("z.example.net", []Ref{}, []RuleRef{}, []string{WarnNoCertificate})
+	check("old.example.com", "exact", []Ref{{x.ID, "exact"}, {w.ID, "wild"}}, []DomainPin{{8443, Ref{w.ID, "wild"}}},
+		[]RuleRef{{RulePanel, e.site.ID, "old"}}, []string{WarnCertConflict})
+	check("*.example.com", "wild", []Ref{{w.ID, "wild"}}, []DomainPin{}, []RuleRef{{RuleRedirect, 1, "wild rule"}}, []string{})
+	check("bare.example.org", "wild", []Ref{}, []DomainPin{}, []RuleRef{}, []string{WarnDomain})
+	check("wait.example.com", "-", []Ref{{w.ID, "wild"}}, []DomainPin{}, []RuleRef{}, []string{WarnNotAdopted})
+	check("z.example.net", "-", []Ref{}, []DomainPin{}, []RuleRef{}, []string{WarnNoCertificate})
+	if c := by["bare.example.org"].Certificate; c == nil || !slices.Equal(c.Facts.Warnings, []string{WarnDomain}) || c.Origin != "" {
+		t.Errorf("certificate of a name it does not cover %+v", c)
+	}
 }
 
-// A domain shows the warnings of the certificates its rules use.
+// A domain shows the warnings of its certificate.
 func TestDomainCarriesCertificateWarnings(t *testing.T) {
 	e := newCertEnv(t)
-	cert, key := selfSigned(t, "old.example.com")
-	c := e.addCert(CertificateInput{Name: "soon", CertPEM: cert, KeyPEM: key})
-	e.pointSite(e.site.ID, c.ID)
-	e.addDomain("old.example.com")
+	cert, key := selfSigned(t, "new.example.com")
+	e.addDomainWith("new.example.com", CertChoice{Kind: ChoicePasted, CertPEM: cert, KeyPEM: key})
 	e.clock.add(2 * time.Hour) // the certificate is valid for an hour
 	list, err := e.b.Domains(context.Background())
-	if err != nil || len(list) != 1 || !slices.Equal(list[0].Warnings, []string{WarnExpired}) {
+	if err != nil || len(list) != 2 || list[0].Name != "new.example.com" || !slices.Equal(list[0].Warnings, []string{WarnExpired}) {
 		t.Fatalf("domains %+v %v", list, err)
 	}
 }
@@ -385,20 +411,20 @@ func TestChangedCertificateIsServed(t *testing.T) {
 	e := newCertEnv(t)
 	ctx := context.Background()
 	t.Cleanup(e.b.stopAll)
-	cf, kf := longCertFiles(t, t.TempDir(), "old.example.com")
+	cf, kf := longCertFiles(t, t.TempDir(), "tls.example.com")
 	port := freePort(t)
-	c := e.addCert(CertificateInput{Name: "tls", CertFile: cf, KeyFile: kf})
+	e.addDomainWith("tls.example.com", CertChoice{Kind: ChoiceFile, CertFile: cf, KeyFile: kf})
 	s, err := e.b.SaveSite(ctx, Site{Name: "tls", PanelID: 1, SourceKind: panel.Marzban, SourceURL: e.old.URL, SourceIP: "127.0.0.1",
-		OldPath: "tls", Domains: []string{"old.example.com"}, Port: port, CertificateID: c.ID})
+		OldPath: "tls", Domains: []string{"tls.example.com"}, Port: port})
 	if err != nil || s.CertificateID == 0 {
 		t.Fatalf("save %+v %v", s, err)
 	}
-	before := handshake(t, port, "old.example.com")
-	cf2, kf2 := longCertFiles(t, t.TempDir(), "old.example.com")
-	if _, err := e.b.SaveCertificate(ctx, s.CertificateID, CertificateInput{Name: "tls", CertFile: cf2, KeyFile: kf2}); err != nil {
+	before := handshake(t, port, "tls.example.com")
+	cf2, kf2 := longCertFiles(t, t.TempDir(), "tls.example.com")
+	if _, err := e.b.SaveCertificate(ctx, s.CertificateID, CertificateInput{Name: "tls.example.com", CertFile: cf2, KeyFile: kf2}); err != nil {
 		t.Fatal(err)
 	}
-	if after := handshake(t, port, "old.example.com"); after == before || after == "error" {
+	if after := handshake(t, port, "tls.example.com"); after == before || after == "error" {
 		t.Fatalf("handshake after the change: %s", after)
 	}
 }

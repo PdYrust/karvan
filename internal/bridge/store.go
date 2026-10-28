@@ -35,8 +35,9 @@ type store struct {
 	key        *secret.Key
 	now        func() time.Time
 	panelPorts func() []int // Karvan's own web panel ports; nil: none known
-	// saveMu runs one rule save at a time, so two saves cannot both pass
-	// the conflict check before either is written.
+	// saveMu runs one save of rules, domains, their certificates and pins
+	// at a time, so no two can both pass their checks before either is
+	// written.
 	saveMu sync.Mutex
 }
 
@@ -60,6 +61,8 @@ func scanSite(row interface{ Scan(...any) error }) (Site, error) {
 	if err := json.Unmarshal([]byte(domains), &s.Domains); err != nil {
 		return s, fmt.Errorf("site %d domains: %w", s.ID, err)
 	}
+	https := s.TLS()
+	s.HTTPS = &https
 	return s, s.setOrigin()
 }
 
@@ -120,10 +123,11 @@ func (st *store) siteKey(ctx context.Context, id int64) ([]byte, error) {
 }
 
 // Save creates (ID 0) or updates a site: a rule of batches takes its
-// derived fields from them, the certificate is CertificateID, and the
-// domains get rows (D48). The site's own certificate columns are cleared
-// in the same transaction; a site still served from them must pick a
-// certificate (ErrNotAdopted, D54).
+// derived fields from them, every domain must be registered, and the
+// certificate is derived from the domains and https (D48, D63). The
+// site's own certificate columns are cleared in the same transaction; a
+// site still served from them is saved only once its domains have
+// certificates (ErrNotAdopted, D54).
 func (st *store) Save(ctx context.Context, s Site) (Site, error) {
 	st.saveMu.Lock()
 	defer st.saveMu.Unlock()
@@ -138,18 +142,24 @@ func (st *store) Save(ctx context.Context, s Site) (Site, error) {
 	if err := checkMode(&s, stored); err != nil {
 		return s, err
 	}
-	if stored != nil && stored.TLS() && stored.CertificateID == 0 && s.CertificateID == 0 {
-		return s, ErrNotAdopted
-	}
 	if s.Mode == ModeBatches {
 		if err := st.fromBatches(ctx, &s); err != nil {
 			return s, err
 		}
 	}
-	if err := st.pickCertificate(ctx, &s); err != nil {
+	if err := s.normalize(); err != nil {
 		return s, err
 	}
-	if err := s.normalize(); err != nil {
+	in := ruleCert{self: RuleRef{Kind: RulePanel, ID: s.ID}, port: s.Port, domains: s.Domains, https: s.HTTPS}
+	if stored != nil {
+		in.stored, in.notAdopted = stored.HTTPS, stored.TLS() && stored.CertificateID == 0
+	}
+	id, err := st.derive(ctx, in)
+	if err != nil {
+		return s, err
+	}
+	s.CertificateID = id
+	if err := st.pickCertificate(ctx, &s); err != nil {
 		return s, err
 	}
 	if err := st.checkSave(ctx, s); err != nil {
@@ -161,19 +171,18 @@ func (st *store) Save(ctx context.Context, s Site) (Site, error) {
 	return st.Site(ctx, s.ID)
 }
 
-// write stores a checked site, its batches and its domain rows in one
-// transaction.
+// write stores a checked site and its batches, and drops the pins no
+// rule holds any more, in one transaction.
 func (st *store) write(ctx context.Context, s *Site) error {
 	domains, _ := json.Marshal(s.Domains)
 	now := st.now().Unix()
-	certID := sql.NullInt64{Int64: s.CertificateID, Valid: s.CertificateID != 0}
 	tx, err := st.db.BeginTx(ctx, nil)
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback() //nolint:errcheck // a no-op after Commit
 	args := []any{s.Name, s.PanelID, string(s.SourceKind), s.SourceURL, s.SourceIP, s.SourcePin, s.OldPath, string(domains),
-		s.Port, s.Lazy, s.PlainHTTPOK, certID, now}
+		s.Port, s.Lazy, s.PlainHTTPOK, nullID(s.CertificateID), now}
 	if s.ID == 0 {
 		res, err := tx.ExecContext(ctx, "INSERT INTO legacy_sites (name, panel_id, source_kind, source_url, source_ip, source_pin, "+
 			"old_path, domains, listen_port, lazy, plain_http_ok, certificate_id, updated_at, mode, created_at) "+
@@ -190,14 +199,14 @@ func (st *store) write(ctx context.Context, s *Site) error {
 	if err := linkBatches(ctx, tx, *s); err != nil {
 		return err
 	}
-	if err := addDomains(ctx, tx, s.Domains, now); err != nil {
+	if err := prunePins(ctx, tx); err != nil {
 		return err
 	}
 	return tx.Commit()
 }
 
 // checkSave checks s against its panel, Karvan's own port and every other
-// panel and redirect rule (D52, D53). The bridge store writes both rule
+// panel and redirect rule (D52). The bridge store writes both rule
 // tables, so a request reaches at most one rule.
 func (st *store) checkSave(ctx context.Context, s Site) error {
 	var n int
@@ -242,14 +251,29 @@ func update(ctx context.Context, tx *sql.Tx, id int64, args []any) error {
 	return nil
 }
 
-// Delete removes a site and its tokens.
+// Delete removes a site and its tokens, and the pins no rule holds any
+// more.
 func (st *store) Delete(ctx context.Context, id int64) error {
-	res, err := st.db.ExecContext(ctx, "DELETE FROM legacy_sites WHERE id = ?", id)
+	return st.deleteRule(ctx, "DELETE FROM legacy_sites WHERE id = ?", id)
+}
+
+// deleteRule runs the delete q of rule id and drops the pins no rule
+// holds any more, in one transaction.
+func (st *store) deleteRule(ctx context.Context, q string, id int64) error {
+	tx, err := st.db.BeginTx(ctx, nil)
 	if err != nil {
-		return fmt.Errorf("delete site: %w", err)
+		return err
+	}
+	defer tx.Rollback() //nolint:errcheck // a no-op after Commit
+	res, err := tx.ExecContext(ctx, q, id)
+	if err != nil {
+		return fmt.Errorf("delete rule: %w", err)
 	}
 	if n, _ := res.RowsAffected(); n == 0 {
 		return ErrNotFound
 	}
-	return nil
+	if err := prunePins(ctx, tx); err != nil {
+		return err
+	}
+	return tx.Commit()
 }
