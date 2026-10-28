@@ -89,34 +89,6 @@ func TestCertTimeWarnings(t *testing.T) {
 	}
 }
 
-// A changed pasted certificate needs its own key; the stored one is kept
-// only while it still fits.
-func TestPastedCertNeedsItsKey(t *testing.T) {
-	e := newEnv(t)
-	ctx := context.Background()
-	now := e.clock.now()
-	a, aKey := certFor(t, "old.example.com", []string{"old.example.com"}, now.Add(-time.Hour), now.Add(90*24*time.Hour))
-	b, _ := certFor(t, "old.example.com", []string{"old.example.com"}, now.Add(-time.Hour), now.Add(time.Hour))
-	s := e.site
-	s.CertPEM, s.KeyPEM = string(a), string(aKey)
-	saved, err := e.b.st.Save(ctx, s)
-	if err != nil {
-		t.Fatal(err)
-	}
-	saved.CertPEM = string(b)
-	if _, err := e.b.st.Save(ctx, saved); FieldOf(err) != "keyPem" {
-		t.Fatalf("a new certificate with the old key: %v", err)
-	}
-	saved.CertPEM = "-----BEGIN CERTIFICATE-----\nAAAA\n-----END CERTIFICATE-----\n"
-	if _, err := e.b.st.Save(ctx, saved); FieldOf(err) != "certPem" {
-		t.Fatalf("a broken certificate: %v", err)
-	}
-	v := e.b.View(ctx, mustSite(t, e, saved.ID))
-	if v.Cert == nil || len(v.Cert.Warnings) != 0 {
-		t.Fatalf("stored facts %+v", v.Cert)
-	}
-}
-
 func mustSite(t *testing.T, e *env, id int64) Site {
 	t.Helper()
 	s, err := e.b.st.Site(context.Background(), id)

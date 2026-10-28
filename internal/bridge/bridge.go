@@ -96,18 +96,11 @@ func (b *Bridge) Sites(ctx context.Context) ([]Site, error) { return b.st.Sites(
 // Site reads one site.
 func (b *Bridge) Site(ctx context.Context, id int64) (Site, error) { return b.st.Site(ctx, id) }
 
-// SaveSite adds or changes a site, adopts a certificate it brings in its
-// own columns, and starts serving it.
+// SaveSite adds or changes a site and starts serving it.
 func (b *Bridge) SaveSite(ctx context.Context, s Site) (Site, error) {
 	saved, err := b.st.Save(ctx, s)
 	if err != nil {
 		return saved, err
-	}
-	if saved.TLS() && saved.CertificateID == 0 {
-		b.adoptSite(ctx, saved.ID, saved.Name)
-		if saved, err = b.st.Site(ctx, saved.ID); err != nil {
-			return saved, err
-		}
 	}
 	return saved, b.Reload(ctx)
 }

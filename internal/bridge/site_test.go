@@ -28,16 +28,14 @@ func TestSiteValidation(t *testing.T) {
 		t.Fatalf("%v %+v", err, ok)
 	}
 	for name, edit := range map[string]func(s *Site){
-		"kind":      func(s *Site) { s.SourceKind = "x-ui" },
-		"path":      func(s *Site) { s.OldPath = "a/b" },
-		"port":      func(s *Site) { s.Port = 0 },
-		"url":       func(s *Site) { s.SourceURL = "ftp://old" },
-		"ip":        func(s *Site) { s.SourceIP = "old.example.com" },
-		"metadata":  func(s *Site) { s.SourceIP = "169.254.169.254" },
-		"pin":       func(s *Site) { s.SourcePin = "abc" },
-		"domain":    func(s *Site) { s.Domains = []string{"*.*.example.com"} },
-		"key file":  func(s *Site) { s.CertFile = "/c.pem" },
-		"two certs": func(s *Site) { s.CertFile, s.KeyFile, s.CertPEM = "/c", "/k", "pem" },
+		"kind":     func(s *Site) { s.SourceKind = "x-ui" },
+		"path":     func(s *Site) { s.OldPath = "a/b" },
+		"port":     func(s *Site) { s.Port = 0 },
+		"url":      func(s *Site) { s.SourceURL = "ftp://old" },
+		"ip":       func(s *Site) { s.SourceIP = "old.example.com" },
+		"metadata": func(s *Site) { s.SourceIP = "169.254.169.254" },
+		"pin":      func(s *Site) { s.SourcePin = "abc" },
+		"domain":   func(s *Site) { s.Domains = []string{"*.*.example.com"} },
 	} {
 		s := ok
 		s.Domains = append([]string(nil), ok.Domains...)
@@ -79,39 +77,18 @@ func TestOverlappingSitesAreRefused(t *testing.T) {
 	}
 }
 
-// A pasted private key is stored sealed and never read back out.
-func TestPastedKeyIsSealed(t *testing.T) {
-	e := newEnv(t)
-	ctx := context.Background()
-	certPEM, keyPEM := selfSigned(t, "old.example.com")
-	s := e.site
-	s.CertPEM, s.KeyPEM = certPEM, keyPEM
-	saved, err := e.b.st.Save(ctx, s)
-	if err != nil || !saved.HasKey || saved.KeyPEM != "" {
-		t.Fatalf("%v %+v", err, saved)
-	}
-	var raw []byte
-	_ = e.b.DB.QueryRow("SELECT key_sealed FROM legacy_sites WHERE id = ?", s.ID).Scan(&raw)
-	if len(raw) == 0 || string(raw) == keyPEM {
-		t.Fatal("key stored in the clear")
-	}
-	if got, err := e.b.st.siteKey(ctx, s.ID); err != nil || string(got) != keyPEM {
-		t.Fatalf("key round trip: %v", err)
-	}
-	saved.KeyPEM = "" // an update without a key keeps the stored one
-	if again, err := e.b.st.Save(ctx, saved); err != nil || !again.HasKey {
-		t.Fatalf("update: %v %+v", err, again)
-	}
-}
-
 // The bridge listens on the site's port and serves HTTPS with the site's
 // certificate picked by SNI.
 func TestServesOverTLS(t *testing.T) {
 	e := newEnv(t, "ali")
 	ctx := context.Background()
 	certPEM, keyPEM := selfSigned(t, "old.example.com")
+	stored, err := e.b.SaveCertificate(ctx, 0, CertificateInput{Name: "tls", CertPEM: certPEM, KeyPEM: keyPEM})
+	if err != nil {
+		t.Fatal(err)
+	}
 	s := e.site
-	s.Port, s.CertPEM, s.KeyPEM = freePort(t), certPEM, keyPEM
+	s.Port, s.CertificateID = freePort(t), stored.ID
 	if _, err := e.b.SaveSite(ctx, s); err != nil {
 		t.Fatal(err)
 	}

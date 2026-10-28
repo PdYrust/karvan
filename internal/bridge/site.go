@@ -19,10 +19,16 @@ import (
 	"github.com/PdYrust/karvan/internal/panel/source"
 )
 
-// Site is one old subscription address the bridge answers.
+// Site is one old subscription address the bridge answers: a panel rule.
 type Site struct {
-	ID          int64      `json:"id"`
-	Name        string     `json:"name"`
+	ID   int64  `json:"id"`
+	Name string `json:"name"`
+	// Mode is ModeManual (the default) or ModeBatches, fixed when the rule
+	// is made. A rule of batches takes PanelID, SourceKind, SourceURL,
+	// SourcePin, and OldPath and SourceIP when they know them, from
+	// BatchIDs (D56); the body may not send them.
+	Mode        string     `json:"mode"`
+	BatchIDs    []int64    `json:"batchIds,omitempty"`
 	PanelID     int64      `json:"panelId"` // the destination panel
 	SourceKind  panel.Kind `json:"sourceKind"`
 	SourceURL   string     `json:"sourceUrl"`
@@ -31,18 +37,20 @@ type Site struct {
 	OldPath     string     `json:"oldPath"`
 	Domains     []string   `json:"domains"`
 	Port        int        `json:"port"`
-	CertFile    string     `json:"certFile,omitempty"`
-	KeyFile     string     `json:"keyFile,omitempty"`
-	CertPEM     string     `json:"certPem,omitempty"`
-	KeyPEM      string     `json:"-"` // write only (the handler reads keyPem); stored sealed
-	HasKey      bool       `json:"hasKey"`
 	Lazy        bool       `json:"lazy"`
 	PlainHTTPOK bool       `json:"plainHttpOk"`
-	Mode        string     `json:"-"` // ModeManual or ModeBatches; set when the rule is made
 	// CertificateID is the certificates row the site is served with, or 0:
 	// plain HTTP, or its own certificate columns when not adopted (D54).
-	CertificateID int64 `json:"-"`
-	origin        string
+	CertificateID int64 `json:"certificateId"`
+	// The certificate the site is served with, read from its certificates
+	// row, else from its own columns. Never sent or taken as JSON.
+	CertFile string `json:"-"`
+	KeyFile  string `json:"-"`
+	CertPEM  string `json:"-"`
+	KeyPEM   string `json:"-"`
+	HasKey   bool   `json:"-"`
+	certName string // the name of its certificates row
+	origin   string
 }
 
 // How a panel rule picks the users it serves (D23).
@@ -63,8 +71,9 @@ var (
 	siteKind       = []panel.Kind{panel.Marzban, panel.PasarGuard}
 )
 
-// InvalidError names the first site field that is wrong, by its JSON key.
-type InvalidError struct{ Field string }
+// InvalidError names the first site field that is wrong, by its JSON key,
+// and for batchIds the reason (Reason* constants).
+type InvalidError struct{ Field, Reason string }
 
 func (e *InvalidError) Error() string { return fmt.Sprintf("%v: %s", ErrInvalidSite, e.Field) }
 
@@ -116,9 +125,6 @@ func (s *Site) checkFields() error {
 	case s.SourcePin != "" && !pinRe.MatchString(s.SourcePin):
 		return invalid("sourcePin")
 	}
-	if err := s.checkCert(); err != nil {
-		return err
-	}
 	if s.SourceIP != "" {
 		if a, err := netip.ParseAddr(s.SourceIP); err != nil || !source.Allowed(a) {
 			return invalid("sourceIp")
@@ -127,8 +133,8 @@ func (s *Site) checkFields() error {
 	return nil
 }
 
-// checkCert checks how the site gets its certificate: files on this
-// server (absolute paths, both), a pasted certificate with its key, or none.
+// checkCert checks a certificate to inspect: files on this server
+// (absolute paths, both), a pasted certificate with its key, or none.
 func (s *Site) checkCert() error {
 	switch {
 	case s.CertFile != "" && s.CertPEM != "":

@@ -291,7 +291,8 @@ func TestAdoptionFailureLeavesTheSite(t *testing.T) {
 		t.Fatal(err)
 	}
 	v := e.b.View(context.Background(), s)
-	if !slices.Equal(v.Warnings, []string{WarnNotAdopted}) || v.Cert == nil || !slices.Contains(v.Cert.Warnings, WarnKeyMismatch) {
+	// Both sites serve p.example.com on one port with other certificates (D53).
+	if !slices.Equal(v.Warnings, []string{WarnNotAdopted, WarnCertConflict}) || v.Cert == nil || !slices.Contains(v.Cert.Warnings, WarnKeyMismatch) {
 		t.Fatalf("view warnings %v, cert %+v", v.Warnings, v.Cert)
 	}
 }
@@ -320,9 +321,8 @@ func (e *env) siteCert(id int64) string {
 		"FROM legacy_sites s LEFT JOIN certificates c ON c.id = s.certificate_id WHERE s.id = %d", id))[0]
 }
 
-// A save that sends the certificate a site is served with keeps its row;
-// one that sends another certificate is adopted into a row of its own.
-func TestSaveKeepsOrAdoptsTheCertificate(t *testing.T) {
+// A save that keeps a site's certificateId keeps its row and its key.
+func TestSaveKeepsTheCertificate(t *testing.T) {
 	c := newAdoptCase(t)
 	e := c.e
 	ctx := context.Background()
@@ -338,16 +338,5 @@ func TestSaveKeepsOrAdoptsTheCertificate(t *testing.T) {
 	}
 	if key, err := e.b.st.siteKey(ctx, 11); err != nil || !strings.Contains(string(key), "PRIVATE KEY") {
 		t.Errorf("pasted key after save: %v", err)
-	}
-	file := mustSite(t, e, 10)
-	file.CertFile, file.KeyFile = certFiles(t, t.TempDir(), "a.example.com")
-	if _, err := e.b.SaveSite(ctx, file); err != nil {
-		t.Fatal(err)
-	}
-	if got := e.siteCert(10); got != "file 3 1" {
-		t.Errorf("file site after a new pair: %q", got)
-	}
-	if got := e.siteCert(12); got != "file 2 1" {
-		t.Errorf("site sharing the old pair: %q", got)
 	}
 }

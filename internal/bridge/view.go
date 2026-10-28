@@ -3,6 +3,7 @@ package bridge
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 )
 
@@ -23,14 +24,25 @@ type SiteStats struct {
 // columns: its adoption failed (D54, D50).
 const WarnNotAdopted = "certificate_not_adopted"
 
-// SiteView is a site with its certificate facts, warnings and numbers.
-// Cert is nil for a plain HTTP site; Stats is nil when the destination
-// cannot be read.
+// SiteView is a site with its batches, certificate, warnings and numbers.
+// Cert is nil for a plain HTTP site and holds the facts of the
+// certificate it is served with; Certificate is its certificates row, nil
+// for plain HTTP and for a site not adopted (D54). Stats is nil when the
+// destination cannot be read.
 type SiteView struct {
 	Site
-	Cert     *CertFacts `json:"cert,omitempty"`
-	Warnings []string   `json:"warnings"`
-	Stats    *SiteStats `json:"stats,omitempty"`
+	Batches     []BatchRef       `json:"batches"`
+	Certificate *SiteCertificate `json:"certificate"`
+	Cert        *CertFacts       `json:"cert,omitempty"`
+	Warnings    []string         `json:"warnings"`
+	Stats       *SiteStats       `json:"stats,omitempty"`
+}
+
+// SiteCertificate is the certificates row a site is served with.
+type SiteCertificate struct {
+	ID    int64     `json:"id"`
+	Name  string    `json:"name"`
+	Facts CertFacts `json:"facts"`
 }
 
 // Views lists every site with its certificate facts and numbers.
@@ -39,18 +51,48 @@ func (b *Bridge) Views(ctx context.Context) ([]SiteView, error) {
 	if err != nil {
 		return nil, err
 	}
+	rules, err := b.st.rules(ctx)
+	if err != nil {
+		return nil, err
+	}
 	out := make([]SiteView, 0, len(sites))
 	for _, s := range sites {
-		out = append(out, b.View(ctx, s))
+		out = append(out, b.view(ctx, s, rules))
 	}
 	return out, nil
 }
 
-// View adds a site's certificate facts and numbers.
+// View adds a site's batches, certificate facts, warnings and numbers.
 func (b *Bridge) View(ctx context.Context, s Site) SiteView {
-	v := SiteView{Site: s, Cert: b.siteCert(ctx, s), Warnings: []string{}}
-	if s.TLS() && s.CertificateID == 0 {
+	rules, err := b.st.rules(ctx)
+	if err != nil {
+		b.Log.Warn("bridge: read rules", "site", s.Name, "err", err)
+	}
+	return b.view(ctx, s, rules)
+}
+
+func (b *Bridge) view(ctx context.Context, s Site, rules []rule) SiteView {
+	v := SiteView{Site: s, Batches: []BatchRef{}, Cert: b.siteCert(ctx, s), Warnings: []string{}}
+	if bs, err := b.st.siteBatches(ctx, s.ID); err != nil {
+		b.Log.Warn("bridge: read rule batches", "site", s.Name, "err", err)
+	} else {
+		v.Batches = bs
+	}
+	v.BatchIDs = nil
+	for _, r := range v.Batches {
+		v.BatchIDs = append(v.BatchIDs, r.ID)
+	}
+	switch {
+	case s.CertificateID != 0 && v.Cert != nil:
+		v.Certificate = &SiteCertificate{ID: s.CertificateID, Name: s.certName, Facts: *v.Cert}
+	case s.TLS():
 		v.Warnings = append(v.Warnings, WarnNotAdopted)
+	}
+	if v.Cert != nil && slices.Contains(v.Cert.Warnings, WarnDomain) {
+		v.Warnings = append(v.Warnings, WarnDomain)
+	}
+	if slices.ContainsFunc(s.Domains, func(d string) bool { return certConflict(d, rules) }) {
+		v.Warnings = append(v.Warnings, WarnCertConflict)
 	}
 	st, err := b.stats(ctx, s)
 	if err != nil {

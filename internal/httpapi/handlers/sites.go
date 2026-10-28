@@ -30,9 +30,10 @@ func writeSiteError(w http.ResponseWriter, r *http.Request, err error) {
 		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeBusy})
 	case errors.Is(err, bridge.ErrNoCert):
 		respond.BadRequest(w)
+	case errors.Is(err, bridge.ErrNotAdopted):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: "certificate_not_adopted"})
 	case errors.Is(err, bridge.ErrInvalidSite):
-		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: "site_invalid",
-			Extra: map[string]any{"field": bridge.FieldOf(err)}})
+		respond.Error(w, respond.APIError{Status: http.StatusBadRequest, Code: "site_invalid", Extra: siteInvalid(err)})
 	default:
 		respond.Internal(w, r, err)
 	}
@@ -49,23 +50,27 @@ func (a *API) Sites(w http.ResponseWriter, r *http.Request) {
 	respond.JSON(w, http.StatusOK, map[string]any{"sites": vs, "portErrors": a.Bridge.Status()})
 }
 
-// siteBody is a site as sent: the private key of a pasted certificate
-// comes in, but never goes out.
-type siteBody struct {
-	bridge.Site
-	KeyPEM string `json:"keyPem"`
+// siteInvalid is the field a site_invalid answer names, and its reason
+// when there is one.
+func siteInvalid(err error) map[string]any {
+	extra := map[string]any{"field": bridge.FieldOf(err)}
+	var e *bridge.InvalidError
+	if errors.As(err, &e) && e.Reason != "" {
+		extra["reason"] = e.Reason
+	}
+	return extra
 }
 
-// SaveSite adds (POST) or changes (PATCH /{id}) a legacy site. A change
-// sends the whole site; an empty private key keeps the stored one.
+// SaveSite adds (POST) or changes (PATCH /{id}) a panel rule. A change
+// sends the whole rule. The certificate is certificateId; certificate
+// files and PEM are not part of the body (they are certificates rows).
 func (a *API) SaveSite(w http.ResponseWriter, r *http.Request) {
-	var b siteBody
-	if err := respond.DecodeLimit(w, r, &b, 256<<10); err != nil {
+	var s bridge.Site
+	if err := respond.DecodeLimit(w, r, &s, 256<<10); err != nil {
 		respond.BadRequest(w)
 		return
 	}
-	s := b.Site
-	s.ID, s.KeyPEM = 0, b.KeyPEM
+	s.ID = 0
 	status := http.StatusCreated
 	if v := r.PathValue("id"); v != "" {
 		id, err := strconv.ParseInt(v, 10, 64)

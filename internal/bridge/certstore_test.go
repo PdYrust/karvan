@@ -49,6 +49,14 @@ func longCertFiles(t *testing.T, dir, name string) (string, string) {
 func (e *env) addDomain(name string) Domain {
 	e.t.Helper()
 	d, err := e.b.AddDomain(context.Background(), name)
+	if errors.Is(err, ErrNameTaken) { // a rule's domain has its row already (D48)
+		list, _ := e.b.Domains(context.Background())
+		for _, d := range list {
+			if d.Name == name {
+				return d
+			}
+		}
+	}
 	if err != nil {
 		e.t.Fatalf("add domain %q: %v", name, err)
 	}
@@ -64,7 +72,7 @@ func (e *env) addCert(in CertificateInput) Certificate {
 	return c
 }
 
-// pointSite makes site id use certificate certID, as P41-17 saves will.
+// pointSite makes site id use certificate certID, as a save does.
 func (e *env) pointSite(id, certID int64) {
 	e.t.Helper()
 	if _, err := e.b.DB.Exec("UPDATE legacy_sites SET certificate_id = ? WHERE id = ?", certID, id); err != nil {
@@ -379,8 +387,9 @@ func TestChangedCertificateIsServed(t *testing.T) {
 	t.Cleanup(e.b.stopAll)
 	cf, kf := longCertFiles(t, t.TempDir(), "old.example.com")
 	port := freePort(t)
+	c := e.addCert(CertificateInput{Name: "tls", CertFile: cf, KeyFile: kf})
 	s, err := e.b.SaveSite(ctx, Site{Name: "tls", PanelID: 1, SourceKind: panel.Marzban, SourceURL: e.old.URL, SourceIP: "127.0.0.1",
-		OldPath: "tls", Domains: []string{"old.example.com"}, Port: port, CertFile: cf, KeyFile: kf})
+		OldPath: "tls", Domains: []string{"old.example.com"}, Port: port, CertificateID: c.ID})
 	if err != nil || s.CertificateID == 0 {
 		t.Fatalf("save %+v %v", s, err)
 	}
