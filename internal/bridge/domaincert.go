@@ -86,14 +86,17 @@ type Domain struct {
 	Certificate  *DomainCert `json:"certificate"`
 	Certificates []Ref       `json:"certificates"`
 	Pins         []DomainPin `json:"pins"`
+	ACME         *DomainACME `json:"acme"`
 	Rules        []RuleRef   `json:"rules"`
 	Warnings     []string    `json:"warnings"`
 	certID       int64
 	filled       bool
 }
 
-// normalDomain is a domain name in its stored form, or "" when it is not
+// NormalDomain is a domain name in its stored form, or "" when it is not
 // a host name, one leading wildcard or an IP address.
+func NormalDomain(name string) string { return normalDomain(name) }
+
 func normalDomain(name string) string {
 	name = strings.ToLower(strings.TrimSuffix(strings.TrimSpace(name), "."))
 	if len(name) > 253 || !validPattern(name) {
@@ -130,8 +133,13 @@ func (b *Bridge) domains(ctx context.Context, id int64) ([]Domain, error) {
 	if err != nil {
 		return nil, err
 	}
+	acme, err := b.st.acmeRows(ctx, id)
+	if err != nil {
+		return nil, err
+	}
 	for i := range out {
 		fillDomain(&out[i], certs, rules, pins[out[i].ID])
+		addACME(&out[i], acme[out[i].ID])
 	}
 	return out, nil
 }
@@ -188,7 +196,9 @@ func fillDomain(d *Domain, certs []Certificate, rules []rule, pins []DomainPin) 
 	d.Warnings = slices.Compact(d.Warnings)
 }
 
-// domain reads one domain with its views.
+// Domain reads one domain with its views.
+func (b *Bridge) Domain(ctx context.Context, id int64) (Domain, error) { return b.domain(ctx, id) }
+
 func (b *Bridge) domain(ctx context.Context, id int64) (Domain, error) {
 	list, err := b.domains(ctx, id)
 	if err != nil {
@@ -281,7 +291,7 @@ func (st *store) choose(ctx context.Context, tx *sql.Tx, name string, ch CertCho
 		}
 		return st.insertChosen(ctx, tx, name, ch.Name, p)
 	case ChoiceACME:
-		return 0, &ACMEInvalidError{Field: "kind"} // Let's Encrypt orders are not part of this build yet
+		return 0, &ACMEInvalidError{Field: "kind"} // an order is started by certorder, never chosen here
 	}
 	return 0, &DomainInvalidError{Field: "certificate"}
 }
