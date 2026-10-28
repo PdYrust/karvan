@@ -8,7 +8,7 @@ import (
 	"testing"
 )
 
-// 0011 gives ledger rows a source admin, ” on every row from before,
+// 0011 gives ledger rows a source admin, empty on every row from before,
 // and keeps every row.
 func TestLedgerRowsGetASourceAdmin(t *testing.T) {
 	ctx := context.Background()
