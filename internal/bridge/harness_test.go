@@ -153,7 +153,7 @@ func newEnv(t *testing.T, names ...string) *env {
 		t.Fatal(err)
 	}
 	e.b.mu.Lock()
-	e.b.sites = []Site{e.site}
+	e.b.load([]Site{e.site}, nil)
 	e.b.mu.Unlock()
 	for i, n := range names {
 		e.addUser(n, int64(100+i))

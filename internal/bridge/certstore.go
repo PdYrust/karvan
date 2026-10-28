@@ -85,13 +85,27 @@ type Certificate struct {
 	leaf     *x509.Certificate
 }
 
-// rule is a panel or redirect rule as the certificate pages see it.
+// rule is a panel or redirect rule as the router and the certificate
+// pages see it.
 type rule struct {
 	ref     RuleRef
 	domains []string
 	port    int
 	certID  int64 // its certificates row, or 0
 	site    *Site // a panel rule still served from its own columns (D54)
+	tls     bool
+	path    string // its path without the outer slashes: a panel rule's old path, a redirect's from path
+	exact   bool   // the path must match exactly; else it is a prefix
+}
+
+// ruleOf is a panel rule as a rule.
+func ruleOf(s Site) rule {
+	r := rule{ref: RuleRef{Kind: RulePanel, ID: s.ID, Name: s.Name}, domains: s.Domains, port: s.Port, certID: s.CertificateID,
+		tls: s.TLS(), path: s.OldPath}
+	if s.TLS() && s.CertificateID == 0 {
+		r.site = &s
+	}
+	return r
 }
 
 // certKey tells apart the certificates rules on one port are served with.
@@ -113,26 +127,31 @@ func (st *store) rules(ctx context.Context) ([]rule, error) {
 	}
 	out := make([]rule, 0, len(sites))
 	for _, s := range sites {
-		r := rule{ref: RuleRef{Kind: RulePanel, ID: s.ID, Name: s.Name}, domains: s.Domains, port: s.Port, certID: s.CertificateID}
-		if s.TLS() && s.CertificateID == 0 {
-			r.site = &s
-		}
-		out = append(out, r)
+		out = append(out, ruleOf(s))
 	}
-	rows, err := st.db.QueryContext(ctx, "SELECT id, name, domains, listen_port, COALESCE(certificate_id, 0) FROM link_redirects ORDER BY id")
+	redirects, err := st.redirectRules(ctx)
+	return append(out, redirects...), err
+}
+
+// redirectRules reads every redirect rule by id.
+func (st *store) redirectRules(ctx context.Context) ([]rule, error) {
+	rows, err := st.db.QueryContext(ctx, "SELECT id, name, domains, listen_port, from_path, match = 'exact', "+
+		"COALESCE(certificate_id, 0) FROM link_redirects ORDER BY id")
 	if err != nil {
 		return nil, fmt.Errorf("read redirects: %w", err)
 	}
 	defer rows.Close()
+	var out []rule
 	for rows.Next() {
 		r := rule{ref: RuleRef{Kind: RuleRedirect}}
 		var domains string
-		if err := rows.Scan(&r.ref.ID, &r.ref.Name, &domains, &r.port, &r.certID); err != nil {
+		if err := rows.Scan(&r.ref.ID, &r.ref.Name, &domains, &r.port, &r.path, &r.exact, &r.certID); err != nil {
 			return nil, err
 		}
 		if err := json.Unmarshal([]byte(domains), &r.domains); err != nil {
 			return nil, fmt.Errorf("redirect %d domains: %w", r.ref.ID, err)
 		}
+		r.path, r.tls = strings.Trim(r.path, "/"), r.certID != 0
 		out = append(out, r)
 	}
 	return out, rows.Err()

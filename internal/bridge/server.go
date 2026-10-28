@@ -54,6 +54,10 @@ func (b *Bridge) Reload(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	redirects, err := b.st.redirectRules(ctx)
+	if err != nil {
+		return err
+	}
 	want := map[int]bool{} // port -> TLS
 	for _, s := range sites {
 		if tlsOn, ok := want[s.Port]; ok && tlsOn != s.TLS() {
@@ -62,7 +66,9 @@ func (b *Bridge) Reload(ctx context.Context) error {
 		want[s.Port] = s.TLS()
 	}
 	b.mu.Lock()
-	b.sites, b.olds = sites, map[int64]OldPanel{}
+	b.load(sites, redirects)
+	b.olds = map[int64]OldPanel{}
+	routes := b.routes
 	for port := range b.errs {
 		if _, ok := want[port]; !ok {
 			delete(b.errs, port) // no rule uses the port any more
@@ -76,6 +82,7 @@ func (b *Bridge) Reload(ctx context.Context) error {
 		}
 	}
 	b.mu.Unlock()
+	routes.logConflicts(b.Log)
 	for _, l := range stop {
 		shutdown(l)
 	}
@@ -169,16 +176,17 @@ func (b *Bridge) certificate(port int) func(*tls.ClientHelloInfo) (*tls.Certific
 	}
 }
 
-// siteForName is the site on port whose domains cover name; else the
-// port's catch-all site (no domains), else its first site (a client
-// without SNI, or an IP address).
+// siteForName is the first site in id order on port whose domains cover
+// name; else the port's catch-all site (no domains), else its first site
+// (a client without SNI, or an IP address). The save check keeps this
+// pick unambiguous (D53).
 func (b *Bridge) siteForName(port int, name string) (Site, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 	var first, catchAll *Site
-	for i := range b.sites {
-		s := &b.sites[i]
-		if s.Port != port {
+	for _, r := range b.routes[port] {
+		s := r.panel
+		if s == nil {
 			continue
 		}
 		switch {

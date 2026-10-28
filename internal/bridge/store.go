@@ -6,6 +6,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"slices"
+	"sync"
 	"time"
 
 	"github.com/PdYrust/karvan/internal/migration/ledger"
@@ -16,8 +18,9 @@ import (
 // ErrNotFound means no such site.
 var ErrNotFound = errors.New("no such site")
 
-// ErrOverlap means another site already answers the same requests.
-var ErrOverlap = errors.New("another site answers the same port, domain and path")
+// ErrOverlap means another rule has the same port, host key and path key,
+// so no request could tell the two apart (D52).
+var ErrOverlap = errors.New("another rule answers the same port, domain and path")
 
 // ErrNameTaken means another site has this name.
 var ErrNameTaken = errors.New("another site has this name")
@@ -28,9 +31,13 @@ var ErrPortMixed = errors.New("the port has sites with and without a certificate
 
 // store keeps sites, verified tokens and closed users in Karvan's DB.
 type store struct {
-	db  *sql.DB
-	key *secret.Key
-	now func() time.Time
+	db         *sql.DB
+	key        *secret.Key
+	now        func() time.Time
+	panelPorts func() []int // Karvan's own web panel ports; nil: none known
+	// saveMu runs one rule save at a time, so two saves cannot both pass
+	// the conflict check before either is written.
+	saveMu sync.Mutex
 }
 
 // siteColumns read a site with the certificate it is served with: its
@@ -118,6 +125,8 @@ func (st *store) siteKey(ctx context.Context, id int64) ([]byte, error) {
 // in the same transaction; a site still served from them must pick a
 // certificate (ErrNotAdopted, D54).
 func (st *store) Save(ctx context.Context, s Site) (Site, error) {
+	st.saveMu.Lock()
+	defer st.saveMu.Unlock()
 	var stored *Site
 	if s.ID != 0 {
 		old, err := st.Site(ctx, s.ID)
@@ -187,7 +196,9 @@ func (st *store) write(ctx context.Context, s *Site) error {
 	return tx.Commit()
 }
 
-// checkSave checks s against the other sites and its panel.
+// checkSave checks s against its panel, Karvan's own port and every other
+// panel and redirect rule (D52, D53). The bridge store writes both rule
+// tables, so a request reaches at most one rule.
 func (st *store) checkSave(ctx context.Context, s Site) error {
 	var n int
 	if err := st.db.QueryRowContext(ctx, "SELECT count(*) FROM panels WHERE id = ?", s.PanelID).Scan(&n); err != nil {
@@ -196,19 +207,20 @@ func (st *store) checkSave(ctx context.Context, s Site) error {
 	if n == 0 {
 		return invalid("panelId")
 	}
-	all, err := st.Sites(ctx)
+	if st.panelPorts != nil && slices.Contains(st.panelPorts(), s.Port) {
+		return ErrPortTaken
+	}
+	all, err := st.rules(ctx)
 	if err != nil {
 		return err
 	}
+	r := ruleOf(s)
 	for _, o := range all {
-		switch {
-		case o.ID == s.ID:
-		case o.Name == s.Name:
-			return ErrNameTaken
-		case o.Port == s.Port && o.TLS() != s.TLS():
-			return fmt.Errorf("%w: %s", ErrPortMixed, o.Name)
-		case s.overlaps(o):
-			return fmt.Errorf("%w: %s", ErrOverlap, o.Name)
+		if o.ref.Kind == RulePanel && o.ref.ID == s.ID {
+			continue
+		}
+		if err := r.conflict(o); err != nil {
+			return err
 		}
 	}
 	return nil

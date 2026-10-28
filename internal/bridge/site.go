@@ -200,21 +200,3 @@ func (s Site) covers(host string) bool {
 	}
 	return slices.ContainsFunc(s.Domains, func(p string) bool { return matches(p, host) })
 }
-
-// overlaps reports whether two sites could both claim one request.
-func (s Site) overlaps(o Site) bool {
-	if s.Port != o.Port || s.OldPath != o.OldPath {
-		return false
-	}
-	if len(s.Domains) == 0 || len(o.Domains) == 0 {
-		return true
-	}
-	for _, a := range s.Domains {
-		for _, b := range o.Domains {
-			if a == b || matches(a, strings.TrimPrefix(b, "*.")) || matches(b, strings.TrimPrefix(a, "*.")) {
-				return true
-			}
-		}
-	}
-	return false
-}

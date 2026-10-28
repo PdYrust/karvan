@@ -67,7 +67,7 @@ func TestOverlappingSitesAreRefused(t *testing.T) {
 	e := newEnv(t)
 	ctx := context.Background()
 	s := e.site
-	s.ID, s.Name, s.Domains = 0, "second", []string{"*.example.com"}
+	s.ID, s.Name = 0, "second"
 	if _, err := e.b.st.Save(ctx, s); !errors.Is(err, ErrOverlap) {
 		t.Fatalf("overlap: %v", err)
 	}

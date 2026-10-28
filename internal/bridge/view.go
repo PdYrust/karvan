@@ -91,7 +91,10 @@ func (b *Bridge) view(ctx context.Context, s Site, rules []rule) SiteView {
 	if v.Cert != nil && slices.Contains(v.Cert.Warnings, WarnDomain) {
 		v.Warnings = append(v.Warnings, WarnDomain)
 	}
-	if slices.ContainsFunc(s.Domains, func(d string) bool { return certConflict(d, rules) }) {
+	self := ruleOf(s)
+	if slices.ContainsFunc(rules, func(o rule) bool {
+		return (o.ref.Kind != RulePanel || o.ref.ID != s.ID) && self.tls && o.tls && self.certClash(o)
+	}) {
 		v.Warnings = append(v.Warnings, WarnCertConflict)
 	}
 	st, err := b.stats(ctx, s)

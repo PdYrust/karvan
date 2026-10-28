@@ -69,7 +69,10 @@ func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 	b.lazy(w, r, q)
 }
 
-// route finds the site for a request and splits /{old_path}/{token}{rest}.
+// route finds the one rule for a request (D52) and, for a panel rule,
+// splits /{old_path}/{token}{rest}. A malformed token or rest on the
+// winner is a 404; no other rule is tried. A redirect rule that wins
+// gets the plain 404 here.
 func (b *Bridge) route(port int, r *http.Request) (request, bool) {
 	host := strings.ToLower(r.Host)
 	if h, _, err := net.SplitHostPort(host); err == nil {
@@ -77,21 +80,18 @@ func (b *Bridge) route(port int, r *http.Request) (request, bool) {
 	}
 	b.mu.Lock()
 	defer b.mu.Unlock()
-	for _, s := range b.sites {
-		rest, ok := strings.CutPrefix(r.URL.EscapedPath(), "/"+s.OldPath+"/")
-		if s.Port != port || !ok || !s.covers(host) {
-			continue
-		}
-		token, tail, _ := strings.Cut(rest, "/")
-		if tail != "" {
-			tail = "/" + tail
-		}
-		if !tokenRe.MatchString(token) || !restRe.MatchString(tail) {
-			return request{}, false
-		}
-		return request{site: s, token: token, rest: tail}, true
+	rt, rest, ok := b.routes.match(port, host, r.URL.EscapedPath())
+	if !ok || rt.panel == nil {
+		return request{}, false
 	}
-	return request{}, false
+	token, tail, _ := strings.Cut(rest[1:], "/") // a panel rule's rest starts with its slash
+	if tail != "" {
+		tail = "/" + tail
+	}
+	if !tokenRe.MatchString(token) || !restRe.MatchString(tail) {
+		return request{}, false
+	}
+	return request{site: *rt.panel, token: token, rest: tail}, true
 }
 
 // fromVerified serves a token proven earlier, if the user still passes.

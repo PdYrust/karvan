@@ -50,7 +50,7 @@ func TestProofCountsOnEverySiteOfTheOldPanel(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.b.mu.Lock()
-	e.b.sites = append(e.b.sites, saved)
+	e.b.load(append(e.b.sites, saved), nil)
 	e.b.mu.Unlock()
 	calls := e.oldCalls()
 	e.port = 2
@@ -104,7 +104,8 @@ func TestUploadRefusesPlainHTTPWithoutTheOptIn(t *testing.T) {
 
 // With SNI for no listed domain, the port's catch-all site answers.
 func TestCatchAllSiteOwnsUnknownNames(t *testing.T) {
-	b := &Bridge{sites: []Site{{ID: 1, Port: 443, Domains: []string{"a.example.com"}}, {ID: 2, Port: 443}, {ID: 3, Port: 8443}}}
+	b := &Bridge{}
+	b.load([]Site{{ID: 1, Port: 443, Domains: []string{"a.example.com"}}, {ID: 2, Port: 443}, {ID: 3, Port: 8443}}, nil)
 	for name, want := range map[string]int64{"a.example.com": 1, "b.example.com": 2, "": 2} {
 		if s, ok := b.siteForName(443, name); !ok || s.ID != want {
 			t.Errorf("%q: site %d", name, s.ID)

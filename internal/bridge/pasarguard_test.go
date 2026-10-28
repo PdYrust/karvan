@@ -29,7 +29,7 @@ func TestPasarGuardOldPanel(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.b.mu.Lock()
-	e.b.sites = append(e.b.sites, site)
+	e.b.load(append(e.b.sites, site), nil)
 	e.b.mu.Unlock()
 
 	v3 := subtoken.PasarGuard(42, oldSecret, e.clock.now())

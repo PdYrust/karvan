@@ -74,7 +74,7 @@ func (e *env) batchRule(port int, ids ...int64) Site {
 		e.t.Fatal(err)
 	}
 	e.b.mu.Lock()
-	e.b.sites = sites
+	e.b.load(sites, nil)
 	e.b.mu.Unlock()
 	saved, _ = e.b.st.Site(ctx, saved.ID)
 	return saved

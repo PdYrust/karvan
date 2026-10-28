@@ -26,6 +26,9 @@ type Deps struct {
 	DataDir  string
 	KeyFile  string
 	EnvRoots []string
+	// PanelPorts are the ports Karvan's own web panel listens on; no rule
+	// may take them.
+	PanelPorts func() []int
 }
 
 // destTTL is how long an opened destination is reused before its ENV is
@@ -49,6 +52,7 @@ type Bridge struct {
 	reloadMu sync.Mutex
 	mu       sync.Mutex
 	sites    []Site
+	routes   table               // built from sites and the redirect rules (D52)
 	dests    map[int64]*openDest // by panel id
 	olds     map[int64]OldPanel  // by site id
 	servers  map[int]*listener   // by port
@@ -85,7 +89,7 @@ func New(d Deps) *Bridge {
 		d.OpenOld = openOldPanel
 	}
 	bg, stop := context.WithCancel(context.Background())
-	return &Bridge{Deps: d, st: &store{db: d.DB, key: d.Key, now: d.Now}, macKey: d.Key.Derive("bridge/token-mac"),
+	return &Bridge{Deps: d, st: &store{db: d.DB, key: d.Key, now: d.Now, panelPorts: d.PanelPorts}, macKey: d.Key.Derive("bridge/token-mac"),
 		lim: newLimits(d.Now), neg: newNegative(d.Now), dests: map[int64]*openDest{}, olds: map[int64]OldPanel{},
 		servers: map[int]*listener{}, errs: map[int]string{}, bg: bg, stopBg: stop, ups: map[int64]*UploadProgress{}}
 }
@@ -112,6 +116,11 @@ func (b *Bridge) DeleteSite(ctx context.Context, id int64) error {
 	}
 	b.forgetUpload(id)
 	return b.Reload(ctx)
+}
+
+// load serves sites and redirects from now on. The caller holds mu.
+func (b *Bridge) load(sites []Site, redirects []rule) {
+	b.sites, b.routes = sites, newTable(sites, redirects)
 }
 
 // site returns the loaded site id.
