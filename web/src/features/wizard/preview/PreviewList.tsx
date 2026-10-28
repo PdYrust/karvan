@@ -21,7 +21,7 @@ import { protocolName } from '../protocols';
 import { expiryOf } from './expiry';
 import { previewMessages } from './messages';
 import { Pager } from '../../../components/data/Pager';
-import { useSettled } from '../UserList';
+import { useSettled } from '../../../lib/lists/use-settled';
 import { useFirstLoad } from '../../../lib/motion/use-first-load';
 /** Final status, data limit and expiry, as the run writes them. */
 function Facts({ row }: { row: UserRow }) {

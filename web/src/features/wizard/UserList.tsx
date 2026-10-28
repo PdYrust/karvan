@@ -1,7 +1,7 @@
 import { Badge } from '@cloudflare/kumo/components/badge';
 import { keepPreviousData, useQuery } from '@tanstack/react-query';
 import { ArrowRightIcon } from '@phosphor-icons/react';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useState, type ReactNode } from 'react';
 import { Pager } from '../../components/data/Pager';
 import { SearchBar } from '../../components/data/SearchBar';
 import { ErrorState } from '../../components/feedback/ErrorState';
@@ -10,16 +10,7 @@ import { useT } from '../../i18n/locale';
 import { getUsers, migrationKeys, usersPerPage, type UserRow } from '../../lib/api/migrations';
 import { wizardMessages } from './messages';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
-
-/** A search term that settles after the operator stops typing for a moment. */
-export function useSettled(value: string, ms = 300): string {
-  const [settled, setSettled] = useState(value);
-  useEffect(() => {
-    const id = setTimeout(() => setSettled(value), ms);
-    return () => clearTimeout(id);
-  }, [value, ms]);
-  return settled;
-}
+import { useSettled } from '../../lib/lists/use-settled';
 
 /** The name a user has now and, when the plan renames them, the new one. */
 function UserName({ row }: { row: UserRow }) {

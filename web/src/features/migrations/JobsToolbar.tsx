@@ -18,6 +18,26 @@ function PanelOption({ panel }: { panel: Panel }) {
     </span>
   );
 }
+/** The panel filter of a list: the switcher's current panel, so both always agree. */
+export function usePanelChoice(): ToolbarChoice {
+  const t = useT(listMessages);
+  const panels = (usePanels().data ?? []).filter((p) => p.id > 0);
+  const { panel, select } = useCurrentPanel();
+  return {
+    label: t('panelLabel'),
+    value: panel ? String(panel.id) : 'all',
+    all: 'all',
+    options: [
+      { value: 'all', label: t('allPanels'), text: t('allPanels') },
+      ...panels.map((p) => ({
+        value: String(p.id),
+        label: <PanelOption panel={p} />,
+        text: p.name,
+      })),
+    ],
+    onChange: (v) => select(v === 'all' ? null : Number(v)),
+  };
+}
 /**
  * The list toolbar of a jobs list: search, the state filter, the panel filter and refresh.
  * The panel filter is the switcher's current panel, so both always agree.
@@ -45,8 +65,7 @@ export function JobsToolbar({
   children?: ReactNode;
 }) {
   const t = useT(listMessages);
-  const panels = (usePanels().data ?? []).filter((p) => p.id > 0);
-  const { panel, select } = useCurrentPanel();
+  const panelChoice = usePanelChoice();
   const choices: ToolbarChoice[] = [
     {
       label: t('stateLabel'),
@@ -58,20 +77,7 @@ export function JobsToolbar({
       }),
       onChange: (s) => onState(s as StateFilter),
     },
-    {
-      label: t('panelLabel'),
-      value: panel ? String(panel.id) : 'all',
-      all: 'all',
-      options: [
-        { value: 'all', label: t('allPanels'), text: t('allPanels') },
-        ...panels.map((p) => ({
-          value: String(p.id),
-          label: <PanelOption panel={p} />,
-          text: p.name,
-        })),
-      ],
-      onChange: (v) => select(v === 'all' ? null : Number(v)),
-    },
+    panelChoice,
   ];
   return (
     <ListToolbar
