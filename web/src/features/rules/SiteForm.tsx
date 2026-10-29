@@ -7,7 +7,6 @@ import { useT } from '../../i18n/locale';
 import type { SiteInput } from '../../lib/api/rules';
 import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
 import { DestinationField } from '../wizard/connect/DestinationField';
-import { CertFields } from '../certificates/CertFields';
 import { siteFormMessages } from './form-messages';
 import { inputOf, isPlainHttp, refusedField, type SiteField, type SiteValues } from './site-form';
 import { AnswerFields, OldPanelFields } from './SiteFields';
@@ -17,7 +16,6 @@ import { TextField } from './TextField';
 export function SiteForm({
   initial,
   siteId,
-  hasKey,
   saving,
   error,
   onSave,
@@ -25,7 +23,6 @@ export function SiteForm({
 }: {
   initial: SiteValues;
   siteId?: number;
-  hasKey: boolean;
   saving: boolean;
   error: unknown;
   onSave: (input: SiteInput) => void;
@@ -63,7 +60,6 @@ export function SiteForm({
       </div>
       <OldPanelFields {...fields} />
       <AnswerFields {...fields} />
-      <CertFields {...fields} siteId={siteId} hasKey={hasKey} />
       <div className="flex flex-col gap-5">
         <SwitchRow
           id="site-lazy"

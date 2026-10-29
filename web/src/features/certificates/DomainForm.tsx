@@ -8,10 +8,9 @@ import { useT } from '../../i18n/locale';
 import type { Certificate } from '../../lib/api/certificates';
 import type { CertChoice } from '../../lib/api/domains';
 import { useAcmeErrorText } from '../../lib/errors/acme';
-import type { CertMode } from '../rules/site-form';
 import { TextField } from '../rules/TextField';
 import { AcmeFields } from './AcmeFields';
-import { ModeFields } from './CertFields';
+import { ModeFields, type CertMode } from './CertFields';
 import {
   acmeMethodsFor,
   canSubmit,

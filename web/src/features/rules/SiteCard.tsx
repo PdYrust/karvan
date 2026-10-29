@@ -112,7 +112,7 @@ export function SiteCard({
   const Caret = open ? CaretDownIcon : CaretRightIcon;
   const to = panel ? panelKind(panel) : undefined;
   const domains = site.domains ?? [];
-  const tls = Boolean(site.certFile || site.certPem);
+  const tls = site.https;
   const facts = [
     { label: t('oldPanel'), value: mono(site.sourceUrl) },
     { label: t('domains'), value: domains.length ? mono(domains.join(', ')) : t('everyDomain') },

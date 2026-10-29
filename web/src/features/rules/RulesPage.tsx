@@ -98,8 +98,7 @@ export function RulesPage() {
   } else {
     const ports = Object.keys(load.data.portErrors).map((p) => fmt.number(Number(p)));
     const sites = load.data.sites;
-    const isTls = (s: LinkSite, f: typeof tls) =>
-      f === 'all' || (f === 'https') === Boolean(s.certFile || s.certPem);
+    const isTls = (s: LinkSite, f: typeof tls) => f === 'all' || (f === 'https') === s.https;
     const shown = sortRows(
       sites.filter(
         (s) => isTls(s, tls) && matchesTerm(query, [s.name, s.sourceUrl, ...(s.domains ?? [])]),

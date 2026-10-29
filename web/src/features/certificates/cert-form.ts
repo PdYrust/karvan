@@ -1,7 +1,6 @@
 import { ApiError } from '../../lib/api/client';
 import type { Certificate, CertificateInput } from '../../lib/api/certificates';
-import type { CertMode } from '../rules/site-form';
-import type { CertValues } from './CertFields';
+import type { CertMode, CertValues } from './CertFields';
 
 /** A stored certificate always has one: files, or text read from files or pasted. */
 export const certModes: readonly CertMode[] = ['files', 'upload', 'paste'];

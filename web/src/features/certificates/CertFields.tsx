@@ -1,26 +1,24 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { Radio } from '@cloudflare/kumo/components/radio';
-import { FileArrowUpIcon, SealCheckIcon } from '../../components/icons/regular';
-import { useMutation } from '@tanstack/react-query';
+import { FileArrowUpIcon } from '../../components/icons/regular';
 import { useRef, useState } from 'react';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
-import { inspectCert } from '../../lib/api/rules';
-import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
-import { CertFactsView } from './CertFactsView';
-import { siteFormMessages } from '../rules/form-messages';
-import { canCheckCert, certInputOf, type CertMode, type SiteValues } from '../rules/site-form';
-import type { FieldsProps } from '../rules/SiteFields';
 import { TextField } from '../rules/TextField';
+import { certFieldMessages } from './cert-messages';
 
-const siteModes: readonly CertMode[] = ['files', 'upload', 'paste', 'none'];
+/** How a certificate is given. Upload and paste both send PEM text. */
+export type CertMode = 'files' | 'upload' | 'paste' | 'none';
 
-/** The certificate fields a rule and a stored certificate share. */
-export type CertValues = Pick<
-  SiteValues,
-  'certMode' | 'certFile' | 'keyFile' | 'certPem' | 'keyPem'
->;
+/** The certificate fields a domain and a stored certificate share. */
+export interface CertValues {
+  certMode: CertMode;
+  certFile: string;
+  keyFile: string;
+  certPem: string;
+  keyPem: string;
+}
 
 export type CertField = 'certFile' | 'keyFile' | 'certPem' | 'keyPem';
 
@@ -34,7 +32,7 @@ export interface SourceProps {
 
 /** A file read in this browser; only its text goes to Karvan, as PEM. */
 function PemFile({ label, onText }: { label: string; onText: (text: string) => void }) {
-  const t = useT(siteFormMessages);
+  const t = useT(certFieldMessages);
   const input = useRef<HTMLInputElement>(null);
   const [name, setName] = useState('');
   const [failed, setFailed] = useState(false);
@@ -77,7 +75,7 @@ function PemFile({ label, onText }: { label: string; onText: (text: string) => v
 }
 
 function PasteFields({ values, set, errorOf, hasKey }: SourceProps) {
-  const t = useT(siteFormMessages);
+  const t = useT(certFieldMessages);
   return (
     <>
       <TextField
@@ -108,7 +106,7 @@ function PasteFields({ values, set, errorOf, hasKey }: SourceProps) {
  * paste fields. A saved key never comes back, so an empty key field keeps it.
  */
 export function ModeFields({ values, set, errorOf, hasKey }: SourceProps) {
-  const t = useT(siteFormMessages);
+  const t = useT(certFieldMessages);
   switch (values.certMode) {
     case 'files':
       return (
@@ -155,7 +153,7 @@ export function CertSource({
   modes,
   ...props
 }: SourceProps & { legend: string; modes: readonly CertMode[] }) {
-  const t = useT(siteFormMessages);
+  const t = useT(certFieldMessages);
   return (
     <>
       <Radio.Group
@@ -179,40 +177,5 @@ export function CertSource({
       </Radio.Group>
       <ModeFields {...props} />
     </>
-  );
-}
-
-/** How the site gets its certificate, and a check of it before saving. */
-export function CertFields(props: FieldsProps & { siteId?: number; hasKey: boolean }) {
-  const { values, siteId } = props;
-  const t = useT(siteFormMessages);
-  const errorText = useSubscriptionErrorText();
-  const check = useMutation({ mutationFn: inspectCert });
-  // Facts only show for the certificate they were read from.
-  const asked = JSON.stringify(certInputOf(values, siteId));
-  const fresh = check.variables && JSON.stringify(check.variables) === asked;
-  return (
-    <fieldset className="flex flex-col gap-5">
-      <CertSource legend={t('certTitle')} modes={siteModes} {...props} />
-      {values.certMode === 'none' ? null : (
-        <div className="flex flex-col items-start gap-3">
-          <Button
-            icon={<SealCheckIcon size={16} />}
-            loading={check.isPending}
-            disabled={!canCheckCert(values)}
-            className="pointer-coarse:h-9"
-            onClick={() => check.mutate(certInputOf(values, siteId))}
-          >
-            {t('check')}
-          </Button>
-          <div aria-live="polite" className="w-full empty:hidden">
-            {fresh && check.data ? <CertFactsView facts={check.data} /> : null}
-            {fresh && check.isError ? (
-              <InlineAlert>{`${t('checkFailed')} ${errorText(check.error)}`}</InlineAlert>
-            ) : null}
-          </div>
-        </div>
-      )}
-    </fieldset>
   );
 }

@@ -80,7 +80,6 @@ export function SiteFormPage() {
         key={site?.id ?? 'new'}
         initial={site ? valuesOf(site) : newValues(sitePrefill(query), panel?.id ?? 0)}
         siteId={siteId}
-        hasKey={site?.hasKey ?? false}
         saving={save.isPending}
         error={save.error}
         onSave={(input) => save.mutate(input)}

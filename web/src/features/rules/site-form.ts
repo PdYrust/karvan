@@ -1,9 +1,6 @@
 import { ApiError } from '../../lib/api/client';
-import type { CertInput, LinkSite, SiteInput, SitePrefill } from '../../lib/api/rules';
+import type { LinkSite, SiteInput, SitePrefill } from '../../lib/api/rules';
 import type { PanelKind } from '../../lib/api/panels';
-
-/** How the site gets its certificate. Upload and paste both send PEM text. */
-export type CertMode = 'files' | 'upload' | 'paste' | 'none';
 
 /** The site form as typed: every field a string or a switch. */
 export interface SiteValues {
@@ -16,11 +13,6 @@ export interface SiteValues {
   oldPath: string;
   domains: string;
   port: string;
-  certMode: CertMode;
-  certFile: string;
-  keyFile: string;
-  certPem: string;
-  keyPem: string;
   lazy: boolean;
   plainHttpOk: boolean;
 }
@@ -36,10 +28,6 @@ export const siteFields = [
   'oldPath',
   'domains',
   'port',
-  'certFile',
-  'keyFile',
-  'certPem',
-  'keyPem',
 ] as const;
 export type SiteField = (typeof siteFields)[number];
 
@@ -55,21 +43,13 @@ export function newValues(p: SitePrefill, panelId: number): SiteValues {
     oldPath: 'sub',
     domains: '',
     port: '443',
-    certMode: 'files',
-    certFile: '',
-    keyFile: '',
-    certPem: '',
-    keyPem: '',
     lazy: true,
     plainHttpOk: false,
   };
 }
 
-/** A saved site in the form. The key never comes back, so its field starts empty. */
+/** A saved site in the form. */
 export function valuesOf(s: LinkSite): SiteValues {
-  let certMode: CertMode = 'none';
-  if (s.certFile) certMode = 'files';
-  else if (s.certPem) certMode = 'paste';
   return {
     name: s.name,
     panelId: s.panelId,
@@ -80,11 +60,6 @@ export function valuesOf(s: LinkSite): SiteValues {
     oldPath: s.oldPath,
     domains: (s.domains ?? []).join('\n'),
     port: String(s.port),
-    certMode,
-    certFile: s.certFile ?? '',
-    keyFile: s.keyFile ?? '',
-    certPem: s.certPem ?? '',
-    keyPem: '',
     lazy: s.lazy,
     plainHttpOk: s.plainHttpOk,
   };
@@ -100,19 +75,6 @@ export function isPlainHttp(url: string): boolean {
   return /^http:\/\//i.test(url.trim());
 }
 
-/** The certificate part of a site or a check: only the chosen way's fields. */
-function certPart(v: SiteValues): Pick<CertInput, 'certFile' | 'keyFile' | 'certPem' | 'keyPem'> {
-  switch (v.certMode) {
-    case 'files':
-      return { certFile: v.certFile.trim(), keyFile: v.keyFile.trim() };
-    case 'upload':
-    case 'paste':
-      return v.keyPem ? { certPem: v.certPem, keyPem: v.keyPem } : { certPem: v.certPem };
-    case 'none':
-      return {};
-  }
-}
-
 export function inputOf(v: SiteValues): SiteInput {
   return {
     name: v.name.trim(),
@@ -126,19 +88,7 @@ export function inputOf(v: SiteValues): SiteInput {
     port: Number(v.port),
     lazy: v.lazy,
     plainHttpOk: isPlainHttp(v.sourceUrl) && v.plainHttpOk,
-    ...certPart(v),
   };
-}
-
-/** The certificate check of what the form holds; a saved site lends its stored key. */
-export function certInputOf(v: SiteValues, id?: number): CertInput {
-  return { ...(id ? { id } : {}), domains: parseDomains(v.domains), ...certPart(v) };
-}
-
-/** The form can check a certificate once the chosen way has one to read. */
-export function canCheckCert(v: SiteValues): boolean {
-  if (v.certMode === 'files') return v.certFile.trim() !== '' && v.keyFile.trim() !== '';
-  return v.certMode !== 'none' && v.certPem.trim() !== '';
 }
 
 /** The field a refused save names, when the server named one this form shows. */

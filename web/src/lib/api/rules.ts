@@ -41,10 +41,6 @@ export interface LinkSite {
   /** Null or empty: every host on the port. */
   domains: string[] | null;
   port: number;
-  certFile?: string;
-  keyFile?: string;
-  certPem?: string;
-  hasKey: boolean;
   lazy: boolean;
   plainHttpOk: boolean;
   /** Whether the rule answers over HTTPS; its certificate comes from its domains (D63). */
@@ -71,13 +67,11 @@ export function getLinkSites(): Promise<LinkSites> {
 }
 
 /**
- * A site as sent. `keyPem` goes in and never comes back; empty on a change keeps the saved key.
- * Without `https`, a new rule answers over HTTPS when every domain has a certificate, and a
+ * A site as sent. Without `https`, a new rule answers over HTTPS when every domain has a certificate, and a
  * change keeps what it was.
  */
-export type SiteInput = Omit<LinkSite, 'id' | 'hasKey' | 'cert' | 'stats' | 'domains' | 'https'> & {
+export type SiteInput = Omit<LinkSite, 'id' | 'cert' | 'stats' | 'domains' | 'https'> & {
   domains: string[];
-  keyPem?: string;
   https?: boolean;
 };
 
@@ -90,20 +84,6 @@ export function saveSite(input: SiteInput, id?: number): Promise<LinkSite> {
 
 export function deleteSite(id: number): Promise<void> {
   return api('DELETE', `legacy-sites/${String(id)}`);
-}
-
-/** A certificate to check before saving; with `id` and no key, the site's saved key is used (api-resources.md 10.6). */
-export interface CertInput {
-  id?: number;
-  certFile?: string;
-  keyFile?: string;
-  certPem?: string;
-  keyPem?: string;
-  domains: string[];
-}
-
-export function inspectCert(input: CertInput): Promise<CertFacts> {
-  return api('POST', 'certificates/inspect', input);
 }
 
 /** A token list checked in the background; `checked` of `found` are done. */
