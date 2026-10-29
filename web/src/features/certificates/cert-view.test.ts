@@ -4,6 +4,7 @@ import type { ScanResult } from '../../lib/api/certificates';
 import {
   daysLeft,
   domainLines,
+  domainStateOf,
   domainWarningTone,
   notScanned,
   renewalOf,
@@ -224,5 +225,27 @@ describe('renew now', () => {
     expect(renewMethod(domain({ certificate: { ...le, origin: '' }, acme }))).toBeUndefined();
     expect(renewMethod(domain({ certificate: le, acme: { ...acme, method: '' } }))).toBeUndefined();
     expect(renewMethod(domain({}))).toBeUndefined();
+  });
+});
+
+describe("a domain's state", () => {
+  it('is Active with no warning', () => {
+    expect(domainStateOf(domain({ warnings: [] }), now).state).toBe('active');
+  });
+  it('is plain HTTP when its only line is no certificate', () => {
+    expect(domainStateOf(domain({ warnings: ['no_certificate'] }), now)).toEqual({
+      state: 'plain',
+      tone: 'neutral',
+    });
+  });
+  it('stays Active while its certificate only ends soon', () => {
+    expect(domainStateOf(domain({ warnings: ['expires_soon'] }), now).state).toBe('active');
+  });
+  it('needs a look for a warning, and does not serve for a danger', () => {
+    expect(domainStateOf(domain({ warnings: ['domain_mismatch'] }), now).state).toBe('attention');
+    expect(domainStateOf(domain({ warnings: ['expires_soon', 'expired'] }), now)).toEqual({
+      state: 'broken',
+      tone: 'danger',
+    });
   });
 });

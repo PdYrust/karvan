@@ -1,129 +1,18 @@
-import { Button } from '@cloudflare/kumo/components/button';
-import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
 import { useKumoToastManager } from '@cloudflare/kumo/components/toast';
-import {
-  ArrowClockwiseIcon,
-  DotsThreeIcon,
-  SealCheckIcon,
-  TrashIcon,
-} from '../../components/icons/regular';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';
-import { useNavigate } from 'react-router';
-import { DataTable, type Column } from '../../components/data/DataTable';
-import { CardFacts, RowCard } from '../../components/data/RowCard';
 import { TypeToConfirm } from '../../components/dialogs/TypeToConfirm';
 import { useT } from '../../i18n/locale';
-import { acmeKeys, startAcme } from '../../lib/api/acme';
 import { certificateKeys } from '../../lib/api/certificates';
 import { deleteDomain, domainKeys, type Domain } from '../../lib/api/domains';
-import { useAcmeErrorText } from '../../lib/errors/acme';
 import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
 import { useLingering } from '../../lib/motion/use-lingering';
 import { useFormat } from '../../lib/preferences/region';
 import { useNow } from '../overview/use-now';
-import { renewalOf, renewMethod } from './cert-view';
+import { DomainCard } from './DomainCard';
 import { certificatesMessages } from './messages';
-import { DomainLinesView, Mono, NameList, RuleName } from './parts';
 
-/**
- * The "..." menu: change the certificate, renew a Let's Encrypt one now, or delete while no rule
- * holds the domain.
- */
-function DomainMenu({ domain, onDelete }: { domain: Domain; onDelete: () => void }) {
-  const t = useT(certificatesMessages);
-  const navigate = useNavigate();
-  const toasts = useKumoToastManager();
-  const acmeError = useAcmeErrorText();
-  const qc = useQueryClient();
-  const label = t('moreFor', { name: domain.name });
-  const page = `/domains/${String(domain.id)}/certificate`;
-  const method = renewMethod(domain);
-  // The order runs on the domain's own page, which follows it to its end.
-  const renew = useMutation({
-    mutationFn: (m: NonNullable<typeof method>) => startAcme(domain.id, m),
-    onSuccess: () => {
-      void qc.invalidateQueries({ queryKey: acmeKeys.domain(domain.id) });
-      void qc.invalidateQueries({ queryKey: domainKeys.all });
-      void navigate(page);
-    },
-    onError: (e) =>
-      toasts.add({ title: t('renewFailed'), description: acmeError(e), variant: 'error' }),
-  });
-  return (
-    <DropdownMenu>
-      <DropdownMenu.Trigger
-        render={
-          <Button
-            variant="ghost"
-            shape="square"
-            aria-label={label}
-            title={label}
-            icon={<DotsThreeIcon size={20} />}
-            className="shrink-0 pointer-coarse:size-9"
-          />
-        }
-      />
-      <DropdownMenu.Content align="end" className="min-w-44">
-        <DropdownMenu.Item className="gap-2" onClick={() => void navigate(page)}>
-          <SealCheckIcon size={16} />
-          {t('changeCert')}
-        </DropdownMenu.Item>
-        {method ? (
-          <DropdownMenu.Item
-            className="gap-2"
-            disabled={renew.isPending}
-            onClick={() => renew.mutate(method)}
-          >
-            <ArrowClockwiseIcon size={16} />
-            {t('renewNow')}
-          </DropdownMenu.Item>
-        ) : null}
-        <DropdownMenu.Item
-          className="gap-2"
-          variant="danger"
-          disabled={domain.rules.length > 0}
-          onClick={onDelete}
-        >
-          <TrashIcon size={16} />
-          {t('delete')}
-        </DropdownMenu.Item>
-      </DropdownMenu.Content>
-    </DropdownMenu>
-  );
-}
-
-/** The domain's certificate with its issuer and end date under it, or plain HTTP. */
-function CertCell({ domain }: { domain: Domain }) {
-  const t = useT(certificatesMessages);
-  const fmt = useFormat();
-  const c = domain.certificate;
-  if (!c) return <span className="text-kumo-subtle">{t('plainHttp')}</span>;
-  const ends = c.facts.notAfter ? t('endsOn', { date: fmt.date(new Date(c.facts.notAfter)) }) : '';
-  return (
-    <span className="flex min-w-0 flex-col gap-0.5">
-      <bdi className="truncate text-kumo-default">{c.name}</bdi>
-      <span className="text-sm text-kumo-subtle">
-        {[c.facts.issuer, ends].filter(Boolean).join(', ')}
-      </span>
-    </span>
-  );
-}
-
-/** A Let's Encrypt domain's running order or next renewal; nothing for the rest. */
-function RenewalCell({ domain }: { domain: Domain }) {
-  const t = useT(certificatesMessages);
-  const fmt = useFormat();
-  const r = renewalOf(domain);
-  if (!r) return <span className="text-kumo-subtle">{t('none')}</span>;
-  if (r.kind === 'order') return <span>{t(`order_${r.state}`)}</span>;
-  return <span>{t('renewsOn', { date: fmt.date(r.at) })}</span>;
-}
-
-const ruleNames = (d: Domain) =>
-  d.rules.map((r) => ({ key: `${r.kind}:${String(r.id)}`, node: <RuleName rule={r} /> }));
-
-/** Every domain rules can answer, with its certificate, renewal, rules and warnings (D50, D61). */
+/** Every domain rules can answer, one short card each; problems open from the state badge's menu (D50, D61). */
 export function DomainsSection({ domains }: { domains: readonly Domain[] }) {
   const t = useT(certificatesMessages);
   const fmt = useFormat();
@@ -148,39 +37,6 @@ export function DomainsSection({ domains }: { domains: readonly Domain[] }) {
     remove.reset();
     setAsking(d);
   };
-  const columns: Column<Domain>[] = [
-    {
-      key: 'domain',
-      header: t('colDomain'),
-      cell: (d) => <Mono text={d.name} className="text-kumo-strong" />,
-      className: 'max-w-56',
-    },
-    {
-      key: 'cert',
-      header: t('colCert'),
-      cell: (d) => <CertCell domain={d} />,
-      className: 'max-w-56',
-    },
-    { key: 'renewal', header: t('colRenewal'), cell: (d) => <RenewalCell domain={d} /> },
-    {
-      key: 'rules',
-      header: t('colRules'),
-      cell: (d) => <NameList names={ruleNames(d)} />,
-      className: 'max-w-44',
-    },
-    {
-      key: 'warnings',
-      header: t('colWarnings'),
-      cell: (d) => <DomainLinesView domain={d} now={now} />,
-    },
-    {
-      key: 'menu',
-      header: t('colMenu'),
-      hideHeader: true,
-      cell: (d) => <DomainMenu domain={d} onDelete={() => ask(d)} />,
-      className: 'w-12 text-end',
-    },
-  ];
   return (
     <section aria-labelledby={titleId} className="flex flex-col gap-3">
       <h2 id={titleId} className="text-heading font-semibold text-kumo-strong">
@@ -189,28 +45,11 @@ export function DomainsSection({ domains }: { domains: readonly Domain[] }) {
           {fmt.number(domains.length)}
         </span>
       </h2>
-      <DataTable
-        caption={t('domainsTitle')}
-        rows={domains}
-        rowKey={(d) => d.id}
-        columns={columns}
-        card={(d) => (
-          <RowCard
-            lead={<Mono text={d.name} className="font-medium text-kumo-strong" />}
-            menu={<DomainMenu domain={d} onDelete={() => ask(d)} />}
-          >
-            <CardFacts
-              className="grid-cols-2"
-              facts={[
-                { label: t('colCert'), value: <CertCell domain={d} /> },
-                { label: t('colRenewal'), value: <RenewalCell domain={d} /> },
-                { label: t('colRules'), value: <NameList names={ruleNames(d)} /> },
-              ]}
-            />
-            <DomainLinesView domain={d} now={now} />
-          </RowCard>
-        )}
-      />
+      <div className="flex flex-col gap-4">
+        {domains.map((d) => (
+          <DomainCard key={d.id} domain={d} now={now} onDelete={() => ask(d)} />
+        ))}
+      </div>
       <TypeToConfirm
         open={asking !== null}
         onOpenChange={(open) => {

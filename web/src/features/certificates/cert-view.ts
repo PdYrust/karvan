@@ -116,3 +116,22 @@ export function renewMethod(d: Domain): AcmeMethod | undefined {
     return undefined;
   return a.method;
 }
+
+export type DomainState = 'active' | 'plain' | 'attention' | 'broken';
+
+/** A domain's lines without the end date's warning, which sits next to the date itself. */
+export function listLines(d: Domain, now: Date): DomainLine[] {
+  return domainLines(d, now).filter((l) => l.word !== 'expires_soon');
+}
+
+/**
+ * One word for the head of a domain's row: its worst line decides, none is Active.
+ * A certificate that ends soon still serves, so it stays Active.
+ */
+export function domainStateOf(d: Domain, now: Date): { state: DomainState; tone: StatusTone } {
+  const lines = listLines(d, now);
+  if (lines.some((l) => l.tone === 'danger')) return { state: 'broken', tone: 'danger' };
+  if (lines.length === 0) return { state: 'active', tone: 'success' };
+  if (lines.every((l) => l.word === 'no_certificate')) return { state: 'plain', tone: 'neutral' };
+  return { state: 'attention', tone: 'warning' };
+}
