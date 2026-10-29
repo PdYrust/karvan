@@ -128,8 +128,16 @@ func TestMonitorSendsReadyThenWatchdogAndWritesTheHeartbeat(t *testing.T) {
 func TestMonitorStaysSilentWhileTheProbeFails(t *testing.T) {
 	socket, got := fakeSystemd(t)
 	beat := filepath.Join(t.TempDir(), "heartbeat")
+	// A port this test opened and closed again: a fixed low port can be in
+	// use by another package's tests where binding it needs no root.
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	closed := ln.Addr().String()
+	_ = ln.Close()
 	m := &Monitor{Socket: socket, Heartbeat: beat, Log: slog.New(slog.DiscardHandler),
-		Addrs: func() []string { return []string{"127.0.0.1:1"} }}
+		Addrs: func() []string { return []string{closed} }}
 	ctx, cancel := context.WithTimeout(context.Background(), 1500*time.Millisecond)
 	defer cancel()
 	m.Run(ctx)
