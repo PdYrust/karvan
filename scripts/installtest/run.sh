@@ -263,8 +263,13 @@ sys ': >/var/lib/karvan/after-update'
 if out=$(sys 'karvan rollback' 2>&1); then
 	fail "the rollback across a schema change did not ask"
 fi
+# stdout and stderr come back through docker exec in either order.
 case $out in
-*"restores the backup taken at 20"*" UTC; changes made since then are lost"*"--yes"*) ;;
+*"restores the backup taken at 20"*" UTC; changes made since then are lost"*) ;;
+*) fail "the rollback said: $out" ;;
+esac
+case $out in
+*"run it again with --yes"*) ;;
 *) fail "the rollback said: $out" ;;
 esac
 on_version "$V3" "$VERSION"
