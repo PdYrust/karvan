@@ -1,0 +1,20 @@
+# Karvan in Docker (docs/docker.md). Once, to set it up:
+#   docker compose run --rm karvan init
+# then: docker compose up -d
+# The Docker socket gives this container control of the host.
+services:
+  karvan:
+    image: ghcr.io/pdyrust/karvan:0.5.0-beta
+    restart: unless-stopped
+    # The bridge opens rule ports while it runs, and panel databases often
+    # listen on 127.0.0.1 (D27).
+    network_mode: host
+    volumes:
+      - /var/lib/karvan:/var/lib/karvan
+      - /etc/karvan:/etc/karvan
+      - /opt:/opt:ro
+      - /var/lib/marzban:/var/lib/marzban
+      - /var/lib/pasarguard:/var/lib/pasarguard
+      - /root/cert:/root/cert:ro
+      - /etc/letsencrypt:/etc/letsencrypt:ro
+      - /var/run/docker.sock:/var/run/docker.sock
