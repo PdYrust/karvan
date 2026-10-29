@@ -36,6 +36,29 @@ jobs:
         run: |
           go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
           go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+      # The PostgreSQL test servers are 17 and pg_dump refuses a newer
+      # server, so take the client from the PostgreSQL apt repository; the
+      # runner's own is 16. The MySQL and MariaDB tests run their dump tools
+      # inside the server containers.
+      - name: Install pg_dump 17
+        env:
+          PGDG_FPR: B97B0AFCAA1A47F044F244A07FCC7D46ACCC4CF8
+        run: |
+          curl -fsSL https://www.postgresql.org/media/keys/ACCC4CF8.asc -o "$RUNNER_TEMP/pgdg.asc"
+          fpr=$(gpg --show-keys --with-colons "$RUNNER_TEMP/pgdg.asc" | awk -F: '$1 == "fpr" { print $10; exit }')
+          if [ "$fpr" != "$PGDG_FPR" ]; then
+            echo "::error::The PostgreSQL apt key has fingerprint $fpr, want $PGDG_FPR."
+            exit 1
+          fi
+          sudo gpg --dearmor -o /usr/share/keyrings/pgdg.gpg "$RUNNER_TEMP/pgdg.asc"
+          echo "deb [signed-by=/usr/share/keyrings/pgdg.gpg] https://apt.postgresql.org/pub/repos/apt noble-pgdg main" |
+            sudo tee /etc/apt/sources.list.d/pgdg.list >/dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends postgresql-client-17
+          sudo ln -sf /usr/lib/postgresql/17/bin/pg_dump /usr/local/bin/pg_dump
+          sudo ln -sf /usr/lib/postgresql/17/bin/psql /usr/local/bin/psql
+          pg_dump --version
+          psql --version
       - name: Install the web dependencies
         run: make web-deps
       - name: make check-full
