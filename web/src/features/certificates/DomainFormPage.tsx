@@ -109,6 +109,7 @@ export function DomainFormPage() {
         initial={newDomainForm(domain?.name ?? query.get('name') ?? '')}
         isNew={!domain}
         certificates={load.data.certificates}
+        except={domain?.certificate?.id}
         needsAgreement={!load.data.s.hasAccount}
         saving={save.isPending}
         error={save.error}
