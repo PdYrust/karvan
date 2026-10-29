@@ -55,15 +55,17 @@ type Bridge struct {
 	reloadMu sync.Mutex
 	mu       sync.Mutex
 	sites    []Site
-	routes   table               // built from sites and the redirect rules (D52)
-	shakes   map[int]portShake   // the certificate pick of each TLS port (D62), by port
-	certRows map[int64]certSnap  // the certificates rows the picks read, by id
-	dests    map[int64]*openDest // by panel id
-	olds     map[int64]OldPanel  // by site id
-	servers  map[int]*listener   // by port
-	errs     map[int]error       // ports that could not listen
-	chal     challenges          // the challenge port's holders and live tokens (D67)
-	wg       sync.WaitGroup
+	routes   table              // built from sites and the redirect rules (D52)
+	shakes   map[int]portShake  // the certificate pick of each TLS port (D62), by port
+	certRows map[int64]certSnap // the certificates rows the picks read, by id
+	// panelCerts holds the web panel's certificate in domain mode.
+	panelCerts certCache
+	dests      map[int64]*openDest // by panel id
+	olds       map[int64]OldPanel  // by site id
+	servers    map[int]*listener   // by port
+	errs       map[int]error       // ports that could not listen
+	chal       challenges          // the challenge port's holders and live tokens (D67)
+	wg         sync.WaitGroup
 	// bg is cancelled when Run ends, which stops token lists in the background.
 	bg     context.Context
 	stopBg context.CancelFunc
@@ -104,7 +106,8 @@ func New(d Deps) *Bridge {
 	b := &Bridge{Deps: d, st: &store{db: d.DB, key: d.Key, now: d.Now, panelPorts: d.PanelPorts}, macKey: d.Key.Derive("bridge/token-mac"),
 		lim: newLimits(d.Now), neg: newNegative(d.Now), dests: map[int64]*openDest{}, olds: map[int64]OldPanel{},
 		servers: map[int]*listener{}, errs: map[int]error{}, bg: bg, stopBg: stop, ups: map[int64]*UploadProgress{},
-		chal: challenges{holders: map[string]bool{}, tokens: map[string]challenge{}}, started: make(chan struct{})}
+		chal: challenges{holders: map[string]bool{}, tokens: map[string]challenge{}}, started: make(chan struct{}),
+		panelCerts: certCache{m: map[string]cachedCert{}}}
 	b.st.challengeOpen = b.challengeOpen
 	return b
 }
