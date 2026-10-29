@@ -117,13 +117,13 @@ function CertUsers({ cert, domains }: { cert: Certificate; domains: readonly Dom
   return (
     <ul className="flex flex-col gap-2 text-sm">
       {cert.domains.map((d) => (
-        <li key={`domain:${String(d.id)}`} className="flex flex-col gap-1">
+        <li key={`domain:${String(d.id)}`} className="flex flex-col items-start gap-1">
           <Mono text={d.name} />
           {d.warnings.includes('domain_mismatch') ? missing(d.name) : null}
         </li>
       ))}
       {cert.rules.map((r) => (
-        <li key={`${r.kind}:${String(r.id)}`} className="flex flex-col gap-1">
+        <li key={`${r.kind}:${String(r.id)}`} className="flex flex-col items-start gap-1">
           <RuleName rule={r} />
           {r.warnings.includes('domain_mismatch')
             ? uncoveredDomains(cert.id, r, domains).map(missing)
@@ -186,7 +186,7 @@ export function CertificateCard({
         </div>
       </header>
       <Collapse id={`${id}-details`} open={open}>
-        <div className="grid divide-kumo-hairline border-t border-kumo-hairline lg:grid-cols-2 lg:divide-x rtl:lg:divide-x-reverse">
+        <div className="grid divide-kumo-hairline border-t border-kumo-hairline lg:grid-cols-2 lg:divide-x">
           <div className="flex flex-col divide-y divide-kumo-hairline">
             <div className="px-4 py-1">
               <FactList facts={facts} />
