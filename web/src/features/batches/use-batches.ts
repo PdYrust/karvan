@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 import { batchKeys, listBatches, listBatchUsers, type Batch } from '../../lib/api/batches';
 
-export const batchesPerPage = 20;
+const batchesPerPage = 20;
 export const usersPerPage = 50;
 /** A search looks through this many of the latest batches that match the filters. */
 export const searchDepth = 100;

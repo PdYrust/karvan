@@ -40,7 +40,7 @@ export interface RuleValues {
 }
 
 /** The fields the server can name in a site_invalid or redirect_invalid answer. */
-export const ruleFields = [
+const ruleFields = [
   'name',
   'batchIds',
   'panelId',
