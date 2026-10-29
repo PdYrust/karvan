@@ -1,6 +1,16 @@
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
-import { defineConfig } from 'vitest/config';
+import { configDefaults, defineConfig } from 'vitest/config';
+
+const domTests = [
+  'src/**/*.test.tsx',
+  'src/lib/api/**/*.test.ts',
+  'src/lib/clipboard/**/*.test.ts',
+  'src/lib/keys/**/*.test.ts',
+  'src/lib/preferences/**/*.test.ts',
+  'src/i18n/change-locale.test.ts',
+  'src/features/live/use-dots.test.ts',
+];
 
 // In development the Go server runs separately; set KARVAN_DEV_TARGET to its
 // address including the hidden path, e.g. http://127.0.0.1:34567/abcDEF2345ghijkm
@@ -31,8 +41,21 @@ export default defineConfig({
       }
     : undefined,
   test: {
-    environment: 'happy-dom',
-    include: ['src/**/*.test.{ts,tsx}'],
+    // Only these tests need a DOM; the rest run in plain Node, which starts
+    // much faster than happy-dom. A test that needs a DOM and is not listed
+    // fails in Node (no document, window or storage), so add it here.
+    projects: [
+      {
+        extends: true,
+        test: {
+          name: 'node',
+          environment: 'node',
+          include: ['src/**/*.test.{ts,tsx}'],
+          exclude: [...configDefaults.exclude, ...domTests],
+        },
+      },
+      { extends: true, test: { name: 'dom', environment: 'happy-dom', include: domTests } },
+    ],
     coverage: {
       provider: 'v8',
       include: ['src/lib/**/*.ts', 'src/i18n/**/*.ts'],
