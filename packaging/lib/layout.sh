@@ -35,6 +35,32 @@ switch_current() {
 	ln -sfn "$LIB_DIR/current/karvan" "$BIN_LINK"
 }
 
+# version_of prints the version link $1 (current or previous) points at.
+version_of() {
+	readlink "$LIB_DIR/$1" 2>/dev/null || true
+}
+# set_previous points $LIB_DIR/previous at version $1.
+set_previous() {
+	ln -sfn "$1" "$LIB_DIR/.previous.new"
+	mv -T "$LIB_DIR/.previous.new" "$LIB_DIR/previous"
+}
+# prune_versions deletes every version folder but current and previous.
+prune_versions() {
+	keep_cur=$(version_of current)
+	keep_prev=$(version_of previous)
+	for d in "$LIB_DIR"/*; do
+		if [ ! -d "$d" ] || [ -L "$d" ]; then
+			continue
+		fi
+		v=${d##*/}
+		[ "$v" = "$keep_cur" ] || [ "$v" = "$keep_prev" ] || rm -rf "$d"
+	done
+}
+# schema_of prints the store schema version the binary of version $1
+# migrates to (karvan version -json).
+schema_of() {
+	"$LIB_DIR/$1/karvan" version -json 2>/dev/null | sed -n 's/.*"schema":\([0-9]*\).*/\1/p'
+}
 # make_dirs creates the data and config folders for root only and writes a
 # config file with the defaults when there is none.
 make_dirs() {
@@ -59,9 +85,13 @@ make_dirs() {
 
 # install_unit puts the service in place and starts it.
 install_unit() {
+	put_unit
+	systemctl enable --now karvan.service
+}
+# put_unit copies the unit of the current version in place.
+put_unit() {
 	install -m 0644 -o root -g root "$LIB_DIR/current/karvan.service" "$UNIT"
 	systemctl daemon-reload
-	systemctl enable --now karvan.service
 }
 
 # remove_path deletes $1 when it is there, and says so when it is not.
