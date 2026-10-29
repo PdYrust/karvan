@@ -32,8 +32,8 @@ type Config struct {
 	LogLevel       string   `json:"logLevel"`
 	TrustedProxies []string `json:"trustedProxies"`
 	// PanelControl says how Karvan stops and starts a panel to put a Safe
-	// Mode backup back: "auto" (Docker, else sudo -n), "docker", "sudo"
-	// or "off".
+	// Mode backup back: "auto" (the Docker CLI, else the Docker socket,
+	// else sudo -n), "docker", "sudo" or "off".
 	PanelControl string `json:"panelControl"`
 	// ACMEHTTPPort is where Karvan answers Let's Encrypt HTTP-01
 	// challenges (D74).
