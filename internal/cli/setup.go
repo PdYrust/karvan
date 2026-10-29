@@ -32,11 +32,17 @@ func newLogger(w io.Writer, cfg config.Config) *slog.Logger {
 }
 
 func runInit(ctx context.Context, streams IO, args []string) error {
-	cfg, err := loadConfig("init", streams, args, nil)
+	port := 0
+	cfg, err := loadConfig("init", streams, args, func(fs *flagSetter) {
+		fs.IntVar(&port, "port", 0, "panel port, 1 to 65535 (default 0: a random one)")
+	})
 	if err != nil {
 		return err
 	}
-	creds, err := app.Initialize(ctx, cfg, newLogger(streams.Stderr, cfg))
+	if port < 0 || port > 65535 {
+		return fmt.Errorf("%w: -port must be 1 to 65535", errUsage)
+	}
+	creds, err := app.InitializeOnPort(ctx, cfg, port, newLogger(streams.Stderr, cfg))
 	if err != nil {
 		return err
 	}

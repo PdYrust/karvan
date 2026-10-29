@@ -31,9 +31,15 @@ type Credentials struct {
 }
 
 // Initialize creates the key, the database and the operator account of a
-// new installation. It refuses to touch an existing one, and removes what it
-// created if a later step fails, so init can simply be run again.
-func Initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (creds Credentials, err error) {
+// new installation on a random port. It refuses to touch an existing one,
+// and removes what it created if a later step fails, so init can simply be
+// run again.
+func Initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (Credentials, error) {
+	return InitializeOnPort(ctx, cfg, 0, logger)
+}
+
+// InitializeOnPort is Initialize on the given port; 0 picks a random one.
+func InitializeOnPort(ctx context.Context, cfg config.Config, port int, logger *slog.Logger) (creds Credentials, err error) {
 	exists, err := store.Exists(cfg.DataDir)
 	if err != nil {
 		return Credentials{}, err
@@ -66,6 +72,9 @@ func Initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (cr
 	creds, err = newCredentials()
 	if err != nil {
 		return Credentials{}, err
+	}
+	if port != 0 {
+		creds.Port = port
 	}
 	hash, err := auth.HashPassword(creds.Password.Reveal())
 	if err != nil {

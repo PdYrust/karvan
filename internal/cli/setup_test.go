@@ -33,11 +33,24 @@ func TestInitPrintsCredentialsOnlyToStdout(t *testing.T) {
 	}
 }
 
-func doInit(t *testing.T, dir string) (int, string, string) {
+// The installer passes the port the operator confirmed (D20).
+func TestInitTakesThePort(t *testing.T) {
+	for _, bad := range []string{"x", "65536", "-1"} {
+		if code, _, errOut := doInit(t, t.TempDir(), "-port", bad); code != 2 || !strings.Contains(errOut, "-port") {
+			t.Fatalf("-port %s: %d %s", bad, code, errOut)
+		}
+	}
+	code, out, errOut := doInit(t, t.TempDir(), "-port", "31234")
+	if code != 0 || !strings.Contains(out, "https://<server address>:31234/") {
+		t.Fatalf("init -port: %d %q %s", code, out, errOut)
+	}
+}
+
+func doInit(t *testing.T, dir string, flags ...string) (int, string, string) {
 	t.Helper()
 	var out, errOut bytes.Buffer
-	code := Run(context.Background(), []string{"init", "-data-dir", filepath.Join(dir, "data"), "-key-file", filepath.Join(dir, "secret.key")},
-		IO{Stdout: &out, Stderr: &errOut, StdoutIsTerminal: true})
+	args := append([]string{"init", "-data-dir", filepath.Join(dir, "data"), "-key-file", filepath.Join(dir, "secret.key")}, flags...)
+	code := Run(context.Background(), args, IO{Stdout: &out, Stderr: &errOut, StdoutIsTerminal: true})
 	return code, out.String(), errOut.String()
 }
 
