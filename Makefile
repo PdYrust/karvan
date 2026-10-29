@@ -16,7 +16,7 @@ TESTDB_ENV := KARVAN_TEST_MYSQL='root:test@tcp(127.0.0.1:33061)/' \
 	KARVAN_TEST_MARIADB='root:test@tcp(127.0.0.1:33062)/' \
 	KARVAN_TEST_POSTGRES='postgres://postgres:test@127.0.0.1:54321/postgres' \
 	KARVAN_TEST_TIMESCALE='postgres://postgres:test@127.0.0.1:54322/postgres'
-.PHONY: build build-go web web-deps test lint lint-web fmt floor cover check check-web check-full vuln audit-web clean test-db testdb-seed testdb-down test-panels testpanels-down test-acme bench test-install
+.PHONY: build build-go web web-deps test lint lint-web fmt floor cover check check-web check-full vuln audit-web clean test-db testdb-seed testdb-down test-panels testpanels-down test-acme bench test-install release-dry
 
 build: web build-go
 
@@ -86,6 +86,10 @@ bench:
 # one packed from this tree.
 test-install:
 	./scripts/installtest/run.sh
+# Build, check and test the release files locally without pushing anything
+# (needs Docker; VERSION defaults to 0.5.0-beta-dry, output in dist/).
+release-dry:
+	./scripts/release/dry.sh
 testpanels-down:
 	for d in /tmp/karvan-panels/karvan-test-*; do [ -f $$d/docker-compose.yml ] && docker compose -f $$d/docker-compose.yml -p $$(basename $$d) down; done; true
 # Full gate: before a phase ends or a release.
