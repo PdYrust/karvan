@@ -33,10 +33,12 @@ func newAddressEnv(t *testing.T, ttl time.Duration) *addressEnv {
 		Bind: "127.0.0.1", TTL: ttl, Log: d.Logger,
 		HTTP: func(h http.Handler) *http.Server { return &http.Server{Handler: h, ReadHeaderTimeout: 5 * time.Second} },
 		Save: func(ctx context.Context, s address.Site) error {
-			return settings.New(e.db).SetHTTP(ctx, settings.HTTP{Bind: "127.0.0.1", Port: s.Port, BasePath: s.BasePath})
+			return settings.New(e.db).SetHTTP(ctx, settings.HTTP{Bind: "127.0.0.1", Port: s.Port, BasePath: s.BasePath, TLS: s.TLS})
 		},
 	}
 	d.Address = srv
+	d.PanelTLS = panelTLS(t, e)
+	srv.Certificate = d.PanelTLS.Certificate
 	srv.Handler = func(b string) (http.Handler, error) {
 		dd := d
 		dd.BasePath = b

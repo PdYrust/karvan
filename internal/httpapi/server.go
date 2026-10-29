@@ -18,6 +18,7 @@ import (
 	"github.com/PdYrust/karvan/internal/httpapi/handlers"
 	"github.com/PdYrust/karvan/internal/httpapi/middleware"
 	"github.com/PdYrust/karvan/internal/migration/run"
+	"github.com/PdYrust/karvan/internal/paneltls"
 	"github.com/PdYrust/karvan/internal/settings"
 )
 
@@ -58,6 +59,8 @@ type Deps struct {
 
 	// Address serves the panel; with it the address can be changed.
 	Address *address.Server
+	// PanelTLS gives the panel its certificate in HTTPS mode.
+	PanelTLS *paneltls.Manager
 }
 
 // New builds the root handler.
@@ -69,7 +72,8 @@ func New(d Deps) (http.Handler, error) {
 	cookies := middleware.Cookies{Path: "/" + d.BasePath + "/"}
 	api := &handlers.API{Auth: d.Auth, Audit: d.Audit, Cookies: cookies, Version: d.Version,
 		Runs: d.Runs, Bridge: d.Bridge, Orders: d.Orders, Settings: d.Settings, ScanRoots: d.ScanRoots, Closing: d.Closing,
-		Host: d.Host, HostStore: d.HostStore, HostReader: d.HostReader, DBStats: d.DBStats, Address: d.Address}
+		Host: d.Host, HostStore: d.HostStore, HostReader: d.HostReader, DBStats: d.DBStats, Address: d.Address,
+		PanelTLS: d.PanelTLS}
 	signedIn := func(h http.HandlerFunc) http.Handler { return middleware.RequireSession(h) }
 
 	rt := middleware.NewRouter()
@@ -123,6 +127,8 @@ func accountRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.
 		routes["GET /api/v1/settings/address"] = api.GetAddress
 		routes["POST /api/v1/settings/address"] = api.StartAddress
 		routes["POST /api/v1/settings/address/confirm"] = api.ConfirmAddress
+		routes["GET /api/v1/settings/https"] = api.GetHTTPS
+		routes["PUT /api/v1/settings/https"] = api.PutHTTPS
 	}
 	for pattern, h := range routes {
 		rt.Handle(pattern, signedIn(h))

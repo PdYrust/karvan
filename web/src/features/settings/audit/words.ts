@@ -41,6 +41,7 @@ const en = {
   'account.credentials': 'Made a new username and password',
   'settings.address_start': 'Started an address change',
   'settings.address': 'Changed the panel address',
+  'settings.https': 'Started an HTTPS change',
 };
 
 export type AuditAction = keyof typeof en;
@@ -85,6 +86,7 @@ const fa: Messages<AuditAction>['fa'] = {
   'account.credentials': 'ساخت نام کاربری و رمز جدید',
   'settings.address_start': 'شروع تغییر آدرس',
   'settings.address': 'تغییر آدرس پنل',
+  'settings.https': 'شروع تغییر HTTPS',
 };
 
 export const actionMessages: Messages<AuditAction> = { en, fa };

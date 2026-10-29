@@ -15,6 +15,7 @@ import (
 	"github.com/PdYrust/karvan/internal/httpapi/address"
 	"github.com/PdYrust/karvan/internal/httpapi/middleware"
 	"github.com/PdYrust/karvan/internal/migration/run"
+	"github.com/PdYrust/karvan/internal/paneltls"
 	"github.com/PdYrust/karvan/internal/settings"
 )
 
@@ -52,6 +53,8 @@ type API struct {
 
 	// Address serves the panel and changes its address.
 	Address *address.Server
+	// PanelTLS gives the panel its certificate.
+	PanelTLS *paneltls.Manager
 }
 
 // record audits an operator action. A failed audit write is logged, not

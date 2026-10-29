@@ -42,6 +42,7 @@ const serverActions = [
   'account.credentials',
   'settings.address_start',
   'settings.address',
+  'settings.https',
 ];
 
 describe('audit words', () => {

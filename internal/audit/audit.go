@@ -68,6 +68,7 @@ const (
 	ActionLoginRenew    = "account.credentials"
 	ActionAddressStart  = "settings.address_start"
 	ActionAddressChange = "settings.address"
+	ActionHTTPS         = "settings.https"
 )
 
 // ActorCLI is the actor for actions taken from the command line.
