@@ -71,6 +71,9 @@ export function DomainFormPage() {
   });
   const failed = [domains, certs, settings].find((q) => q.isError);
   const running = isRunning(domain?.acme?.order);
+  // An order running when the page opens stays on the page once it ends, so
+  // a failed one shows its words and Try again instead of the empty form.
+  if (ordered === undefined && domain && running) setOrdered(domain.id);
   let body;
   if (failed) {
     body = (
