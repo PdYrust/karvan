@@ -16,11 +16,22 @@ import { ListToolbar } from '../../components/data/ListToolbar';
 import { dataMessages } from '../../components/data/messages';
 import { sortChoice } from '../../components/data/sort-choice';
 import { matchesTerm, sortRows, type ListSort } from '../../lib/lists/choices';
-import { deleteSite, getLinkSites, linkKeys, type LinkSite } from '../../lib/api/rules';
+import { domainKeys, getDomains } from '../../lib/api/domains';
+import {
+  deleteRedirect,
+  deleteSite,
+  getLinkSites,
+  getRedirects,
+  linkKeys,
+  redirectKeys,
+  type LinkSite,
+  type Redirect,
+} from '../../lib/api/rules';
 import { useErrorText } from '../../lib/errors/errors';
 import { useFormat } from '../../lib/preferences/region';
 import { usePanels } from '../panels/use-panels';
 import { rulesMessages } from './messages';
+import { RedirectCard } from './RedirectCard';
 import { SiteCard } from './SiteCard';
 import { Reveal } from '../../components/feedback/Reveal';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
@@ -41,7 +52,14 @@ function AddButton() {
   );
 }
 
-/** One card per old link site, with ports that could not open first (4.9). */
+/** A panel rule or a redirect, as the list holds them. */
+type Rule = { kind: 'panel'; rule: LinkSite } | { kind: 'redirect'; rule: Redirect };
+const terms = (r: Rule) =>
+  r.kind === 'panel'
+    ? [r.rule.name, r.rule.sourceUrl, ...(r.rule.domains ?? [])]
+    : [r.rule.name, r.rule.toUrl, ...(r.rule.domains ?? [])];
+
+/** One card per rule, panel rules and redirects, with ports that could not open first (4.9). */
 export function RulesPage() {
   const t = useT(rulesMessages);
   usePageTitle(t('title'));
@@ -50,8 +68,10 @@ export function RulesPage() {
   const toasts = useKumoToastManager();
   const errorText = useErrorText();
   const list = useQuery({ queryKey: linkKeys.all, queryFn: getLinkSites });
+  const redirects = useQuery({ queryKey: redirectKeys.all, queryFn: getRedirects });
+  const domains = useQuery({ queryKey: domainKeys.all, queryFn: getDomains });
   const panels = usePanels();
-  const [asking, setAsking] = useState<LinkSite | null>(null);
+  const [asking, setAsking] = useState<Rule | null>(null);
   const td = useT(dataMessages);
   const { locale } = useLocale();
   const [query, setQuery] = useState('');
@@ -60,23 +80,33 @@ export function RulesPage() {
   // The dialog keeps the name while it fades out.
   const named = useLingering(asking);
   const remove = useMutation({
-    mutationFn: (s: LinkSite) => deleteSite(s.id),
-    onSuccess: (_, s) => {
+    mutationFn: (r: Rule) =>
+      r.kind === 'panel' ? deleteSite(r.rule.id) : deleteRedirect(r.rule.id),
+    onSuccess: (_, r) => {
       setAsking(null);
       toasts.add({ title: t('deleted') });
       // A deleted site has no upload to read any more.
-      qc.removeQueries({ queryKey: linkKeys.upload(s.id) });
-      void qc.invalidateQueries({ queryKey: linkKeys.all, exact: true });
+      if (r.kind === 'panel') qc.removeQueries({ queryKey: linkKeys.upload(r.rule.id) });
+      void qc.invalidateQueries({
+        queryKey: r.kind === 'panel' ? linkKeys.all : redirectKeys.all,
+        exact: true,
+      });
+      void qc.invalidateQueries({ queryKey: domainKeys.all });
     },
   });
-  const load = useFirstLoad(list.data);
+  const both =
+    list.data && redirects.data && domains.data
+      ? { ...list.data, redirects: redirects.data.redirects, domains: domains.data.domains }
+      : undefined;
+  const load = useFirstLoad(both);
+  const failed = [list, redirects, domains].find((q) => q.isError);
   let body;
-  if (list.isError) {
+  if (failed) {
     body = (
       <ErrorState
         message={t('loadFailed')}
-        error={list.error}
-        onRetry={() => void list.refetch()}
+        error={failed.error}
+        onRetry={() => void failed.refetch()}
       />
     );
   } else if (!load.data) {
@@ -85,7 +115,7 @@ export function RulesPage() {
         <Bone className="h-72 w-full rounded-lg" />
       </div>
     );
-  } else if (load.data.sites.length === 0) {
+  } else if (load.data.sites.length + load.data.redirects.length === 0) {
     body = (
       <EmptyState
         icon={<LinkSimpleIcon size={32} aria-hidden="true" />}
@@ -97,16 +127,18 @@ export function RulesPage() {
     );
   } else {
     const ports = Object.keys(load.data.portErrors).map((p) => fmt.number(Number(p)));
-    const sites = load.data.sites;
-    const isTls = (s: LinkSite, f: typeof tls) => f === 'all' || (f === 'https') === s.https;
+    const rules: Rule[] = [
+      ...load.data.sites.map((rule) => ({ kind: 'panel' as const, rule })),
+      ...load.data.redirects.map((rule) => ({ kind: 'redirect' as const, rule })),
+    ];
+    const isTls = (r: Rule, f: typeof tls) => f === 'all' || (f === 'https') === r.rule.https;
     const shown = sortRows(
-      sites.filter(
-        (s) => isTls(s, tls) && matchesTerm(query, [s.name, s.sourceUrl, ...(s.domains ?? [])]),
-      ),
+      rules.filter((r) => isTls(r, tls) && matchesTerm(query, terms(r))),
       sort,
-      { name: (s) => s.name, time: (s) => s.id },
+      { name: (r) => r.rule.name, time: (r) => r.rule.id },
       locale,
     );
+    const known = load.data.domains;
     const tlsText = { all: td('showAll'), https: t('https'), plain: t('plainHttp') };
     body = (
       <>
@@ -124,7 +156,7 @@ export function RulesPage() {
                 value: f,
                 label: tlsText[f],
                 text: tlsText[f],
-                count: sites.filter((s) => isTls(s, f)).length,
+                count: rules.filter((r) => isTls(r, f)).length,
               })),
               onChange: (f) => setTls(f as typeof tls),
             },
@@ -137,22 +169,33 @@ export function RulesPage() {
           </p>
         ) : null}
         <section aria-label={t('list')} className="flex flex-col gap-4">
-          {shown.map((s) => (
-            <SiteCard
-              key={s.id}
-              site={s}
-              panel={panels.data?.find((p) => p.id === s.panelId)}
-              onDelete={() => {
-                remove.reset();
-                setAsking(s);
-              }}
-            />
-          ))}
+          {shown.map((r) => {
+            const onDelete = () => {
+              remove.reset();
+              setAsking(r);
+            };
+            return r.kind === 'panel' ? (
+              <SiteCard
+                key={`p${String(r.rule.id)}`}
+                site={r.rule}
+                panel={panels.data?.find((p) => p.id === r.rule.panelId)}
+                domains={known}
+                onDelete={onDelete}
+              />
+            ) : (
+              <RedirectCard
+                key={`r${String(r.rule.id)}`}
+                redirect={r.rule}
+                domains={known}
+                onDelete={onDelete}
+              />
+            );
+          })}
         </section>
       </>
     );
   }
-  const hasSites = Boolean(load.data?.sites.length);
+  const hasSites = Boolean(load.data && load.data.sites.length + load.data.redirects.length);
   return (
     <div className="flex flex-col">
       <PageHeader
@@ -169,13 +212,13 @@ export function RulesPage() {
           if (!open) setAsking(null);
         }}
         title={t('deleteTitle')}
-        word={named?.name ?? ''}
+        word={named?.rule.name ?? ''}
         action={t('delete')}
         pending={remove.isPending}
         error={remove.isError ? `${t('deleteFailed')} ${errorText(remove.error)}` : undefined}
         onConfirm={() => asking && remove.mutate(asking)}
       >
-        {t('deleteBody')}
+        {named?.kind === 'redirect' ? t('deleteRedirectBody') : t('deleteBody')}
       </TypeToConfirm>
     </div>
   );

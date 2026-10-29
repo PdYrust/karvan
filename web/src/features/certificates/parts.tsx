@@ -6,6 +6,7 @@ import { useT } from '../../i18n/locale';
 import type { AcmeError } from '../../lib/api/acme';
 import type { RuleRef } from '../../lib/api/certificates';
 import type { Domain } from '../../lib/api/domains';
+import { rulePath } from '../../lib/api/rules';
 import { acmeErrorKey, acmeErrorMessages } from '../../lib/errors/acme';
 import { useFormat } from '../../lib/preferences/region';
 import { domainLines } from './cert-view';
@@ -15,11 +16,10 @@ import { certificatesMessages } from './messages';
 export const linkClass =
   'text-kumo-default underline decoration-kumo-line underline-offset-4 hover:decoration-current';
 
-/** A rule by name: a panel rule links to its form; a redirect rule has no page of its own yet. */
+/** A rule by name, as a link to its form. */
 export function RuleName({ rule }: { rule: RuleRef }) {
-  if (rule.kind !== 'panel') return <bdi>{rule.name}</bdi>;
   return (
-    <Link to={`/rules/${String(rule.id)}`} className={linkClass}>
+    <Link to={rulePath(rule)} className={linkClass}>
       <bdi>{rule.name}</bdi>
     </Link>
   );
