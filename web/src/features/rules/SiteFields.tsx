@@ -2,10 +2,10 @@ import { Radio } from '@cloudflare/kumo/components/radio';
 import { panelNames } from '../../components/panels/PanelLogo';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
-import { latinDigits } from '../../lib/format/number';
 import type { PanelKind } from '../../lib/api/panels';
 import { siteFormMessages } from './form-messages';
 import type { RuleField, RuleValues } from './rule-form';
+import { PortField } from './PortField';
 import { TextField } from './TextField';
 
 export interface FieldsProps {
@@ -97,15 +97,7 @@ export function AnswerFields({
       ) : (
         <span aria-hidden="true" className="hidden sm:block" />
       )}
-      <TextField
-        id="site-port"
-        label={t('portLabel')}
-        error={errorOf('port')}
-        value={values.port}
-        onChange={(port) => set({ port: latinDigits(port).replace(/\D/g, '') })}
-        machine
-        inputMode="numeric"
-      />
+      <PortField id="site-port" values={values} set={set} errorOf={errorOf} />
     </div>
   );
 }

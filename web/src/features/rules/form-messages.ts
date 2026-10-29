@@ -66,6 +66,8 @@ const en = {
   domainsHint:
     'Only domains added in Domains and certificates. None picked: every domain on this port.',
   portLabel: 'Port',
+  portFree: 'Suggested port: {free}.',
+  portTaken: 'Port {port} is already in use. Suggested: {free}.',
   lazyLabel: 'Lazy checks',
   lazyHint: 'An old link Karvan has not seen is checked with the old panel once.',
   plainLabel: 'The old panel is plain HTTP',
@@ -158,6 +160,8 @@ const fa: Messages<SiteFormKey>['fa'] = {
   domainsHint:
     'فقط دامنه هایی که در دامنه ها و گواهی ها اضافه شده اند. اگر هیچ کدام را انتخاب نکنید: همه دامنه های این پورت.',
   portLabel: 'پورت',
+  portFree: 'پورت پیشنهادی: {free}.',
+  portTaken: 'پورت {port} در حال استفاده است. پیشنهاد: {free}.',
   lazyLabel: 'بررسی هنگام درخواست',
   lazyHint: 'لینک قدیمی ای که کاروان ندیده است یک بار با پنل قدیمی بررسی میشود.',
   plainLabel: 'پنل قدیمی HTTP ساده است',

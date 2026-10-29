@@ -2,10 +2,10 @@ import { Radio } from '@cloudflare/kumo/components/radio';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
-import { latinDigits } from '../../lib/format/number';
 import { siteFormMessages } from './form-messages';
 import { isPlainHttp, parseOldLink, type RuleValues } from './rule-form';
 import type { FieldsProps } from './SiteFields';
+import { PortField } from './PortField';
 import { TextField } from './TextField';
 
 /** Where the redirect sends the old link; a plain http address gets a warning. */
@@ -45,15 +45,7 @@ export function RedirectFields({ values, set, errorOf }: FieldsProps) {
           onChange={(fromPath) => set({ fromPath })}
           machine
         />
-        <TextField
-          id="rule-port"
-          label={t('portLabel')}
-          error={errorOf('port')}
-          value={values.port}
-          onChange={(port) => set({ port: latinDigits(port).replace(/\D/g, '') })}
-          machine
-          inputMode="numeric"
-        />
+        <PortField id="rule-port" values={values} set={set} errorOf={errorOf} />
       </div>
       <Radio.Group
         legend={t('matchTitle')}
