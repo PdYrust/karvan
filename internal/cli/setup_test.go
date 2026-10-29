@@ -11,6 +11,9 @@ import (
 
 var passwordLine = regexp.MustCompile(`Password  (\S+)`)
 
+// fingerprintLine is the self-signed certificate's fingerprint (D5).
+var fingerprintLine = regexp.MustCompile(`(?m)^  ([0-9A-F]{2}:){31}[0-9A-F]{2}$`)
+
 func TestInitPrintsCredentialsOnlyToStdout(t *testing.T) {
 	dir := t.TempDir()
 	code, out, errOut := doInit(t, dir)
@@ -18,7 +21,8 @@ func TestInitPrintsCredentialsOnlyToStdout(t *testing.T) {
 		t.Fatalf("init exit %d: %s", code, errOut)
 	}
 	m := passwordLine.FindStringSubmatch(out)
-	if m == nil || !strings.Contains(out, "Username  ") || !strings.Contains(out, "Address   http://") || !strings.Contains(out, "plain HTTP") {
+	if m == nil || !strings.Contains(out, "Username  ") || !strings.Contains(out, "Address   https://") || strings.Contains(out, "plain HTTP") ||
+		!fingerprintLine.MatchString(out) {
 		t.Fatalf("stdout = %q", out)
 	}
 	if strings.Contains(errOut, m[1]) {
@@ -45,9 +49,24 @@ func doReset(t *testing.T, dir string, terminal bool, flags ...string) (int, str
 	return code, out.String(), errOut.String()
 }
 
+// wantResetOutput checks a reset of the password, port and two-step: the
+// HTTPS address with the new port, the same fingerprint as at init, and
+// the follow-up notes.
+func wantResetOutput(t *testing.T, out, init string) {
+	t.Helper()
+	if !passwordLine.MatchString(out) || !strings.Contains(out, "https://<server address>:42000/<path>/") || strings.Contains(out, "Username") ||
+		fingerprintLine.FindString(out) != fingerprintLine.FindString(init) {
+		t.Fatalf("stdout = %q", out)
+	}
+	if !strings.Contains(out, "Restart Karvan") || !strings.Contains(out, "Two-step sign-in is off") {
+		t.Fatalf("missing follow-up notes: %q", out)
+	}
+}
+
 func TestResetCommand(t *testing.T) {
 	dir := t.TempDir()
-	if code, _, errOut := doInit(t, dir); code != 0 {
+	code, first, errOut := doInit(t, dir)
+	if code != 0 {
 		t.Fatal(errOut)
 	}
 	if code, _, errOut := doReset(t, dir, true); code != 2 || !strings.Contains(errOut, "choose at least one") {
@@ -58,12 +77,7 @@ func TestResetCommand(t *testing.T) {
 	if code != 0 {
 		t.Fatalf("reset: %d %s", code, errOut)
 	}
-	if !passwordLine.MatchString(out) || !strings.Contains(out, ":42000/<path>/") || strings.Contains(out, "Username") {
-		t.Fatalf("stdout = %q", out)
-	}
-	if !strings.Contains(out, "Restart Karvan") || !strings.Contains(out, "Two-step sign-in is off") {
-		t.Fatalf("missing follow-up notes: %q", out)
-	}
+	wantResetOutput(t, out, first)
 	if !strings.Contains(errOut, "not a terminal") {
 		t.Fatalf("no warning for non-terminal output: %q", errOut)
 	}

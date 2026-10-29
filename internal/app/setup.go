@@ -23,6 +23,11 @@ type Credentials struct {
 	Password secret.Value
 	BasePath string
 	Port     int
+	// HTTPS and Fingerprint say how the panel is served: the SHA-256 of
+	// the self-signed certificate, in self mode, to compare with what the
+	// browser shows.
+	HTTPS       bool
+	Fingerprint string
 }
 
 // Initialize creates the key, the database and the operator account of a
@@ -69,7 +74,12 @@ func Initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (cr
 	if _, err := a.Auth.Operators.Create(ctx, creds.Username, hash); err != nil {
 		return Credentials{}, err
 	}
-	if err := a.Settings.SetHTTP(ctx, settings.HTTP{Port: creds.Port, BasePath: creds.BasePath}); err != nil {
+	// A new installation starts on HTTPS with its own certificate (D5).
+	h := settings.HTTP{Port: creds.Port, BasePath: creds.BasePath, TLS: settings.TLS{Mode: settings.TLSSelf}}
+	if err := a.Settings.SetHTTP(ctx, h); err != nil {
+		return Credentials{}, err
+	}
+	if err := a.describeTLS(ctx, h.TLS, &creds); err != nil {
 		return Credentials{}, err
 	}
 	if err = a.Audit.Record(ctx, audit.Event{Actor: audit.ActorCLI, Action: audit.ActionInit, Outcome: audit.Success}); err != nil {
@@ -168,12 +178,15 @@ func (a *App) Reset(ctx context.Context, o ResetOptions) (Credentials, error) {
 }
 
 func (a *App) resetHTTP(ctx context.Context, o ResetOptions, gen Credentials, out *Credentials, changed *[]string) error {
-	if !o.Path && o.Port == 0 {
-		return nil
-	}
 	h, err := a.Settings.HTTP(ctx)
 	if err != nil {
 		return err
+	}
+	if err := a.describeTLS(ctx, h.TLS, out); err != nil {
+		return err
+	}
+	if !o.Path && o.Port == 0 {
+		return nil
 	}
 	if o.Path {
 		h.BasePath, out.BasePath = gen.BasePath, gen.BasePath
@@ -188,4 +201,19 @@ func (a *App) resetHTTP(ctx context.Context, o ResetOptions, gen Credentials, ou
 		*changed = append(*changed, "port")
 	}
 	return a.Settings.SetHTTP(ctx, h)
+}
+
+// describeTLS fills in how the panel is served, making the self-signed
+// certificate when it does not exist yet.
+func (a *App) describeTLS(ctx context.Context, t settings.TLS, c *Credentials) error {
+	c.HTTPS = t.On()
+	if t.Mode != settings.TLSSelf {
+		return nil
+	}
+	fp, err := a.panelTLS().Fingerprint(ctx)
+	if err != nil {
+		return err
+	}
+	c.Fingerprint = fp
+	return nil
 }

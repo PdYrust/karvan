@@ -13,6 +13,7 @@ import (
 	"github.com/PdYrust/karvan/internal/hoststats"
 	"github.com/PdYrust/karvan/internal/httpapi"
 	"github.com/PdYrust/karvan/internal/httpapi/address"
+	"github.com/PdYrust/karvan/internal/paneltls"
 	"github.com/PdYrust/karvan/internal/settings"
 )
 
@@ -34,6 +35,16 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 	srv := a.addressServer(h.Bind, func() { close(closing) })
 	svc := a.startServices(ctx, panelPorts(srv))
 	defer func() { cancel(); svc.stop() }()
+	tlsm := a.panelTLS()
+	tlsm.Domain = svc.bridge.PanelCertificate
+	srv.Certificate = tlsm.Certificate
+	go tlsm.Run(ctx)
+	if h.TLS.On() {
+		// A certificate that cannot be loaded is logged now, not at the first visit (D11).
+		if _, err := tlsm.Certificate(ctx, h.TLS); err != nil {
+			a.Logger.Error("the panel certificate cannot be loaded", "err", err)
+		}
+	}
 	deps := httpapi.Deps{
 		TrustedProxies: a.Config.Proxies(),
 		Auth:           a.Auth,
@@ -51,6 +62,7 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 		HostStore:      svc.hostStore,
 		HostReader:     hoststats.System,
 		DBStats:        svc.dbstats,
+		PanelTLS:       tlsm,
 	}
 	deps.Address = srv
 	srv.Handler = func(base string) (http.Handler, error) {
@@ -62,7 +74,7 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 	if err != nil {
 		return fmt.Errorf("listen on %s: %w", h.Addr(), err)
 	}
-	return a.serveOn(ctx, srv, address.Site{Port: h.Port, BasePath: h.BasePath}, ln)
+	return a.serveOn(ctx, srv, address.Site{Port: h.Port, BasePath: h.BasePath, TLS: h.TLS}, ln)
 }
 
 // addressServer serves the panel on bind and saves a confirmed change of
@@ -71,12 +83,18 @@ func (a *App) addressServer(bind string, onShutdown func()) *address.Server {
 	return &address.Server{
 		Bind: bind,
 		Save: func(ctx context.Context, s address.Site) error {
-			return a.Settings.SetHTTP(ctx, settings.HTTP{Bind: bind, Port: s.Port, BasePath: s.BasePath})
+			return a.Settings.SetHTTP(ctx, settings.HTTP{Bind: bind, Port: s.Port, BasePath: s.BasePath, TLS: s.TLS})
 		},
 		HTTP:       a.httpServer,
 		OnShutdown: onShutdown,
 		Log:        a.Logger,
 	}
+}
+
+// panelTLS gives the panel its self-signed certificate; serve adds the
+// domains' certificates.
+func (a *App) panelTLS() *paneltls.Manager {
+	return &paneltls.Manager{Settings: a.Settings, Key: a.Key, Log: a.Logger}
 }
 
 // panelPorts lists the ports srv serves the panel on: the current one and

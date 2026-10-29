@@ -61,8 +61,17 @@ func printCredentials(streams IO, title string, c app.Credentials) {
 		if c.BasePath != "" {
 			path = c.BasePath
 		}
-		fmt.Fprintf(&b, "  Address   http://<server address>:%s/%s/\n", port, path)
-		defer fmt.Fprintln(streams.Stdout, "This address is plain HTTP. Until HTTPS is set up, sign in only over a network you trust.")
+		scheme := "http"
+		if c.HTTPS {
+			scheme = "https"
+		}
+		fmt.Fprintf(&b, "  Address   %s://<server address>:%s/%s/\n", scheme, port, path)
+		if !c.HTTPS {
+			defer fmt.Fprintln(streams.Stdout, "This address is plain HTTP. Until HTTPS is set up, sign in only over a network you trust.")
+		}
+	}
+	if c.Fingerprint != "" {
+		defer fmt.Fprintf(streams.Stdout, "The browser warns about Karvan's own certificate. Go on only if it shows this SHA-256 fingerprint:\n  %s\n", c.Fingerprint)
 	}
 	if c.Username != "" {
 		fmt.Fprintf(&b, "  Username  %s\n", c.Username)
