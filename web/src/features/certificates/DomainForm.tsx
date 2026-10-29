@@ -1,43 +1,42 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { useQuery } from '@tanstack/react-query';
-import { useEffect, useId, useRef, useState } from 'react';
-import { InlineAlert } from '../../components/feedback/InlineAlert';
+import { useEffect, useId, useRef, useState, type ReactNode } from 'react';
 import { Steps } from '../../components/form/Steps';
-import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
 import { certificateKeys, scanCertificates, type Certificate } from '../../lib/api/certificates';
 import type { CertChoice } from '../../lib/api/domains';
 import { useAcmeErrorText } from '../../lib/errors/acme';
+import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
+import { useFirstLoad } from '../../lib/motion/use-first-load';
 import { useNow } from '../overview/use-now';
-import { TextField } from '../rules/TextField';
-import { CertStep, type Looked } from './CertStep';
+import { DetailsStep, SaveError } from './DetailsStep';
 import {
-  bestChoice,
+  bestCert,
   choiceOf,
-  domainName,
-  foundChoices,
   isPortError,
   missingOf,
-  recommended,
+  recommendedSource,
   refusedDomainField,
-  stepAfter,
+  serverCerts,
+  stepsFor,
+  wayFor,
   type DomainFormValues,
+  type Source,
   type Step,
 } from './domain-form';
 import { domainFormMessages } from './domain-messages';
-
-const actions = 'flex-1 justify-center sm:flex-none pointer-coarse:h-9';
+import { Mono } from './parts';
+import { action, Footer, HttpsQuestion, NameStep, StepTitle, SourceQuestion } from './Questions';
 
 /**
- * Add domain as two steps, the name then its certificate, or Change certificate
- * (`isNew` false) as the certificate step alone. `except` is the domain's own
- * certificate, which the change page does not offer again.
+ * Add domain one question at a time: the name, with or without a certificate,
+ * which one, then what that way needs. A press on an answer goes on by itself.
+ * Change certificate (`isNew` false) starts at the second question.
  */
 export function DomainForm({
   initial,
   isNew,
   certificates,
-  except,
   needsAgreement,
   saving,
   error,
@@ -48,7 +47,6 @@ export function DomainForm({
   initial: DomainFormValues;
   isNew: boolean;
   certificates: readonly Certificate[];
-  except?: number;
   needsAgreement: boolean;
   saving: boolean;
   error: unknown;
@@ -58,164 +56,189 @@ export function DomainForm({
 }) {
   const t = useT(domainFormMessages);
   const errorText = useAcmeErrorText();
+  const scanText = useSubscriptionErrorText();
   const now = useNow();
-  const missingId = useId();
+  const noteId = useId();
   const [v, setV] = useState(initial);
   const set = (patch: Partial<DomainFormValues>) => setV((old) => ({ ...old, ...patch }));
-  const [step, setStep] = useState<Step>(isNew ? 'domain' : 'certificate');
-  const [looking, setLooking] = useState(!isNew);
+  const [step, setStep] = useState<Step>(isNew ? 'domain' : 'https');
+  // The questions already answered keep their answer tinted after Back.
+  const [answered, setAnswered] = useState<readonly Step[]>([]);
+  const answer = (s: Step) => setAnswered((a) => (a.includes(s) ? a : [...a, s]));
   const scan = useQuery({
     queryKey: [...certificateKeys.all, 'scan'],
     queryFn: scanCertificates,
     staleTime: Infinity,
     retry: false,
-    enabled: looking,
+    enabled: step !== 'domain',
   });
-  const looked: Looked | undefined =
-    looking && !scan.isPending ? { result: scan.data, error: scan.error ?? undefined } : undefined;
-  const choices = foundChoices(v.name, certificates, scan.data, except);
-  const best = bestChoice(choices, now);
-  const rec = recommended(v.name, choices, now);
-  // The answer is chosen once the scan answered, again only for another name.
-  const [chosenFor, setChosenFor] = useState<string>();
-  if (looked && chosenFor !== domainName(v.name)) {
-    setChosenFor(domainName(v.name));
-    setV((old) => ({ ...old, ...rec }));
-  }
+  const load = useFirstLoad(scan.isPending ? undefined : true);
+  const certs = serverCerts(v.name, certificates, scan.data);
+  const best = bestCert(certs, now);
+  const steps = stepsFor(isNew, v.https);
+  const at = steps.indexOf(step);
   const refused = refusedDomainField(error);
-  const [shownError, setShownError] = useState(error);
-  if (error !== shownError) {
-    setShownError(error);
+  const [shown, setShown] = useState(error);
+  if (error !== shown) {
+    setShown(error);
     if (refused === 'name') setStep('domain');
   }
   const reason = error ? errorText(error) : '';
   const errorOf = (f: string) => (refused === f ? reason : undefined);
   const heading = useRef<HTMLHeadingElement>(null);
-  const focusNext = useRef<'heading' | 'field' | undefined>(undefined);
+  const moved = useRef(false);
   useEffect(() => {
-    if (focusNext.current === 'heading') heading.current?.focus();
-    if (focusNext.current === 'field') document.getElementById('domain-name')?.focus();
-    focusNext.current = undefined;
+    if (!moved.current) return;
+    if (step === 'domain') document.getElementById('domain-name')?.focus();
+    else heading.current?.focus();
   }, [step]);
-  useEffect(() => {
-    if (refused === 'name') document.getElementById('domain-name')?.focus();
-  }, [refused, error]);
   const go = (to: Step) => {
-    focusNext.current = to === 'certificate' ? 'heading' : 'field';
+    moved.current = true;
     setStep(to);
   };
+  const back = () => (at > 0 ? go(steps[at - 1] ?? 'domain') : onCancel());
+  const backButton = (
+    <Button type="button" className={action} onClick={back}>
+      {at > 0 ? t('back') : t('cancel')}
+    </Button>
+  );
+  const source: Source | undefined =
+    v.way === 'acme-http' || v.way === 'acme-dns' ? v.way : v.way === 'none' ? undefined : 'own';
+  const rec = recommendedSource(v.name, best);
   const missing = missingOf(v, needsAgreement);
-  const labels = [t('step_domain'), t('step_certificate')] as const;
-  const current = step === 'domain' ? 0 : 1;
-  const steps = labels.map((label) => ({ label }));
-  return (
-    <div className="flex max-w-[720px] flex-col gap-8">
-      {isNew ? (
-        <Steps
-          steps={steps}
-          current={current}
-          label={t('stepsLabel')}
-          progress={t('stepOf', { n: current + 1, total: 2, name: labels[current] })}
+  const label = (s: Step) => t(`step_${s}`);
+  let body: ReactNode;
+  if (step === 'domain') {
+    body = (
+      <NameStep
+        name={v.name}
+        error={errorOf('name')}
+        onName={(name) => set({ name })}
+        onContinue={() => go('https')}
+      />
+    );
+  } else if (step === 'https') {
+    body = (
+      <>
+        <HttpsQuestion
+          chosen={answered.includes('https') ? v.https : undefined}
+          onChoose={(https) => {
+            answer('https');
+            if (https === 'without') {
+              set({ https, way: 'none', pick: null });
+              go('details');
+            } else {
+              set({ https, ...(v.way === 'none' ? wayFor(rec, best) : {}) });
+              go('source');
+            }
+          }}
         />
-      ) : null}
-      {step === 'domain' ? (
-        <form
-          noValidate
-          className="flex flex-col gap-8"
-          onSubmit={(e) => {
-            e.preventDefault();
-            if (stepAfter(v.name) === 'domain') return;
-            setLooking(true);
-            go('certificate');
+        <Footer>{backButton}</Footer>
+      </>
+    );
+  } else if (step === 'source') {
+    body = (
+      <>
+        <SourceQuestion
+          name={v.name}
+          ready={load.data !== undefined}
+          found={certs.filter((c) => c.covers).length}
+          recommended={rec}
+          chosen={answered.includes('source') ? source : undefined}
+          onChoose={(s) => {
+            answer('source');
+            set(s === source && s === 'own' ? {} : wayFor(s, best));
+            go('details');
           }}
-        >
-          <TextField
-            id="domain-name"
-            label={t('nameLabel')}
-            hint={<CodeText text={t('nameHint')} />}
-            error={errorOf('name')}
-            value={v.name}
-            onChange={(name) => set({ name })}
-            placeholder="sub.example.com"
-            machine
-          />
-          <div className="flex justify-end border-t border-kumo-hairline pt-5">
-            <Button
-              type="submit"
-              variant="primary"
-              disabled={stepAfter(v.name) === 'domain'}
-              className="w-full justify-center sm:w-auto pointer-coarse:h-9"
-            >
-              {t('continue')}
-            </Button>
-          </div>
-        </form>
-      ) : (
-        <form
-          noValidate
-          className="flex flex-col gap-8"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const choice = choiceOf(v, needsAgreement);
-            if (choice) onSave(v.name, choice);
-          }}
-        >
-          <CertStep
-            headingRef={isNew ? heading : undefined}
-            looked={looked}
+        />
+        <Footer>{backButton}</Footer>
+      </>
+    );
+  } else {
+    body = (
+      <form
+        noValidate
+        className="flex flex-col gap-8"
+        onSubmit={(e) => {
+          e.preventDefault();
+          const choice = choiceOf(v, needsAgreement);
+          if (choice) onSave(v.name, choice);
+        }}
+      >
+        <div className="flex flex-col gap-4">
+          <DetailsStep
             values={v}
             set={set}
-            choices={choices}
-            best={best?.key}
-            needsAgreement={needsAgreement}
+            certs={certs}
+            best={best}
+            scan={scan.data}
+            scanError={scan.isError ? `${t('scanFailed')} ${scanText(scan.error)}` : undefined}
             errorOf={errorOf}
+            needsAgreement={needsAgreement}
           />
-          {error && !refused ? (
-            <InlineAlert>
-              <span className="flex flex-col items-start gap-3">
-                <CodeText text={`${t('failed')} ${reason}`} />
-                {isPortError(error) ? (
-                  <Button
-                    className="pointer-coarse:h-9"
-                    onClick={() => {
-                      set({ way: 'acme-dns' });
-                      onReset();
-                    }}
-                  >
-                    {t('useDns')}
-                  </Button>
-                ) : null}
-              </span>
-            </InlineAlert>
-          ) : null}
-          <div className="flex flex-col gap-3 border-t border-kumo-hairline pt-5 sm:flex-row sm:items-center sm:justify-end">
-            {looked && missing ? (
-              <p id={missingId} className="text-sm text-kumo-subtle sm:me-auto">
+        </div>
+        {error && !refused ? (
+          <SaveError
+            text={`${t('failed')} ${reason}`}
+            onDns={
+              isPortError(error)
+                ? () => {
+                    set({ way: 'acme-dns' });
+                    onReset();
+                  }
+                : undefined
+            }
+          />
+        ) : null}
+        <Footer
+          note={
+            missing ? (
+              <p id={noteId} className="text-sm text-kumo-subtle sm:me-auto">
                 {t(`need_${missing}`)}
               </p>
-            ) : null}
-            <div className="flex gap-2 sm:justify-end">
-              <Button
-                type="button"
-                className={actions}
-                onClick={isNew ? () => go('domain') : onCancel}
-              >
-                {isNew ? t('back') : t('cancel')}
-              </Button>
-              <Button
-                type="submit"
-                variant="primary"
-                loading={saving}
-                disabled={!looked || missing !== undefined}
-                aria-describedby={looked && missing ? missingId : undefined}
-                className={actions}
-              >
-                {isNew ? t('addSubmit') : t('save')}
-              </Button>
-            </div>
+            ) : undefined
+          }
+        >
+          {backButton}
+          <Button
+            type="submit"
+            variant="primary"
+            loading={saving}
+            disabled={missing !== undefined}
+            aria-describedby={missing ? noteId : undefined}
+            className={action}
+          >
+            {isNew ? t('addSubmit') : t('save')}
+          </Button>
+        </Footer>
+      </form>
+    );
+  }
+  return (
+    <div className="flex max-w-[720px] flex-col gap-8">
+      <Steps
+        steps={steps.map((s) => ({ label: label(s) }))}
+        current={at}
+        label={t('stepsLabel')}
+        progress={t('stepOf', { n: at + 1, total: steps.length, name: label(step) })}
+      />
+      <div className="flex flex-col gap-5">
+        {step === 'domain' ? null : (
+          <div className="flex flex-col gap-1">
+            <h2
+              ref={heading}
+              tabIndex={-1}
+              className="text-heading font-semibold text-kumo-strong outline-none"
+            >
+              <StepTitle step={step} way={v.way} name={v.name} />
+            </h2>
+            {step === 'https' || !isNew ? null : (
+              <Mono text={v.name.trim()} className="text-sm text-kumo-subtle" />
+            )}
           </div>
-        </form>
-      )}
+        )}
+        {body}
+      </div>
     </div>
   );
 }

@@ -5,21 +5,28 @@ import type { CertChoice } from '../../lib/api/domains';
 import type { CertFacts, CertWarning } from '../../lib/api/rules';
 
 /**
- * The ways a domain gets its certificate (D61). Let's Encrypt is two ways, one
- * per check, since the Other ways menu offers them apart.
+ * The ways a domain gets its certificate (D61): one on this server, a new one
+ * from Let's Encrypt by either check, uploaded or pasted text, typed file paths,
+ * or none.
  */
-export type Way = 'found' | 'acme-http' | 'acme-dns' | 'upload' | 'paste' | 'file' | 'none';
+export type Way = 'found' | 'acme-http' | 'acme-dns' | 'paste' | 'file' | 'none';
 
-/** Add domain asks for the name first, then for its certificate. */
-export type Step = 'domain' | 'certificate';
+/**
+ * The steps, one question each: the name, with or without a certificate,
+ * which certificate, then what that way needs.
+ */
+export type Step = 'domain' | 'https' | 'source' | 'details';
+export type Https = 'with' | 'without';
+export type Source = 'acme-http' | 'acme-dns' | 'own';
 
-/** A certificate picked from those found on this server or stored in Karvan. */
+/** A certificate picked from those on this server or stored in Karvan. */
 export type FoundPick =
   { kind: 'stored'; certificateId: number } | { kind: 'file'; certFile: string; keyFile: string };
 
 /** The Add domain and Change certificate form as typed. */
 export interface DomainFormValues {
   name: string;
+  https: Https;
   way: Way;
   pick: FoundPick | null;
   certPem: string;
@@ -32,6 +39,7 @@ export interface DomainFormValues {
 export function newDomainForm(name = ''): DomainFormValues {
   return {
     name,
+    https: 'with',
     way: 'acme-http',
     pick: null,
     certPem: '',
@@ -57,36 +65,47 @@ export function covers(certName: string, domain: string): boolean {
   return dot > 0 && d.slice(dot + 1) === c.slice(2);
 }
 
-export interface FoundChoice {
+/** The steps a form walks: Change certificate starts at `https`; no certificate skips `source`. */
+export function stepsFor(isNew: boolean, https: Https): Step[] {
+  const steps: Step[] = isNew ? ['domain', 'https'] : ['https'];
+  return https === 'without' ? [...steps, 'details'] : [...steps, 'source', 'details'];
+}
+
+/** Continue on the first step needs a name. */
+export function stepAfter(name: string): Step {
+  return domainName(name) ? 'https' : 'domain';
+}
+
+export interface ServerCert {
   key: string;
   pick: FoundPick;
   /** The stored certificate's name, or the found file. */
   title: string;
   facts: CertFacts;
+  /** Whether it covers the name; one that does not is shown but cannot be chosen. */
+  covers: boolean;
 }
 
-/** 0 when a name the certificate carries is the domain itself, 1 when only a wildcard covers it. */
-function matchRank(facts: CertFacts, name: string): number | undefined {
-  const d = domainName(name);
-  if (facts.domains.some((n) => domainName(n) === d)) return 0;
-  return facts.domains.some((n) => covers(n, d)) ? 1 : undefined;
+/** 0 when a name the certificate carries is the domain itself, 1 for a wildcard, 2 for neither. */
+function matchRank(facts: CertFacts, name: string): number {
+  if (facts.domains.some((n) => domainName(n) === name)) return 0;
+  return facts.domains.some((n) => covers(n, name)) ? 1 : 2;
 }
 
 /**
- * The certificates that cover the name: exact names before wildcards, and in each
- * stored ones before found files Karvan does not keep yet. `except` leaves out
- * the domain's own certificate on the change page.
+ * The certificates on this server no domain uses yet (on the change page the
+ * domain's own is left out too): stored ones and found files Karvan does not
+ * keep yet. Exact names first, then wildcards, then those that do not cover it.
  */
-export function foundChoices(
+export function serverCerts(
   rawName: string,
   stored: readonly Certificate[],
   scan: ScanResult | undefined,
-  except?: number,
-): FoundChoice[] {
+): ServerCert[] {
   const name = domainName(rawName);
   if (!name) return [];
   const kept = stored
-    .filter((c) => c.id !== except)
+    .filter((c) => c.domains.length === 0)
     .map((c) => ({
       key: `stored:${String(c.id)}`,
       pick: { kind: 'stored' as const, certificateId: c.id },
@@ -103,13 +122,10 @@ export function foundChoices(
       title: f.certFile,
       facts: f.facts,
     }));
-  const all: FoundChoice[] = [...kept, ...found];
-  const ranked: { c: FoundChoice; rank: number }[] = [];
-  for (const c of all) {
-    const rank = matchRank(c.facts, name);
-    if (rank !== undefined) ranked.push({ c, rank });
-  }
-  return ranked.sort((a, b) => a.rank - b.rank).map((x) => x.c);
+  const all = [...kept, ...found].map((c) => ({ c, rank: matchRank(c.facts, name) }));
+  return all
+    .sort((a, b) => a.rank - b.rank)
+    .map(({ c, rank }): ServerCert => ({ ...c, covers: rank < 2 }));
 }
 
 const cannotServe: ReadonlySet<CertWarning> = new Set([
@@ -128,11 +144,12 @@ export function canServe(facts: CertFacts, now: Date): boolean {
   return endOf(facts) > now.getTime();
 }
 
-/** The one to choose: it can serve and ends last; on a tie the earlier in the list. */
-export function bestChoice(choices: readonly FoundChoice[], now: Date): FoundChoice | undefined {
-  let best: FoundChoice | undefined;
-  for (const c of choices) {
-    if (canServe(c.facts, now) && (!best || endOf(c.facts) > endOf(best.facts))) best = c;
+/** The one to choose: it covers the name, can serve and ends last; on a tie the earlier. */
+export function bestCert(list: readonly ServerCert[], now: Date): ServerCert | undefined {
+  let best: ServerCert | undefined;
+  for (const c of list) {
+    if (!c.covers || !canServe(c.facts, now)) continue;
+    if (!best || endOf(c.facts) > endOf(best.facts)) best = c;
   }
   return best;
 }
@@ -142,25 +159,24 @@ export function acmeMethodsFor(name: string): AcmeMethod[] {
   return domainName(name).startsWith('*.') ? ['dns-01'] : ['http-01', 'dns-01'];
 }
 
-const isWildcard = (name: string) => !acmeMethodsFor(name).includes('http-01');
+export const isWildcard = (name: string) => !acmeMethodsFor(name).includes('http-01');
 
-/** The answer chosen when the certificate step opens: the best found one, else Let's Encrypt. */
-export function recommended(
-  name: string,
-  choices: readonly FoundChoice[],
-  now: Date,
-): Pick<DomainFormValues, 'way' | 'pick'> {
-  const best = bestChoice(choices, now);
-  if (best) return { way: 'found', pick: best.pick };
-  return { way: isWildcard(name) ? 'acme-dns' : 'acme-http', pick: null };
+/** The source marked Recommended: a certificate this server has, else Let's Encrypt. */
+export function recommendedSource(name: string, best: ServerCert | undefined): Source {
+  if (best) return 'own';
+  return isWildcard(name) ? 'acme-dns' : 'acme-http';
 }
 
-/** The Other ways menu: every way but the chosen one, No certificate last. */
-export function otherWays(current: Way, name: string, found: boolean): Way[] {
-  const all: Way[] = ['found', 'acme-http', 'acme-dns', 'upload', 'paste', 'file', 'none'];
-  return all.filter(
-    (w) => w !== current && (w !== 'found' || found) && (w !== 'acme-http' || !isWildcard(name)),
-  );
+/**
+ * The way a picked source opens with: the best certificate on this server for
+ * a certificate the operator has, else upload or paste.
+ */
+export function wayFor(
+  source: Source,
+  best: ServerCert | undefined,
+): Pick<DomainFormValues, 'way' | 'pick'> {
+  if (source !== 'own') return { way: source, pick: null };
+  return best ? { way: 'found', pick: best.pick } : { way: 'paste', pick: null };
 }
 
 /** What the chosen way still needs before Add domain, if anything. */
@@ -172,7 +188,6 @@ export function missingOf(v: DomainFormValues, needsAgreement: boolean): Missing
   switch (v.way) {
     case 'found':
       return v.pick ? undefined : 'pick';
-    case 'upload':
     case 'paste':
       return filled(v.certPem) && filled(v.keyPem) ? undefined : 'pem';
     case 'file':
@@ -192,7 +207,6 @@ export function choiceOf(v: DomainFormValues, needsAgreement: boolean): CertChoi
   switch (v.way) {
     case 'found':
       return v.pick ?? undefined;
-    case 'upload':
     case 'paste':
       return { kind: 'pasted', certPem: v.certPem, keyPem: v.keyPem };
     case 'none':
@@ -205,11 +219,6 @@ export function choiceOf(v: DomainFormValues, needsAgreement: boolean): CertChoi
       return needsAgreement ? { kind: 'acme', method, agreeTos: true } : { kind: 'acme', method };
     }
   }
-}
-
-/** Continue opens the certificate step only once a name is typed. */
-export function stepAfter(name: string): Step {
-  return domainName(name) ? 'certificate' : 'domain';
 }
 
 export type DomainField = 'name' | 'certPem' | 'keyPem' | 'certFile' | 'keyFile';

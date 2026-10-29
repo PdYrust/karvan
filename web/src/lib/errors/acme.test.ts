@@ -56,7 +56,7 @@ describe("Let's Encrypt words", () => {
     const t = createTranslate(acmeErrorMessages.en, 'en');
     const other = () => 'other';
     expect(acmeErrorText(t, other, new ApiError(409, 'acme_port_busy'))).toBe(
-      "Port 80 is used by another program. Use Let's Encrypt by DNS.",
+      "Port 80 is used by another program. Use the DNS way.",
     );
     expect(acmeErrorText(t, other, new ApiError(409, 'site_overlap'))).toBe('other');
   });
