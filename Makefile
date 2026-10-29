@@ -16,7 +16,7 @@ TESTDB_ENV := KARVAN_TEST_MYSQL='root:test@tcp(127.0.0.1:33061)/' \
 	KARVAN_TEST_MARIADB='root:test@tcp(127.0.0.1:33062)/' \
 	KARVAN_TEST_POSTGRES='postgres://postgres:test@127.0.0.1:54321/postgres' \
 	KARVAN_TEST_TIMESCALE='postgres://postgres:test@127.0.0.1:54322/postgres'
-.PHONY: build build-go web web-deps test lint lint-web fmt floor cover check check-web check-full vuln audit-web clean test-db testdb-seed testdb-down test-panels testpanels-down test-acme bench test-install release-dry
+.PHONY: build build-go web web-deps test lint lint-web fmt floor cover check check-web check-full vuln audit-web clean test-db testdb-seed testdb-down test-panels testpanels-down test-acme bench test-install release-dry ci-lint
 
 build: web build-go
 
@@ -90,6 +90,12 @@ test-install:
 # (needs Docker; VERSION defaults to 0.5.0-beta-dry, output in dist/).
 release-dry:
 	./scripts/release/dry.sh
+# Check the GitHub workflows (actionlint, which runs shellcheck on their
+# steps) and every tracked shell script (needs Docker).
+ACTIONLINT := rhysd/actionlint:1.7.7@sha256:887a259a5a534f3c4f36cb02dca341673c6089431057242cdc931e9f133147e9
+ci-lint:
+	docker run --rm -v "$(CURDIR):/repo:ro" -w /repo $(ACTIONLINT) -color
+	shellcheck $$(git ls-files '*.sh')
 testpanels-down:
 	for d in /tmp/karvan-panels/karvan-test-*; do [ -f $$d/docker-compose.yml ] && docker compose -f $$d/docker-compose.yml -p $$(basename $$d) down; done; true
 # Full gate: before a phase ends or a release.
