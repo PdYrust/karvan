@@ -1,0 +1,20 @@
+[Unit]
+Description=Karvan panel migration and bridge
+Documentation=https://github.com/PdYrust/karvan
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+# Runs as root (owner decision, Phase 5 Q3). /usr, /boot and /etc are read
+# only to the service, so a flaw cannot replace the binary or system files.
+Type=notify
+ExecStart=/usr/local/bin/karvan serve
+Restart=on-failure
+RestartSec=5
+WatchdogSec=30
+NoNewPrivileges=yes
+PrivateTmp=yes
+ProtectSystem=full
+
+[Install]
+WantedBy=multi-user.target
