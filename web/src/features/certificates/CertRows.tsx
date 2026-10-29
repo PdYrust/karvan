@@ -2,7 +2,7 @@ import { Button } from '@cloudflare/kumo/components/button';
 import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
 import { Link, useNavigate } from 'react-router';
 import type { Column } from '../../components/data/DataTable';
-import { CardFacts, RowCard } from '../../components/data/RowCard';
+import { RowCard } from '../../components/data/RowCard';
 import { StatusLabel } from '../../components/feedback/StatusBadge';
 import { DotsThreeIcon, PencilSimpleIcon, TrashIcon } from '../../components/icons/regular';
 import { useT } from '../../i18n/locale';
@@ -161,7 +161,7 @@ export function useCertColumns(
   ];
 }
 
-/** On a phone a certificate is a card: the name, its state and menu, then its facts. */
+/** On a phone a certificate is a row like a Migrations card: the name, its state and menu, then one line. */
 export function CertRowCard({
   cert,
   now,
@@ -172,21 +172,22 @@ export function CertRowCard({
   onDelete: () => void;
 }) {
   const t = useT(certificatesMessages);
+  const fmt = useFormat();
+  const end = cert.facts.notAfter;
+  const soon = end && cert.facts.warnings.includes('expires_soon') ? daysLeft(end, now) : undefined;
   return (
     <RowCard
       lead={<bdi className="truncate font-medium text-kumo-strong">{cert.name}</bdi>}
       badge={<CertState cert={cert} badge />}
       menu={<CertMenu cert={cert} onDelete={onDelete} />}
     >
-      <CardFacts
-        className="grid-cols-2"
-        facts={[
-          { label: t('kindLabel'), value: t(kindOf(cert)) },
-          { label: t('colEnds'), value: <Ends cert={cert} now={now} /> },
-          { label: t('colCovers'), value: covers(cert), wide: true },
-          { label: t('usedBy'), value: <Names links={users(cert)} />, wide: true },
-        ]}
-      />
+      <p className="flex flex-wrap items-center gap-x-3 text-sm text-kumo-subtle">
+        {cert.facts.issuer ? <bdi className="max-w-full truncate">{cert.facts.issuer}</bdi> : null}
+        {end ? <span>{t('endsOn', { date: fmt.date(new Date(end)) })}</span> : null}
+        {soon === undefined ? null : (
+          <StatusLabel tone="warning">{t('expiresIn', { count: soon })}</StatusLabel>
+        )}
+      </p>
     </RowCard>
   );
 }
