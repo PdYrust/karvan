@@ -42,7 +42,7 @@ const en = {
   linksProven: '{verified} of {moved} users proven',
   linksPending: { one: '{count} pending', other: '{count} pending' },
   linksOpen: 'All rules',
-  newRule: 'Add a rule',
+  newRule: 'Add rule',
   newDomain: 'Add domain',
   cardFailed: "Couldn't load this.",
 

@@ -19,3 +19,12 @@ export function PageSkeleton({ label }: { label: string }) {
     </div>
   );
 }
+/** A list's toolbar, then its rows, each its own shape, as the list takes. */
+export function ListSkeleton({ label }: { label: string }) {
+  return (
+    <div role="status" aria-label={label} className="flex flex-col gap-4">
+      <Bone className="h-8 w-full" />
+      <Bone className="h-56 w-full rounded-lg" />
+    </div>
+  );
+}

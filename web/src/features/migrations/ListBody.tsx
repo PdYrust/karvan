@@ -10,16 +10,6 @@ import type { JobList } from './use-job-list';
 import { Reveal } from '../../components/feedback/Reveal';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
 
-/** The toolbar and a few rows, the shape the list takes. */
-export function ListSkeleton({ label }: { label: string }) {
-  return (
-    <div role="status" aria-label={label} className="flex flex-col gap-4">
-      <Bone className="h-8 w-full" />
-      <Bone className="h-56 w-full rounded-lg" />
-    </div>
-  );
-}
-
 /** The rows that show, the line under them, and the empty or failed states. */
 export function ListBody({
   list,

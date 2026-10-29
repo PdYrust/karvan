@@ -4,9 +4,10 @@ import { SealCheckIcon } from '../../components/icons/regular';
 import { useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import { ToolbarAdd } from '../../components/data/ToolbarAdd';
 import { EmptyState } from '../../components/feedback/EmptyState';
 import { ErrorState } from '../../components/feedback/ErrorState';
-import { Bone } from '../../components/feedback/PageSkeleton';
+import { ListSkeleton } from '../../components/feedback/PageSkeleton';
 import { Reveal } from '../../components/feedback/Reveal';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { usePageTitle } from '../../components/layout/use-page-title';
@@ -19,6 +20,24 @@ import { CertificatesSection } from './CertificatesSection';
 import { DomainsSection } from './DomainsSection';
 import { certificatesMessages } from './messages';
 
+/** The list toolbar's actions: Let's Encrypt settings, then add, as on the Migrations page. */
+function ToolbarActions({ onSettings }: { onSettings: () => void }) {
+  const t = useT(certificatesMessages);
+  const navigate = useNavigate();
+  return (
+    <>
+      <Button
+        shape="square"
+        aria-label={t('acmeSettings')}
+        title={t('acmeSettings')}
+        icon={<SlidersHorizontalIcon size={16} />}
+        className="pointer-coarse:size-9"
+        onClick={onSettings}
+      />
+      <ToolbarAdd label={t('addDomain')} onClick={() => void navigate('/domains/new')} />
+    </>
+  );
+}
 function AddButton() {
   const t = useT(certificatesMessages);
   const navigate = useNavigate();
@@ -61,9 +80,9 @@ export function DomainsPage() {
     );
   } else if (!load.data) {
     body = (
-      <div role="status" aria-label={t('title')} className="flex flex-col gap-4">
-        <Bone className="h-56 w-full rounded-lg" />
-        <Bone className="h-24 w-full rounded-lg" />
+      <div className="flex flex-col gap-8">
+        <ListSkeleton label={t('domainsTitle')} />
+        <ListSkeleton label={t('certsTitle')} />
       </div>
     );
   } else {
@@ -73,12 +92,26 @@ export function DomainsPage() {
           <EmptyState
             icon={<SealCheckIcon size={32} />}
             title={t('emptyTitle')}
-            action={<AddButton />}
+            action={
+              <div className="flex flex-wrap justify-center gap-2">
+                <AddButton />
+                <Button
+                  icon={<SlidersHorizontalIcon size={16} />}
+                  className="pointer-coarse:h-9"
+                  onClick={() => setSettings(true)}
+                >
+                  {t('acmeSettings')}
+                </Button>
+              </div>
+            }
           >
             {t('emptyBody')}
           </EmptyState>
         ) : (
-          <DomainsSection domains={load.data.domains} />
+          <DomainsSection
+            domains={load.data.domains}
+            actions={<ToolbarActions onSettings={() => setSettings(true)} />}
+          />
         )}
         {load.data.certificates.length === 0 && load.data.domains.length === 0 ? null : (
           <CertificatesSection certificates={load.data.certificates} />
@@ -88,22 +121,7 @@ export function DomainsPage() {
   }
   return (
     <div className="flex flex-col">
-      <PageHeader
-        title={t('title')}
-        description={t('description')}
-        actions={
-          <div className="flex flex-wrap gap-2">
-            <Button
-              icon={<SlidersHorizontalIcon size={16} />}
-              className="pointer-coarse:h-9"
-              onClick={() => setSettings(true)}
-            >
-              {t('acmeSettings')}
-            </Button>
-            <AddButton />
-          </div>
-        }
-      />
+      <PageHeader title={t('title')} description={t('description')} />
       <div className="flex max-w-[1200px] flex-col gap-4 p-4 sm:p-8">
         <Reveal on={load.reveal}>{body}</Reveal>
       </div>

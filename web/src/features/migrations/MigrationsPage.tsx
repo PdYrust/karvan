@@ -12,7 +12,9 @@ import { newMigrationPath } from '../wizard/steps';
 import { useDeleteDraft } from './DeleteDraft';
 import { stateFilters, statesOf } from './job-place';
 import { JobsToolbar } from './JobsToolbar';
-import { ListBody, ListSkeleton } from './ListBody';
+import { ToolbarAdd } from '../../components/data/ToolbarAdd';
+import { ListSkeleton } from '../../components/feedback/PageSkeleton';
+import { ListBody } from './ListBody';
 import { listMessages } from './list-messages';
 import { MigrationsTable } from './MigrationsTable';
 import { useJobList, useStateFilter } from './use-job-list';
@@ -46,13 +48,8 @@ export function MigrationsPage() {
               refreshing={list.query.isFetching}
               onRefresh={() => void list.query.refetch()}
             >
-              <Button
-                variant="primary"
-                shape="square"
-                aria-label={t('newMigration')}
-                title={t('newMigration')}
-                icon={<PlusIcon size={16} />}
-                className="pointer-coarse:size-9"
+              <ToolbarAdd
+                label={t('newMigration')}
                 onClick={() => void navigate(newMigrationPath)}
               />
             </JobsToolbar>

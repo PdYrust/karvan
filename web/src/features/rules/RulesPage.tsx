@@ -8,11 +8,12 @@ import { TypeToConfirm } from '../../components/dialogs/TypeToConfirm';
 import { EmptyState } from '../../components/feedback/EmptyState';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
-import { Bone } from '../../components/feedback/PageSkeleton';
+import { ListSkeleton } from '../../components/feedback/PageSkeleton';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { usePageTitle } from '../../components/layout/use-page-title';
 import { useLocale, useT } from '../../i18n/locale';
 import { ListToolbar } from '../../components/data/ListToolbar';
+import { ToolbarAdd } from '../../components/data/ToolbarAdd';
 import { dataMessages } from '../../components/data/messages';
 import { sortChoice } from '../../components/data/sort-choice';
 import { matchesTerm, sortRows, type ListSort } from '../../lib/lists/choices';
@@ -61,6 +62,7 @@ const terms = (r: Rule) =>
 
 /** One card per rule, panel rules and redirects, with ports that could not open first (4.9). */
 export function RulesPage() {
+  const navigate = useNavigate();
   const t = useT(rulesMessages);
   usePageTitle(t('title'));
   const fmt = useFormat();
@@ -110,11 +112,7 @@ export function RulesPage() {
       />
     );
   } else if (!load.data) {
-    body = (
-      <div role="status" aria-label={t('title')} className="flex flex-col gap-4">
-        <Bone className="h-72 w-full rounded-lg" />
-      </div>
-    );
+    body = <ListSkeleton label={t('title')} />;
   } else if (load.data.sites.length + load.data.redirects.length === 0) {
     body = (
       <EmptyState
@@ -162,7 +160,9 @@ export function RulesPage() {
             },
             sortChoice(td, sort, setSort, ['name', 'newest']),
           ]}
-        />
+        >
+          <ToolbarAdd label={t('add')} onClick={() => void navigate('/rules/new')} />
+        </ListToolbar>
         {shown.length === 0 ? (
           <p className="rounded-lg bg-kumo-base px-4 py-8 text-center text-kumo-subtle ring ring-kumo-hairline">
             {t('noMatch')}
@@ -195,14 +195,9 @@ export function RulesPage() {
       </>
     );
   }
-  const hasSites = Boolean(load.data && load.data.sites.length + load.data.redirects.length);
   return (
     <div className="flex flex-col">
-      <PageHeader
-        title={t('title')}
-        description={t('description')}
-        actions={hasSites ? <AddButton /> : undefined}
-      />
+      <PageHeader title={t('title')} description={t('description')} />
       <div className="flex max-w-[1200px] flex-col gap-4 p-4 sm:p-8">
         <Reveal on={load.reveal}>{body}</Reveal>
       </div>

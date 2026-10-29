@@ -14,7 +14,7 @@ import { usePageTitle } from '../../components/layout/use-page-title';
 import { useT } from '../../i18n/locale';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
 import { usePanelChoice } from '../migrations/JobsToolbar';
-import { ListSkeleton } from '../migrations/ListBody';
+import { ListSkeleton } from '../../components/feedback/PageSkeleton';
 import { useNow } from '../overview/use-now';
 import { useCurrentPanel } from '../panels/current-panel';
 import { BatchesTable } from './BatchesTable';

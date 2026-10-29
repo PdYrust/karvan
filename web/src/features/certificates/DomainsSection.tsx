@@ -1,6 +1,6 @@
 import { useKumoToastManager } from '@cloudflare/kumo/components/toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { DataTable } from '../../components/data/DataTable';
 import { ListToolbar } from '../../components/data/ListToolbar';
 import { dataMessages } from '../../components/data/messages';
@@ -22,7 +22,14 @@ const states = ['all', 'active', 'plain', 'attention', 'broken'] as const;
 type StateFilter = (typeof states)[number];
 
 /** Every domain rules can answer, as a list like Migrations; problems open from each state (D50, D61). */
-export function DomainsSection({ domains }: { domains: readonly Domain[] }) {
+export function DomainsSection({
+  domains,
+  actions,
+}: {
+  domains: readonly Domain[];
+  /** After the search, as on the Migrations page: Let's Encrypt settings and add. */
+  actions: ReactNode;
+}) {
   const t = useT(certificatesMessages);
   const td = useT(dataMessages);
   const { locale } = useLocale();
@@ -85,7 +92,9 @@ export function DomainsSection({ domains }: { domains: readonly Domain[] }) {
               },
               sortChoice(td, sort, setSort, ['name', 'newest']),
             ]}
-          />
+          >
+            {actions}
+          </ListToolbar>
         }
       >
         <DataTable

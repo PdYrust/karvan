@@ -1,7 +1,7 @@
 import type { Messages } from '../../i18n/locale';
 
 const en = {
-  newTitle: 'Add a rule',
+  newTitle: 'Add rule',
   editTitle: 'Edit {name}',
   description: 'Users who still have an old link reach the new panel through this rule.',
   kindTitle: 'Kind',

@@ -3,7 +3,7 @@ import type { Messages } from '../../i18n/locale';
 const en = {
   title: 'Rules',
   description: 'A rule answers the old subscription links of moved users from the new panel.',
-  add: 'Add a rule',
+  add: 'Add rule',
   list: 'Rules',
   portsFailed:
     "These ports couldn't open: {ports}. Another program may be using them, or Karvan may need the right to use ports under 1024.",
