@@ -192,6 +192,48 @@ func TestResetPathUserAndRandomPort(t *testing.T) {
 	}
 }
 
+// A new port from reset is the panel's own, not a shared bridge port.
+func TestResetPortLeavesASharedPort(t *testing.T) {
+	ctx := context.Background()
+	cfg := testConfig(t)
+	if _, err := Initialize(ctx, cfg, quiet()); err != nil {
+		t.Fatal(err)
+	}
+	a, err := Open(ctx, cfg, quiet())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer a.Close()
+	h, _ := a.Settings.HTTP(ctx)
+	h.Port, h.TLS = 443, settings.TLS{Mode: settings.TLSDomain, DomainID: 7, Shared: true}
+	if err := a.Settings.SetHTTP(ctx, h); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := a.Reset(ctx, ResetOptions{Port: 41000}); err != nil {
+		t.Fatal(err)
+	}
+	if h, _ = a.Settings.HTTP(ctx); h.Port != 41000 || h.TLS != (settings.TLS{Mode: settings.TLSDomain, DomainID: 7}) {
+		t.Fatalf("after the reset %+v", h)
+	}
+}
+
+// A shared port is the bridge's: rules may still use it.
+func TestPanelPortsLeaveOutASharedPort(t *testing.T) {
+	srv := &address.Server{Handler: func(string) (http.Handler, error) { return http.NotFoundHandler(), nil }, Log: quiet()}
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	current := address.Site{Port: 443, BasePath: "hiddenPath1234", TLS: settings.TLS{Mode: settings.TLSDomain, DomainID: 7, Shared: true}}
+	go func() { done <- srv.Serve(ctx, current, nil) }()
+	for srv.Status().Current != current {
+		time.Sleep(5 * time.Millisecond)
+	}
+	ports := panelPorts(srv)()
+	cancel()
+	if err := <-done; err != nil || len(ports) != 0 {
+		t.Fatalf("panel ports %v, Serve %v", ports, err)
+	}
+}
+
 func TestServeStopsWhenContextEnds(t *testing.T) {
 	ctx := context.Background()
 	cfg := testConfig(t)

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/PdYrust/karvan/internal/bridge"
 	"github.com/PdYrust/karvan/internal/buildinfo"
 	"github.com/PdYrust/karvan/internal/hoststats"
 	"github.com/PdYrust/karvan/internal/httpapi"
@@ -38,6 +39,7 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 	tlsm := a.panelTLS()
 	tlsm.Domain = svc.bridge.PanelCertificate
 	srv.Certificate = tlsm.Certificate
+	srv.Share = shareWith(ctx, svc.bridge)
 	go tlsm.Run(ctx)
 	if h.TLS.On() {
 		// A certificate that cannot be loaded is logged now, not at the first visit (D11).
@@ -70,11 +72,24 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 		d.BasePath = base
 		return httpapi.New(d)
 	}
-	ln, err := net.Listen("tcp", h.Addr())
-	if err != nil {
-		return fmt.Errorf("listen on %s: %w", h.Addr(), err)
+	var ln net.Listener
+	if !h.TLS.Shared { // a shared port is the bridge's (D12)
+		if ln, err = net.Listen("tcp", h.Addr()); err != nil {
+			return fmt.Errorf("listen on %s: %w", h.Addr(), err)
+		}
 	}
 	return a.serveOn(ctx, srv, address.Site{Port: h.Port, BasePath: h.BasePath, TLS: h.TLS}, ln)
+}
+
+// shareWith hands the panel addresses on shared ports to br.
+func shareWith(ctx context.Context, br *bridge.Bridge) func([]address.Shared) {
+	return func(sites []address.Shared) {
+		out := make([]bridge.PanelSite, len(sites))
+		for i, s := range sites {
+			out[i] = bridge.PanelSite{Port: s.Port, DomainID: s.TLS.DomainID, BasePath: s.BasePath, Handler: s.Handler}
+		}
+		br.SharePanel(context.WithoutCancel(ctx), out)
+	}
 }
 
 // addressServer serves the panel on bind and saves a confirmed change of
@@ -97,14 +112,18 @@ func (a *App) panelTLS() *paneltls.Manager {
 	return &paneltls.Manager{Settings: a.Settings, Key: a.Key, Log: a.Logger}
 }
 
-// panelPorts lists the ports srv serves the panel on: the current one and
-// a new one waiting for its confirmation.
+// panelPorts lists the ports srv listens on for the panel: the current
+// one and a new one waiting for its confirmation. A shared port is the
+// bridge's, and rules stay on it.
 func panelPorts(srv *address.Server) func() []int {
 	return func() []int {
 		st := srv.Status()
-		ports := []int{st.Current.Port}
-		if st.Pending != nil {
-			ports = append(ports, st.Pending.Port)
+		var ports []int
+		if !st.Current.TLS.Shared {
+			ports = append(ports, st.Current.Port)
+		}
+		if p := st.Pending; p != nil && !p.TLS.Shared {
+			ports = append(ports, p.Port)
 		}
 		return ports
 	}
@@ -130,7 +149,11 @@ func (a *App) httpServer(h http.Handler) *http.Server {
 func (a *App) serveOn(ctx context.Context, srv *address.Server, site address.Site, ln net.Listener) error {
 	go a.janitor(ctx)
 	// The address is logged; the hidden path never is.
-	a.Logger.Info("karvan is listening", "addr", ln.Addr().String(), "version", buildinfo.Version)
+	if ln != nil {
+		a.Logger.Info("karvan is listening", "addr", ln.Addr().String(), "version", buildinfo.Version)
+	} else {
+		a.Logger.Info("karvan is served on a shared bridge port", "port", site.Port, "version", buildinfo.Version)
+	}
 	if err := srv.Serve(ctx, site, ln); err != nil {
 		return err
 	}

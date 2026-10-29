@@ -193,7 +193,7 @@ func (a *App) resetHTTP(ctx context.Context, o ResetOptions, gen Credentials, ou
 		*changed = append(*changed, "path")
 	}
 	if o.Port != 0 {
-		h.Port = o.Port
+		h.Port, h.TLS.Shared = o.Port, false // the new port is the panel's own
 		if o.Port < 0 {
 			h.Port = gen.Port
 		}
