@@ -55,6 +55,9 @@ export default defineConfig({
     : undefined,
   test: {
     deps: { optimizer: { client: testDeps, ssr: testDeps } },
+    // The default leaves one CPU free; on a 2-CPU host one worker for every
+    // CPU measured 10 to 20 % faster.
+    maxWorkers: '100%',
     // Only these tests need a DOM; the rest run in plain Node, which starts
     // much faster than happy-dom. A test that needs a DOM and is not listed
     // fails in Node (no document, window or storage), so add it here.
