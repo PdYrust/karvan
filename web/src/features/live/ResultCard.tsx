@@ -5,7 +5,7 @@ import { StatusLabel } from '../../components/feedback/StatusBadge';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
-import { newSitePath } from '../../lib/api/rules';
+import { newBatchRulePath, newSitePath } from '../../lib/api/rules';
 import type { JobRow } from '../../lib/api/migrations';
 import type { Report } from '../../lib/api/report';
 import { useFormat } from '../../lib/preferences/region';
@@ -114,11 +114,14 @@ export function ResultCard({
             title={t('oldLinksHint')}
             onClick={() =>
               void navigate(
-                newSitePath({
-                  panelId: row.panel.id,
-                  sourceKind: row.source.kind,
-                  sourceUrl: row.source.origin,
-                }),
+                // A done job's batch fills the rule in; a job from before batches fills a manual one.
+                row.batch
+                  ? newBatchRulePath(row.batch.id)
+                  : newSitePath({
+                      panelId: row.panel.id,
+                      sourceKind: row.source.kind,
+                      sourceUrl: row.source.origin,
+                    }),
               )
             }
           >
