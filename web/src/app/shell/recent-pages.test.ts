@@ -18,6 +18,7 @@ describe('recentPage', () => {
     expect(recentPage('/settings')).toEqual({ section: 'settings', tab: 'general' });
     expect(recentPage('/settings/safe-mode')).toEqual({ section: 'settings', tab: 'safe-mode' });
     expect(recentPage('/settings/access')).toEqual({ section: 'settings', tab: 'access' });
+    expect(recentPage('/settings/https')).toEqual({ section: 'settings', tab: 'https' });
     expect(recentPage('/settings/audit-log')).toEqual({ section: 'settings', tab: 'audit-log' });
   });
 

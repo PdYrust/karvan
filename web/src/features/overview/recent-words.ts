@@ -15,6 +15,7 @@ export const recentTab = {
   general: 'recentGeneral',
   'safe-mode': 'recentSafeMode',
   access: 'recentAccess',
+  https: 'recentHttps',
   'two-step': 'recentTwoStep',
   sessions: 'recentSessions',
   'audit-log': 'recentAudit',

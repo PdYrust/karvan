@@ -9,6 +9,7 @@ import { PanelsColumn } from './columns/PanelsColumn';
 import { RecentsColumn } from './columns/RecentsColumn';
 import { HomeSearch } from './search/HomeSearch';
 import { overviewMessages } from './messages';
+import { PlainHttpWarning } from './PlainHttpWarning';
 import { Summary } from './summary/Summary';
 import { useNear } from './use-near';
 import { useNow } from './use-now';
@@ -52,6 +53,7 @@ export function OverviewPage() {
           <p className="text-center text-display font-semibold text-kumo-strong">{t('heading')}</p>
           <HomeSearch />
         </div>
+        <PlainHttpWarning />
         {noPanels ? (
           <NoPanels onScan={scan} scanning={scanning} />
         ) : (
