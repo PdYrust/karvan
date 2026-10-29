@@ -12,6 +12,19 @@ const domTests = [
   'src/features/live/use-dots.test.ts',
 ];
 
+// The icon package is about 4,500 modules behind one index, and Kumo imports
+// that index. Loaded as is, a test file that touches either spends about 10 s
+// on it; prebundled once per run, under 2 s.
+const testDeps = {
+  enabled: true,
+  include: [
+    '@phosphor-icons/react',
+    '@cloudflare/kumo/components/*',
+    '@cloudflare/kumo/primitives/*',
+    '@cloudflare/kumo/utils',
+  ],
+};
+
 // In development the Go server runs separately; set KARVAN_DEV_TARGET to its
 // address including the hidden path, e.g. http://127.0.0.1:34567/abcDEF2345ghijkm
 const devTarget = process.env.KARVAN_DEV_TARGET;
@@ -41,6 +54,7 @@ export default defineConfig({
       }
     : undefined,
   test: {
+    deps: { optimizer: { client: testDeps, ssr: testDeps } },
     // Only these tests need a DOM; the rest run in plain Node, which starts
     // much faster than happy-dom. A test that needs a DOM and is not listed
     // fails in Node (no document, window or storage), so add it here.
