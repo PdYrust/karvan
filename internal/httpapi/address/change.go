@@ -33,7 +33,10 @@ func (s *Server) Start(c Change) (Pending, error) {
 	if c.Port > 0 {
 		next.Port = c.Port
 	}
-	if !c.NewPath && (c.Port == 0 || c.Port == s.current.Port) {
+	if c.TLS != nil {
+		next.TLS = c.TLS.Normal()
+	}
+	if !c.NewPath && c.Port >= 0 && next == s.current.Site {
 		return Pending{}, ErrNoChange
 	}
 	if c.NewPath {
@@ -82,7 +85,7 @@ func (s *Server) serveNew(next Site, ln net.Listener) (Pending, error) {
 	}
 	p.timer = time.AfterFunc(s.ttl(), func() { s.expire(p) })
 	s.pending = p
-	s.log().Info("serving a new address until it is confirmed", "port", next.Port, "minutes", int(s.ttl().Minutes()))
+	s.log().Info("serving a new address until it is confirmed", "port", next.Port, "tls", next.TLS.On(), "minutes", int(s.ttl().Minutes()))
 	return Pending{Site: next, Expires: p.expires}, nil
 }
 
@@ -120,6 +123,6 @@ func (s *Server) Confirm(ctx context.Context, via Site) (Site, error) {
 	} else {
 		s.ports[p.Port].serve(p.site)
 	}
-	s.log().Info("the new address is confirmed", "port", p.Port)
+	s.log().Info("the new address is confirmed", "port", p.Port, "tls", p.TLS.On())
 	return old.Site, nil
 }

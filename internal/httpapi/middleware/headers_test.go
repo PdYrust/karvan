@@ -36,8 +36,8 @@ func TestSecurityHeaders(t *testing.T) {
 	req.TLS = &tls.ConnectionState{}
 	rec = httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
-	if rec.Header().Get("Strict-Transport-Security") == "" {
-		t.Error("HSTS missing over HTTPS")
+	if rec.Header().Get("Strict-Transport-Security") != "" {
+		t.Error("HSTS sent by the middleware; only domain mode sends it (D8)")
 	}
 }
 
@@ -59,10 +59,9 @@ func TestHTTPSBehindATrustedProxy(t *testing.T) {
 			req.Header.Set("X-Forwarded-Proto", "https")
 			rec := httptest.NewRecorder()
 			h.ServeHTTP(rec, req)
-			gotHSTS := rec.Header().Get("Strict-Transport-Security") != ""
 			gotHost := strings.HasPrefix(rec.Header().Get("Set-Cookie"), "__Host-s=")
-			if gotHSTS != tc.want || gotHost != tc.want {
-				t.Fatalf("HSTS %v, __Host- cookie %v; want %v", gotHSTS, gotHost, tc.want)
+			if gotHost != tc.want {
+				t.Fatalf("__Host- cookie %v; want %v", gotHost, tc.want)
 			}
 		})
 	}

@@ -1,11 +1,12 @@
-// Package address serves the web panel on its address (a port and a hidden
-// path) and, while a change of address waits for its confirmation, on the
+// Package address serves the web panel on its address (a port, a hidden
+// path and HTTP or HTTPS) and, while a change of address waits for its confirmation, on the
 // new one next to it. Nothing is saved until the operator confirms from
 // the new address; otherwise the new one goes away (ADR 0009).
 package address
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -43,14 +44,22 @@ var (
 type Site struct {
 	Port     int
 	BasePath string
+	TLS      settings.TLS // normal form (settings.TLS.Normal)
 }
 
-// Change says what Start changes: a new random hidden path, and the port
-// (0 keeps it, -1 picks a random one).
+// Change says what Start changes: a new random hidden path, the port (0
+// keeps it, -1 picks a random one) and how the panel is served (nil keeps
+// it).
 type Change struct {
 	NewPath bool
 	Port    int
+	TLS     *settings.TLS
 }
+
+// hsts is sent in domain mode only (D8): a self-signed certificate under
+// HSTS cannot be clicked through, and a day is short enough that going
+// back to plain HTTP does not lock a browser out.
+const hsts = "max-age=86400"
 
 // Pending is a new address waiting for its confirmation.
 type Pending struct {
@@ -73,6 +82,8 @@ type Server struct {
 	Save func(ctx context.Context, s Site) error
 	// HTTP makes the server of each listener (timeouts, error log).
 	HTTP func(h http.Handler) *http.Server
+	// Certificate is the certificate of an HTTPS address.
+	Certificate func(ctx context.Context, t settings.TLS) (*tls.Certificate, error)
 	// OnShutdown runs once when the final shutdown starts.
 	OnShutdown func()
 	Log        *slog.Logger
@@ -104,9 +115,11 @@ type pending struct {
 // listener serves the sites of one port: the current one, or the new one,
 // or both when only the path changes.
 type listener struct {
-	ln    net.Listener
-	srv   *http.Server
-	sites atomic.Pointer[[]site]
+	ln        net.Listener
+	srv       *http.Server
+	sites     atomic.Pointer[[]site]
+	certs     func(ctx context.Context, t settings.TLS) (*tls.Certificate, error)
+	tlsConfig *tls.Config
 }
 
 type ctxKey struct{}
@@ -118,8 +131,12 @@ func From(ctx context.Context) Site {
 }
 
 func (l *listener) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	secure := r.TLS != nil
 	for _, s := range *l.sites.Load() {
-		if middleware.UnderBase(r.URL.Path, s.BasePath) {
+		if s.TLS.On() == secure && middleware.UnderBase(r.URL.Path, s.BasePath) {
+			if secure && s.TLS.Mode == settings.TLSDomain {
+				w.Header().Set("Strict-Transport-Security", hsts)
+			}
 			s.h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, s.Site)))
 			return
 		}
@@ -155,12 +172,14 @@ func (s *Server) Serve(ctx context.Context, current Site, ln net.Listener) error
 
 // start serves sites on ln. Callers hold mu.
 func (s *Server) start(port int, ln net.Listener, sites ...site) {
-	l := &listener{ln: ln}
+	l := &listener{certs: s.Certificate}
+	l.ln = newConnListener(ln, l)
+	l.tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12, NextProtos: []string{"http/1.1"}, GetCertificate: l.certificate}
 	l.serve(sites...)
 	l.srv = s.HTTP(l)
 	s.ports[port] = l
 	s.wg.Go(func() {
-		if err := l.srv.Serve(ln); !errors.Is(err, http.ErrServerClosed) {
+		if err := l.srv.Serve(l.ln); !errors.Is(err, http.ErrServerClosed) {
 			s.failed(l, err)
 		}
 	})
