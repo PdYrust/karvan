@@ -77,6 +77,9 @@ func startBridge(t *testing.T, m *livetest.Mover, src migrationtest.Source) (*br
 	done := make(chan struct{})
 	go func() { _ = b.Run(ctx); close(done) }()
 	t.Cleanup(func() { cancel(); <-done })
+	if _, err := b.AddDomain(context.Background(), "old.example.com", bridge.CertChoice{Kind: bridge.ChoiceNone, PlainOK: true}); err != nil {
+		t.Fatal(err)
+	}
 	if _, err := b.SaveSite(context.Background(), bridge.Site{Name: "old", PanelID: m.Panel, SourceKind: src.Kind,
 		SourceURL: src.URL, SourceIP: "127.0.0.1", OldPath: "sub", Domains: []string{"old.example.com"}, Port: port,
 		Lazy: true, PlainHTTPOK: true}); err != nil {
