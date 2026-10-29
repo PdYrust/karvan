@@ -86,6 +86,10 @@ export interface PendingAddress {
   expiresAt: string;
   /** This page came through the new address, where Confirm works. */
   fromNew: boolean;
+  /** How the new address is served. */
+  tls: 'off' | 'self' | 'domain';
+  /** The domain's name in domain mode; absent when the link keeps this host. */
+  host?: string;
 }
 
 export interface Address {

@@ -94,6 +94,9 @@ func (a *addressEnv) startSelf() string {
 	if h := a.https(base); h.Pending == nil || h.Pending.TLS != "self" || h.Pending.FromNew || h.Fingerprint != n.Fingerprint {
 		a.t.Fatalf("waiting = %+v", h)
 	}
+	if p := a.address(base).Pending; p == nil || p.TLS != "self" || p.Host != "" {
+		a.t.Fatalf("address waiting = %+v", p)
+	}
 	if res := a.do(http.MethodPost, api+"/settings/address/confirm", nil); res.errorCode(a.t) != "not_new_address" {
 		a.t.Fatalf("confirm over plain HTTP: %d %s", res.status, res.body)
 	}
@@ -170,6 +173,9 @@ func TestHTTPSChangeIsChecked(t *testing.T) {
 	res := a.putHTTPS(map[string]any{"tls": "domain", "domainId": good})
 	if res.status != http.StatusOK || strings.Contains(string(res.body), "fingerprint") {
 		t.Fatalf("domain mode: %d %s", res.status, res.body)
+	}
+	if p := a.address(base).Pending; p == nil || p.TLS != "domain" || p.Host != "panel.example.com" {
+		t.Fatalf("address waiting = %+v", p)
 	}
 }
 

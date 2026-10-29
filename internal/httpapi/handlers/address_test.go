@@ -72,9 +72,11 @@ func (a *addressEnv) at(port int, basePath string) *env {
 type addressBody struct {
 	Port    int `json:"port"`
 	Pending *struct {
-		Port        int  `json:"port"`
-		PathChanged bool `json:"pathChanged"`
-		FromNew     bool `json:"fromNew"`
+		Port        int    `json:"port"`
+		PathChanged bool   `json:"pathChanged"`
+		FromNew     bool   `json:"fromNew"`
+		TLS         string `json:"tls"`
+		Host        string `json:"host"`
 	} `json:"pending"`
 }
 

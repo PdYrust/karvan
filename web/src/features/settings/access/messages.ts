@@ -30,7 +30,7 @@ const en = {
   timeLeft: '{time} left',
   openNew: 'Open the new address',
   newAddress: 'New address',
-  signInThere: 'Sign in there first: a new path does not keep this session over plain HTTP.',
+  signInThere: 'Sign in there first: this session does not carry over to the new address.',
   pathShownOnce:
     'The new path was shown once, on the page that started the change. Start again to get a new one.',
   confirmTitle: 'Confirm the new address',
@@ -85,7 +85,7 @@ const fa: Messages<Key>['fa'] = {
   timeLeft: '{time} مانده',
   openNew: 'باز کردن آدرس جدید',
   newAddress: 'آدرس جدید',
-  signInThere: 'اول آنجا وارد شوید: روی HTTP ساده، مسیر جدید این نشست را نگه نمیدارد.',
+  signInThere: 'اول آنجا وارد شوید: این نشست به آدرس جدید منتقل نمیشود.',
   pathShownOnce:
     'مسیر جدید فقط یک بار، در صفحه ای که تغییر را شروع کرد نشان داده شد. برای گرفتن مسیر تازه دوباره شروع کنید.',
   confirmTitle: 'تایید آدرس جدید',

@@ -4,11 +4,14 @@ import (
 	"errors"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/PdYrust/karvan/internal/audit"
+	"github.com/PdYrust/karvan/internal/bridge"
 	"github.com/PdYrust/karvan/internal/httpapi/address"
 	"github.com/PdYrust/karvan/internal/httpapi/respond"
+	"github.com/PdYrust/karvan/internal/settings"
 )
 
 // Error codes of the address change.
@@ -25,6 +28,10 @@ type pendingAddressJSON struct {
 	// FromNew is true when this request came through the new address,
 	// where the change can be confirmed.
 	FromNew bool `json:"fromNew"`
+	// TLS is how the new address is served (off, self or domain), and Host
+	// the domain's name in domain mode, so a link to it is right.
+	TLS  string `json:"tls"`
+	Host string `json:"host,omitempty"`
 }
 
 type addressJSON struct {
@@ -38,10 +45,34 @@ func (a *API) GetAddress(w http.ResponseWriter, r *http.Request) {
 	st := a.Address.Status()
 	out := addressJSON{Port: st.Current.Port}
 	if p := st.Pending; p != nil {
+		host, err := a.pendingHost(r, p.TLS)
+		if err != nil {
+			respond.Internal(w, r, err)
+			return
+		}
 		out.Pending = &pendingAddressJSON{Port: p.Port, PathChanged: p.BasePath != st.Current.BasePath,
-			ExpiresAt: p.Expires.UTC(), FromNew: address.From(r.Context()) == p.Site}
+			ExpiresAt: p.Expires.UTC(), FromNew: address.From(r.Context()) == p.Site, TLS: modeOf(p.TLS), Host: host}
 	}
 	respond.JSON(w, http.StatusOK, out)
+}
+
+// pendingHost is the name a waiting domain-mode address answers on, or ""
+// when the link keeps this page's host (other modes, a wildcard, a domain
+// removed since).
+func (a *API) pendingHost(r *http.Request, t settings.TLS) (string, error) {
+	if t.Mode != settings.TLSDomain || a.Bridge == nil {
+		return "", nil
+	}
+	d, err := a.Bridge.Domain(r.Context(), t.DomainID)
+	switch {
+	case errors.Is(err, bridge.ErrNotFound):
+		return "", nil
+	case err != nil:
+		return "", err
+	case strings.HasPrefix(d.Name, "*."):
+		return "", nil
+	}
+	return d.Name, nil
 }
 
 type startAddressBody struct {
