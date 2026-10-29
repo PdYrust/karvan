@@ -252,9 +252,12 @@ func TestMissesLookIdentical(t *testing.T) {
 		{http.MethodPut, "/" + base + "/api/v1/session"},
 		{http.MethodGet, "/" + base + "/api/v1/users"},
 		{http.MethodGet, "/" + base + "/overview"},
-		// App pages exist only with a session.
-		{http.MethodGet, "/" + base + "/settings"},
-		{http.MethodGet, "/" + base + "/migrations/abc/live"},
+		// App pages sign in again without a session, but only under the
+		// hidden path and only for GET and HEAD.
+		{http.MethodGet, "/wrongpath/domains"},
+		{http.MethodGet, "/domains"},
+		{http.MethodGet, "/" + base + "/nope"},
+		{http.MethodPost, "/" + base + "/domains"},
 	} {
 		if got := e.raw(m[0], m[1]); !bytes.Equal(got, want) {
 			t.Errorf("%s %s:\n%s\nwant\n%s", m[0], m[1], got, want)

@@ -79,8 +79,8 @@ func New(d Deps) (http.Handler, error) {
 		rt.HandleFunc("GET /"+name, spa.Static(name))
 	}
 	for _, p := range appPages {
-		rt.HandleFunc("GET /"+p, spa.App)
-		rt.HandleFunc("GET /"+p+"/{rest...}", spa.App)
+		rt.HandleFunc("GET /"+p, spa.Page)
+		rt.HandleFunc("GET /"+p+"/{rest...}", spa.Page)
 	}
 
 	rt.HandleFunc("GET /api/v1/session", api.GetSession)
