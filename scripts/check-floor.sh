@@ -19,7 +19,7 @@ report() {
   hits=$(grep -nIE "$pattern" "$@" 2>/dev/null | cut -c1-160 || true)
   if [ -n "$hits" ]; then
     echo "[$rule]"
-    echo "$hits" | sed 's/^/  /'
+    printf '%s\n' "$hits" | sed 's/^/  /'
     status=1
   fi
 }
@@ -44,15 +44,15 @@ writing=$(printf '\u200c|\u0654|\u06c0|\u00ab|\u00bb|\u061b|\u2026|\u2013|\u2014
 hits=$(grep -nIP "$writing" "${files[@]}" 2>/dev/null | cut -c1-160 || true)
 if [ -n "$hits" ]; then
   echo "[writing]"
-  echo "$hits" | sed 's/^/  /'
+  printf '%s\n' "$hits" | sed 's/^/  /'
   status=1
 fi
 
 if git rev-parse --verify -q HEAD >/dev/null; then
   msgs=$(git log --format='%h %an <%ae> %s%n%b' | grep -nE '\b(Claude|Anthropic|ChatGPT|OpenAI|Copilot|Gemini|Kiro|LLM)\b|Co-authored-by' || true)
-  if [ -n "$msgs" ]; then echo "[ai-reference-in-history]"; echo "$msgs" | sed 's/^/  /'; status=1; fi
+  if [ -n "$msgs" ]; then echo "[ai-reference-in-history]"; printf '%s\n' "$msgs" | sed 's/^/  /'; status=1; fi
   authors=$(git log --format='%an <%ae>|%cn <%ce>' | sort -u | grep -v '^YrustPd <PdYrust@outlook.com>|YrustPd <PdYrust@outlook.com>$' || true)
-  if [ -n "$authors" ]; then echo "[wrong-author]"; echo "$authors" | sed 's/^/  /'; status=1; fi
+  if [ -n "$authors" ]; then echo "[wrong-author]"; printf '%s\n' "$authors" | sed 's/^/  /'; status=1; fi
 fi
 
 [ $status -eq 0 ] && echo "check-floor: clean"

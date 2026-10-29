@@ -35,7 +35,7 @@ migrate() {
 # Dump commands strip lines that change on every run (dates, versions) and
 # the key material the panels generate on first migration (the jwt secret,
 # Marzban's self-signed TLS key). Tests insert their own.
-no_keys() { grep -vE '^INSERT INTO (public\.)?`?(tls|jwt)`? '; }
+no_keys() { grep -vE "^INSERT INTO (public\\.)?\`?(tls|jwt)\`? "; }
 
 dump_sqlite() { sqlite3 "$work/$1" .dump | grep -v '^INSERT INTO sqlite_stat1' | no_keys; }
 

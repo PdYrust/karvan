@@ -12,7 +12,11 @@ PANELS_DIR=${PANELS_DIR:-/tmp/karvan-panels}
 m=$PANELS_DIR/karvan-test-marzban
 p=$PANELS_DIR/karvan-test-pasarguard
 
-down() { [ -f "$1/docker-compose.yml" ] && docker compose -f "$1/docker-compose.yml" -p "$(basename "$1")" down --remove-orphans >/dev/null 2>&1 || true; }
+down() {
+  if [ -f "$1/docker-compose.yml" ]; then
+    docker compose -f "$1/docker-compose.yml" -p "$(basename "$1")" down --remove-orphans >/dev/null 2>&1 || true
+  fi
+}
 down "$m"
 down "$p"
 rm -rf "$PANELS_DIR"

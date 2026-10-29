@@ -15,7 +15,7 @@ echo "$out" | grep -E '^(ok|FAIL|---)' || true
 status=0
 for p in $core; do
   [ -d "internal/$p" ] || continue
-  line=$(echo "$out" | grep -E "github.com/PdYrust/karvan/internal/$p[[:space:]]" || true)
+  line=$(echo "$out" | grep -E "github.com/PdYrust/karvan/internal/${p}[[:space:]]" || true)
   pct=$(echo "$line" | grep -oE 'coverage: [0-9.]+%' | grep -oE '[0-9.]+' || echo 0)
   if awk -v p="$pct" -v m="$min" 'BEGIN { exit !(p < m) }'; then
     echo "coverage: internal/$p is ${pct}%, needs ${min}%"
