@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ApiError, offline } from '../../lib/api/client';
 import { getSession, signIn } from '../../lib/api/session';
+import { returnTarget } from '../../lib/return-target';
 
 export type Step = 'credentials' | 'totp';
 
@@ -13,9 +14,9 @@ interface Fields {
   code: string;
 }
 
-/** Goes to the app; the server serves it at the same address once signed in. */
+/** Goes back to the page the operator asked for; the server serves the app there once signed in. */
 function enterApp() {
-  window.location.replace(document.baseURI);
+  window.location.replace(returnTarget(window.location, document.baseURI));
 }
 
 function classify(err: unknown): SignInError {

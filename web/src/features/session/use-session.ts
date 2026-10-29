@@ -3,6 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useT } from '../../i18n/locale';
 import { ApiError } from '../../lib/api/client';
 import { getSession, signOut } from '../../lib/api/session';
+import { returnTarget } from '../../lib/return-target';
 import { sessionMessages } from './messages';
 
 export const sessionKey = ['session'] as const;
@@ -12,9 +13,9 @@ export function useSession() {
   return useQuery({ queryKey: sessionKey, queryFn: getSession, staleTime: Infinity });
 }
 
-/** The server serves the sign-in page at the same address once the session is gone. */
+/** Reloads the current page; without a session the server serves the sign-in page there. */
 export function returnToSignIn() {
-  window.location.replace(document.baseURI);
+  window.location.replace(returnTarget(window.location, document.baseURI));
 }
 
 /** Signs out; on a failure the page stays, so a shared machine is never left signed in by surprise. */
