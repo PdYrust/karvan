@@ -194,7 +194,7 @@ func (s *Service) adminHash(j *Job, out *engine.AdminOutcome, hash string) (stri
 	if err != nil {
 		return "", err
 	}
-	h, err := bcrypt.GenerateFromPassword([]byte(pw), bcryptCost)
+	h, err := bcrypt.GenerateFromPassword([]byte(pw), hashCost)
 	if err != nil {
 		return "", err
 	}

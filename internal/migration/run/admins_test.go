@@ -113,6 +113,9 @@ func checkTwoAdmins(t *testing.T, h *harness, j *Job, rep *Report) {
 	if pw == "" || len(j.passwords) != 1 || bcrypt.CompareHashAndPassword([]byte(hashes["north"]), []byte(pw)) != nil {
 		t.Fatalf("north's password: %d generated", len(j.passwords))
 	}
+	if cost, err := bcrypt.Cost([]byte(hashes["north"])); err != nil || cost != hashCost {
+		t.Fatalf("north's bcrypt cost = %d, %v, want hashCost %d", cost, err, hashCost)
+	}
 }
 
 // checkMovedAgain checks a re-run that moves user004 into north's admin.

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"maps"
+	"testing"
 
 	"golang.org/x/crypto/bcrypt"
 
@@ -41,6 +42,21 @@ var errStale = errors.New("the outcome changed since the plan was approved")
 // bcryptCost matches PasarGuard (app/models/admin.py:26).
 const bcryptCost = 12
 
+// hashCost is the bcrypt cost of the admin passwords a run writes. Only
+// UseCheapHashesForTests changes it.
+var hashCost = bcryptCost
+
+// UseCheapHashesForTests makes runs hash admin passwords at the lowest
+// bcrypt cost, so suites that run many jobs do not spend most of their
+// time hashing. The hashes keep their format and verify the same way. Call
+// it from TestMain, before any test runs. It panics outside a test binary.
+func UseCheapHashesForTests() {
+	if !testing.Testing() {
+		panic("run: cheap password hashes outside a test")
+	}
+	hashCost = bcrypt.MinCost
+}
+
 // Run starts the job in the background. It returns once the run is
 // accepted; progress comes as events.
 func (s *Service) Run(ctx context.Context, jobID string, o Options) error {
@@ -73,7 +89,7 @@ func (s *Service) Run(ctx context.Context, jobID string, o Options) error {
 	if err != nil {
 		return err
 	}
-	hash, err := bcrypt.GenerateFromPassword([]byte(password.Reveal()), bcryptCost)
+	hash, err := bcrypt.GenerateFromPassword([]byte(password.Reveal()), hashCost)
 	if err != nil {
 		j.passwords = before
 		return err

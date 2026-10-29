@@ -241,6 +241,7 @@ func TestCredentialsAreDroppedAtTheEnd(t *testing.T) {
 func TestAdminKeepsTheResellersPassword(t *testing.T) {
 	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/marzbandb/testdata/" + marzbandb.Revision + ".sqlite.sql"})
 	h := newHarness(t, panel.PasarGuard, panel.Marzban, tg, 2)
+	useHashCost(t, bcryptCost)
 	j := h.job(nil)
 	rep := h.run(j, false)
 	if rep.Admin.Password != PasswordKept || len(j.passwords) != 0 {
@@ -260,6 +261,10 @@ func TestAdminKeepsTheResellersPassword(t *testing.T) {
 	}
 	if bcrypt.CompareHashAndPassword([]byte(hash), []byte(h.src.Password)) != nil {
 		t.Fatal("the moved admin cannot sign in with its old password")
+	}
+	// The production cost: what runs use until a test lowers it.
+	if cost, err := bcrypt.Cost([]byte(hash)); err != nil || cost != 12 || startHashCost != 12 {
+		t.Fatalf("bcrypt cost = %d, %v, at start %d, want PasarGuard's 12", cost, err, startHashCost)
 	}
 }
 
