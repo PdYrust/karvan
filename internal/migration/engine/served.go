@@ -53,6 +53,22 @@ func currentProtocols(src Source, u panel.User) (out []string, ok bool) {
 	return out, true
 }
 
+// steadyProtocols are the protocols whose credentials two reads of the
+// user agree on, or nil when all of them do. PasarGuard answers a protocol
+// it holds no credential for with new random values on every read. Only
+// the protocols of the user's current config are compared: no config the
+// user has holds the others, so their values change nothing for the user.
+func steadyProtocols(src Source, u panel.User) []string {
+	if src.Kind != panel.PasarGuard {
+		return nil
+	}
+	cur, ok := currentProtocols(src, u)
+	if !ok {
+		return nil
+	}
+	return append([]string{}, cur...) // not nil, even when empty
+}
+
 // unsupportedOnMarzban are the protocols Marzban has no model for.
 func unsupportedOnMarzban(p string) bool { return p == "wireguard" || p == "hysteria" }
 

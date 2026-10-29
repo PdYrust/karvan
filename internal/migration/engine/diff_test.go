@@ -48,6 +48,33 @@ func TestDiffNamesNewGoneAndChangedUsers(t *testing.T) {
 	}
 }
 
+// PasarGuard answers a protocol it holds no credential for with new random
+// values on every read. Only the protocols of the user's current config
+// count, so a second read of the same panel changes nothing, and a new
+// credential in the current config still shows.
+func TestDiffOfAPasarGuardReadSkipsUnusedProtocols(t *testing.T) {
+	read := func(vless, vmess string) Inputs {
+		u := pgUser(1, 2) // group 2 serves VLESS only
+		u.Credentials.VLESS.ID = panel.UUID(vless)
+		u.Credentials.VMess.ID = panel.UUID(vmess)
+		return pgSource(inputs(panel.PasarGuard, dest(panel.Marzban), u))
+	}
+	vless, vmess := string(uuid('a', 1)), string(uuid('b', 1))
+	before := build(t, basePlan(), read(vless, vmess))
+	if c := Diff(before, build(t, basePlan(), read(vless, string(uuid('c', 1))))); c.Changed() {
+		t.Fatalf("a random VMess fill changed the outcome: %+v", c.Users)
+	}
+	c := Diff(before, build(t, basePlan(), read(string(uuid('d', 1)), vmess)))
+	if len(c.Users) != 1 || !slices.Equal(c.Users[0].Fields, []string{"credentials"}) {
+		t.Fatalf("a new VLESS id in the current config: %+v", c.Users)
+	}
+	unknown := read(vless, string(uuid('c', 1)))
+	unknown.Source.GroupsRead = false
+	if c := Diff(before, build(t, basePlan(), unknown)); !c.Changed() {
+		t.Fatal("with the groups unknown every credential counts")
+	}
+}
+
 // New credentials show as a changed field, never as values: the outcome
 // only names the protocols.
 func TestDiffKeepsCredentialsOut(t *testing.T) {

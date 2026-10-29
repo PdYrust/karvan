@@ -199,7 +199,7 @@ func differs(a, b *Item) []string {
 		{"adopted", adoptID(a) == adoptID(b)},
 		{"username", a.User.Username == b.User.Username},
 		{"targets", slices.Equal(a.Targets, b.Targets)},
-		{"credentials", slices.Equal(credentialKeys(a), credentialKeys(b))},
+		{"credentials", slices.Equal(comparedCredentials(a, b.steady), comparedCredentials(b, b.steady))},
 		{"conflicts", slices.EqualFunc(marks(a), marks(b), sameMark)},
 	} {
 		if !f.same {
@@ -225,6 +225,19 @@ func credentialKeys(it *Item) []string {
 	}
 	slices.Sort(out)
 	return out
+}
+
+// comparedCredentials are the credential keys of the steady protocols,
+// or all of them when steady is nil (see steadyProtocols).
+func comparedCredentials(it *Item, steady []string) []string {
+	keys := credentialKeys(it)
+	if steady == nil {
+		return keys
+	}
+	return slices.DeleteFunc(keys, func(k string) bool {
+		p, _, _ := strings.Cut(k, ":")
+		return !slices.Contains(steady, p)
+	})
 }
 
 // marks is every conflict of a user, fixed or open, with its type,

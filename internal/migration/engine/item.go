@@ -94,6 +94,8 @@ type Item struct {
 	ChangesConfig bool
 	ChangesLink   bool
 	Adopt         *panel.ExistingUser // C28: already on the destination
+
+	steady []string // protocols whose credentials Diff compares; nil for all
 }
 
 // KeyOf is the source identity of u for a source kind (D31).
@@ -115,6 +117,7 @@ func newItems(in Inputs) []*Item {
 			User:    clone(u),
 			Include: true,
 			Targets: slices.Clone(in.admins[owner].Targets),
+			steady:  steadyProtocols(in.Source, u),
 		})
 	}
 	slices.SortFunc(out, func(a, b *Item) int { return compareKeys(a.Key, b.Key) })
