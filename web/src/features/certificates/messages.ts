@@ -133,7 +133,8 @@ const fa: Messages<CertificatesKey>['fa'] = {
   dwarn_pin:
     'پورت {port} هنوز برای این دامنه گواهی {cert} را میدهد. یک گواهی انتخاب کنید تا روی همه پورت ها همان استفاده شود.',
   dwarn_no_certificate: 'گواهی ندارد، پس قانون ها با HTTP ساده به آن پاسخ میدهند.',
-  dwarn_certificate_not_adopted: 'گواهی خود یک قانون اضافه نشد. گواهی این دامنه را تغییر دهید.',
+  dwarn_certificate_not_adopted:
+    'گواهی قبلی یکی از قانون ها اضافه نشد. گواهی این دامنه را تغییر دهید.',
   dwarn_cert_conflict: 'قانون های آن روی یک پورت از گواهی های مختلف استفاده میکنند.',
   dwarn_renewal_failed: 'تمدید انجام نشد: {reason}',
   dwarn_renewal_waiting_dns: 'تمدید منتظر رکورد TXT جدید است.',

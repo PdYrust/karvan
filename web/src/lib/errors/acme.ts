@@ -17,7 +17,7 @@ const en = {
   acme_invalid_ip: "Let's Encrypt gives no certificates for IP addresses here. Pick another way.",
   acme_invalid_wildcard_needs_dns: 'A wildcard domain needs the manual way (DNS).',
   acme_busy: "A Let's Encrypt order for this domain is already running. Wait for it, or cancel it.",
-  acme_state: "This order isn't waiting for its DNS record any more. Reload the page.",
+  acme_state: "This order isn't waiting for its DNS record anymore. Reload the page.",
   acme_dns_not_found: "The TXT record isn't visible yet. DNS changes can take a few minutes.",
   acme_port_denied:
     "Karvan can't use port 80 because it doesn't run as root. Use the manual way (DNS).",
