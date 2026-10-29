@@ -1,10 +1,10 @@
 #!/bin/sh
-# Installs Karvan in a clean Debian 12 system with systemd the way an
-# operator would, from a local copy of the release files, and checks the
-# result (D36). Needs Docker. ARCHIVE=<release archive> tests that archive;
-# otherwise one is packed from a fresh build of this tree.
+# Installs, updates, rolls back and removes Karvan in a clean Debian 12
+# system with systemd the way an operator would, from a local copy of the
+# release files, and checks the result (D36). Needs Docker. ARCHIVE=<release
+# archive> tests that archive; otherwise one is packed from a fresh build of
+# this tree. The update builds are made from the same archive.
 set -eu
-
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)
 IMAGE=karvan-installtest:debian12
 NAME=karvan-installtest
@@ -14,7 +14,11 @@ x86_64 | amd64) ARCH=amd64 OTHER=arm64 ;;
 aarch64 | arm64) ARCH=arm64 OTHER=amd64 ;;
 *) echo "no Karvan build for $(uname -m)" >&2 && exit 1 ;;
 esac
-
+# The update builds: V2 is the same binary under a new version, BAD never
+# gets healthy and V3 claims a newer store schema.
+V2=0.0.1-test
+BAD=0.0.2-bad
+V3=0.0.3-test
 work=$(mktemp -d)
 cleanup() {
 	[ -n "${KEEP:-}" ] || docker rm -f "$NAME" >/dev/null 2>&1 || true
@@ -22,7 +26,6 @@ cleanup() {
 }
 trap cleanup EXIT
 trap 'exit 1' INT TERM
-
 fail() {
 	echo "FAIL: $*" >&2
 	exit 1
@@ -30,7 +33,6 @@ fail() {
 step() { echo "== $*"; }
 # sys runs a command inside the test system as root.
 sys() { docker exec "$NAME" sh -c "$1"; }
-
 # pack builds the binary and lays out the release archive of D16.
 pack() {
 	VERSION=${VERSION:-0.0.0-test}
@@ -44,22 +46,35 @@ pack() {
 	rm -rf "$dir"
 	ARCHIVE=$work/karvan_${VERSION}_linux_$ARCH.tar.gz
 }
-
-# release_tree puts the archive, its SHA256SUMS and a get.sh pointed at the local
-# server under /srv/release/<tree>/download/v<version>/ in the test system.
-# A tree named bad gets a SHA256SUMS that does not match.
+# derive packs the archive of version $1 from the unpacked base archive,
+# with the binary replaced by file $2 when given.
+derive() {
+	dir=$work/karvan_$1_linux_$ARCH
+	cp -a "$work/base/karvan_${VERSION}_linux_$ARCH" "$dir"
+	[ -z "${2:-}" ] || install -m 0755 "$2" "$dir/karvan"
+	tar -czf "$dir.tar.gz" -C "$work" "karvan_$1_linux_$ARCH"
+	rm -rf "$dir"
+}
+# release_tree puts archive $3 of version $2, its SHA256SUMS and a get.sh
+# pointed at the local server under /srv/release/<$1>/download/v<$2>/ in the
+# test system. A tree named bad gets a SHA256SUMS that does not match.
 release_tree() {
-	tree=$work/release/$1/download/v$VERSION
+	tree=$work/release/$1/download/v$2
 	mkdir -p "$tree"
-	cp "$ARCHIVE" "$tree/"
-	(cd "$tree" && sha256sum "$(basename "$ARCHIVE")" >SHA256SUMS)
+	cp "$3" "$tree/"
+	(cd "$tree" && sha256sum "$(basename "$3")" >SHA256SUMS)
 	if [ "$1" = bad ]; then
 		awk '{ printf "%064d  %s\n", 0, $2 }' "$tree/SHA256SUMS" >"$tree/sums" && mv "$tree/sums" "$tree/SHA256SUMS"
 	fi
-	sed -e "s|^BASE_URL=.*|BASE_URL=http://127.0.0.1:$PORT/$1/download|" \
-		-e "s|^VERSION=.*|VERSION=$VERSION|" "$ROOT/packaging/get.sh" >"$tree/get.sh"
+	local_get "$1" "$2" >"$tree/get.sh"
 }
-
+# local_get prints get.sh pointed at the local server's tree $1, with
+# version $2 stamped in (none: --update asks the local release list).
+local_get() {
+	sed -e "s|^BASE_URL=.*|BASE_URL=http://127.0.0.1:$PORT/$1/download|" \
+		-e "s|^RELEASES_URL=.*|RELEASES_URL=http://127.0.0.1:$PORT/releases.json|" \
+		-e "s|^VERSION=.*|VERSION=$2|" "$ROOT/packaging/get.sh"
+}
 if [ -z "${ARCHIVE:-}" ]; then
 	step "pack an archive from this tree"
 	pack
@@ -69,20 +84,47 @@ else
 	VERSION=${VERSION%_linux_*}
 fi
 name=karvan_${VERSION}_linux_$ARCH
-
+mkdir -p "$work/base"
+tar -xzf "$ARCHIVE" -C "$work/base"
+cat >"$work/bad-karvan" <<EOF
+#!/bin/sh
+case \$1 in
+version) echo '{"version":"$BAD","commit":"","date":"","schema":999}' ;;
+serve) : >/var/lib/karvan/bad-ran && exec sleep 600 ;;
+*) exit 1 ;;
+esac
+EOF
+cat >"$work/v3-karvan" <<'EOF'
+#!/bin/sh
+if [ "${1:-}" = version ]; then
+	/srv/karvan.real "$@" | sed 's/"schema":[0-9]*/"schema":999/'
+	exit
+fi
+exec /srv/karvan.real "$@"
+EOF
+derive "$V2"
+derive "$BAD" "$work/bad-karvan"
+derive "$V3" "$work/v3-karvan"
 step "start the test system"
 docker build -q -t "$IMAGE" "$ROOT/scripts/installtest" >/dev/null
 docker rm -f "$NAME" >/dev/null 2>&1 || true
 docker run -d --name "$NAME" --tmpfs /run --tmpfs /run/lock \
 	-v /sys/fs/cgroup:/sys/fs/cgroup:rw --cgroupns=host "$IMAGE" >/dev/null
 sys 'systemctl is-system-running --wait >/dev/null 2>&1 || true'
-release_tree good
-release_tree bad
+release_tree good "$VERSION" "$ARCHIVE"
+release_tree good "$V2" "$work/karvan_${V2}_linux_$ARCH.tar.gz"
+local_get good '' >"$work/release/get-latest.sh"
+printf '[\n  {\n    "tag_name": "v%s",\n    "prerelease": true\n  }\n]\n' "$V2" >"$work/release/releases.json"
+release_tree bad "$VERSION" "$ARCHIVE"
 docker cp "$work/release" "$NAME:/srv/" >/dev/null
 docker cp "$ARCHIVE" "$NAME:/srv/" >/dev/null
+sys 'mkdir -p /srv/updates/v3'
+docker cp "$work/karvan_${BAD}_linux_$ARCH.tar.gz" "$NAME:/srv/updates/" >/dev/null
+docker cp "$work/karvan_${V3}_linux_$ARCH.tar.gz" "$NAME:/srv/updates/v3/" >/dev/null
+sys "cd /srv/updates/v3 && sha256sum karvan_${V3}_linux_$ARCH.tar.gz >SHA256SUMS"
+docker cp "$work/base/$name/karvan" "$NAME:/srv/karvan.real" >/dev/null
 sys "busybox httpd -p 127.0.0.1:$PORT -h /srv/release"
 sys 'mkdir -p /opt/marzban /var/lib/marzban /root/cert && echo SQLALCHEMY_DATABASE_URL=sqlite:////var/lib/marzban/db.sqlite3 >/opt/marzban/.env && : >/var/lib/marzban/db.sqlite3'
-
 # nothing_installed fails when an install that should have stopped left
 # anything behind.
 nothing_installed() {
@@ -168,16 +210,88 @@ sys 'karvan health' || fail "karvan health"
 signed_in
 echo "ok   installed, running as root, modes as D18, sign-in answers"
 
+# on_version fails unless current points at $1, previous at $2 (- for
+# none), the service is healthy and the first install's sign-in works.
+on_version() {
+	[ "$(sys 'readlink /usr/local/lib/karvan/current')" = "$1" ] || fail "current is not $1"
+	prev=$(sys 'readlink /usr/local/lib/karvan/previous || echo -')
+	[ "$prev" = "$2" ] || fail "previous is $prev, want $2"
+	sys 'systemctl is-active --quiet karvan && karvan health >/dev/null' || fail "$1 is not healthy"
+	signed_in
+}
+# data_kept fails unless the test data marker is there and every file in
+# $1 (space separated, may be empty) is gone from the data folder.
+data_kept() {
+	sys 'grep -qx before-updates /var/lib/karvan/test-data' || fail "the test data is gone"
+	for f in $1; do
+		sys "! [ -e /var/lib/karvan/$f ]" || fail "$f is still in the data folder"
+	done
+}
+# count prints the number of folders in $1.
+count() { sys "find $1 -mindepth 1 -maxdepth 1 -type d | wc -l"; }
+step "update to the newest release"
+sys 'echo before-updates >/var/lib/karvan/test-data'
+sys 'sh /srv/release/get-latest.sh --update' >/dev/null || fail "the update to $V2"
+on_version "$V2" "$VERSION"
+data_kept ''
+[ "$(count /var/lib/karvan-backups)" = 1 ] || fail "the update made no backup"
+expect_mode /var/lib/karvan-backups 700
+echo "ok   updated to $V2 with a backup, data intact"
+step "a failed update goes back by itself"
+if out=$(sys "karvan update --archive /srv/updates/karvan_${BAD}_linux_$ARCH.tar.gz" 2>&1); then
+	fail "the unhealthy update did not report a failure"
+fi
+case $out in
+*"going back to $V2"*"is running again"*) ;;
+*) fail "the failed update said: $out" ;;
+esac
+on_version "$V2" "$VERSION"
+data_kept bad-ran
+sys "! [ -e /usr/local/lib/karvan/$BAD ]" || fail "the failed version folder is still there"
+echo "ok   unhealthy $BAD rolled back to $V2, backup restored, data intact"
+step "rollback"
+sys 'karvan rollback' >/dev/null || fail "karvan rollback"
+on_version "$VERSION" "$V2"
+data_kept ''
+echo "ok   rolled back to $VERSION, data intact"
+step "rollback across a schema change"
+sys "karvan update --archive /srv/updates/v3/karvan_${V3}_linux_$ARCH.tar.gz" >/dev/null || fail "the update to $V3"
+on_version "$V3" "$VERSION"
+[ "$(count /usr/local/lib/karvan)" = 2 ] || fail "more than two version folders are kept"
+[ "$(count /var/lib/karvan-backups)" = 2 ] || fail "more than two backups are kept"
+sys ': >/var/lib/karvan/after-update'
+if out=$(sys 'karvan rollback' 2>&1); then
+	fail "the rollback across a schema change did not ask"
+fi
+case $out in
+*"restores the backup taken at 20"*" UTC; changes made since then are lost"*"--yes"*) ;;
+*) fail "the rollback said: $out" ;;
+esac
+on_version "$V3" "$VERSION"
+sys '[ -e /var/lib/karvan/after-update ]' || fail "the rollback that stopped changed the data"
+sys 'karvan rollback --yes' >/dev/null || fail "karvan rollback --yes"
+on_version "$VERSION" "$V3"
+data_kept after-update
+echo "ok   the rollback named the backup time, stopped without --yes and restored the backup with it"
 step "uninstall keeps the data"
 sys 'karvan uninstall' >/dev/null || fail "karvan uninstall"
 sys '! [ -e /etc/systemd/system/karvan.service ] && ! [ -e /usr/local/lib/karvan ] && ! [ -e /usr/local/bin/karvan ]' || fail "uninstall left Karvan's files"
-sys '[ -f /var/lib/karvan/karvan.db ] && [ -f /etc/karvan/secret.key ] && [ -f /etc/karvan/config.json ]' || fail "uninstall removed the data"
-echo "ok   uninstalled, data and config kept"
-
+sys '[ -f /var/lib/karvan/karvan.db ] && [ -f /etc/karvan/secret.key ] && [ -f /etc/karvan/config.json ] && [ -d /var/lib/karvan-backups ]' || fail "uninstall removed the data"
+echo "ok   uninstalled, data, config and backups kept"
 step "reinstall reads the same data"
 one_liner /root/reinstall.out
 sys 'grep -q "Found the data" /root/reinstall.out && ! grep -q "Password  " /root/reinstall.out' || fail "reinstall set Karvan up again"
 sys 'systemctl is-active --quiet karvan' || fail "the service is not active after the reinstall"
 signed_in
+data_kept ''
 echo "ok   reinstalled, the old sign-in details still work"
+step "purge"
+if sys 'echo delete | karvan uninstall --purge' >/dev/null 2>&1; then
+	fail "purge went on without the typed words"
+fi
+sys '[ -e /usr/local/bin/karvan ] && [ -f /var/lib/karvan/karvan.db ]' || fail "purge without the typed words removed something"
+sys 'echo delete karvan data | karvan uninstall --purge' >/dev/null 2>&1 || fail "karvan uninstall --purge"
+nothing_installed "purge"
+sys '! [ -e /var/lib/karvan-backups ]' || fail "purge kept the backups"
+echo "ok   purge asked for the words, then removed Karvan, its data, config and backups"
 echo "PASS install test ($VERSION, $ARCH)"

@@ -81,7 +81,7 @@ test-acme:
 	go test -tags acmetest -count=1 -run TestPebble ./internal/certorder/; s=$$?; ./scripts/acmetest/down.sh; exit $$s
 bench:
 	go test -run x -bench . -benchtime 3x ./internal/migration/...
-# Install, uninstall and reinstall in a clean Debian 12 system with systemd
+# Install, update, roll back and remove Karvan in a clean Debian 12 system with systemd
 # (needs Docker). ARCHIVE=<release archive> tests that archive instead of
 # one packed from this tree.
 test-install:
