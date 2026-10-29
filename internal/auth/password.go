@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
+	"testing"
 
 	"golang.org/x/crypto/argon2"
 
@@ -34,6 +35,30 @@ const (
 	passwordAlphabet = "abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789"
 	usernameAlphabet = "abcdefghijkmnpqrstuvwxyz23456789"
 )
+
+// argonParams are the argon2id costs of a new hash.
+type argonParams struct {
+	memoryKiB uint32
+	time      uint32
+	threads   uint8
+}
+
+// defaultArgon is the cost of every hash made outside tests.
+var defaultArgon = argonParams{memoryKiB: argonMemoryKiB, time: argonTime, threads: argonThreads}
+
+// argon is the cost HashPassword uses. Only UseCheapHashesForTests changes it.
+var argon = defaultArgon
+
+// UseCheapHashesForTests makes HashPassword use the smallest argon2id cost,
+// so suites that sign in many times do not spend most of their time hashing.
+// The hashes keep their format and verify the same way. Call it from
+// TestMain, before any test runs. It panics outside a test binary.
+func UseCheapHashesForTests() {
+	if !testing.Testing() {
+		panic("auth: cheap password hashes outside a test")
+	}
+	argon = argonParams{memoryKiB: 8, time: 1, threads: 1}
+}
 
 var (
 	errMalformedHash = errors.New("malformed password hash")
@@ -70,9 +95,10 @@ func HashPassword(pw string) (string, error) {
 	if _, err := rand.Read(salt); err != nil {
 		return "", fmt.Errorf("generate salt: %w", err)
 	}
-	key := argon2.IDKey([]byte(pw), salt, argonTime, argonMemoryKiB, argonThreads, argonKeyLen)
+	p := argon
+	key := argon2.IDKey([]byte(pw), salt, p.time, p.memoryKiB, p.threads, argonKeyLen)
 	return fmt.Sprintf("$argon2id$v=%d$m=%d,t=%d,p=%d$%s$%s",
-		argon2.Version, argonMemoryKiB, argonTime, argonThreads, b64.EncodeToString(salt), b64.EncodeToString(key)), nil
+		argon2.Version, p.memoryKiB, p.time, p.threads, b64.EncodeToString(salt), b64.EncodeToString(key)), nil
 }
 
 // VerifyPassword reports whether pw matches the encoded hash.

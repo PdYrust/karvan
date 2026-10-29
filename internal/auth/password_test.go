@@ -6,6 +6,11 @@ import (
 )
 
 func TestHashAndVerifyPassword(t *testing.T) {
+	// The production cost: what HashPassword uses until a test lowers it.
+	if want := (argonParams{memoryKiB: 65536, time: 3, threads: 2}); defaultArgon != want || startArgon != want {
+		t.Fatalf("production cost = %+v, at start %+v, want %+v", defaultArgon, startArgon, want)
+	}
+	useArgon(t, defaultArgon)
 	h, err := HashPassword("correct horse battery")
 	if err != nil {
 		t.Fatal(err)
