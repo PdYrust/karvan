@@ -1,7 +1,8 @@
 import type { StatusTone } from '../../components/feedback/StatusBadge';
 import type { AcmeMethod, AcmeState } from '../../lib/api/acme';
-import type { RuleRef, ScanResult } from '../../lib/api/certificates';
+import type { ScanResult } from '../../lib/api/certificates';
 import type { Domain, DomainWarning } from '../../lib/api/domains';
+import type { CertWarning } from '../../lib/api/rules';
 
 /** What stops a handshake first, then what needs a look (D50). */
 const order: readonly DomainWarning[] = [
@@ -42,18 +43,6 @@ const day = 24 * 60 * 60 * 1000;
 export function daysLeft(notAfter: string | undefined, now: Date): number | undefined {
   if (!notAfter) return undefined;
   return Math.max(0, Math.ceil((new Date(notAfter).getTime() - now.getTime()) / day));
-}
-
-/** The domains of one rule that the certificate it uses does not cover. */
-export function uncoveredDomains(
-  certificateId: number,
-  rule: Pick<RuleRef, 'kind' | 'id'>,
-  domains: readonly Domain[],
-): string[] {
-  return domains
-    .filter((d) => d.rules.some((r) => r.kind === rule.kind && r.id === rule.id))
-    .filter((d) => !d.certificates.some((c) => c.id === certificateId))
-    .map((d) => d.name);
 }
 
 /** Every place the scan did not read, once, whatever the reason (D51, D59). */
@@ -134,4 +123,24 @@ export function domainStateOf(d: Domain, now: Date): { state: DomainState; tone:
   if (lines.length === 0) return { state: 'active', tone: 'success' };
   if (lines.every((l) => l.word === 'no_certificate')) return { state: 'plain', tone: 'neutral' };
   return { state: 'attention', tone: 'warning' };
+}
+
+export type CertState = 'active' | 'attention' | 'broken';
+
+/** A certificate's problems, worst first, without its end date's, which sits by the date. */
+export function certProblems(warnings: readonly CertWarning[]): CertWarning[] {
+  return sortedWarnings(warnings).filter((w) => w !== 'expires_soon');
+}
+
+/** One word for a certificate: Not serving on a danger, Needs a look on a warning, else Active. */
+export function certStateOf(warnings: readonly CertWarning[]): {
+  state: CertState;
+  tone: StatusTone;
+} {
+  const list = certProblems(warnings);
+  if (list.some((w) => domainWarningTone(w) === 'danger'))
+    return { state: 'broken', tone: 'danger' };
+  return list.length > 0
+    ? { state: 'attention', tone: 'warning' }
+    : { state: 'active', tone: 'success' };
 }

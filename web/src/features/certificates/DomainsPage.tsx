@@ -81,7 +81,7 @@ export function DomainsPage() {
           <DomainsSection domains={load.data.domains} />
         )}
         {load.data.certificates.length === 0 && load.data.domains.length === 0 ? null : (
-          <CertificatesSection certificates={load.data.certificates} domains={load.data.domains} />
+          <CertificatesSection certificates={load.data.certificates} />
         )}
       </div>
     );

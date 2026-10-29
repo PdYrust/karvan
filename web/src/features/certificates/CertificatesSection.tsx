@@ -1,32 +1,38 @@
 import { useKumoToastManager } from '@cloudflare/kumo/components/toast';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { useId, useState } from 'react';
+import { useState } from 'react';
+import { DataTable } from '../../components/data/DataTable';
+import { ListToolbar } from '../../components/data/ListToolbar';
+import { dataMessages } from '../../components/data/messages';
+import { sortChoice } from '../../components/data/sort-choice';
 import { TypeToConfirm } from '../../components/dialogs/TypeToConfirm';
-import { useT } from '../../i18n/locale';
+import { useLocale, useT } from '../../i18n/locale';
 import { certificateKeys, deleteCertificate, type Certificate } from '../../lib/api/certificates';
-import { domainKeys, type Domain } from '../../lib/api/domains';
+import { domainKeys } from '../../lib/api/domains';
 import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
+import { matchesTerm, sortRows, type ListSort } from '../../lib/lists/choices';
 import { useLingering } from '../../lib/motion/use-lingering';
-import { useFormat } from '../../lib/preferences/region';
 import { useNow } from '../overview/use-now';
-import { CertificateCard } from './CertificateCard';
+import { certStateOf } from './cert-view';
+import { CertRowCard, useCertColumns } from './CertRows';
+import { ListFrame } from './ListFrame';
 import { certificatesMessages } from './messages';
 
-/** The stored certificates, one card each, and the typed delete of one no rule uses. */
-export function CertificatesSection({
-  certificates,
-  domains,
-}: {
-  certificates: readonly Certificate[];
-  domains: readonly Domain[];
-}) {
+const states = ['all', 'active', 'attention', 'broken'] as const;
+type StateFilter = (typeof states)[number];
+
+/** The stored certificates as a list like Migrations, and the typed delete of one nothing uses. */
+export function CertificatesSection({ certificates }: { certificates: readonly Certificate[] }) {
   const t = useT(certificatesMessages);
-  const fmt = useFormat();
+  const td = useT(dataMessages);
+  const { locale } = useLocale();
   const now = useNow();
   const errorText = useSubscriptionErrorText();
   const toasts = useKumoToastManager();
   const qc = useQueryClient();
-  const titleId = useId();
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<StateFilter>('all');
+  const [sort, setSort] = useState<ListSort>('name');
   const [asking, setAsking] = useState<Certificate | null>(null);
   // The dialog keeps the name while it fades out.
   const named = useLingering(asking);
@@ -39,32 +45,65 @@ export function CertificatesSection({
       void qc.invalidateQueries({ queryKey: domainKeys.all });
     },
   });
-  return (
-    <section aria-labelledby={titleId} className="flex flex-col gap-3">
-      <h2 id={titleId} className="text-heading font-semibold text-kumo-strong">
-        {t('certsTitle')}
-        <span className="ms-2 font-normal text-kumo-subtle tabular">
-          {fmt.number(certificates.length)}
-        </span>
-      </h2>
-      {certificates.length === 0 ? (
+  const ask = (c: Certificate) => {
+    remove.reset();
+    setAsking(c);
+  };
+  const columns = useCertColumns(now, ask);
+  const is = (c: Certificate, f: StateFilter) =>
+    f === 'all' || certStateOf(c.facts.warnings).state === f;
+  const terms = (c: Certificate) => [c.name, c.certFile, c.keyFile, ...c.facts.domains];
+  const shown = sortRows(
+    certificates.filter((c) => is(c, filter) && matchesTerm(query, terms(c))),
+    sort,
+    { name: (c) => c.name, time: (c) => c.id },
+    locale,
+  );
+  const word = (f: StateFilter) => (f === 'all' ? td('showAll') : t(`state_${f}`));
+  if (certificates.length === 0) {
+    return (
+      <section className="flex flex-col gap-3">
+        <h2 className="text-heading font-semibold text-kumo-strong">{t('certsTitle')}</h2>
         <p className="rounded-lg bg-kumo-tint px-4 py-3 text-kumo-subtle">{t('certsEmpty')}</p>
-      ) : (
-        <div className="flex flex-col gap-4">
-          {certificates.map((c) => (
-            <CertificateCard
-              key={c.id}
-              cert={c}
-              domains={domains}
-              now={now}
-              onDelete={() => {
-                remove.reset();
-                setAsking(c);
-              }}
-            />
-          ))}
-        </div>
-      )}
+      </section>
+    );
+  }
+  return (
+    <>
+      <ListFrame
+        title={t('certsTitle')}
+        total={certificates.length}
+        shown={shown.length}
+        noMatch={t('noCertMatch')}
+        toolbar={
+          <ListToolbar
+            search={{ label: t('searchCerts'), value: query, onChange: setQuery }}
+            choices={[
+              {
+                label: td('filter'),
+                value: filter,
+                all: 'all',
+                options: states.map((f) => ({
+                  value: f,
+                  label: word(f),
+                  text: word(f),
+                  count: certificates.filter((c) => is(c, f)).length,
+                })),
+                onChange: (f) => setFilter(f as StateFilter),
+              },
+              sortChoice(td, sort, setSort, ['name', 'newest']),
+            ]}
+          />
+        }
+      >
+        <DataTable
+          caption={t('certsTitle')}
+          rows={shown}
+          rowKey={(c) => c.id}
+          columns={columns}
+          card={(c) => <CertRowCard cert={c} now={now} onDelete={() => ask(c)} />}
+        />
+      </ListFrame>
       <TypeToConfirm
         open={asking !== null}
         onOpenChange={(open) => {
@@ -79,6 +118,6 @@ export function CertificatesSection({
       >
         {t('deleteCertBody')}
       </TypeToConfirm>
-    </section>
+    </>
   );
 }

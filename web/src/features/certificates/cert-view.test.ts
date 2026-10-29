@@ -4,13 +4,13 @@ import type { ScanResult } from '../../lib/api/certificates';
 import {
   daysLeft,
   domainLines,
+  certStateOf,
   domainStateOf,
   domainWarningTone,
   notScanned,
   renewalOf,
   renewMethod,
   sortedWarnings,
-  uncoveredDomains,
 } from './cert-view';
 
 describe('domain warnings', () => {
@@ -47,46 +47,14 @@ describe('days left on a certificate', () => {
   });
 });
 
-describe('the rule domains a certificate misses', () => {
-  const domains: Domain[] = [
-    {
-      id: 1,
-      name: 'cdn.example.com',
-      certificate: null,
-      certificates: [],
-      pins: [],
-      acme: null,
-      rules: [{ kind: 'panel', id: 2, name: 'old' }],
-      warnings: ['no_certificate'],
-    },
-    {
-      id: 2,
-      name: 'old.example.com',
-      certificate: null,
-      certificates: [{ id: 1, name: 'le' }],
-      pins: [],
-      acme: null,
-      rules: [{ kind: 'panel', id: 2, name: 'old' }],
-      warnings: [],
-    },
-    {
-      id: 3,
-      name: 'go.example.com',
-      certificate: null,
-      certificates: [],
-      pins: [],
-      acme: null,
-      rules: [{ kind: 'redirect', id: 2, name: 'go' }],
-      warnings: [],
-    },
-  ];
-
-  it('are the domains of that rule its certificate does not cover', () => {
-    expect(uncoveredDomains(1, { kind: 'panel', id: 2 }, domains)).toEqual(['cdn.example.com']);
+describe("a certificate's state", () => {
+  it('is Active with no warning, and while it only ends soon', () => {
+    expect(certStateOf([]).state).toBe('active');
+    expect(certStateOf(['expires_soon']).state).toBe('active');
   });
-
-  it('tell a redirect rule from a panel rule with the same id', () => {
-    expect(uncoveredDomains(1, { kind: 'redirect', id: 2 }, domains)).toEqual(['go.example.com']);
+  it('needs a look when it misses a domain, and does not serve on a danger', () => {
+    expect(certStateOf(['domain_mismatch'])).toEqual({ state: 'attention', tone: 'warning' });
+    expect(certStateOf(['domain_mismatch', 'no_key']).state).toBe('broken');
   });
 });
 
