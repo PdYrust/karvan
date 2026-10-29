@@ -123,6 +123,7 @@ func accountRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.
 		"POST /api/v1/account/credentials":     api.RenewLogin,
 		"GET /api/v1/audit":                    api.AuditLog,
 		"GET /api/v1/ports":                    api.Ports,
+		"GET /api/v1/settings/install":         api.InstallSettings,
 	}
 	if address {
 		routes["GET /api/v1/settings/address"] = api.GetAddress

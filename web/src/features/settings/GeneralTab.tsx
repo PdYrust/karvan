@@ -1,9 +1,11 @@
 import { Select } from '@cloudflare/kumo/components/select';
+import { useQuery } from '@tanstack/react-query';
 import { useMemo } from 'react';
 import { SettingRow, SettingsCard } from '../../components/layout/SettingRow';
 import { locales, type Locale } from '../../i18n/core';
 import { useLocale, useT } from '../../i18n/locale';
 import { languageNames } from '../../i18n/shared';
+import { getInstall } from '../../lib/api/install';
 import type { CalendarPref, ThemePref } from '../../lib/preferences/preferences';
 import { useFormat, useRegion } from '../../lib/preferences/region';
 import { useTheme } from '../../lib/preferences/theme';
@@ -20,6 +22,11 @@ export function GeneralTab() {
   const { timeZone, calendarPref, setTimeZone, setCalendarPref } = useRegion();
   const f = useFormat();
   const now = useNow();
+  const install = useQuery({
+    queryKey: ['settings', 'install'],
+    queryFn: getInstall,
+    staleTime: Infinity,
+  });
 
   const languages = Object.fromEntries(locales.map((l) => [l, languageNames[l]]));
   const themes: Record<ThemePref, string> = {
@@ -99,6 +106,23 @@ export function GeneralTab() {
           }
         />
       </SettingsCard>
+      {install.data ? (
+        <SettingsCard title={t('serverTitle')}>
+          <SettingRow
+            title={t('runsAs')}
+            description={install.data.runsAsRoot ? t('runsAsRoot') : t('runsAsOther')}
+            control={
+              install.data.runsAsRoot ? (
+                <bdi dir="ltr" className="font-mono text-sm text-kumo-strong">
+                  root
+                </bdi>
+              ) : (
+                <span className="text-sm text-kumo-strong">{t('otherUser')}</span>
+              )
+            }
+          />
+        </SettingsCard>
+      ) : null}
     </>
   );
 }

@@ -27,6 +27,13 @@ const en = {
   calendarAuto: 'Follow the language',
   calendarPersian: 'Solar Hijri (Jalali)',
   calendarGregory: 'Gregorian',
+  serverTitle: 'Server',
+  runsAs: 'System user',
+  runsAsRoot:
+    "Karvan runs with full system access, so it can stop and start panels, take port 80 for certificates and read the panels' files.",
+  runsAsOther:
+    'Karvan is not running with full system access here. Stopping panels, port 80 and some panel files may not work.',
+  otherUser: 'Another user',
   safeModeTitle: 'Safe Mode',
   safeModeHint:
     'Before a migration writes anything, Karvan backs up the new panel. If the move fails, it is undone.',
@@ -89,6 +96,13 @@ const fa: Messages<Key>['fa'] = {
   calendarAuto: 'مطابق زبان',
   calendarPersian: 'خورشیدی',
   calendarGregory: 'میلادی',
+  serverTitle: 'سرور',
+  runsAs: 'کاربر سیستم',
+  runsAsRoot:
+    'کاروان با دسترسی کامل سیستم اجرا میشود تا بتواند پنل ها را متوقف و اجرا کند، پورت 80 را برای گواهی ها بگیرد و فایل های پنل ها را بخواند.',
+  runsAsOther:
+    'کاروان اینجا با دسترسی کامل سیستم اجرا نمیشود. توقف پنل ها، پورت 80 و برخی فایل های پنل ممکن است کار نکنند.',
+  otherUser: 'کاربر دیگر',
   safeModeTitle: 'حالت امن',
   safeModeHint:
     'پیش از اینکه انتقال چیزی بنویسد، کاروان از پنل جدید پشتیبان میگیرد. اگر انتقال شکست بخورد، برگردانده میشود.',
