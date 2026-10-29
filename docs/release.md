@@ -27,3 +27,10 @@ make release-dry
 It builds `0.5.0-beta-dry` into `dist/` (both archives, `get.sh`, `SHA256SUMS`, both images loaded into the local Docker, nothing pushed), checks the checksums and that a changed byte fails them, checks the attestation subject list (`scripts/release/subjects.sh`), looks for tool names in the unpacked archives, then runs the image check and the install test on the host's architecture. It needs Docker. Attestations need GitHub's OIDC token, so only the release workflow makes them.
 
 `VERSION=<version> scripts/release/build.sh` builds the release files alone; `scripts/release/verify.sh dist` checks them.
+## The workflows
+- `.github/workflows/ci.yml` runs `make check-full` on every push to `main` and every pull request. It can only read the repository.
+- `.github/workflows/release.yml` runs when a `v*` tag is pushed. It builds the release files, runs the install test on the amd64 archive, pushes `ghcr.io/pdyrust/karvan:<version>` (plus `<version>-amd64` and `<version>-arm64`, the two images it joins), attests every file and image, checks the attestations with `gh attestation verify`, and creates the GitHub release with the archives, `get.sh` and `SHA256SUMS`. A tag with a `-`, such as `v0.5.0-beta`, makes a pre-release. The release notes are the tag's section of `CHANGELOG.md` (`## 0.5.0-beta`); without that section the workflow stops before it pushes anything.
+- Run it by hand from the Actions tab (Release, Run workflow) to try it: with `dry_run` on, the default, it builds, tests and attests the files, builds both images without pushing them, and makes no release. The run's summary lists the attested files and digests.
+- `make ci-lint` checks both workflows with actionlint and every shell script with shellcheck, without pushing.
+Every action in the workflows is pinned by its full commit SHA. No secret is stored: the workflows use the token GitHub gives each run.
+After the first release, open the `karvan` package on GitHub (your profile, Packages, Package settings) and check that its visibility is public. A new package can start out private, and then `docker pull` asks for a login.
