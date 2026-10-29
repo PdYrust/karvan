@@ -58,6 +58,8 @@ Measured 2026-10-25 with Lighthouse 13.5.0, CPU multiplier 1 (benchmark index 40
 | Metric | Today | Target | Direction |
 |---|---|---|---|
 
+## Owner decisions
+- Karvan runs as root (owner decision 2026-10-29, Phase 5 Q3). This replaces the non-root `karvan` user of the security baseline, the certificate folder ACLs (D59), `CAP_NET_BIND_SERVICE` and the sudo rule for panel control. File modes stay tight: data dir 0700, `/etc/karvan` 0700, config and key 0600. The systemd unit keeps `NoNewPrivileges`, `PrivateTmp` and `ProtectSystem=full`. The Docker image also runs as root with the Docker socket mounted, which gives the container control of the host.
 ## Exceptions
 | ID | Rule | Path | Reason | Owner | Expires |
 |---|---|---|---|---|---|
