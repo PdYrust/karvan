@@ -15,15 +15,13 @@ const en = {
     "Accept the Let's Encrypt subscriber agreement to get the first certificate.",
   acme_invalid_email: 'Enter one email address, like ops@example.com, or leave it empty.',
   acme_invalid_ip: "Let's Encrypt gives no certificates for IP addresses here. Pick another way.",
-  acme_invalid_wildcard_needs_dns: "A wildcard domain needs the DNS way.",
+  acme_invalid_wildcard_needs_dns: 'A wildcard domain needs the DNS way.',
   acme_busy: "A Let's Encrypt order for this domain is already running. Wait for it, or cancel it.",
   acme_state: "This order isn't waiting for its DNS record anymore. Reload the page.",
   acme_dns_not_found: "The TXT record isn't visible yet. DNS changes can take a few minutes.",
-  acme_port_denied:
-    "Karvan can't use port 80 because it doesn't run as root. Use the DNS way.",
-  acme_port_busy: "Port 80 is used by another program. Use the DNS way.",
-  acme_port_tls:
-    "An HTTPS rule uses port 80. Use the DNS way, or move that rule to another port.",
+  acme_port_denied: "Karvan can't use port 80 because it doesn't run as root. Use the DNS way.",
+  acme_port_busy: 'Port 80 is used by another program. Use the DNS way.',
+  acme_port_tls: 'An HTTPS rule uses port 80. Use the DNS way, or move that rule to another port.',
   acme_rate_limited: "Let's Encrypt is limiting requests for this domain. Try again after {time}.",
   acme_challenge_failed:
     "Let's Encrypt couldn't confirm this domain. Check the domain's DNS and try again.",
@@ -44,15 +42,15 @@ const fa: Messages<AcmeErrorKey>['fa'] = {
   acme_invalid_agreeTos: "برای گرفتن اولین گواهی، توافق نامه مشترکان Let's Encrypt را بپذیرید.",
   acme_invalid_email: 'یک ایمیل مثل ops@example.com وارد کنید یا آن را خالی بگذارید.',
   acme_invalid_ip: "Let's Encrypt اینجا برای IP گواهی نمیدهد. روش دیگری انتخاب کنید.",
-  acme_invalid_wildcard_needs_dns: "دامنه ستاره دار فقط با روش DNS گواهی میگیرد.",
+  acme_invalid_wildcard_needs_dns: 'دامنه ستاره دار فقط با روش DNS گواهی میگیرد.',
   acme_busy: "یک سفارش Let's Encrypt برای این دامنه در حال انجام است. صبر کنید یا آن را لغو کنید.",
   acme_state: 'این سفارش دیگر منتظر رکورد DNS نیست. صفحه را دوباره باز کنید.',
   acme_dns_not_found: 'رکورد TXT هنوز دیده نمیشود. اعمال تغییرات DNS ممکن است چند دقیقه طول بکشد.',
   acme_port_denied:
-    "کاروان نمیتواند از پورت 80 استفاده کند، چون با دسترسی root اجرا نمیشود. از روش DNS استفاده کنید.",
-  acme_port_busy: "پورت 80 در اختیار برنامه دیگری است. از روش DNS استفاده کنید.",
+    'کاروان نمیتواند از پورت 80 استفاده کند، چون با دسترسی root اجرا نمیشود. از روش DNS استفاده کنید.',
+  acme_port_busy: 'پورت 80 در اختیار برنامه دیگری است. از روش DNS استفاده کنید.',
   acme_port_tls:
-    "یک قانون HTTPS از پورت 80 استفاده میکند. از روش DNS استفاده کنید یا آن قانون را به پورت دیگری ببرید.",
+    'یک قانون HTTPS از پورت 80 استفاده میکند. از روش DNS استفاده کنید یا آن قانون را به پورت دیگری ببرید.',
   acme_rate_limited:
     "Let's Encrypt فعلا درخواست های این دامنه را محدود کرده است. بعد از {time} دوباره امتحان کنید.",
   acme_challenge_failed:
