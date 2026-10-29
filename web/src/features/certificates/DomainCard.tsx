@@ -13,7 +13,7 @@ import { Mono, RuleName, useAcmeErrorWords } from './parts';
 
 /**
  * The domain's state as a badge. With problems it opens a small menu like the
- * account menu: the domain, then each problem worst first; a press on one opens
+ * account menu: each problem worst first; a press on one opens
  * the domain's certificate page, where it is fixed. Without, it is only the word.
  */
 function StateBadge({ domain, now }: { domain: Domain; now: Date }) {
@@ -43,9 +43,6 @@ function StateBadge({ domain, now }: { domain: Domain; now: Date }) {
       />
       <DropdownMenu.Content align="start" className="w-72 max-w-[calc(100vw-2rem)]">
         <DropdownMenu.Group>
-          <DropdownMenu.Label>
-            <Mono text={domain.name} />
-          </DropdownMenu.Label>
           {lines.map((l) => (
             <DropdownMenu.Item key={l.key} onClick={() => void navigate(page)}>
               <span className="text-sm whitespace-normal">
