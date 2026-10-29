@@ -123,7 +123,7 @@ func TestWhyNot(t *testing.T) {
 		t.Errorf("no compose file: %v", err)
 	}
 	denied := &recorder{mode: "denied"}
-	_, err := Opener{Mode: ModeAuto, Run: denied.run}.Open(ctx, panelDir(t, "docker-compose.yml"))
+	_, err := Opener{Mode: ModeAuto, Run: denied.run, Socket: filepath.Join(t.TempDir(), "none.sock")}.Open(ctx, panelDir(t, "docker-compose.yml"))
 	if err == nil || !strings.Contains(err.Error(), "permission denied while trying") || strings.Contains(err.Error(), "more") {
 		t.Errorf("denied: %v", err)
 	}

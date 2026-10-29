@@ -2,7 +2,8 @@
 // script, the way that script does: `docker compose -f <dir>/<compose file>
 // -p <folder name> stop|start <app services>`. Only the panel's own
 // containers stop; a database container in the same file keeps running,
-// so a backup can be put back into it.
+// so a backup can be put back into it. Without the Docker CLI it does the
+// same through the Docker socket.
 package panelctl
 
 import (
@@ -21,7 +22,7 @@ import (
 
 // Modes say how Karvan may run Docker.
 const (
-	ModeAuto   = "auto"   // Docker itself, else sudo -n
+	ModeAuto   = "auto"   // the Docker CLI, else the Docker socket, else sudo -n
 	ModeDocker = "docker" // Karvan's user may use Docker itself
 	ModeSudo   = "sudo"   // through sudo -n, for a rule that allows only these commands
 	ModeOff    = "off"    // never stop or start a panel
@@ -57,17 +58,21 @@ type Control struct {
 	Services []string
 	compose  []string // "docker", "compose" or "docker-compose"
 	run      Runner
+	engine   *engine  // set when Karvan uses the Docker socket
+	ids      []string // the containers of Services, with engine
 }
 
 // Opener finds the control for a panel folder.
 type Opener struct {
-	Mode string
-	Run  Runner // nil: exec.CommandContext, with sudo -n in ModeSudo
+	Mode   string
+	Run    Runner // nil: exec.CommandContext, with sudo -n in ModeSudo
+	Socket string // the Docker socket for ModeAuto; empty: DefaultSocket
 }
 
 // Open reads the compose file in dir (the folder of the panel's ENV file),
 // finds its panel services and checks Karvan may control them now. In
-// ModeAuto it tries Docker itself first, then sudo -n.
+// ModeAuto it tries the Docker CLI first, then the Docker socket, then
+// sudo -n.
 func (o Opener) Open(ctx context.Context, dir string) (*Control, error) {
 	switch o.Mode {
 	case ModeOff:
@@ -76,6 +81,9 @@ func (o Opener) Open(ctx context.Context, dir string) (*Control, error) {
 		c, err := Opener{Mode: ModeDocker, Run: o.Run}.Open(ctx, dir)
 		if err == nil || errors.Is(err, ErrNoCompose) || errors.Is(err, ErrNoServices) {
 			return c, err
+		}
+		if c, serr := o.openSocket(ctx, dir); serr == nil || errors.Is(serr, ErrNoServices) {
+			return c, serr
 		}
 		if c, serr := (Opener{Mode: ModeSudo, Run: o.Run}).Open(ctx, dir); serr == nil {
 			return c, nil
@@ -93,13 +101,7 @@ func (o Opener) Open(ctx context.Context, dir string) (*Control, error) {
 }
 
 func (o Opener) open(ctx context.Context, dir string) (*Control, error) {
-	c := &Control{Project: filepath.Base(dir), run: o.runner()}
-	for _, n := range composeNames {
-		if f := filepath.Join(dir, n); fileExists(f) {
-			c.File = f
-			break
-		}
-	}
+	c := &Control{Project: filepath.Base(dir), File: composeFile(dir), run: o.runner()}
 	if c.File == "" {
 		return nil, ErrNoCompose
 	}
@@ -135,6 +137,17 @@ func (o Opener) runner() Runner {
 	}
 }
 
+// composeFile is the compose file in dir that Docker Compose would read,
+// or "".
+func composeFile(dir string) string {
+	for _, n := range composeNames {
+		if f := filepath.Join(dir, n); fileExists(f) {
+			return f
+		}
+	}
+	return ""
+}
+
 func fileExists(p string) bool {
 	info, err := os.Stat(p)
 	return err == nil && info.Mode().IsRegular()
@@ -152,9 +165,7 @@ func panelServices(config []byte) ([]string, error) {
 	}
 	var out []string
 	for name, s := range c.Services {
-		if slices.ContainsFunc(panelImages, func(img string) bool {
-			return s.Image == img || strings.HasPrefix(s.Image, img+":") || strings.HasPrefix(s.Image, img+"@")
-		}) {
+		if isPanelImage(s.Image) {
 			out = append(out, name)
 		}
 	}
@@ -163,6 +174,14 @@ func panelServices(config []byte) ([]string, error) {
 	}
 	slices.Sort(out)
 	return out, nil
+}
+
+// isPanelImage reports whether image is a panel image, at any tag or digest.
+func isPanelImage(image string) bool {
+	image = strings.TrimPrefix(image, "docker.io/")
+	return slices.ContainsFunc(panelImages, func(img string) bool {
+		return image == img || strings.HasPrefix(image, img+":") || strings.HasPrefix(image, img+"@")
+	})
 }
 
 // Stop stops the panel's services and leaves the rest running.
@@ -174,6 +193,9 @@ func (c *Control) Start(ctx context.Context) error { return c.op(ctx, "start") }
 func (c *Control) op(ctx context.Context, verb string) error {
 	ctx, cancel := context.WithTimeout(ctx, opTimeout)
 	defer cancel()
+	if c.engine != nil {
+		return c.engine.each(ctx, c.ids, verb)
+	}
 	_, err := c.output(ctx, append([]string{verb}, c.Services...)...)
 	return err
 }
