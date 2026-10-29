@@ -32,7 +32,7 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/run"
 	"github.com/PdYrust/karvan/internal/secret"
 	"github.com/PdYrust/karvan/internal/settings"
-	"github.com/PdYrust/karvan/internal/store"
+	"github.com/PdYrust/karvan/internal/store/storetest"
 )
 
 const (
@@ -119,7 +119,7 @@ func newEnv(t *testing.T) *env {
 func newEnvDeps(t *testing.T) (*env, httpapi.Deps) {
 	t.Helper()
 	dir := t.TempDir()
-	db, err := store.Open(context.Background(), filepath.Join(dir, "data"))
+	db, err := storetest.Open(context.Background(), filepath.Join(dir, "data"))
 	if err != nil {
 		t.Fatal(err)
 	}

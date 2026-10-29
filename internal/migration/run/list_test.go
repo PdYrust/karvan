@@ -11,12 +11,12 @@ import (
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/paneldb/paneldbtest"
 	"github.com/PdYrust/karvan/internal/panel/pasarguarddb"
-	"github.com/PdYrust/karvan/internal/store"
+	"github.com/PdYrust/karvan/internal/store/storetest"
 )
 
 func listService(t *testing.T) *Service {
 	t.Helper()
-	db, err := store.Open(context.Background(), t.TempDir())
+	db, err := storetest.Open(context.Background(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

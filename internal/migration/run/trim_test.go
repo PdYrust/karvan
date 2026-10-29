@@ -5,13 +5,13 @@ import (
 	"testing"
 	"time"
 
-	"github.com/PdYrust/karvan/internal/store"
+	"github.com/PdYrust/karvan/internal/store/storetest"
 )
 
 // trimService holds one job per case, each with two events, at a fixed now.
 func trimService(t *testing.T, now time.Time) *Service {
 	t.Helper()
-	db, err := store.Open(context.Background(), t.TempDir())
+	db, err := storetest.Open(context.Background(), t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}
