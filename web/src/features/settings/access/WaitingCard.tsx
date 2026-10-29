@@ -16,6 +16,7 @@ import type { WaitingLink } from './waiting';
 export function WaitingCard({
   pending,
   link,
+  signInNote,
   secondsLeft,
   confirming,
   confirmError,
@@ -23,6 +24,8 @@ export function WaitingCard({
 }: {
   pending: PendingAddress;
   link: WaitingLink;
+  /** Why this session stays behind, when it is not a new path over plain HTTP. */
+  signInNote?: string;
   secondsLeft: number;
   confirming: boolean;
   confirmError: string | null;
@@ -70,7 +73,9 @@ export function WaitingCard({
           {link.url ? (
             <>
               <CopyValue label={t('newAddress')} value={link.url} />
-              {link.signInFirst ? <InlineAlert tone="info">{t('signInThere')}</InlineAlert> : null}
+              {link.signInFirst ? (
+                <InlineAlert tone="info">{signInNote ?? t('signInThere')}</InlineAlert>
+              ) : null}
               <div className="flex justify-end">
                 <LinkButton
                   href={link.url}

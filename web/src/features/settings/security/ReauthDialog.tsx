@@ -30,6 +30,7 @@ export function ReauthDialog({
   ready = true,
   pending,
   error,
+  describe,
   onSubmit,
   children,
 }: {
@@ -46,6 +47,8 @@ export function ReauthDialog({
   ready?: boolean;
   pending: boolean;
   error: unknown;
+  /** The sentence for a failed change, when the change has codes of its own. */
+  describe?: (err: unknown) => string;
   onSubmit: (r: Reauth) => void;
   /** Fields of the change itself, above the password. */
   children?: ReactNode;
@@ -78,7 +81,7 @@ export function ReauthDialog({
     error instanceof ApiError && error.code === 'invalid_credentials'
       ? t('wrongPassword')
       : error
-        ? errorText(error)
+        ? (describe ?? errorText)(error)
         : null;
 
   return (

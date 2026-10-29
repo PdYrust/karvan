@@ -22,6 +22,7 @@ export function SettingsPage() {
               { to: '/settings', label: t('tabGeneral'), end: true },
               { to: '/settings/safe-mode', label: t('tabSafeMode') },
               { to: '/settings/access', label: t('tabAccess') },
+              { to: '/settings/https', label: t('tabHttps') },
               { to: '/settings/two-step', label: t('tabTwoStep') },
               { to: '/settings/sessions', label: t('tabSessions') },
               { to: '/settings/audit-log', label: t('tabAudit') },

@@ -12,28 +12,17 @@ import { getSession } from '../lib/api/session';
 import { RegionProvider } from '../lib/preferences/region';
 import { ThemeProvider } from '../lib/preferences/theme';
 import { AppShell } from './shell/AppShell';
+import {
+  SettingsPage,
+  GeneralTab,
+  SafeModeTab,
+  AccessTab,
+  HttpsTab,
+  TwoStepTab,
+  SessionsTab,
+  AuditTab,
+} from './settings-pages';
 
-const SettingsPage = lazy(() =>
-  import('../features/settings/SettingsPage').then((m) => ({ default: m.SettingsPage })),
-);
-const GeneralTab = lazy(() =>
-  import('../features/settings/GeneralTab').then((m) => ({ default: m.GeneralTab })),
-);
-const SafeModeTab = lazy(() =>
-  import('../features/settings/SafeModeTab').then((m) => ({ default: m.SafeModeTab })),
-);
-const AccessTab = lazy(() =>
-  import('../features/settings/access/AccessTab').then((m) => ({ default: m.AccessTab })),
-);
-const TwoStepTab = lazy(() =>
-  import('../features/settings/two-step/TwoStepTab').then((m) => ({ default: m.TwoStepTab })),
-);
-const SessionsTab = lazy(() =>
-  import('../features/settings/sessions/SessionsTab').then((m) => ({ default: m.SessionsTab })),
-);
-const AuditTab = lazy(() =>
-  import('../features/settings/audit/AuditTab').then((m) => ({ default: m.AuditTab })),
-);
 const NotFoundPage = lazy(() =>
   import('../features/not-found/NotFoundPage').then((m) => ({ default: m.NotFoundPage })),
 );
@@ -230,6 +219,7 @@ export function App() {
                         <Route index element={<GeneralTab />} />
                         <Route path="safe-mode" element={<SafeModeTab />} />
                         <Route path="access" element={<AccessTab />} />
+                        <Route path="https" element={<HttpsTab />} />
                         <Route path="two-step" element={<TwoStepTab />} />
                         <Route path="sessions" element={<SessionsTab />} />
                         <Route path="audit-log" element={<AuditTab />} />
