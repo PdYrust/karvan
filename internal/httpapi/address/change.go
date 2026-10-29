@@ -29,13 +29,7 @@ func (s *Server) Start(c Change) (Pending, error) {
 	if s.closing || s.ports == nil {
 		return Pending{}, errClosed
 	}
-	next := s.current.Site
-	if c.Port > 0 {
-		next.Port = c.Port
-	}
-	if c.TLS != nil {
-		next.TLS = c.TLS.Normal()
-	}
+	next := s.current.next(c)
 	if !c.NewPath && c.Port >= 0 && next == s.current.Site {
 		return Pending{}, ErrNoChange
 	}
@@ -53,7 +47,7 @@ func (s *Server) Start(c Change) (Pending, error) {
 	switch {
 	case c.Port < 0:
 		next.Port, ln, err = s.randomPort()
-	case next.Port != s.current.Port:
+	case !next.TLS.Shared && s.ports[next.Port] == nil:
 		if ln, err = s.listen(next.Port); err != nil {
 			err = fmt.Errorf("%w: %w", ErrPortUnavailable, err)
 		}
@@ -64,8 +58,23 @@ func (s *Server) Start(c Change) (Pending, error) {
 	return s.serveNew(next, ln)
 }
 
-// serveNew serves next: on ln when the port changes, else next to the
-// current path on the current port. Callers hold mu.
+// next is s with the port and the mode of c; the path is changed later.
+func (s Site) next(c Change) Site {
+	if c.Port > 0 {
+		s.Port = c.Port
+	}
+	switch {
+	case c.TLS != nil:
+		s.TLS = c.TLS.Normal()
+	case c.Port != 0:
+		s.TLS.Shared = false // a new port is the panel's own
+	}
+	return s
+}
+
+// serveNew serves next: through the bridge when it is shared, on ln when
+// the port changes, else next to the current path on the current port.
+// Callers hold mu.
 func (s *Server) serveNew(next Site, ln net.Listener) (Pending, error) {
 	h := s.current.h
 	if next.BasePath != s.current.BasePath {
@@ -78,13 +87,16 @@ func (s *Server) serveNew(next Site, ln net.Listener) (Pending, error) {
 		}
 	}
 	p := &pending{site: site{Site: next, h: h}, expires: time.Now().Add(s.ttl())}
-	if ln != nil {
+	switch {
+	case next.TLS.Shared:
+	case ln != nil:
 		s.start(next.Port, ln, p.site)
-	} else {
+	default:
 		s.ports[next.Port].serve(s.current, p.site)
 	}
 	p.timer = time.AfterFunc(s.ttl(), func() { s.expire(p) })
 	s.pending = p
+	s.share()
 	s.log().Info("serving a new address until it is confirmed", "port", next.Port, "tls", next.TLS.On(), "minutes", int(s.ttl().Minutes()))
 	return Pending{Site: next, Expires: p.expires}, nil
 }
@@ -118,11 +130,14 @@ func (s *Server) Confirm(ctx context.Context, via Site) (Site, error) {
 	p.timer.Stop()
 	old := s.current
 	s.current, s.pending = p.site, nil
-	if old.Port != p.Port {
+	switch {
+	case old.TLS.Shared:
+	case p.TLS.Shared || old.Port != p.Port:
 		s.drop(old.Port)
-	} else {
+	default:
 		s.ports[p.Port].serve(p.site)
 	}
+	s.share()
 	s.log().Info("the new address is confirmed", "port", p.Port, "tls", p.TLS.On())
 	return old.Site, nil
 }

@@ -23,6 +23,7 @@ type fixture struct {
 	srv    *Server
 	port   int
 	saved  []Site
+	shared []Shared // the last sites handed to the bridge
 	mu     sync.Mutex
 	closed atomic.Int32
 	done   chan error
@@ -49,7 +50,12 @@ func newFixture(t *testing.T, ttl time.Duration) *fixture {
 			f.saved = append(f.saved, s)
 			return nil
 		},
-		HTTP:       func(h http.Handler) *http.Server { return &http.Server{Handler: h, ReadHeaderTimeout: time.Second} },
+		HTTP: func(h http.Handler) *http.Server { return &http.Server{Handler: h, ReadHeaderTimeout: time.Second} },
+		Share: func(sites []Shared) {
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			f.shared = sites
+		},
 		OnShutdown: func() { f.closed.Add(1) },
 		Log:        slog.New(slog.DiscardHandler),
 	}

@@ -61,6 +61,14 @@ type Change struct {
 // back to plain HTTP does not lock a browser out.
 const hsts = "max-age=86400"
 
+// Shared is an address on a bridge HTTPS port (settings.TLS.Shared): the
+// bridge listens there and hands Handler the requests for the domain
+// under the hidden path.
+type Shared struct {
+	Site
+	Handler http.Handler
+}
+
 // Pending is a new address waiting for its confirmation.
 type Pending struct {
 	Site
@@ -84,6 +92,9 @@ type Server struct {
 	HTTP func(h http.Handler) *http.Server
 	// Certificate is the certificate of an HTTPS address.
 	Certificate func(ctx context.Context, t settings.TLS) (*tls.Certificate, error)
+	// Share hands the addresses served on a bridge HTTPS port to the
+	// bridge (D12, ADR 0011), each time they change; nil means none.
+	Share func(sites []Shared)
 	// OnShutdown runs once when the final shutdown starts.
 	OnShutdown func()
 	Log        *slog.Logger
@@ -134,29 +145,61 @@ func (l *listener) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	secure := r.TLS != nil
 	for _, s := range *l.sites.Load() {
 		if s.TLS.On() == secure && middleware.UnderBase(r.URL.Path, s.BasePath) {
-			if secure && s.TLS.Mode == settings.TLSDomain {
-				w.Header().Set("Strict-Transport-Security", hsts)
-			}
-			s.h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, s.Site)))
+			s.ServeHTTP(w, r)
 			return
 		}
 	}
 	middleware.NotFound(w, r)
 }
 
+// ServeHTTP serves a request that came through s.
+func (s site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if r.TLS != nil && s.TLS.Mode == settings.TLSDomain {
+		w.Header().Set("Strict-Transport-Security", hsts)
+	}
+	s.h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, s.Site)))
+}
+
+// share hands the shared addresses to the bridge. Callers hold mu.
+func (s *Server) share() {
+	if s.Share == nil {
+		return
+	}
+	var out []Shared
+	for _, st := range []*site{&s.current, s.pendingSite()} {
+		if st != nil && st.TLS.Shared {
+			out = append(out, Shared{Site: st.Site, Handler: *st})
+		}
+	}
+	s.Share(out)
+}
+
+func (s *Server) pendingSite() *site {
+	if s.pending == nil {
+		return nil
+	}
+	return &s.pending.site
+}
+
 func (l *listener) serve(sites ...site) { l.sites.Store(&sites) }
 
 // Serve serves current on ln until ctx ends or that listener fails, then
-// shuts every listener down.
+// shuts every listener down. A shared current address has no listener of
+// its own: ln is nil and the bridge serves it.
 func (s *Server) Serve(ctx context.Context, current Site, ln net.Listener) error {
 	h, err := s.Handler(current.BasePath)
 	if err != nil {
-		_ = ln.Close()
+		if ln != nil {
+			_ = ln.Close()
+		}
 		return err
 	}
 	s.mu.Lock()
 	s.current, s.ports, s.fatal = site{Site: current, h: h}, map[int]*listener{}, make(chan error, 1)
-	s.start(current.Port, ln, s.current)
+	if ln != nil {
+		s.start(current.Port, ln, s.current)
+	}
+	s.share()
 	s.mu.Unlock()
 
 	select {
@@ -215,6 +258,9 @@ func (s *Server) shutdown() error {
 		ls = append(ls, l)
 	}
 	clear(s.ports)
+	if s.Share != nil {
+		s.Share(nil)
+	}
 	s.mu.Unlock()
 
 	if s.OnShutdown != nil {
@@ -260,11 +306,16 @@ func (s *Server) dropPending() {
 	}
 	s.pending = nil
 	p.timer.Stop()
-	if p.Port != s.current.Port {
+	switch {
+	case p.TLS.Shared:
+	case p.Port == s.current.Port && !s.current.TLS.Shared:
+		if l := s.ports[p.Port]; l != nil {
+			l.serve(s.current)
+		}
+	default:
 		s.drop(p.Port)
-	} else if l := s.ports[s.current.Port]; l != nil {
-		l.serve(s.current)
 	}
+	s.share()
 }
 
 func (s *Server) log() *slog.Logger {
