@@ -6,12 +6,15 @@ export function SwitchRow({
   label,
   hint,
   checked,
+  disabled,
   onChange,
 }: {
   id: string;
   label: string;
   hint: string;
   checked: boolean;
+  /** Locked, as when what the switch needs is missing. */
+  disabled?: boolean;
   onChange: (on: boolean) => void;
 }) {
   return (
@@ -28,6 +31,7 @@ export function SwitchRow({
         aria-labelledby={`${id}-label`}
         aria-describedby={`${id}-hint`}
         checked={checked}
+        disabled={disabled}
         onCheckedChange={onChange}
         // The switch is 18 px high; the hit area reaches 44 px on touch screens.
         className="relative shrink-0 pointer-coarse:before:absolute pointer-coarse:before:-inset-x-[9px] pointer-coarse:before:-inset-y-[13px] pointer-coarse:before:content-['']"

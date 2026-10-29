@@ -41,17 +41,26 @@ describe('siteKeywords', () => {
     oldPath: 'sub',
     domains: ['sub.example.net'],
     port: 2096,
-    hasKey: true,
+    mode: 'manual',
+    batches: [],
     lazy: false,
     plainHttpOk: false,
     https: false,
+    certificate: null,
+    warnings: [],
   } as const;
   const sites: CommandGroup[] = [
     {
       id: 'sites',
       label: 'Old links',
       searchOnly: true,
-      items: [item('site:3', site.name, siteKeywords({ ...site, domains: [...site.domains] }))],
+      items: [
+        item(
+          'site:3',
+          site.name,
+          siteKeywords({ ...site, domains: [...site.domains], batches: [], warnings: [] }),
+        ),
+      ],
     },
   ];
   it('finds a site by its name, old address, domain, port and old panel', () => {

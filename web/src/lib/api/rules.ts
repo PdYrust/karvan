@@ -27,10 +27,25 @@ export interface SiteStats {
   closed: number;
 }
 
-/** A site that keeps an old panel's subscription links working (Old links). */
+/** A batch a panel rule serves (phase 4.1 D25). */
+export interface RuleBatch {
+  id: number;
+  name: string;
+  state: 'active' | 'inactive' | 'deleted';
+}
+/** The certificate a rule serves a handshake without a known name with (D63); read only. */
+export interface RuleCertificate {
+  id: number;
+  name: string;
+  facts: CertFacts;
+}
+/** A panel rule: an old panel's subscription links answered from the new panel. */
 export interface LinkSite {
   id: number;
   name: string;
+  /** Made from batches, or typed by hand; fixed once saved. */
+  mode: 'manual' | 'batches';
+  batches: RuleBatch[];
   /** The destination panel. */
   panelId: number;
   sourceKind: PanelKind;
@@ -47,6 +62,9 @@ export interface LinkSite {
   https: boolean;
   /** Only with HTTPS. */
   cert?: CertFacts;
+  certificate: RuleCertificate | null;
+  /** Its domains' warnings, and certificate_not_adopted (api-resources.md 5.0c). */
+  warnings: string[];
   /** Missing when the destination did not answer. */
   stats?: SiteStats;
 }
@@ -70,10 +88,23 @@ export function getLinkSites(): Promise<LinkSites> {
  * A site as sent. Without `https`, a new rule answers over HTTPS when every domain has a certificate, and a
  * change keeps what it was.
  */
-export type SiteInput = Omit<LinkSite, 'id' | 'cert' | 'stats' | 'domains' | 'https'> & {
+export interface SiteInput {
+  name: string;
+  mode: LinkSite['mode'];
+  /** A rule of batches takes the panel, the old panel and its pin from them (5.0a). */
+  batchIds?: number[];
+  panelId?: number;
+  sourceKind?: PanelKind;
+  sourceUrl?: string;
+  sourceIp?: string;
+  sourcePin?: string;
+  oldPath?: string;
   domains: string[];
+  port: number;
+  lazy: boolean;
+  plainHttpOk: boolean;
   https?: boolean;
-};
+}
 
 /** Adds a site (no id) or replaces one; 400 site_invalid names the field in `detail.field`. */
 export function saveSite(input: SiteInput, id?: number): Promise<LinkSite> {
@@ -86,6 +117,50 @@ export function deleteSite(id: number): Promise<void> {
   return api('DELETE', `legacy-sites/${String(id)}`);
 }
 
+/** A rule that answers matching old links with a 302 to a fixed address (section 11). */
+export interface Redirect {
+  id: number;
+  name: string;
+  domains: string[] | null;
+  port: number;
+  /** With one leading slash. */
+  fromPath: string;
+  match: 'exact' | 'prefix';
+  toUrl: string;
+  https: boolean;
+  certificate: RuleCertificate | null;
+  warnings: string[];
+}
+export type RedirectInput = Omit<
+  Redirect,
+  'id' | 'domains' | 'https' | 'certificate' | 'warnings'
+> & {
+  domains: string[];
+  https?: boolean;
+};
+export const redirectKeys = {
+  all: ['link-redirects'] as const,
+};
+export function getRedirects(): Promise<{ redirects: Redirect[] }> {
+  return api('GET', 'link-redirects');
+}
+/** Adds a redirect (no id) or replaces one; 400 redirect_invalid names the field. */
+export function saveRedirect(input: RedirectInput, id?: number): Promise<Redirect> {
+  return id
+    ? api('PATCH', `link-redirects/${String(id)}`, input)
+    : api('POST', 'link-redirects', input);
+}
+export function deleteRedirect(id: number): Promise<void> {
+  return api('DELETE', `link-redirects/${String(id)}`);
+}
+/** Where a rule is changed: a panel rule by its id, a redirect under its own path. */
+export function rulePath(r: { kind: 'panel' | 'redirect'; id: number }): string {
+  return r.kind === 'redirect' ? `/rules/redirects/${String(r.id)}` : `/rules/${String(r.id)}`;
+}
+/** A new rule from a batch, as a finished migration offers it. */
+export function newBatchRulePath(batchId: number): string {
+  return `/rules/new?batch=${String(batchId)}`;
+}
 /** A token list checked in the background; `checked` of `found` are done. */
 export interface UploadProgress {
   state: 'none' | 'running' | 'done' | 'stopped';

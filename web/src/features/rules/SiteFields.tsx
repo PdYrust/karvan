@@ -1,19 +1,18 @@
-import { Select } from '@cloudflare/kumo/components/select';
-import { FormField } from '../../components/form/FormField';
+import { Radio } from '@cloudflare/kumo/components/radio';
 import { panelNames } from '../../components/panels/PanelLogo';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
 import { latinDigits } from '../../lib/format/number';
 import type { PanelKind } from '../../lib/api/panels';
 import { siteFormMessages } from './form-messages';
-import type { SiteField, SiteValues } from './site-form';
+import type { RuleField, RuleValues } from './rule-form';
 import { TextField } from './TextField';
 
 export interface FieldsProps {
-  values: SiteValues;
-  set: (patch: Partial<SiteValues>) => void;
+  values: RuleValues;
+  set: (patch: Partial<RuleValues>) => void;
   /** The sentence of the field the server refused. */
-  errorOf: (f: SiteField) => string | undefined;
+  errorOf: (f: RuleField) => string | undefined;
 }
 
 function Legend({ title, hint }: { title: string; hint?: string }) {
@@ -31,16 +30,16 @@ export function OldPanelFields({ values, set, errorOf }: FieldsProps) {
   return (
     <fieldset className="flex flex-col gap-5">
       <Legend title={t('oldTitle')} hint={t('oldHint')} />
-      <FormField id="site-kind" label={t('kindLabel')}>
-        <Select
-          id="site-kind"
-          aria-labelledby="site-kind-label"
-          className="h-10 w-full sm:w-64 pointer-coarse:h-9"
-          value={values.sourceKind}
-          onValueChange={(v) => v && set({ sourceKind: v as PanelKind })}
-          items={panelNames}
-        />
-      </FormField>
+      {/* Two kinds: a radio pair reads faster than a menu. */}
+      <Radio.Group
+        legend={t('kindLabel')}
+        value={values.sourceKind}
+        onValueChange={(sourceKind: PanelKind) => set({ sourceKind })}
+      >
+        {(['marzban', 'pasarguard'] as const).map((k) => (
+          <Radio.Item key={k} value={k} label={panelNames[k]} />
+        ))}
+      </Radio.Group>
       <TextField
         id="site-url"
         label={t('urlLabel')}
@@ -75,13 +74,17 @@ export function OldPanelFields({ values, set, errorOf }: FieldsProps) {
   );
 }
 
-/** What the site answers: the old path, its domains and its port. */
-export function AnswerFields({ values, set, errorOf }: FieldsProps) {
+/** The old path (unless the batches know it) and the port the rule answers on. */
+export function AnswerFields({
+  values,
+  set,
+  errorOf,
+  path = true,
+}: FieldsProps & { path?: boolean }) {
   const t = useT(siteFormMessages);
   return (
-    <fieldset className="flex flex-col gap-5">
-      <Legend title={t('answerTitle')} />
-      <div className="grid gap-5 sm:grid-cols-[1fr_10rem]">
+    <div className="grid gap-5 sm:grid-cols-[1fr_10rem]">
+      {path ? (
         <TextField
           id="site-path"
           label={t('pathLabel')}
@@ -91,26 +94,18 @@ export function AnswerFields({ values, set, errorOf }: FieldsProps) {
           onChange={(oldPath) => set({ oldPath })}
           machine
         />
-        <TextField
-          id="site-port"
-          label={t('portLabel')}
-          error={errorOf('port')}
-          value={values.port}
-          onChange={(port) => set({ port: latinDigits(port).replace(/\D/g, '') })}
-          machine
-          inputMode="numeric"
-        />
-      </div>
+      ) : (
+        <span aria-hidden="true" className="hidden sm:block" />
+      )}
       <TextField
-        id="site-domains"
-        label={t('domainsLabel')}
-        hint={<CodeText text={t('domainsHint')} />}
-        error={errorOf('domains')}
-        value={values.domains}
-        onChange={(domains) => set({ domains })}
+        id="site-port"
+        label={t('portLabel')}
+        error={errorOf('port')}
+        value={values.port}
+        onChange={(port) => set({ port: latinDigits(port).replace(/\D/g, '') })}
         machine
-        rows={3}
+        inputMode="numeric"
       />
-    </fieldset>
+    </div>
   );
 }

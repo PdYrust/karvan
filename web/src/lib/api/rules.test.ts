@@ -1,10 +1,15 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  deleteRedirect,
   getLinkSites,
+  getRedirects,
   getUpload,
+  newBatchRulePath,
   newSitePath,
   originOf,
   pendingOf,
+  rulePath,
+  saveRedirect,
   sitePrefill,
   uploadTokens,
 } from './rules';
@@ -18,6 +23,41 @@ describe('old link sites', () => {
     vi.stubGlobal('fetch', f);
     await expect(getLinkSites()).resolves.toEqual(body);
     expect((f.mock.calls.at(-1) as unknown as [string])[0]).toMatch(/api\/v1\/legacy-sites$/);
+  });
+});
+
+describe('redirect rules', () => {
+  it('are read, added, changed and deleted at their own route', async () => {
+    const f = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ redirects: [] }))));
+    vi.stubGlobal('fetch', f);
+    await getRedirects();
+    const input = {
+      name: 'r',
+      domains: [],
+      port: 80,
+      fromPath: '/a',
+      match: 'exact' as const,
+      toUrl: 'https://n',
+    };
+    await saveRedirect(input);
+    await saveRedirect(input, 4);
+    f.mockResolvedValueOnce(new Response(null, { status: 204 }));
+    await deleteRedirect(4);
+    const calls = (f.mock.calls as unknown as [string, RequestInit][]).map(
+      ([url, init]) => `${init.method ?? 'GET'} ${url.replace(/.*api\/v1\//, '')}`,
+    );
+    expect(calls).toEqual([
+      'GET link-redirects',
+      'POST link-redirects',
+      'PATCH link-redirects/4',
+      'DELETE link-redirects/4',
+    ]);
+  });
+
+  it('are changed under their own path, panel rules under theirs', () => {
+    expect(rulePath({ kind: 'redirect', id: 4 })).toBe('/rules/redirects/4');
+    expect(rulePath({ kind: 'panel', id: 4 })).toBe('/rules/4');
+    expect(newBatchRulePath(12)).toBe('/rules/new?batch=12');
   });
 });
 

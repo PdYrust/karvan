@@ -117,8 +117,8 @@ const CertificateFormPage = lazy(() =>
 const RulesPage = lazy(() =>
   import('../features/rules/RulesPage').then((m) => ({ default: m.RulesPage })),
 );
-const SiteFormPage = lazy(() =>
-  import('../features/rules/SiteFormPage').then((m) => ({ default: m.SiteFormPage })),
+const RuleFormPage = lazy(() =>
+  import('../features/rules/RuleFormPage').then((m) => ({ default: m.RuleFormPage })),
 );
 const LivePage = lazy(() =>
   import('../features/live/LivePage').then((m) => ({ default: m.LivePage })),
@@ -221,8 +221,9 @@ export function App() {
                       <Route path="domains/:id/certificate" element={<DomainFormPage />} />
                       <Route path="domains/certificates/:id" element={<CertificateFormPage />} />
                       <Route path="rules" element={<RulesPage />} />
-                      <Route path="rules/new" element={<SiteFormPage />} />
-                      <Route path="rules/:id" element={<SiteFormPage />} />
+                      <Route path="rules/new" element={<RuleFormPage />} />
+                      <Route path="rules/:id" element={<RuleFormPage />} />
+                      <Route path="rules/redirects/:id" element={<RuleFormPage redirect />} />
                       <Route path="panels" element={<PanelsPage />} />
                       <Route path="panels/:id" element={<PanelPage />} />
                       <Route path="settings" element={<SettingsPage />}>
