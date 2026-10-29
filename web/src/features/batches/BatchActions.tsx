@@ -64,8 +64,14 @@ export function useBatchActions(batch: Batch) {
     onSuccess: () => {
       setDeleting(false);
       toasts.add({ title: t('deleted') });
-      qc.removeQueries({ queryKey: batchKeys.batch(batch.id) });
-      refresh();
+      // The page still shows the deleted batch until it leaves, so its own
+      // queries are left alone: read again, they would only answer 404.
+      const own = batchKeys.batch(batch.id);
+      void qc.invalidateQueries({
+        queryKey: batchKeys.all,
+        predicate: (q) => !own.every((part, i) => q.queryKey[i] === part),
+      });
+      void qc.invalidateQueries({ queryKey: migrationKeys.all });
       void navigate('/batches');
     },
   });
