@@ -10,11 +10,14 @@ import (
 	"encoding/hex"
 	"io"
 	"log/slog"
+	"math/rand/v2"
 	"net"
 	"net/http"
+	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
+	"strings"
 	"sync"
 	"testing"
 	"time"
@@ -232,14 +235,34 @@ func (e *orderEnv) int(q string, args ...any) int64 {
 	return n
 }
 
+// freePort is a port free on every address that the bridge opens later.
+// It comes from below the kernel's ephemeral range: a port the kernel
+// handed out for :0 goes back to that range when closed, and the next
+// outgoing connection (to the fake CA, or in another package) can take it
+// as its source port before the bridge binds it.
 func freePort(t *testing.T) int {
 	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
+	low, high := 10000, ephemeralStart()
+	for range 200 {
+		p := low + rand.IntN(high-low)
+		if ln, err := net.Listen("tcp", ":"+strconv.Itoa(p)); err == nil {
+			_ = ln.Close()
+			return p
+		}
 	}
-	defer ln.Close()
-	return ln.Addr().(*net.TCPAddr).Port
+	t.Fatal("no free port below the ephemeral range")
+	return 0
+}
+
+// ephemeralStart is the first port of the kernel's ephemeral range.
+func ephemeralStart() int {
+	b, err := os.ReadFile("/proc/sys/net/ipv4/ip_local_port_range")
+	if f := strings.Fields(string(b)); err == nil && len(f) == 2 {
+		if n, err := strconv.Atoi(f[0]); err == nil && n > 10100 {
+			return n
+		}
+	}
+	return 32768
 }
 
 // handshake is the leaf the bridge serves on port for sni.
