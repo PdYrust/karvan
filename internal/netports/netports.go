@@ -5,10 +5,12 @@ package netports
 
 import (
 	"bufio"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"io"
 	"io/fs"
+	"math/big"
 	"os"
 	"path/filepath"
 	"slices"
@@ -98,4 +100,43 @@ func Propose(usable func(port int) bool, prefer int) int {
 		}
 	}
 	return 0
+}
+
+// The range "karvan ports --free" picks the panel's port from (D20), clear
+// of the usual panel and VPN ports.
+const (
+	FreeLow  = 20000
+	FreeHigh = 60000
+)
+
+// Free returns a random port in FreeLow to FreeHigh that nothing listens on.
+func Free() (int, error) {
+	ports, err := Listening()
+	if err != nil {
+		return 0, err
+	}
+	return pickFree(ports, func(n int) (int, error) {
+		v, err := rand.Int(rand.Reader, big.NewInt(int64(n)))
+		if err != nil {
+			return 0, err
+		}
+		return int(v.Int64()), nil
+	})
+}
+
+// pickFree walks the range from a random start and returns the first
+// port missing from listening, which is sorted.
+func pickFree(listening []int, intn func(n int) (int, error)) (int, error) {
+	n := FreeHigh - FreeLow + 1
+	start, err := intn(n)
+	if err != nil {
+		return 0, fmt.Errorf("pick a port: %w", err)
+	}
+	for i := range n {
+		p := FreeLow + (start+i)%n
+		if _, taken := slices.BinarySearch(listening, p); !taken {
+			return p, nil
+		}
+	}
+	return 0, fmt.Errorf("no free port from %d to %d", FreeLow, FreeHigh)
 }

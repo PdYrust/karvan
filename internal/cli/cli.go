@@ -34,7 +34,12 @@ func commands() []command {
 		{name: "serve", summary: "Run the web panel", run: runServe},
 		{name: "reset", summary: "Regenerate the path, username, password or port; or turn two-step off", run: runReset},
 		{name: "safe-mode", summary: "Restore a Safe Mode backup: safe-mode restore <id>", run: runSafeMode},
-		{name: "version", summary: "Print version information", run: runVersion},
+		{name: "health", summary: "Exit 0 when the running server is healthy", run: runHealth},
+		{name: "ports", summary: "List the TCP ports this host listens on, or pick a free one", run: runPorts},
+		{name: "update", summary: "Update Karvan to the latest release (as root)", run: runUpdate},
+		{name: "rollback", summary: "Go back to the previous version (as root)", run: runRollback},
+		{name: "uninstall", summary: "Remove Karvan and keep its data, unless -purge (as root)", run: runUninstall},
+		{name: "version", summary: "Print version information, or -json for the installer", run: runVersion},
 	}
 }
 

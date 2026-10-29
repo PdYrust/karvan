@@ -103,3 +103,26 @@ func TestPropose(t *testing.T) {
 		}
 	}
 }
+
+func TestPickFree(t *testing.T) {
+	at := func(v int) func(int) (int, error) { return func(int) (int, error) { return v, nil } }
+	if p, err := pickFree(nil, at(5)); err != nil || p != FreeLow+5 {
+		t.Errorf("empty host: %d, %v", p, err)
+	}
+	if p, err := pickFree([]int{80, FreeLow + 5, FreeLow + 6}, at(5)); err != nil || p != FreeLow+7 {
+		t.Errorf("taken start: %d, %v; want the next free one", p, err)
+	}
+	if p, err := pickFree([]int{FreeHigh}, at(FreeHigh-FreeLow)); err != nil || p != FreeLow {
+		t.Errorf("wrap: %d, %v; want %d", p, err, FreeLow)
+	}
+	all := make([]int, 0, FreeHigh-FreeLow+1)
+	for p := FreeLow; p <= FreeHigh; p++ {
+		all = append(all, p)
+	}
+	if _, err := pickFree(all, at(0)); err == nil {
+		t.Error("a full range gave a port")
+	}
+	if p, err := Free(); err != nil || p < FreeLow || p > FreeHigh {
+		t.Errorf("Free = %d, %v", p, err)
+	}
+}

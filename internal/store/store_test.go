@@ -91,6 +91,21 @@ func TestOpenIsIdempotent(t *testing.T) {
 	}
 }
 
+func TestSchemaVersionIsTheLastMigration(t *testing.T) {
+	db, err := Open(context.Background(), t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	var applied int
+	if err := db.QueryRow(`SELECT MAX(version) FROM schema_migrations`).Scan(&applied); err != nil {
+		t.Fatal(err)
+	}
+	if v, err := SchemaVersion(); err != nil || v != applied {
+		t.Errorf("SchemaVersion = %d, %v; the store is at %d", v, err, applied)
+	}
+}
+
 func TestMigrateAppliesOnlyPendingSteps(t *testing.T) {
 	db, err := Open(context.Background(), t.TempDir())
 	if err != nil {

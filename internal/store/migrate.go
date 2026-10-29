@@ -47,6 +47,13 @@ func loadMigrations(fsys fs.FS) ([]migration, error) {
 	return out, nil
 }
 
+// SchemaVersion is the store schema version this build migrates to: the
+// number of its migrations. An older build refuses a store above its own.
+func SchemaVersion() (int, error) {
+	all, err := loadMigrations(migrationFiles)
+	return len(all), err
+}
+
 func migrate(ctx context.Context, db *sql.DB) error {
 	return migrateFrom(ctx, db, migrationFiles)
 }
