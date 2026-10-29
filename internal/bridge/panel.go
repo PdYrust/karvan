@@ -47,3 +47,25 @@ func (b *Bridge) ServesHTTPS(ctx context.Context, port int, name string) (bool, 
 	}
 	return false, nil
 }
+
+// RulePort is a port one rule answers on, with the domain names it holds
+// there when it answers HTTPS.
+type RulePort struct {
+	Port    int
+	HTTPS   bool
+	Domains []string
+}
+
+// RulePorts lists the port of every rule (D14, and the ports a shared
+// panel address can use).
+func (b *Bridge) RulePorts(ctx context.Context) ([]RulePort, error) {
+	rules, err := b.st.rules(ctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]RulePort, 0, len(rules))
+	for _, r := range rules {
+		out = append(out, RulePort{Port: r.port, HTTPS: r.tls, Domains: r.domains})
+	}
+	return out, nil
+}

@@ -8,6 +8,7 @@ import (
 	"github.com/PdYrust/karvan/internal/httpapi/middleware"
 	"github.com/PdYrust/karvan/internal/httpapi/respond"
 	"github.com/PdYrust/karvan/internal/migration/run"
+	"github.com/PdYrust/karvan/internal/settings"
 )
 
 const overviewActivityLimit = 8
@@ -32,6 +33,8 @@ type overviewJSON struct {
 	Security struct {
 		TOTPEnabled    bool        `json:"totpEnabled"`
 		PreviousSignIn *signInJSON `json:"previousSignIn"`
+		// TLS is how the panel is served: off, self or domain (D9).
+		TLS string `json:"tls"`
 	} `json:"security"`
 	// Migrations sums up every job: how many are in each state, and the
 	// users they moved and left out.
@@ -76,6 +79,10 @@ func (a *API) Overview(w http.ResponseWriter, r *http.Request) {
 	}
 	out := overviewJSON{Version: a.Version, SafeMode: safe, Migrations: totals, Activity: []activityJSON{}}
 	out.Security.TOTPEnabled = op.TOTPEnabled
+	out.Security.TLS = settings.TLSOff
+	if a.Address != nil {
+		out.Security.TLS = modeOf(a.Address.Status().Current.TLS)
+	}
 	if len(prev) == 1 {
 		out.Security.PreviousSignIn = &signInJSON{At: prev[0].At.UTC(), IP: prev[0].IP}
 	}

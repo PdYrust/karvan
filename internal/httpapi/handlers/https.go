@@ -6,6 +6,7 @@ import (
 	"net/http"
 	"slices"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/PdYrust/karvan/internal/audit"
@@ -23,12 +24,21 @@ const (
 )
 
 type pendingHTTPSJSON struct {
-	TLS       string    `json:"tls"`
-	DomainID  int64     `json:"domainId"`
-	Shared    bool      `json:"shared"`
-	Port      int       `json:"port"`
-	ExpiresAt time.Time `json:"expiresAt"`
-	FromNew   bool      `json:"fromNew"`
+	TLS      string `json:"tls"`
+	DomainID int64  `json:"domainId"`
+	Shared   bool   `json:"shared"`
+	Port     int    `json:"port"`
+	// PathChanged is a new hidden path waiting with it (an address change).
+	PathChanged bool      `json:"pathChanged"`
+	ExpiresAt   time.Time `json:"expiresAt"`
+	FromNew     bool      `json:"fromNew"`
+}
+
+// sharedPortJSON is a port where an HTTPS rule holds domain, which a
+// shared panel address for that domain can use (D10).
+type sharedPortJSON struct {
+	Domain string `json:"domain"`
+	Port   int    `json:"port"`
 }
 
 type httpsJSON struct {
@@ -40,6 +50,7 @@ type httpsJSON struct {
 	// the waiting address uses it.
 	Fingerprint string            `json:"fingerprint,omitempty"`
 	Pending     *pendingHTTPSJSON `json:"pending"`
+	SharedPorts []sharedPortJSON  `json:"sharedPorts"`
 }
 
 func modeOf(t settings.TLS) string {
@@ -53,17 +64,48 @@ func modeOf(t settings.TLS) string {
 func (a *API) GetHTTPS(w http.ResponseWriter, r *http.Request) {
 	st := a.Address.Status()
 	c := st.Current
-	out := httpsJSON{TLS: modeOf(c.TLS), DomainID: c.TLS.DomainID, Shared: c.TLS.Shared, Port: c.Port}
+	shared, err := a.sharedPorts(r)
+	if err != nil {
+		respond.Internal(w, r, err)
+		return
+	}
+	out := httpsJSON{TLS: modeOf(c.TLS), DomainID: c.TLS.DomainID, Shared: c.TLS.Shared, Port: c.Port, SharedPorts: shared}
 	self := c.TLS.Mode == settings.TLSSelf
 	if p := st.Pending; p != nil {
 		out.Pending = &pendingHTTPSJSON{TLS: modeOf(p.TLS), DomainID: p.TLS.DomainID, Shared: p.TLS.Shared, Port: p.Port,
-			ExpiresAt: p.Expires.UTC(), FromNew: address.From(r.Context()) == p.Site}
+			PathChanged: p.BasePath != c.BasePath, ExpiresAt: p.Expires.UTC(), FromNew: address.From(r.Context()) == p.Site}
 		self = self || p.TLS.Mode == settings.TLSSelf
 	}
 	if self {
 		out.Fingerprint = a.fingerprint(r)
 	}
 	respond.JSON(w, http.StatusOK, out)
+}
+
+// sharedPorts lists each (domain, port) an HTTPS rule holds, sorted.
+func (a *API) sharedPorts(r *http.Request) ([]sharedPortJSON, error) {
+	out := []sharedPortJSON{}
+	if a.Bridge == nil {
+		return out, nil
+	}
+	rules, err := a.Bridge.RulePorts(r.Context())
+	if err != nil {
+		return nil, err
+	}
+	for _, rp := range rules {
+		for _, d := range rp.Domains {
+			if sp := (sharedPortJSON{Domain: d, Port: rp.Port}); rp.HTTPS && !slices.Contains(out, sp) {
+				out = append(out, sp)
+			}
+		}
+	}
+	slices.SortFunc(out, func(x, y sharedPortJSON) int {
+		if c := strings.Compare(x.Domain, y.Domain); c != 0 {
+			return c
+		}
+		return x.Port - y.Port
+	})
+	return out, nil
 }
 
 func (a *API) fingerprint(r *http.Request) string {

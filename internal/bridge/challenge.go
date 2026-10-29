@@ -105,6 +105,9 @@ func (b *Bridge) challengeHeld() bool {
 	return len(b.chal.holders) > 0
 }
 
+// ChallengeHeld reports whether Karvan keeps the challenge port open now.
+func (b *Bridge) ChallengeHeld() bool { return b.challengeHeld() }
+
 // challengeOpen reports whether the challenge port is port and held, for
 // the save checks, which run under the save lock.
 func (b *Bridge) challengeOpen(port int) bool { return port == b.ChallengePort && b.challengeHeld() }

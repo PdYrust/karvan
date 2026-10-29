@@ -122,6 +122,7 @@ func accountRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.
 		"DELETE /api/v1/account/sessions/{id}": api.EndSession,
 		"POST /api/v1/account/credentials":     api.RenewLogin,
 		"GET /api/v1/audit":                    api.AuditLog,
+		"GET /api/v1/ports":                    api.Ports,
 	}
 	if address {
 		routes["GET /api/v1/settings/address"] = api.GetAddress
