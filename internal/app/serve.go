@@ -7,10 +7,14 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/PdYrust/karvan/internal/bridge"
 	"github.com/PdYrust/karvan/internal/buildinfo"
+	"github.com/PdYrust/karvan/internal/health"
 	"github.com/PdYrust/karvan/internal/hoststats"
 	"github.com/PdYrust/karvan/internal/httpapi"
 	"github.com/PdYrust/karvan/internal/httpapi/address"
@@ -41,6 +45,7 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 	srv.Certificate = tlsm.Certificate
 	srv.Share = shareWith(ctx, svc.bridge)
 	go tlsm.Run(ctx)
+	go a.monitor(h.Bind, srv).Run(ctx)
 	if h.TLS.On() {
 		// A certificate that cannot be loaded is logged now, not at the first visit (D11).
 		if _, err := tlsm.Certificate(ctx, h.TLS); err != nil {
@@ -103,6 +108,39 @@ func (a *App) addressServer(bind string, onShutdown func()) *address.Server {
 		HTTP:       a.httpServer,
 		OnShutdown: onShutdown,
 		Log:        a.Logger,
+	}
+}
+
+// monitor probes the panel's listeners for systemd and the heartbeat
+// (D15). The socket is kept from the panel commands Karvan runs.
+func (a *App) monitor(bind string, srv *address.Server) *health.Monitor {
+	socket := os.Getenv("NOTIFY_SOCKET")
+	_ = os.Unsetenv("NOTIFY_SOCKET")
+	host := "127.0.0.1"
+	if ip, err := netip.ParseAddr(bind); err == nil {
+		switch {
+		case ip.Is6() && ip.IsUnspecified():
+			host = "::1"
+		case !ip.IsUnspecified():
+			host = bind
+		}
+	}
+	return &health.Monitor{
+		Socket:    socket,
+		Heartbeat: health.HeartbeatPath(a.Config.DataDir),
+		Log:       a.Logger,
+		Addrs: func() []string {
+			st := srv.Status()
+			ports := []int{st.Current.Port}
+			if p := st.Pending; p != nil && p.Port != st.Current.Port {
+				ports = append(ports, p.Port)
+			}
+			addrs := make([]string, len(ports))
+			for i, p := range ports {
+				addrs[i] = net.JoinHostPort(host, strconv.Itoa(p))
+			}
+			return addrs
+		},
 	}
 }
 
