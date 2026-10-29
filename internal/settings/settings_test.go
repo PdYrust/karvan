@@ -156,3 +156,48 @@ func TestACMESettings(t *testing.T) {
 		}
 	}
 }
+
+func TestTLSIsStoredWithTheAddress(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	h := HTTP{Port: 34567, BasePath: "abcDEF2345ghijkm"}
+	if err := s.SetHTTP(ctx, h); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := s.HTTP(ctx); err != nil || got.TLS != (TLS{}) || got.TLS.On() {
+		t.Fatalf("before HTTPS: %+v, %v", got, err)
+	}
+	for _, tl := range []TLS{{Mode: TLSSelf}, {Mode: TLSDomain, DomainID: 7, Shared: true}, {Mode: TLSOff}} {
+		h.TLS = tl
+		if err := s.SetHTTP(ctx, h); err != nil {
+			t.Fatal(err)
+		}
+		if got, err := s.HTTP(ctx); err != nil || got.TLS != tl.Normal() {
+			t.Fatalf("HTTP = %+v, %v; want %+v", got.TLS, err, tl.Normal())
+		}
+	}
+	for _, bad := range []TLS{{Mode: "maybe"}, {Mode: TLSDomain}, {Mode: TLSSelf, Shared: true}} {
+		h.TLS = bad
+		if err := s.SetHTTP(ctx, h); err == nil {
+			t.Errorf("SetHTTP took %+v", bad)
+		}
+	}
+	if (TLS{Mode: TLSSelf, DomainID: 3}).Normal() != (TLS{Mode: TLSSelf}) {
+		t.Error("self mode kept a domain")
+	}
+}
+
+func TestSelfCertIsStoredWhole(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	if _, ok, err := s.SelfCert(ctx); ok || err != nil {
+		t.Fatalf("before one was made: %v, %v", ok, err)
+	}
+	want := SelfCert{CertPEM: "cert", SealedKey: "key"}
+	if err := s.SetSelfCert(ctx, want); err != nil {
+		t.Fatal(err)
+	}
+	if got, ok, err := s.SelfCert(ctx); !ok || err != nil || got != want {
+		t.Fatalf("SelfCert = %+v, %v, %v", got, ok, err)
+	}
+}

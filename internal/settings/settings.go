@@ -1,5 +1,5 @@
 // Package settings stores the values Karvan changes at runtime: the listen
-// address and the hidden base path.
+// address, the hidden base path and how the panel is served (HTTP or HTTPS).
 package settings
 
 import (
@@ -42,6 +42,7 @@ type HTTP struct {
 	Bind     string // empty means all interfaces
 	Port     int
 	BasePath string // without slashes
+	TLS      TLS
 }
 
 // Addr returns the listen address for net.Listen.
@@ -60,7 +61,7 @@ func (h HTTP) Validate() error {
 	if !basePathPattern.MatchString(h.BasePath) {
 		return fmt.Errorf("path %q must be 8 to 64 letters, digits, '-' or '_'", h.BasePath)
 	}
-	return nil
+	return h.TLS.Validate()
 }
 
 // Store reads and writes settings.
@@ -72,7 +73,8 @@ func New(db *sql.DB) *Store { return &Store{db: db} }
 // HTTP returns the current HTTP settings, or ErrNotInitialized.
 func (s *Store) HTTP(ctx context.Context) (HTTP, error) {
 	vals := map[string]string{}
-	rows, err := s.db.QueryContext(ctx, `SELECT key, value FROM settings WHERE key IN (?, ?, ?)`, keyBind, keyPort, keyBasePath)
+	rows, err := s.db.QueryContext(ctx, `SELECT key, value FROM settings WHERE key IN (?, ?, ?, ?, ?, ?)`,
+		keyBind, keyPort, keyBasePath, keyTLSMode, keyTLSDomain, keyTLSShared)
 	if err != nil {
 		return HTTP{}, fmt.Errorf("read settings: %w", err)
 	}
@@ -94,7 +96,11 @@ func (s *Store) HTTP(ctx context.Context) (HTTP, error) {
 	if err != nil {
 		return HTTP{}, fmt.Errorf("stored port %q is not a number", vals[keyPort])
 	}
-	h := HTTP{Bind: vals[keyBind], Port: port, BasePath: vals[keyBasePath]}
+	t, err := tlsOf(vals)
+	if err != nil {
+		return HTTP{}, fmt.Errorf("stored settings are invalid (%w); fix them with: karvan reset -path -port", err)
+	}
+	h := HTTP{Bind: vals[keyBind], Port: port, BasePath: vals[keyBasePath], TLS: t}
 	// Fail closed: an empty or damaged path would put the panel at "/".
 	if err := h.Validate(); err != nil {
 		return HTTP{}, fmt.Errorf("stored settings are invalid (%w); fix them with: karvan reset -path -port", err)
@@ -107,21 +113,9 @@ func (s *Store) SetHTTP(ctx context.Context, h HTTP) error {
 	if err := h.Validate(); err != nil {
 		return err
 	}
-	tx, err := s.db.BeginTx(ctx, nil)
-	if err != nil {
-		return fmt.Errorf("save settings: %w", err)
-	}
-	defer func() { _ = tx.Rollback() }()
-	for k, v := range map[string]string{keyBind: h.Bind, keyPort: strconv.Itoa(h.Port), keyBasePath: h.BasePath} {
-		if _, err := tx.ExecContext(ctx, `INSERT INTO settings (key, value) VALUES (?, ?)
-			ON CONFLICT (key) DO UPDATE SET value = excluded.value`, k, v); err != nil {
-			return fmt.Errorf("save setting %s: %w", k, err)
-		}
-	}
-	if err := tx.Commit(); err != nil {
-		return fmt.Errorf("save settings: %w", err)
-	}
-	return nil
+	vals := h.TLS.rows()
+	vals[keyBind], vals[keyPort], vals[keyBasePath] = h.Bind, strconv.Itoa(h.Port), h.BasePath
+	return s.setAll(ctx, vals)
 }
 
 // NewBasePath returns a random hidden path (about 93 bits). Look-alike
