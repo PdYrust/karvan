@@ -42,7 +42,8 @@ const css = new Set(Object.values(manifest).flatMap((c) => c.css ?? []));
 // its tabs load together), less what the app entry already has. A wizard
 // step is a page of its own, because each step is its own lazy route: its
 // chunks plus the frame the job's steps open in (Connect has its frame
-// inside its own chunk).
+// inside its own chunk). Add domain and Change certificate (DomainFormPage)
+// are a page of their own for the same reason.
 const appStatic = files(closure('index.html'));
 const lazyKeys = Object.values(manifest).flatMap((c) => c.dynamicImports ?? []);
 const wizardFrame = 'src/features/wizard/JobWizard.tsx';
@@ -50,7 +51,13 @@ const pages = new Map();
 for (const key of new Set(lazyKeys)) {
   if (manifest['login.html'].dynamicImports?.includes(key) || key === wizardFrame) continue;
   const step = key.match(/src\/features\/wizard\/([^/]+)\//)?.[1];
-  const page = step ? `wizard ${step}` : (key.match(/src\/features\/([^/]+)\//)?.[1] ?? key);
+  // Add domain and Change certificate are one lazy route that loads alone (owner, 2026-10-29).
+  const domainForm = key === 'src/features/certificates/DomainFormPage.tsx';
+  const page = step
+    ? `wizard ${step}`
+    : domainForm
+      ? 'certificates domain form'
+      : (key.match(/src\/features\/([^/]+)\//)?.[1] ?? key);
   const set = pages.get(page) ?? new Set();
   const keys = closure(key);
   if (step && step !== 'connect') closure(wizardFrame, keys);
@@ -81,8 +88,10 @@ for (const [name, bytes] of Object.entries(measured)) {
     `${over ? 'OVER' : 'ok  '} ${name.padEnd(26)} ${kb.toFixed(1).padStart(6)} KB / ${budgetsKB[name]} KB${note}`,
   );
 }
-// Every wizard step against the page budget, so each step sees its headroom.
-for (const [page, set] of [...pages].filter(([p]) => p.startsWith('wizard ')).sort()) {
+// Every wizard step and the certificate pages against the page budget, so each sees its headroom.
+for (const [page, set] of [...pages]
+  .filter(([p]) => p.startsWith('wizard ') || p.startsWith('certificates'))
+  .sort()) {
   const kb = sum(set) / 1024;
   console.log(
     `     ${page.padEnd(26)} ${kb.toFixed(1).padStart(6)} KB / ${budgetsKB['largest page (JS, lazy)']} KB`,

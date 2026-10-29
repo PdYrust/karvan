@@ -42,6 +42,7 @@ Last reviewed: 2026-10-15.
 The coverage floor (80%) is high enough that new logic needs a test, and low enough to leave room for wiring code.
 The bundle numbers keep the sign-in page usable on a slow mobile connection. They were first guessed at 110 KB for the sign-in page; measured, React 19 alone is about 60 KB and Kumo's Button and Input about 55 KB, so the budget is today's 132 KB plus a little room. Fonts are left out because they cache across visits.
 A lazy page is one feature folder, except that each migration wizard step is a page of its own (its chunks plus the wizard frame), because each step is its own lazy route and loads alone; the report prints every step's size.
+Add domain and Change certificate (`DomainFormPage`) are a page of their own too, for the same reason (owner choice, 2026-10-29: the Domains and certificates list gained the Migrations list toolbar); the 63 KB number is unchanged, and the report prints both certificate pages.
 The largest lazy page went from 60 to 62 KB in Phase 4 (P4-13): the Templates page and the reports share the problem and fix words and the Pager with the wizard's compare step, and those shared chunks add about 1 KB of split overhead to that step; its own code did not grow.
 
 It went from 62 to 63 KB on 2026-10-26 (owner choice): every Copy button now shares one helper that also copies over plain HTTP and says so in a toast, which put Settings at 62.6 KB after trimming duplicate strings.
