@@ -74,6 +74,7 @@ func (b *Bridge) Reload(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
+	b.keepSharedPorts(want)
 	b.mu.Lock()
 	if _, ok := want[b.ChallengePort]; !ok && len(b.chal.holders) > 0 {
 		want[b.ChallengePort] = false // plain HTTP for Let's Encrypt only (D67)
@@ -103,6 +104,16 @@ func (b *Bridge) Reload(ctx context.Context) error {
 		b.listen(port, tlsOn)
 	}
 	return nil
+}
+
+// keepSharedPorts adds the ports the panel is shared on to want, so the
+// panel stays reachable with no rule left there (D12).
+func (b *Bridge) keepSharedPorts(want map[int]bool) {
+	for _, port := range b.sharedPorts() {
+		if _, ok := want[port]; !ok {
+			want[port] = true
+		}
+	}
 }
 
 // portModes is whether each port of rules serves TLS.

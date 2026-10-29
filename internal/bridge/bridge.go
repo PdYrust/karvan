@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/PdYrust/karvan/internal/secret"
@@ -60,11 +61,12 @@ type Bridge struct {
 	certRows map[int64]certSnap // the certificates rows the picks read, by id
 	// panelCerts holds the web panel's certificate in domain mode.
 	panelCerts certCache
-	dests      map[int64]*openDest // by panel id
-	olds       map[int64]OldPanel  // by site id
-	servers    map[int]*listener   // by port
-	errs       map[int]error       // ports that could not listen
-	chal       challenges          // the challenge port's holders and live tokens (D67)
+	panel      atomic.Pointer[[]sharedPanel] // the panel on shared ports (D12)
+	dests      map[int64]*openDest           // by panel id
+	olds       map[int64]OldPanel            // by site id
+	servers    map[int]*listener             // by port
+	errs       map[int]error                 // ports that could not listen
+	chal       challenges                    // the challenge port's holders and live tokens (D67)
 	wg         sync.WaitGroup
 	// bg is cancelled when Run ends, which stops token lists in the background.
 	bg     context.Context

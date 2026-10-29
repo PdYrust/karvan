@@ -34,10 +34,15 @@ func (b *Bridge) Handler(port int) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { b.serve(w, r, port) })
 }
 
-// serve runs the order of D59: verified set, then the panel itself, then
+// serve hands the web panel's requests on a shared port to it (D12), then
+// runs the order of D59: verified set, then the panel itself, then
 // one lazy check against the old panel. Users in an inactive or deleted
 // batch get the plain 404 before the panel is asked (D22).
 func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
+	if h := b.panelFor(port, r); h != nil {
+		h.ServeHTTP(w, r)
+		return
+	}
 	if port == b.ChallengePort && b.serveChallenge(w, r) {
 		return
 	}

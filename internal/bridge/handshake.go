@@ -218,9 +218,13 @@ type cachedCert struct {
 func (b *Bridge) certificate(port int) func(*tls.ClientHelloInfo) (*tls.Certificate, error) {
 	cache := &certCache{m: map[string]cachedCert{}}
 	return func(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
-		src, ok := b.pickCert(port, strings.ToLower(hello.ServerName))
+		name := strings.ToLower(hello.ServerName)
+		src, ok := b.pickCert(port, name)
 		switch {
 		case !ok:
+			if c, ok := b.panelCertificate(hello.Context(), port, name); ok {
+				return c, nil
+			}
 			return nil, errors.New("no certificate for this name on this port")
 		case src.site != nil:
 			s := *src.site
