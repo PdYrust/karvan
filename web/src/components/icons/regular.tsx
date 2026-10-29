@@ -19,6 +19,12 @@ export const FilterIcon = ({ size = 18 }: Props) => (
     d="M200,136a8,8,0,0,1-8,8H64a8,8,0,0,1,0-16H192A8,8,0,0,1,200,136Zm32-56H24a8,8,0,0,0,0,16H232a8,8,0,0,0,0-16Zm-80,96H104a8,8,0,0,0,0,16h48a8,8,0,0,0,0-16Z"
   />
 );
+export const ArrowClockwiseIcon = ({ size = 16 }: Props) => (
+  <Regular
+    size={size}
+    d="M240,56v48a8,8,0,0,1-8,8H184a8,8,0,0,1,0-16H211.4L184.81,71.64l-.25-.24a80,80,0,1,0-1.67,114.78,8,8,0,0,1,11,11.63A95.44,95.44,0,0,1,128,224h-1.32A96,96,0,1,1,195.75,60L224,85.8V56a8,8,0,1,1,16,0Z"
+  />
+);
 export const FileArrowUpIcon = ({ size = 16 }: Props) => (
   <Regular
     size={size}

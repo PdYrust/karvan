@@ -7,6 +7,7 @@ import {
   domainWarningTone,
   notScanned,
   renewalOf,
+  renewMethod,
   sortedWarnings,
   uncoveredDomains,
 } from './cert-view';
@@ -186,5 +187,42 @@ describe('the renewal of a domain', () => {
   });
   it("is nothing for a domain without Let's Encrypt", () => {
     expect(renewalOf(domain({}))).toBeUndefined();
+  });
+});
+describe('renew now', () => {
+  const le = {
+    id: 2,
+    name: 'a',
+    origin: 'acme' as const,
+    facts: { domains: [], issuer: '', warnings: [] },
+  };
+  const acme = {
+    method: 'dns-01' as const,
+    nextRenewal: null,
+    tries: 0,
+    lastError: null,
+    order: null,
+  };
+  it("renews a Let's Encrypt certificate by the way it was got", () => {
+    expect(renewMethod(domain({ certificate: le, acme }))).toBe('dns-01');
+  });
+  it('waits while an order runs', () => {
+    const order = {
+      id: 1,
+      method: 'dns-01' as const,
+      renewal: true,
+      state: 'validating' as const,
+      dns: null,
+      error: null,
+      createdAt: '',
+      updatedAt: '',
+      expiresAt: null,
+    };
+    expect(renewMethod(domain({ certificate: le, acme: { ...acme, order } }))).toBeUndefined();
+  });
+  it('is not offered for another certificate or a domain that never had one', () => {
+    expect(renewMethod(domain({ certificate: { ...le, origin: '' }, acme }))).toBeUndefined();
+    expect(renewMethod(domain({ certificate: le, acme: { ...acme, method: '' } }))).toBeUndefined();
+    expect(renewMethod(domain({}))).toBeUndefined();
   });
 });

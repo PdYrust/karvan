@@ -1,7 +1,12 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
 import { useKumoToastManager } from '@cloudflare/kumo/components/toast';
-import { DotsThreeIcon, SealCheckIcon, TrashIcon } from '../../components/icons/regular';
+import {
+  ArrowClockwiseIcon,
+  DotsThreeIcon,
+  SealCheckIcon,
+  TrashIcon,
+} from '../../components/icons/regular';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useId, useState } from 'react';
 import { useNavigate } from 'react-router';
@@ -9,21 +14,42 @@ import { DataTable, type Column } from '../../components/data/DataTable';
 import { CardFacts, RowCard } from '../../components/data/RowCard';
 import { TypeToConfirm } from '../../components/dialogs/TypeToConfirm';
 import { useT } from '../../i18n/locale';
+import { acmeKeys, startAcme } from '../../lib/api/acme';
 import { certificateKeys } from '../../lib/api/certificates';
 import { deleteDomain, domainKeys, type Domain } from '../../lib/api/domains';
+import { useAcmeErrorText } from '../../lib/errors/acme';
 import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
 import { useLingering } from '../../lib/motion/use-lingering';
 import { useFormat } from '../../lib/preferences/region';
 import { useNow } from '../overview/use-now';
-import { renewalOf } from './cert-view';
+import { renewalOf, renewMethod } from './cert-view';
 import { certificatesMessages } from './messages';
 import { DomainLinesView, Mono, NameList, RuleName } from './parts';
 
-/** The "..." menu: change the certificate, or delete while no rule holds the domain. */
+/**
+ * The "..." menu: change the certificate, renew a Let's Encrypt one now, or delete while no rule
+ * holds the domain.
+ */
 function DomainMenu({ domain, onDelete }: { domain: Domain; onDelete: () => void }) {
   const t = useT(certificatesMessages);
   const navigate = useNavigate();
+  const toasts = useKumoToastManager();
+  const acmeError = useAcmeErrorText();
+  const qc = useQueryClient();
   const label = t('moreFor', { name: domain.name });
+  const page = `/domains/${String(domain.id)}/certificate`;
+  const method = renewMethod(domain);
+  // The order runs on the domain's own page, which follows it to its end.
+  const renew = useMutation({
+    mutationFn: (m: NonNullable<typeof method>) => startAcme(domain.id, m),
+    onSuccess: () => {
+      void qc.invalidateQueries({ queryKey: acmeKeys.domain(domain.id) });
+      void qc.invalidateQueries({ queryKey: domainKeys.all });
+      void navigate(page);
+    },
+    onError: (e) =>
+      toasts.add({ title: t('renewFailed'), description: acmeError(e), variant: 'error' }),
+  });
   return (
     <DropdownMenu>
       <DropdownMenu.Trigger
@@ -39,13 +65,20 @@ function DomainMenu({ domain, onDelete }: { domain: Domain; onDelete: () => void
         }
       />
       <DropdownMenu.Content align="end" className="min-w-44">
-        <DropdownMenu.Item
-          className="gap-2"
-          onClick={() => void navigate(`/domains/${String(domain.id)}/certificate`)}
-        >
+        <DropdownMenu.Item className="gap-2" onClick={() => void navigate(page)}>
           <SealCheckIcon size={16} />
           {t('changeCert')}
         </DropdownMenu.Item>
+        {method ? (
+          <DropdownMenu.Item
+            className="gap-2"
+            disabled={renew.isPending}
+            onClick={() => renew.mutate(method)}
+          >
+            <ArrowClockwiseIcon size={16} />
+            {t('renewNow')}
+          </DropdownMenu.Item>
+        ) : null}
         <DropdownMenu.Item
           className="gap-2"
           variant="danger"

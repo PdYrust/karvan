@@ -1,5 +1,5 @@
 import type { StatusTone } from '../../components/feedback/StatusBadge';
-import type { AcmeState } from '../../lib/api/acme';
+import type { AcmeMethod, AcmeState } from '../../lib/api/acme';
 import type { RuleRef, ScanResult } from '../../lib/api/certificates';
 import type { Domain, DomainWarning } from '../../lib/api/domains';
 
@@ -107,4 +107,12 @@ export function renewalOf(
   const state = a.order?.state;
   if (isRunningState(state)) return { kind: 'order', state };
   return a.nextRenewal ? { kind: 'renews', at: new Date(a.nextRenewal) } : undefined;
+}
+
+/** The way Renew now orders again: a Let's Encrypt certificate's own, while no order runs. */
+export function renewMethod(d: Domain): AcmeMethod | undefined {
+  const a = d.acme;
+  if (d.certificate?.origin !== 'acme' || !a?.method || isRunningState(a.order?.state))
+    return undefined;
+  return a.method;
 }
