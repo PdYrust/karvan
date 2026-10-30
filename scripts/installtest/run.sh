@@ -116,6 +116,7 @@ release_tree good "$V2" "$work/karvan_${V2}_linux_$ARCH.tar.gz"
 local_get good '' >"$work/release/get-latest.sh"
 printf '[\n  {\n    "tag_name": "v%s",\n    "prerelease": true\n  }\n]\n' "$V2" >"$work/release/releases.json"
 release_tree bad "$VERSION" "$ARCHIVE"
+echo 203.0.113.9 >"$work/release/ip"
 docker cp "$work/release" "$NAME:/srv/" >/dev/null
 docker cp "$ARCHIVE" "$NAME:/srv/" >/dev/null
 sys 'mkdir -p /srv/updates/v3'
@@ -159,17 +160,18 @@ expect_stop "wrong architecture" "sh /srv/unpacked/karvan_${VERSION}_linux_$OTHE
 cat >"$work/signin.sh" <<'EOF'
 #!/bin/sh
 set -eu
-out=/root/install.out
-port=$(sed -n 's|^  Address   https://<server address>:\([0-9]*\)/.*|\1|p' "$out")
-path=$(sed -n 's|^  Address   https://<server address>:[0-9]*/\([^/]*\)/$|\1|p' "$out")
-user=$(sed -n 's/^  Username  //p' "$out")
-pass=$(sed -n 's/^  Password  //p' "$out")
-base=https://127.0.0.1:$port/$path/api/v1
+out=${1:-/root/install.out}
+scheme=$(sed -n 's|^  Address  *\(https\{0,1\}\)://.*|\1|p' "$out")
+port=$(sed -n 's/^  Port  *//p' "$out")
+path=$(sed -n 's|^  Path  */\([^/]*\)/$|\1|p' "$out")
+user=$(sed -n 's/^  Username  *//p' "$out")
+pass=$(sed -n 's/^  Password  *//p' "$out")
+base=$scheme://127.0.0.1:$port/$path/api/v1
 jar=$(mktemp)
 token=$(curl -sk -c "$jar" "$base/session" | sed -n 's/.*"csrfToken":"\([^"]*\)".*/\1/p')
 printf '{"username":"%s","password":"%s"}' "$user" "$pass" |
 	curl -sk -o /dev/null -w '%{http_code}' -b "$jar" -H "X-CSRF-Token: $token" \
-		-H "Origin: https://127.0.0.1:$port" -H 'Content-Type: application/json' --data-binary @- "$base/session"
+		-H "Origin: $scheme://127.0.0.1:$port" -H 'Content-Type: application/json' --data-binary @- "$base/session"
 rm -f "$jar"
 EOF
 docker cp "$work/signin.sh" "$NAME:/srv/signin.sh" >/dev/null
@@ -180,7 +182,7 @@ show_install() { sys 'grep -v "Password  " /root/install.out' >&2 || true; }
 # one_liner installs the README's way, from the get.sh with no version
 # stamped in, with the arguments after @ install in $2.
 one_liner() {
-	sys "bash -c \"\$(curl -fsSL http://127.0.0.1:$PORT/get-latest.sh)\" @ install $2 >$1 2>&1" || {
+	sys "KARVAN_IP_URL=${IP_URL:-http://127.0.0.1:$PORT/ip} bash -c \"\$(curl -fsSL http://127.0.0.1:$PORT/get-latest.sh)\" @ install $2 >$1 2>&1" || {
 		sys "grep -v 'Password  ' $1" >&2
 		fail "the one-liner install"
 	}
@@ -192,13 +194,16 @@ expect_mode() {
 }
 
 signed_in() {
-	code=$(sys 'sh /srv/signin.sh')
+	code=$(sys "sh /srv/signin.sh ${1:-}")
 	[ "$code" = 200 ] || fail "sign-in answered $code"
 }
 
-step "install a pinned version with the one-liner"
-one_liner /root/install.out "--version $VERSION"
+step "install a pinned version with the one-liner, HTTPS on the IP"
+one_liner /root/install.out "--version $VERSION --https ip"
 sys 'grep -q "^  Password  " /root/install.out' || { show_install && fail "init printed no password"; }
+sys 'grep -q "^  Address  *https://203.0.113.9:[0-9]*/[A-Za-z0-9]*/$" /root/install.out && grep -q "^  Fingerprint  *[0-9A-F:]\{95\}$" /root/install.out' ||
+	{ show_install && fail "the result does not show the detected address and the fingerprint"; }
+sys "! grep -q \"$(printf '\033')\" /root/install.out" || fail "the output to a file has colour codes"
 sys 'systemctl is-active --quiet karvan' || fail "the service is not active"
 pid=$(sys 'systemctl show -p MainPID --value karvan')
 user=$(sys "stat -c %U /proc/$pid")
@@ -302,4 +307,43 @@ sys "echo delete karvan data | bash -c \"\$(curl -fsSL http://127.0.0.1:$PORT/ge
 nothing_installed "purge"
 sys '! [ -e /var/lib/karvan-backups ]' || fail "purge kept the backups"
 echo "ok   purge asked for the words, then removed Karvan, its data, config and backups"
+
+purge() { sys "echo delete karvan data | karvan uninstall --purge" >/dev/null 2>&1 || fail "purge"; }
+step "plain HTTP, with the address from the route when the address service fails"
+IP_URL=http://127.0.0.1:1/ip one_liner /root/plain.out "--version $VERSION --https none --yes"
+src=$(sys "ip route get 1.1.1.1 | sed -n 's/.* src \([0-9.]*\).*/\1/p'")
+sys "grep -q '^  Address  *http://$src:[0-9]*/' /root/plain.out && grep -q 'Plain HTTP: the password' /root/plain.out && ! grep -q Fingerprint /root/plain.out" ||
+	{ sys "grep -v 'Password ' /root/plain.out" >&2; fail "the plain HTTP install"; }
+signed_in /root/plain.out
+purge
+echo "ok   plain HTTP on $src, warned, sign-in answers"
+step "a domain that does not point here falls back to Karvan's own certificate"
+one_liner /root/domain.out "--version $VERSION --https domain --domain panel.invalid --yes"
+sys "grep -q 'panel.invalid does not point at this server' /root/domain.out && grep -q '^  Address  *https://203.0.113.9:' /root/domain.out && grep -q '^  Fingerprint ' /root/domain.out" ||
+	{ sys "grep -v 'Password ' /root/domain.out" >&2; fail "the domain fallback"; }
+signed_in /root/domain.out
+purge
+# expect_bad runs install.sh with flags $1, which must stop saying $2.
+expect_bad() {
+	if out=$(sys "sh /srv/unpacked/$name/install.sh $1" 2>&1); then
+		fail "install.sh $1 did not stop"
+	fi
+	case $out in
+	*"$2"*) ;;
+	*) fail "install.sh $1 said: $out" ;;
+	esac
+}
+expect_bad "--https domain --yes" "needs a domain name"
+expect_bad "--https ip --domain a.example --yes" "go with --https domain"
+expect_bad "--https tls --yes" "must be none, ip or domain"
+nothing_installed "bad HTTPS flags"
+echo "ok   the domain check fell back with its reason; bad flags stop before any change"
+step "colour only on a terminal without NO_COLOR"
+esc=$(printf '\033')
+ui=". /srv/unpacked/$name/lib/ui.sh; ok done"
+sys "script -qec '$ui' /dev/null | grep -q '$esc'" || fail "no colour on a terminal"
+if sys "NO_COLOR=1 script -qec '$ui' /dev/null | grep -q '$esc'"; then fail "colour with NO_COLOR"; fi
+if sys "sh -c '$ui' | grep -q '$esc'"; then fail "colour without a terminal"; fi
+sys "LANG=C.UTF-8 sh -c '$ui' | grep -q '✓ done' && LANG=C sh -c '$ui' | grep -q '^  ok done'" || fail "the step marks"
+echo "ok   colour on a terminal only, none with NO_COLOR or in a pipe; ASCII marks without UTF-8"
 echo "PASS install test ($VERSION, $ARCH)"
