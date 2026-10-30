@@ -34,3 +34,11 @@ It builds `0.5.0-beta-dry` into `dist/` (both archives, `get.sh`, `SHA256SUMS`, 
 - `make ci-lint` checks both workflows with actionlint and every shell script with shellcheck, without pushing.
 Every action in the workflows is pinned by its full commit SHA. No secret is stored: the workflows use the token GitHub gives each run.
 After the first release, open the `karvan` package on GitHub (your profile, Packages, Package settings) and check that its visibility is public. A new package can start out private, and then `docker pull` asks for a login.
+
+## Release notes for v0.5.0-beta (draft)
+
+The workflow takes the notes from the `## 0.5.0-beta` section of `CHANGELOG.md`, so that section is the draft: its first line says beta. Before the tag:
+
+- the release dry run on GitHub (Actions, Release, Run workflow) passes,
+- `docs/benchmarks.md` holds a passing bridge run on a real server,
+- the owner has read every Persian string.
