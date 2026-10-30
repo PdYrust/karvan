@@ -372,7 +372,12 @@ func TestDoubleRunStartsOnce(t *testing.T) {
 	}
 	a, b := <-errs, <-errs
 	h.svc.Wait()
-	if (a == nil) == (b == nil) || !errors.Is(a, ErrBusy) && !errors.Is(b, ErrBusy) {
+	if a != nil {
+		a, b = b, a
+	}
+	// The second Start is refused: busy while the first runs, or, when the
+	// first already ended and wiped the old panel's login, ErrNoLogin.
+	if a != nil || !errors.Is(b, ErrBusy) && !errors.Is(b, ErrNoLogin) {
 		t.Fatalf("errors %v and %v", a, b)
 	}
 	if n := h.count("users"); n != 3 {
