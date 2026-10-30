@@ -55,7 +55,7 @@ func scopeArgs(s Site, dest string) []any { return []any{s.origin, dest, s.Mode,
 // token reads a stored token with its ledger row and batch, for rule s
 // on destination dest, in one query (D21).
 func (st *store) token(ctx context.Context, m []byte, s Site, dest string) (verified, scoped, bool, error) {
-	row := st.db.QueryRowContext(ctx, tokenSQL, append(scopeArgs(s, dest), m)...)
+	row := st.queryRow(ctx, tokenSQL, append(scopeArgs(s, dest), m)...)
 	var v verified
 	var r scoped
 	var issued, checked int64

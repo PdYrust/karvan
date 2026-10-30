@@ -42,6 +42,33 @@ type store struct {
 	// at a time, so no two can both pass their checks before either is
 	// written.
 	saveMu sync.Mutex
+	// stmts are the queries every old-link request runs, prepared once:
+	// parsing the token query took most of a request's time (D37).
+	stmtMu sync.Mutex
+	stmtDB *sql.DB // the pool stmts were prepared on
+	stmts  map[string]*sql.Stmt
+}
+
+// queryRow runs q as a statement prepared once on the pool, which
+// database/sql keeps prepared on each connection it runs on. When the
+// prepare fails, the plain query reports the error through the row.
+func (st *store) queryRow(ctx context.Context, q string, args ...any) *sql.Row {
+	st.stmtMu.Lock()
+	if st.stmtDB != st.db {
+		st.stmtDB, st.stmts = st.db, map[string]*sql.Stmt{}
+	}
+	s := st.stmts[q]
+	if s == nil {
+		var err error
+		s, err = st.db.PrepareContext(ctx, q)
+		if err != nil {
+			st.stmtMu.Unlock()
+			return st.db.QueryRowContext(ctx, q, args...)
+		}
+		st.stmts[q] = s
+	}
+	st.stmtMu.Unlock()
+	return s.QueryRowContext(ctx, args...)
 }
 
 // siteColumns read a site with the certificate it is served with: its

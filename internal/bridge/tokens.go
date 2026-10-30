@@ -73,7 +73,7 @@ func (st *store) close(ctx context.Context, ledgerID int64, reason string) (bool
 
 func (st *store) closed(ctx context.Context, ledgerID int64) (bool, error) {
 	var n int
-	err := st.db.QueryRowContext(ctx, "SELECT count(*) FROM legacy_closed WHERE ledger_id = ?", ledgerID).Scan(&n)
+	err := st.queryRow(ctx, "SELECT count(*) FROM legacy_closed WHERE ledger_id = ?", ledgerID).Scan(&n)
 	return n > 0, err
 }
 
