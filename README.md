@@ -4,7 +4,7 @@
 
 <h1 align="center">Karvan</h1>
 
-<p align="center">Move and merge users between Marzban and PasarGuard panels, with every UUID and credential kept.</p>
+<p align="center">Move and merge users between Marzban and PasarGuard panels.</p>
 
 ---
 
@@ -32,7 +32,7 @@ sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/
 sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/get.sh)" @ uninstall
 ```
 ### After installation
-- The install downloads the release archive, checks it against `SHA256SUMS` and installs Karvan as a systemd service. On any failure nothing is installed.
+- The install downloads the release archive, checks it against `SHA256SUMS` and installs Karvan as a systemd service. If the download or a check fails, nothing is installed.
 - At the end it prints the panel address, username and password once. Save them.
 - The panel starts on HTTPS with its own certificate. The browser warns about it once; go on only if it shows the fingerprint the install printed.
 - Files: `/usr/local/lib/karvan`. Config: `/etc/karvan/config.json`. Data: `/var/lib/karvan`.
