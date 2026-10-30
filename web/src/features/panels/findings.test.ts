@@ -80,7 +80,9 @@ describe('findingDetail', () => {
     expect(findingDetail({ code: 'unknown_revision', detail: 'a1b2c3d4e5f6' })).toBe(
       'a1b2c3d4e5f6',
     );
-    expect(findingDetail({ code: 'panel_copy', detail: '/opt/pasarguard' })).toBe('/opt/pasarguard');
+    expect(findingDetail({ code: 'panel_copy', detail: '/opt/pasarguard' })).toBe(
+      '/opt/pasarguard',
+    );
     expect(findingDetail({ code: 'unknown_children', detail: 'logs.user_id -> users' })).toBe(
       'logs.user_id -> users',
     );
