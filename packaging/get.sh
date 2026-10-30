@@ -1,23 +1,31 @@
 #!/bin/sh
-# Downloads a Karvan release from GitHub, checks it against SHA256SUMS and
-# runs its install.sh with the remaining arguments. On any failure nothing
-# is installed. karvan update runs it with --update, and with --archive FILE
-# to use a release archive that is already on this machine.
+# Installs, updates or removes Karvan. Run it from the repository the way
+# the README shows:
+#   sudo bash -c "$(curl -fsSL <raw get.sh address>)" @ install [--version V]
+#   ... @ update [--version V] | @ uninstall [--purge]
+# A bare run means install. With no version it takes the newest release,
+# pre-releases included. The download is checked against SHA256SUMS and on
+# any failure nothing is installed. The copy in a release has that release's
+# version stamped in, so piping it to sh installs that version. karvan update
+# runs the installed copy with --update, and with --archive FILE to use a
+# release archive that is already on this machine.
 set -eu
 
 BASE_URL=https://github.com/PdYrust/karvan/releases/download
-# --update with no --version takes the newest release listed here (GitHub's
-# latest skips pre-releases).
+# With no version the newest release listed here is taken (GitHub's latest
+# skips pre-releases).
 RELEASES_URL="https://api.github.com/repos/PdYrust/karvan/releases?per_page=1"
-# The release build writes its version here; --version overrides it.
+# The release build writes its version here; --version overrides it, and an
+# update without --version ignores it.
 VERSION=
+INSTALLED=/usr/local/lib/karvan/current/install.sh
 
 die() {
 	echo "$*" >&2
 	exit 1
 }
 
-[ "$(id -u)" = 0 ] || die "run it as root, for example: curl -fsSL <get.sh address> | sudo sh"
+[ "$(id -u)" = 0 ] || die "run it as root, for example: sudo bash -c \"\$(curl -fsSL <get.sh address>)\" @ install"
 case $(uname -m) in
 x86_64 | amd64) arch=amd64 ;;
 aarch64 | arm64) arch=arm64 ;;
@@ -25,11 +33,27 @@ aarch64 | arm64) arch=arm64 ;;
 esac
 update=
 archive=
+pinned=
+case ${1:-install} in
+install) [ $# -eq 0 ] || shift ;;
+update)
+	update=--update
+	shift
+	;;
+uninstall)
+	shift
+	[ -f "$INSTALLED" ] || die "Karvan is not installed here"
+	exec sh "$(readlink -f "$INSTALLED")" --uninstall "$@"
+	;;
+-*) ;;
+*) die "unknown command $1: use install, update or uninstall" ;;
+esac
 while [ $# -gt 0 ]; do
 	case $1 in
 	--version)
 		[ $# -ge 2 ] || die "--version needs a version, for example 0.5.0-beta"
 		VERSION=${2#v}
+		pinned=1
 		shift
 		;;
 	--archive)
@@ -64,12 +88,11 @@ if [ -n "$archive" ]; then
 	fi
 	cp "$archive" "$tmp/$file"
 else
-	if [ -n "$update" ] && [ -z "$VERSION" ]; then
+	if [ -z "$pinned" ] && { [ -n "$update" ] || [ -z "$VERSION" ]; }; then
 		VERSION=$(curl -fsSL --retry 3 "$RELEASES_URL" | sed -n 's/^ *"tag_name": *"v\{0,1\}\([^"]*\)".*/\1/p' | head -n 1)
 		[ -n "$VERSION" ] || die "could not find the newest Karvan release"
 	fi
 	case $VERSION in
-	'') die "no version given: run it with --version <version>" ;;
 	[0-9]*[!0-9A-Za-z.+-]* | [!0-9]*) die "not a version: $VERSION" ;;
 	esac
 	name=karvan_${VERSION}_linux_${arch}

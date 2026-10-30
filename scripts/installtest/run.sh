@@ -177,8 +177,10 @@ docker cp "$work/signin.sh" "$NAME:/srv/signin.sh" >/dev/null
 # show_install prints the install output without the password.
 show_install() { sys 'grep -v "Password  " /root/install.out' >&2 || true; }
 
+# one_liner installs the README's way, from the get.sh with no version
+# stamped in, with the arguments after @ install in $2.
 one_liner() {
-	sys "curl -fsSL http://127.0.0.1:$PORT/good/download/v$VERSION/get.sh | sh >$1 2>&1" || {
+	sys "bash -c \"\$(curl -fsSL http://127.0.0.1:$PORT/get-latest.sh)\" @ install $2 >$1 2>&1" || {
 		sys "grep -v 'Password  ' $1" >&2
 		fail "the one-liner install"
 	}
@@ -194,8 +196,8 @@ signed_in() {
 	[ "$code" = 200 ] || fail "sign-in answered $code"
 }
 
-step "install with the one-liner"
-one_liner /root/install.out
+step "install a pinned version with the one-liner"
+one_liner /root/install.out "--version $VERSION"
 sys 'grep -q "^  Password  " /root/install.out' || { show_install && fail "init printed no password"; }
 sys 'systemctl is-active --quiet karvan' || fail "the service is not active"
 pid=$(sys 'systemctl show -p MainPID --value karvan')
@@ -231,7 +233,7 @@ data_kept() {
 count() { sys "find $1 -mindepth 1 -maxdepth 1 -type d | wc -l"; }
 step "update to the newest release"
 sys 'echo before-updates >/var/lib/karvan/test-data'
-sys 'sh /srv/release/get-latest.sh --update' >/dev/null || fail "the update to $V2"
+sys "bash -c \"\$(curl -fsSL http://127.0.0.1:$PORT/get-latest.sh)\" @ update" >/dev/null || fail "the update to $V2"
 on_version "$V2" "$VERSION"
 data_kept ''
 [ "$(count /var/lib/karvan-backups)" = 1 ] || fail "the update made no backup"
@@ -283,19 +285,20 @@ sys 'karvan uninstall' >/dev/null || fail "karvan uninstall"
 sys '! [ -e /etc/systemd/system/karvan.service ] && ! [ -e /usr/local/lib/karvan ] && ! [ -e /usr/local/bin/karvan ]' || fail "uninstall left Karvan's files"
 sys '[ -f /var/lib/karvan/karvan.db ] && [ -f /etc/karvan/secret.key ] && [ -f /etc/karvan/config.json ] && [ -d /var/lib/karvan-backups ]' || fail "uninstall removed the data"
 echo "ok   uninstalled, data, config and backups kept"
-step "reinstall reads the same data"
-one_liner /root/reinstall.out
+step "reinstall the newest release reads the same data"
+one_liner /root/reinstall.out ''
+[ "$(sys 'readlink /usr/local/lib/karvan/current')" = "$V2" ] || fail "the bare install did not take the newest release $V2"
 sys 'grep -q "Found the data" /root/reinstall.out && ! grep -q "Password  " /root/reinstall.out' || fail "reinstall set Karvan up again"
 sys 'systemctl is-active --quiet karvan' || fail "the service is not active after the reinstall"
 signed_in
 data_kept ''
-echo "ok   reinstalled, the old sign-in details still work"
+echo "ok   reinstalled $V2 (newest, pre-release), the old sign-in details still work"
 step "purge"
 if sys 'echo delete | karvan uninstall --purge' >/dev/null 2>&1; then
 	fail "purge went on without the typed words"
 fi
 sys '[ -e /usr/local/bin/karvan ] && [ -f /var/lib/karvan/karvan.db ]' || fail "purge without the typed words removed something"
-sys 'echo delete karvan data | karvan uninstall --purge' >/dev/null 2>&1 || fail "karvan uninstall --purge"
+sys "echo delete karvan data | bash -c \"\$(curl -fsSL http://127.0.0.1:$PORT/get-latest.sh)\" @ uninstall --purge" >/dev/null 2>&1 || fail "@ uninstall --purge"
 nothing_installed "purge"
 sys '! [ -e /var/lib/karvan-backups ]' || fail "purge kept the backups"
 echo "ok   purge asked for the words, then removed Karvan, its data, config and backups"
