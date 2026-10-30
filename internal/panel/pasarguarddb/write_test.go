@@ -118,3 +118,43 @@ func TestReadUsersTakesMoreIDsThanAStatementBinds(t *testing.T) {
 		})
 	})
 }
+
+// Undo removes a moved admin that registered a passkey after the move: the
+// passkey and its challenges go with the admin, other challenges stay.
+func TestRemoveAdminWithPasskey(t *testing.T) {
+	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+		exec(t, tg, toStmts(passkeyTables)...)
+		exec(t, tg, []any{"INSERT INTO passkey_challenges (id, admin_id, kind) VALUES (?, ?, ?)", 1, nil, "login"})
+		clean := paneldbtest.Checksum(t, tg)
+		ctx := context.Background()
+		db, err := paneldb.OpenWriter(ctx, tg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer db.Close()
+		d, now := db.Server().Dialect, time.Now().UTC()
+		var removed bool
+		err = db.Chunk(ctx, func(x paneldb.Execer) error {
+			id, err := Writer{Dialect: d}.InsertAdmin(ctx, x, panel.Admin{Username: "newshop"}, "$2a$12$h", OperatorRole, now)
+			if err != nil {
+				return err
+			}
+			for _, s := range [][]any{
+				{"INSERT INTO admin_passkeys (id, admin_id, name) VALUES (?, ?, ?)", 1, id, "Phone"},
+				{"INSERT INTO passkey_challenges (id, admin_id, kind) VALUES (?, ?, ?)", 2, id, "register"},
+			} {
+				if _, err := x.ExecContext(ctx, s[0].(string), s[1:]...); err != nil {
+					return err
+				}
+			}
+			removed, err = RemoveAdmin(ctx, x, d, panel.Row{ID: id, Username: "newshop", CreatedAt: now})
+			return err
+		})
+		if err != nil || !removed {
+			t.Fatalf("removed = %v, err = %v", removed, err)
+		}
+		if paneldbtest.Checksum(t, tg) != clean {
+			t.Fatal("the passkey rows of the removed admin are still there")
+		}
+	})
+}
