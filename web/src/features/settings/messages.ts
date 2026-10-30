@@ -2,7 +2,7 @@ import type { Messages } from '../../i18n/locale';
 
 const en = {
   title: 'Settings',
-  description: 'How Karvan looks, keeps you safe during a move, and who can sign in.',
+  description: 'How Karvan looks, Safe Mode, and who can sign in.',
   tabs: 'Settings sections',
   tabGeneral: 'General',
   tabSafeMode: 'Safe Mode',
@@ -36,7 +36,7 @@ const en = {
   otherUser: 'Another user',
   safeModeTitle: 'Safe Mode',
   safeModeHint:
-    'Before a migration writes anything, Karvan backs up the new panel. If the move fails, it is undone.',
+    'Before a migration writes anything, Karvan backs up the new panel. If the move fails, Karvan takes back what it can, and the report lists the rest.',
   safeModeOn: 'On',
   safeModeOff: 'Off',
   safeModeOffWarning:
@@ -54,7 +54,7 @@ const en = {
     'Only the moved users and the admin come out. Changes other admins made meanwhile stay. The backup goes back only if something is left.',
   rollbackBackup: 'Put the whole backup back',
   rollbackBackupHint:
-    'The new panel goes back to how it was before the move, including changes others made meanwhile. Karvan stops the panel for a few seconds.',
+    'The new panel goes back to how it was before the move, including changes others made meanwhile. Karvan stops the panel while the backup goes back.',
   rollbackSaved: 'Saved.',
   controlMissing: {
     one: 'Karvan cannot stop and start {names}, so it cannot put a whole backup back there.',
@@ -70,7 +70,7 @@ type Key = keyof typeof en;
 
 const fa: Messages<Key>['fa'] = {
   title: 'تنظیمات',
-  description: 'ظاهر کاروان، محافظت در هنگام انتقال و اینکه چه کسی میتواند وارد شود.',
+  description: 'ظاهر کاروان، حالت امن و اینکه چه کسی میتواند وارد شود.',
   tabs: 'بخش های تنظیمات',
   tabGeneral: 'عمومی',
   tabSafeMode: 'حالت امن',
@@ -105,7 +105,7 @@ const fa: Messages<Key>['fa'] = {
   otherUser: 'کاربر دیگر',
   safeModeTitle: 'حالت امن',
   safeModeHint:
-    'پیش از اینکه انتقال چیزی بنویسد، کاروان از پنل جدید پشتیبان میگیرد. اگر انتقال شکست بخورد، برگردانده میشود.',
+    'پیش از اینکه انتقال چیزی بنویسد، کاروان از پنل جدید پشتیبان میگیرد. اگر انتقال شکست بخورد، کاروان هر چه را بتواند برمیگرداند و گزارش بقیه را نشان میدهد.',
   safeModeOn: 'روشن',
   safeModeOff: 'خاموش',
   safeModeOffWarning:
@@ -123,7 +123,7 @@ const fa: Messages<Key>['fa'] = {
     'فقط کاربرهای منتقل شده و ادمین حذف میشوند. تغییراتی که ادمین های دیگر در این مدت داده اند میمانند. پشتیبان فقط وقتی برمیگردد که چیزی باقی مانده باشد.',
   rollbackBackup: 'برگرداندن کامل پشتیبان',
   rollbackBackupHint:
-    'پنل جدید به حالت پیش از انتقال برمیگردد و تغییرات دیگران در این مدت هم برمیگردند. کاروان پنل را چند ثانیه متوقف میکند.',
+    'پنل جدید به حالت پیش از انتقال برمیگردد و تغییرات دیگران در این مدت هم برمیگردند. کاروان تا برگشتن پشتیبان، پنل را متوقف میکند.',
   rollbackSaved: 'ذخیره شد.',
   controlMissing: {
     one: 'کاروان نمیتواند {names} را متوقف و دوباره روشن کند، پس نمیتواند پشتیبان کامل را آنجا برگرداند.',
