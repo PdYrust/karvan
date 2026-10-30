@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"slices"
 	"strings"
+	"time"
 )
 
 // DefaultSocket is where the Docker daemon listens. Karvan's Docker image
@@ -124,4 +125,26 @@ func projectName(dir string) string {
 		return -1
 	}, strings.ToLower(filepath.Base(dir)))
 	return strings.TrimLeft(name, "-_")
+}
+
+// workingDirLabel is the folder Docker Compose ran a container's project from.
+const workingDirLabel = "com.docker.compose.project.working_dir"
+
+// RunningDirs lists the folders of the compose projects that have a
+// running container, through the Docker socket (DefaultSocket when socket
+// is ""). It fails when Docker cannot be reached.
+func RunningDirs(ctx context.Context, socket string) (map[string]bool, error) {
+	ctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	var list []container
+	if err := newEngine(cmp.Or(socket, DefaultSocket)).do(ctx, http.MethodGet, "/containers/json", &list); err != nil {
+		return nil, err
+	}
+	out := map[string]bool{}
+	for _, k := range list {
+		if d := k.Labels[workingDirLabel]; d != "" {
+			out[filepath.Clean(d)] = true
+		}
+	}
+	return out, nil
 }

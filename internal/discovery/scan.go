@@ -25,7 +25,6 @@ const (
 	DBUnsupported    = "db_unsupported"
 	DBUnreachable    = "db_unreachable"
 	DBNotWritable    = "db_not_writable"
-	DBShared         = "db_shared"
 	NotAPanel        = "not_a_panel"
 	UnknownRevision  = "unknown_revision"
 	SchemaMismatch   = "schema_mismatch"
@@ -86,25 +85,24 @@ func (p *Panel) note(code, detail string) { p.Findings = append(p.Findings, Find
 var DefaultRoots = []string{"/opt"}
 
 // Scan inspects every <root>/*/.env, plus extra ENV files, and returns
-// the panels sorted by folder. Panels that share a database are flagged.
-func Scan(ctx context.Context, roots, extra []string) []Panel {
-	var out []Panel
-	seen := map[string]string{}
+// the panels sorted by folder, without the copies (see Copies), which it
+// returns apart. running holds the folders running containers use.
+func Scan(ctx context.Context, roots, extra []string, running map[string]bool) (panels []Panel, copies map[string]string) {
+	var all []Panel
 	for _, e := range envFiles(roots, extra) {
 		p := Inspect(ctx, e)
 		if p.Kind == "" && hasFinding(p, NotAPanel) {
 			continue
 		}
-		if p.Identity != "" {
-			if first, ok := seen[p.Identity]; ok {
-				p.note(DBShared, first)
-			} else {
-				seen[p.Identity] = p.Name
-			}
-		}
-		out = append(out, p)
+		all = append(all, p)
 	}
-	return out
+	copies = Copies(all, running)
+	for _, p := range all {
+		if _, ok := copies[p.EnvPath]; !ok {
+			panels = append(panels, p)
+		}
+	}
+	return panels, copies
 }
 
 func hasFinding(p Panel, code string) bool {

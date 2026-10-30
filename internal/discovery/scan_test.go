@@ -2,6 +2,7 @@ package discovery
 
 import (
 	"context"
+	"maps"
 	"os"
 	"path/filepath"
 	"slices"
@@ -48,24 +49,29 @@ XRAY_SUBSCRIPTION_PATH = "/links/"
 	write(t, filepath.Join(root, "relative", "docker-compose.yml"), "services:\n  marzban:\n    image: gozargah/marzban:latest\n")
 	write(t, filepath.Join(root, "other-app", ".env"), "DEBUG=1\n")
 
-	got := Scan(context.Background(), []string{root}, nil)
+	write(t, filepath.Join(root, "pasarguard.backup.20261028193827", ".env"), "SQLALCHEMY_DATABASE_URL=sqlite+aiosqlite:///"+p.Path+"\n")
+	got, copies := Scan(context.Background(), []string{root}, nil, nil)
 	byName := map[string]Panel{}
 	for _, x := range got {
 		byName[x.Name] = x
 	}
-	if _, ok := byName["other-app"]; ok || len(got) != 4 {
+	if _, ok := byName["other-app"]; ok || len(got) != 3 {
 		t.Fatalf("scan found %d panels: %+v", len(got), got)
 	}
 	mz := byName["marzban"]
 	if mz.Kind != panel.Marzban || !mz.Ready() || mz.Settings.Port != 8443 || mz.Settings.SubPath != "links" || mz.Revision != marzbandb.Revision {
 		t.Errorf("marzban: %+v", mz)
 	}
-	// Folders are sorted, so "copy" is seen first and "pg-two" is the duplicate.
+	// Three folders on one database: with no running container and none
+	// named pasarguard, the first by path is the panel and the others are
+	// copies, the backup-named one too.
 	if c := byName["copy"]; c.Kind != panel.PasarGuard || !c.Ready() || c.Settings.SubPath != "sub" {
 		t.Errorf("pasarguard: %+v", c)
 	}
-	if pg := byName["pg-two"]; !slices.Contains(codes(pg), DBShared) {
-		t.Errorf("shared database not flagged: %v", codes(pg))
+	want := map[string]string{filepath.Join(root, "pg-two", ".env"): filepath.Join(root, "copy"),
+		filepath.Join(root, "pasarguard.backup.20261028193827", ".env"): filepath.Join(root, "copy")}
+	if !maps.Equal(copies, want) {
+		t.Errorf("copies = %v", copies)
 	}
 	if r := byName["relative"]; r.Hint != panel.Marzban || !slices.Contains(codes(r), DBRelativePath) {
 		t.Errorf("relative: %+v", r)

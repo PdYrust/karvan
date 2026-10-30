@@ -3,7 +3,7 @@ import { createTranslate, type Message } from '../../i18n/core';
 import { codeSpans } from '../../lib/format/code-spans';
 import { findingDetail, findingMessages, findingText, type FindingKey } from './findings';
 
-// Every finding code discovery reports (internal/discovery/scan.go).
+// Every finding code discovery reports (internal/discovery/scan.go and copies.go).
 const codes = [
   'env_unreadable',
   'db_url_missing',
@@ -11,7 +11,7 @@ const codes = [
   'db_unsupported',
   'db_unreachable',
   'db_not_writable',
-  'db_shared',
+  'panel_copy',
   'not_a_panel',
   'unknown_revision',
   'schema_mismatch',
@@ -80,7 +80,7 @@ describe('findingDetail', () => {
     expect(findingDetail({ code: 'unknown_revision', detail: 'a1b2c3d4e5f6' })).toBe(
       'a1b2c3d4e5f6',
     );
-    expect(findingDetail({ code: 'db_shared', detail: 'marzban' })).toBe('marzban');
+    expect(findingDetail({ code: 'panel_copy', detail: '/opt/pasarguard' })).toBe('/opt/pasarguard');
     expect(findingDetail({ code: 'unknown_children', detail: 'logs.user_id -> users' })).toBe(
       'logs.user_id -> users',
     );

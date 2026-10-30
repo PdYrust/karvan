@@ -217,3 +217,39 @@ func (s *Service) emit(j *Job, stage, typ string, data map[string]any) {
 	// Events are best effort: a failed event store must not fail a write.
 	_ = s.events.emit(context.Background(), j.ID, stage, typ, data)
 }
+
+// ForgetPanel deletes the row of panel id, Karvan's record only, when no
+// rule, batch or job points at it, and reports whether it did. The panel's
+// folder and database are never touched.
+func (s *Service) ForgetPanel(ctx context.Context, id int64) (bool, error) {
+	tx, err := s.db.BeginTx(ctx, nil)
+	if err != nil {
+		return false, fmt.Errorf("forget panel: %w", err)
+	}
+	defer func() { _ = tx.Rollback() }()
+	used, err := panelUsed(ctx, tx, id)
+	if err != nil || used {
+		return false, err
+	}
+	if _, err := tx.ExecContext(ctx, "DELETE FROM panels WHERE id = ?", id); err != nil {
+		return false, fmt.Errorf("forget panel: %w", err)
+	}
+	return true, tx.Commit()
+}
+
+// PanelInUse reports whether a rule, a batch or a job points at panel id.
+func (s *Service) PanelInUse(ctx context.Context, id int64) (bool, error) {
+	return panelUsed(ctx, s.db, id)
+}
+
+func panelUsed(ctx context.Context, q interface {
+	QueryRowContext(ctx context.Context, query string, args ...any) *sql.Row
+}, id int64) (bool, error) {
+	var used bool
+	err := q.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM legacy_sites WHERE panel_id = ?1)
+		OR EXISTS (SELECT 1 FROM batches WHERE panel_id = ?1) OR EXISTS (SELECT 1 FROM jobs WHERE panel_id = ?1)`, id).Scan(&used)
+	if err != nil {
+		return false, fmt.Errorf("read panel use: %w", err)
+	}
+	return used, nil
+}

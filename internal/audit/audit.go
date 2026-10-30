@@ -30,6 +30,7 @@ const (
 	ActionReset       = "cli.reset"
 
 	ActionPanelsScan       = "panels.scan"
+	ActionPanelCopyRemoved = "panels.copy_removed"
 	ActionMigrationRun     = "migration.run"
 	ActionMigrationUndo    = "migration.rollback"
 	ActionMigrationStop    = "migration.cancel"

@@ -19,9 +19,9 @@ const en = {
   db_not_writable: "Karvan can't write to this panel's database file.",
   db_not_writable_fix:
     "Let Karvan's user write to the file and its folder. SQLite keeps its `-wal` and `-shm` files there.",
-  db_shared: 'Another panel on this server uses the same database.',
-  db_shared_fix:
-    'Each panel needs a database of its own. Check `SQLALCHEMY_DATABASE_URL` in both `.env` files.',
+  panel_copy: 'This folder is a copy of another panel and uses the same database.',
+  panel_copy_fix:
+    'A migration, batch or rule still uses it. Remove this panel once nothing needs it.',
   not_a_panel: "This database doesn't look like a Marzban or PasarGuard database.",
   not_a_panel_fix: "Check that the address in `.env` points to the panel's own database.",
   unknown_revision: "Karvan doesn't support this version of the panel.",
@@ -58,9 +58,9 @@ const fa: Messages<FindingKey>['fa'] = {
   db_not_writable: 'کاروان نمیتواند در فایل دیتابیس این پنل بنویسد.',
   db_not_writable_fix:
     'به کاربر کاروان اجازه نوشتن در این فایل و پوشه آن را بدهید. SQLite فایل های `-wal` و `-shm` را همانجا نگه میدارد.',
-  db_shared: 'پنل دیگری روی این سرور از همین دیتابیس استفاده میکند.',
-  db_shared_fix:
-    'هر پنل دیتابیس جداگانه ای لازم دارد. مقدار `SQLALCHEMY_DATABASE_URL` را در هر دو فایل `.env` بررسی کنید.',
+  panel_copy: 'این پوشه کپی پنل دیگری است و از همان دیتابیس استفاده میکند.',
+  panel_copy_fix:
+    'هنوز یک انتقال، دسته یا قانون از آن استفاده میکند. وقتی دیگر لازم نبود، این پنل را حذف کنید.',
   not_a_panel: 'این دیتابیس، دیتابیس مرزبان یا پاسارگارد نیست.',
   not_a_panel_fix: 'بررسی کنید آدرس دیتابیس در `.env` به دیتابیس خود پنل اشاره کند.',
   unknown_revision: 'کاروان از این نسخه پنل پشتیبانی نمیکند.',
@@ -93,7 +93,7 @@ export function findingText(code: string): { what: FindingKey; fix: FindingKey }
 
 // These details name something (a panel, a revision, a table, a path); the
 // others hold raw error text, which never reaches the screen.
-const named = new Set(['db_shared', 'unknown_revision', 'unknown_children', 'path_relative']);
+const named = new Set(['panel_copy', 'unknown_revision', 'unknown_children', 'path_relative']);
 
 /** The machine value a finding is about, when its detail is one. */
 export function findingDetail(f: Finding): string | undefined {

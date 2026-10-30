@@ -11,6 +11,7 @@ const serverActions = [
   'cli.init',
   'cli.reset',
   'panels.scan',
+  'panels.copy_removed',
   'migration.run',
   'migration.rollback',
   'migration.cancel',
