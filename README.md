@@ -6,12 +6,6 @@
 
 <p align="center">Move and merge users between Marzban and PasarGuard panels.</p>
 
----
-
-Karvan ships as one binary with a bilingual (Persian and English) web panel.
-
-> Status: beta (0.5.0-beta). Try it on a test server or with Safe Mode on before you use it on a panel with real users.
-
 ## Install
 On a Linux server (amd64 or arm64) with systemd:
 
