@@ -24,7 +24,7 @@ const en = {
   self: 'HTTPS with a self-signed certificate',
   selfHint: 'Encrypted, for an address with no domain. Browsers show a warning first.',
   domain: 'HTTPS with a domain',
-  domainHint: 'Uses the certificate of a registered domain. Browsers trust it.',
+  domainHint: 'Uses the certificate of a registered domain.',
   domainLabel: 'Domain',
   pickDomain: 'Pick a domain',
   noDomains:
@@ -66,7 +66,7 @@ const fa: Messages<HttpsKey>['fa'] = {
   self: 'HTTPS با گواهی خودامضا',
   selfHint: 'رمزنگاری دارد و برای آدرس بدون دامنه است. مرورگرها اول هشدار نشان میدهند.',
   domain: 'HTTPS با دامنه',
-  domainHint: 'از گواهی یک دامنه ثبت شده استفاده میکند و مرورگرها به آن اعتماد دارند.',
+  domainHint: 'از گواهی یک دامنه ثبت شده استفاده میکند.',
   domainLabel: 'دامنه',
   pickDomain: 'انتخاب دامنه',
   noDomains: 'هنوز هیچ دامنه ای برای نام خود گواهی ندارد. در صفحه دامنه ها به یکی گواهی بدهید.',

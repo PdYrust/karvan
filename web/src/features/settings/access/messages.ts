@@ -4,7 +4,7 @@ const en = {
   addressTitle: 'Panel address',
   pathTitle: 'Hidden path',
   pathHint:
-    'The secret part of the address that keeps scanners away. A new one ends old bookmarks.',
+    'The secret part of the address. Without it, the server answers 404. A new one ends old bookmarks.',
   newPath: 'New hidden path',
   portTitle: 'Port',
   portHint: 'Karvan answers on port {port}.',
@@ -59,7 +59,7 @@ const fa: Messages<Key>['fa'] = {
   addressTitle: 'آدرس پنل',
   pathTitle: 'مسیر مخفی',
   pathHint:
-    'بخش مخفی آدرس که اسکنرها را دور نگه میدارد. مسیر جدید نشانک های قبلی را از کار میاندازد.',
+    'بخش مخفی آدرس. بدون آن، سرور خطای 404 میدهد. مسیر جدید نشانک های قبلی را از کار میاندازد.',
   newPath: 'مسیر مخفی جدید',
   portTitle: 'پورت',
   portHint: 'کاروان روی پورت {port} جواب میدهد.',
