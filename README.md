@@ -17,6 +17,10 @@ sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/
 ```sh
 sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/get.sh)" @ install --version 0.5.0-beta
 ```
+**Without questions** (the installer asks how the panel is served; `--https none`, `ip` or `domain` answers it):
+```sh
+sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/get.sh)" @ install --https domain --domain panel.example.com --yes
+```
 **Update** (newest release, or add `--version`):
 ```sh
 sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/get.sh)" @ update
