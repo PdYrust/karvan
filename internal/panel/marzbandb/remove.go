@@ -5,6 +5,8 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"maps"
+	"slices"
 
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/marzban"
@@ -20,9 +22,23 @@ type Written struct {
 	Excluded    map[string][]string // protocol to excluded inbound tags
 }
 
+// readChunk bounds the ids one statement binds: SQLite takes 32766
+// parameters, MySQL and PostgreSQL 65535, and a job may verify more users.
+const readChunk = 1000
+
 // ReadUsers reads ids back, for the verify stage and for settling.
 func ReadUsers(ctx context.Context, q paneldb.Querier, d paneldb.Dialect, ids []int64) (map[int64]*Written, error) {
 	out := map[int64]*Written{}
+	if len(ids) > readChunk {
+		for part := range slices.Chunk(ids, readChunk) {
+			got, err := ReadUsers(ctx, q, d, part)
+			if err != nil {
+				return nil, err
+			}
+			maps.Copy(out, got)
+		}
+		return out, nil
+	}
 	if len(ids) == 0 {
 		return out, nil
 	}

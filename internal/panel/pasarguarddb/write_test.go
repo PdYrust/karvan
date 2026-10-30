@@ -102,3 +102,19 @@ func TestWriteReadBackAndRemove(t *testing.T) {
 		}
 	})
 }
+
+func TestReadUsersTakesMoreIDsThanAStatementBinds(t *testing.T) {
+	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+		ids := make([]int64, 70_000) // more than SQLite (32766), MySQL and PostgreSQL (65535) bind at once
+		for i := range ids {
+			ids[i] = int64(1_000_000 + i)
+		}
+		view(t, tg, func(q paneldb.Querier, _ paneldb.Server) error {
+			back, err := ReadUsers(context.Background(), q, ids)
+			if err == nil && len(back) != 0 {
+				t.Fatalf("read back %d users that do not exist", len(back))
+			}
+			return err
+		})
+	})
+}

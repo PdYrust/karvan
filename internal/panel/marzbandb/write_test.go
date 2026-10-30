@@ -201,3 +201,35 @@ func TestEnsureInboundsAddsTheDefaultHost(t *testing.T) {
 		})
 	})
 }
+
+// manyIDs is more ids than one statement may bind on any server (SQLite
+// 32766, MySQL and PostgreSQL 65535), with the last one known.
+func manyIDs(known int64) []int64 {
+	ids := make([]int64, 0, 70_001)
+	for i := range int64(70_000) {
+		ids = append(ids, 1_000_000+i)
+	}
+	return append(ids, known)
+}
+
+func TestReadUsersTakesMoreIDsThanAStatementBinds(t *testing.T) {
+	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+		ctx := context.Background()
+		db, err := paneldb.OpenWriter(ctx, tg)
+		if err != nil {
+			t.Fatal(err)
+		}
+		defer db.Close()
+		d := db.Server().Dialect
+		w := NewWriter(d, targets)
+		chunk(t, db, func(x paneldb.Execer) error { return w.EnsureInbounds(ctx, x) })
+		_, userID := writeOne(t, db, w, movedUser("many_ids"), time.Now().UTC())
+		chunk(t, db, func(x paneldb.Execer) error {
+			back, err := ReadUsers(ctx, x, d, manyIDs(userID))
+			if err == nil && (len(back) != 1 || back[userID] == nil || back[userID].Credentials.VLESS == nil) {
+				t.Fatalf("read back %d users: %+v", len(back), back[userID])
+			}
+			return err
+		})
+	})
+}
