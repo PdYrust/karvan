@@ -40,6 +40,13 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - the owner has read every Persian string.
 
+## Release notes 0.5.2-beta
+
+Karvan 0.5.2-beta works with PasarGuard 5.5.
+
+### Fixes
+- PasarGuard 5.5 added passkey sign-in for admins, with the tables `admin_passkeys` and `passkey_challenges`. Karvan no longer reports them as an unknown add-on, and undoing a move removes the passkeys of the admins it created.
+
 ## Release notes 0.5.1-beta
 
 Karvan 0.5.1-beta follows 0.5.0-beta with installer and discovery fixes.
