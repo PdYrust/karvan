@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -29,6 +30,8 @@ const (
 )
 
 var apiGets = []string{"overview", "migrations", "domains"}
+
+var errBusy = errors.New("busy")
 
 func TestAPILatency(t *testing.T) {
 	base := os.Getenv("KARVAN_BENCH_URL")
@@ -61,7 +64,7 @@ func TestAPILatency(t *testing.T) {
 			t.Fatal(err)
 		}
 	}
-	for _, name := range append(slices.Clone(apiGets), "POST session") {
+	for _, name := range append(slices.Clone(apiGets), "POST session", "POST session busy") {
 		l := times[name]
 		slices.Sort(l)
 		r := result{lat: l}
@@ -111,8 +114,19 @@ func (c *apiClient) signIn() error {
 		return err
 	}
 	c.csrf = s.CSRFToken
-	start := time.Now()
-	if b, err = c.do(http.MethodPost, "session", c.login); err != nil {
+	var start time.Time
+	for {
+		start = time.Now()
+		b, err = c.do(http.MethodPost, "session", c.login)
+		if !errors.Is(err, errBusy) {
+			break
+		}
+		// Two password checks run at a time and a third waits up to 10 s,
+		// then gets 503 busy (auth.hashSlots): counted, then tried again.
+		c.add("POST session busy", time.Since(start))
+		time.Sleep(time.Second)
+	}
+	if err != nil {
 		return err
 	}
 	c.add("POST session", time.Since(start))
@@ -139,6 +153,9 @@ func (c *apiClient) do(method, path string, body []byte) ([]byte, error) {
 	}
 	defer resp.Body.Close()
 	out, err := io.ReadAll(resp.Body)
+	if err == nil && resp.StatusCode == http.StatusServiceUnavailable {
+		return out, errBusy
+	}
 	if err == nil && resp.StatusCode != http.StatusOK {
 		err = fmt.Errorf("%s %s: status %d", method, path, resp.StatusCode)
 	}
