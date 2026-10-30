@@ -4,14 +4,15 @@ package marzbandb
 
 import (
 	"context"
+	_ "embed"
 
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 	"github.com/PdYrust/karvan/internal/panel/panelstats"
 )
 
-// Revision is the alembic head of Marzban 0.8.4, the only version Karvan
-// writes to (owner decision 3).
+// Revision is the alembic head of Marzban 0.8.4, the known version. Other
+// revisions are used when their schema matches this one's (CheckShape).
 const Revision = "2b231de97dc3"
 
 // columns are the columns Karvan reads or writes, per table, at Revision.
@@ -32,6 +33,25 @@ var columns = map[string][]string{
 	"jwt":             {"id", "secret_key"},
 }
 
+// inserts are the tables Karvan adds rows to (write.go).
+var inserts = []string{"admins", "inbounds", "hosts", "users", "proxies", "exclude_inbounds_association", "next_plans", "user_usage_logs"}
+
+// knownJSON is the shape of columns at Revision on each server flavor,
+// read from the fixtures (go test -tags dbtest -run TestKnownSchema -update).
+//
+//go:embed schema.json
+var knownJSON []byte
+
+var known = mustSpecs(knownJSON)
+
+func mustSpecs(b []byte) map[string]paneldb.Spec {
+	s, err := paneldb.ParseSpecs(b)
+	if err != nil {
+		panic("marzbandb: schema.json: " + err.Error())
+	}
+	return s
+}
+
 // children are the rows that hang off a user or an admin, in delete order
 // (D35, D37). Anything else that references them stops Safe Mode.
 var children = []paneldb.ForeignKey{
@@ -47,8 +67,11 @@ var children = []paneldb.ForeignKey{
 
 // Schema is what Inspect learned about a destination database.
 type Schema struct {
-	Server         paneldb.Server
-	Revision       string
+	Server   paneldb.Server
+	Revision string
+	// Checked means Revision is not a known one but the live schema
+	// matched the known one (paneldb.CheckShape), so Karvan uses it.
+	Checked        bool
 	UsersFoldCase  bool // users.username compares without case
 	AdminsFoldCase bool
 	// UnknownChildren reference users, proxies or admins but are not in the
@@ -56,7 +79,8 @@ type Schema struct {
 	UnknownChildren []paneldb.ForeignKey
 }
 
-// Inspect checks that the database is Marzban at Revision with the expected
+// Inspect checks that the database is Marzban at Revision, or at another
+// revision with the same shape for what Karvan uses, with the expected
 // columns, and reads its collations and foreign keys.
 func Inspect(ctx context.Context, q paneldb.Querier, srv paneldb.Server) (Schema, error) {
 	s := Schema{Server: srv}
@@ -66,7 +90,14 @@ func Inspect(ctx context.Context, q paneldb.Querier, srv paneldb.Server) (Schema
 	}
 	s.Revision = rev
 	if rev != Revision {
-		return s, &panel.VersionError{Kind: panel.Marzban, Revision: rev}
+		diffs, err := paneldb.CheckShape(ctx, q, srv, known, inserts)
+		if err != nil {
+			return s, err
+		}
+		if len(diffs) > 0 {
+			return s, &panel.VersionError{Kind: panel.Marzban, Revision: rev, Diffs: diffs}
+		}
+		s.Checked = true
 	}
 	if gap, err := paneldb.MissingColumns(ctx, q, srv.Dialect, columns); err != nil || gap != "" {
 		if err == nil {

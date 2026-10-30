@@ -4,14 +4,16 @@ package pasarguarddb
 
 import (
 	"context"
+	_ "embed"
 
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 	"github.com/PdYrust/karvan/internal/panel/panelstats"
 )
 
-// Revision is the alembic head of PasarGuard 5.4.1. Newer revisions are
-// added one by one, each with its own fixture (owner decision 3).
+// Revision is the alembic head of PasarGuard 5.4.1, the known version.
+// Other revisions are used when their schema matches this one's
+// (CheckShape).
 const Revision = "48a6bcb8bba1"
 
 // columns are the columns Karvan reads or writes, per table, at Revision.
@@ -36,6 +38,25 @@ var columns = map[string][]string{
 	"hosts":                       {"id", "inbound_tag", "is_disabled"},
 }
 
+// inserts are the tables Karvan adds rows to (write.go).
+var inserts = []string{"admins", "users", "users_groups_association", "next_plans", "user_usage_logs"}
+
+// knownJSON is the shape of columns at Revision on each server flavor,
+// read from the fixtures (go test -tags dbtest -run TestKnownSchema -update).
+//
+//go:embed schema.json
+var knownJSON []byte
+
+var known = mustSpecs(knownJSON)
+
+func mustSpecs(b []byte) map[string]paneldb.Spec {
+	s, err := paneldb.ParseSpecs(b)
+	if err != nil {
+		panic("pasarguarddb: schema.json: " + err.Error())
+	}
+	return s
+}
+
 // children are the rows that hang off a user or an admin, in delete order
 // (D35, D37). Some cascade in the database; Karvan deletes them anyway, so
 // the order is the same on every backend.
@@ -55,13 +76,17 @@ var children = []paneldb.ForeignKey{
 
 // Schema is what Inspect learned about a destination database.
 type Schema struct {
-	Server          paneldb.Server
-	Revision        string
+	Server   paneldb.Server
+	Revision string
+	// Checked means Revision is not a known one but the live schema
+	// matched the known one (paneldb.CheckShape), so Karvan uses it.
+	Checked         bool
 	AdminsFoldCase  bool
 	UnknownChildren []paneldb.ForeignKey
 }
 
-// Inspect checks that the database is PasarGuard at Revision with the
+// Inspect checks that the database is PasarGuard at Revision, or at
+// another revision with the same shape for what Karvan uses, with the
 // expected columns, and reads the admin collation and foreign keys. User
 // names are case-sensitive on every backend (CaseSensitiveString).
 func Inspect(ctx context.Context, q paneldb.Querier, srv paneldb.Server) (Schema, error) {
@@ -72,7 +97,14 @@ func Inspect(ctx context.Context, q paneldb.Querier, srv paneldb.Server) (Schema
 	}
 	s.Revision = rev
 	if rev != Revision {
-		return s, &panel.VersionError{Kind: panel.PasarGuard, Revision: rev}
+		diffs, err := paneldb.CheckShape(ctx, q, srv, known, inserts)
+		if err != nil {
+			return s, err
+		}
+		if len(diffs) > 0 {
+			return s, &panel.VersionError{Kind: panel.PasarGuard, Revision: rev, Diffs: diffs}
+		}
+		s.Checked = true
 	}
 	if gap, err := paneldb.MissingColumns(ctx, q, srv.Dialect, columns); err != nil || gap != "" {
 		if err == nil {

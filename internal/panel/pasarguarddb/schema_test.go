@@ -3,6 +3,8 @@ package pasarguarddb
 import (
 	"context"
 	"errors"
+	"flag"
+	"slices"
 	"testing"
 	"time"
 
@@ -52,6 +54,9 @@ func TestInspectFixtures(t *testing.T) {
 			if err != nil {
 				return err
 			}
+			if s.Checked {
+				t.Error("a known revision needs no schema check")
+			}
 			if want := tg.Dialect == paneldb.MySQL; s.AdminsFoldCase != want {
 				t.Errorf("AdminsFoldCase = %v, want %v", s.AdminsFoldCase, want)
 			}
@@ -63,23 +68,59 @@ func TestInspectFixtures(t *testing.T) {
 	})
 }
 
-func TestInspectRefusesOtherRevisions(t *testing.T) {
-	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "testdata/" + Revision + ".sqlite.sql"})
-	exec(t, tg, []any{"UPDATE alembic_version SET version_num = 'c9b48df42f10'"})
+var update = flag.Bool("update", false, "rewrite schema.json from the fixtures")
+
+func TestKnownSchema(t *testing.T) {
+	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+		paneldbtest.KnownSpec(t, tg, "schema.json", columns, inserts, *update)
+	})
+}
+
+func inspectRevision(t *testing.T, tg paneldb.Target, stmts ...string) (Schema, error) {
+	t.Helper()
+	exec(t, tg, append([][]any{{"UPDATE alembic_version SET version_num = 'c9b48df42f10'"}}, toStmts(stmts)...)...)
 	ctx := context.Background()
 	r, err := paneldb.OpenReader(ctx, tg)
 	if err != nil {
 		t.Fatal(err)
 	}
 	defer r.Close()
+	var s Schema
 	err = r.View(ctx, func(q paneldb.Querier) error {
-		_, err := Inspect(ctx, q, r.Server())
+		var err error
+		s, err = Inspect(ctx, q, r.Server())
 		return err
 	})
-	var ve *panel.VersionError
-	if !errors.As(err, &ve) || ve.Kind != panel.PasarGuard {
-		t.Fatalf("err = %v", err)
+	return s, err
+}
+
+func toStmts(stmts []string) [][]any {
+	out := make([][]any, len(stmts))
+	for i, s := range stmts {
+		out[i] = []any{s}
 	}
+	return out
+}
+
+// A revision Karvan does not know is used when what Karvan reads and
+// writes has the known shape. A new nullable column changes nothing.
+func TestInspectChecksOtherRevisions(t *testing.T) {
+	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+		s, err := inspectRevision(t, tg, "ALTER TABLE users ADD COLUMN nickname VARCHAR(64)")
+		if err != nil || !s.Checked || s.Revision != "c9b48df42f10" {
+			t.Fatalf("schema = %+v, err = %v", s, err)
+		}
+	})
+}
+
+func TestInspectRefusesOtherRevisionsThatDiffer(t *testing.T) {
+	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+		_, err := inspectRevision(t, tg, "ALTER TABLE users DROP COLUMN note")
+		var ve *panel.VersionError
+		if !errors.As(err, &ve) || ve.Kind != panel.PasarGuard || !slices.Equal(ve.Diffs, []string{"users.note missing"}) {
+			t.Fatalf("err = %v", err)
+		}
+	})
 }
 
 const proxySettings = `{"vmess":{"id":"3f2504e0-4f89-11d3-9a0c-0305e82c3301"},"vless":{"id":"3f2504e0-4f89-11d3-9a0c-0305e82c3302"},` +

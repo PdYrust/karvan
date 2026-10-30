@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"flag"
+	"slices"
 	"testing"
 
 	"github.com/PdYrust/karvan/internal/panel"
@@ -34,6 +36,9 @@ func TestInspectFixtures(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
+		if s.Checked {
+			t.Error("a known revision needs no schema check")
+		}
 		if s.UsersFoldCase {
 			t.Error("users.username is case-sensitive at this revision on every backend")
 		}
@@ -62,12 +67,53 @@ func sqliteFixture(t *testing.T, extra string) paneldb.Target {
 	return tg
 }
 
-func TestInspectRefusesOtherRevisions(t *testing.T) {
-	_, err := inspect(t, sqliteFixture(t, "UPDATE alembic_version SET version_num = 'e56f1c781e46'"))
-	var ve *panel.VersionError
-	if !errors.As(err, &ve) || ve.Revision != "e56f1c781e46" {
-		t.Fatalf("err = %v", err)
+var update = flag.Bool("update", false, "rewrite schema.json from the fixtures")
+
+func TestKnownSchema(t *testing.T) {
+	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+		paneldbtest.KnownSpec(t, tg, "schema.json", columns, inserts, *update)
+	})
+}
+
+func alter(t *testing.T, tg paneldb.Target, stmts ...string) {
+	t.Helper()
+	ctx := context.Background()
+	w, err := paneldb.OpenWriter(ctx, tg)
+	if err != nil {
+		t.Fatal(err)
 	}
+	defer w.Close()
+	chunk(t, w, func(x paneldb.Execer) error {
+		for _, s := range stmts {
+			if _, err := x.ExecContext(ctx, s); err != nil {
+				return err
+			}
+		}
+		return nil
+	})
+}
+
+// A revision Karvan does not know is used when what Karvan reads and
+// writes has the known shape. A new nullable column changes nothing.
+func TestInspectChecksOtherRevisions(t *testing.T) {
+	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+		alter(t, tg, "UPDATE alembic_version SET version_num = 'e56f1c781e46'", "ALTER TABLE users ADD COLUMN nickname VARCHAR(64)")
+		s, err := inspect(t, tg)
+		if err != nil || !s.Checked || s.Revision != "e56f1c781e46" {
+			t.Fatalf("schema = %+v, err = %v", s, err)
+		}
+	})
+}
+
+func TestInspectRefusesOtherRevisionsThatDiffer(t *testing.T) {
+	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+		alter(t, tg, "UPDATE alembic_version SET version_num = 'e56f1c781e46'", "ALTER TABLE users DROP COLUMN note")
+		_, err := inspect(t, tg)
+		var ve *panel.VersionError
+		if !errors.As(err, &ve) || ve.Revision != "e56f1c781e46" || !slices.Equal(ve.Diffs, []string{"users.note missing"}) {
+			t.Fatalf("err = %v", err)
+		}
+	})
 }
 
 func TestInspectFindsUnknownChildren(t *testing.T) {

@@ -1,0 +1,287 @@
+{
+  "mariadb": {
+    "columns": {
+      "admins": {
+        "created_at": "datetime null",
+        "discord_webhook": "varchar(1024) null",
+        "hashed_password": "varchar(128) null",
+        "id": "int default",
+        "is_sudo": "boolean null default",
+        "password_reset_at": "datetime null",
+        "telegram_id": "bigint null",
+        "username": "varchar(34) null",
+        "users_usage": "bigint default"
+      },
+      "exclude_inbounds_association": {
+        "inbound_tag": "varchar(256)",
+        "proxy_id": "int null"
+      },
+      "hosts": {
+        "address": "varchar(256)",
+        "alpn": "enum(h3,h3,h2,h3,h2,http/1.1,none,h2,http/1.1,h2,http/1.1)",
+        "fingerprint": "enum(none,chrome,firefox,safari,ios,android,edge,360,qq,random,randomized) default",
+        "id": "int default",
+        "inbound_tag": "varchar(256)",
+        "is_disabled": "boolean null",
+        "mux_enable": "boolean default",
+        "random_user_agent": "boolean default",
+        "remark": "varchar(256)",
+        "security": "enum(inbound_default,none,tls) default",
+        "use_sni_as_host": "boolean default"
+      },
+      "inbounds": {
+        "id": "int default",
+        "tag": "varchar(256)"
+      },
+      "jwt": {
+        "id": "int default",
+        "secret_key": "varchar(64)"
+      },
+      "next_plans": {
+        "add_remaining_traffic": "boolean default",
+        "data_limit": "bigint",
+        "expire": "int null",
+        "fire_on_either": "boolean default",
+        "id": "int default",
+        "user_id": "int"
+      },
+      "proxies": {
+        "id": "int default",
+        "settings": "longtext",
+        "type": "enum(vmess,vless,trojan,shadowsocks)",
+        "user_id": "int null"
+      },
+      "user_usage_logs": {
+        "id": "int default",
+        "reset_at": "datetime null",
+        "used_traffic_at_reset": "bigint",
+        "user_id": "int null"
+      },
+      "users": {
+        "admin_id": "int null",
+        "auto_delete_in_days": "int null",
+        "created_at": "datetime null default",
+        "data_limit": "bigint null",
+        "data_limit_reset_strategy": "enum(no_reset,day,week,month,year) default",
+        "edit_at": "datetime null",
+        "expire": "int null",
+        "id": "int default",
+        "last_status_change": "datetime null",
+        "note": "varchar(500) null",
+        "on_hold_expire_duration": "bigint null",
+        "on_hold_timeout": "datetime null",
+        "online_at": "datetime null",
+        "status": "enum(on_hold,active,limited,expired,disabled)",
+        "sub_last_user_agent": "varchar(512) null",
+        "sub_revoked_at": "datetime null",
+        "sub_updated_at": "datetime null",
+        "used_traffic": "bigint null",
+        "username": "varchar(34) null"
+      }
+    },
+    "unique": [
+      "admins(username)",
+      "inbounds(tag)",
+      "users(username)"
+    ],
+    "foreign": [
+      "exclude_inbounds_association.inbound_tag -> inbounds",
+      "exclude_inbounds_association.proxy_id -> proxies",
+      "hosts.inbound_tag -> inbounds",
+      "next_plans.user_id -> users",
+      "proxies.user_id -> users",
+      "user_usage_logs.user_id -> users",
+      "users.admin_id -> admins"
+    ]
+  },
+  "mysql": {
+    "columns": {
+      "admins": {
+        "created_at": "datetime null",
+        "discord_webhook": "varchar(1024) null",
+        "hashed_password": "varchar(128) null",
+        "id": "int default",
+        "is_sudo": "boolean null default",
+        "password_reset_at": "datetime null",
+        "telegram_id": "bigint null",
+        "username": "varchar(34) null",
+        "users_usage": "bigint default"
+      },
+      "exclude_inbounds_association": {
+        "inbound_tag": "varchar(256)",
+        "proxy_id": "int null"
+      },
+      "hosts": {
+        "address": "varchar(256)",
+        "alpn": "enum(h3,h3,h2,h3,h2,http/1.1,none,h2,http/1.1,h2,http/1.1)",
+        "fingerprint": "enum(none,chrome,firefox,safari,ios,android,edge,360,qq,random,randomized) default",
+        "id": "int default",
+        "inbound_tag": "varchar(256)",
+        "is_disabled": "boolean null",
+        "mux_enable": "boolean default",
+        "random_user_agent": "boolean default",
+        "remark": "varchar(256)",
+        "security": "enum(inbound_default,none,tls) default",
+        "use_sni_as_host": "boolean default"
+      },
+      "inbounds": {
+        "id": "int default",
+        "tag": "varchar(256)"
+      },
+      "jwt": {
+        "id": "int default",
+        "secret_key": "varchar(64)"
+      },
+      "next_plans": {
+        "add_remaining_traffic": "boolean default",
+        "data_limit": "bigint",
+        "expire": "int null",
+        "fire_on_either": "boolean default",
+        "id": "int default",
+        "user_id": "int"
+      },
+      "proxies": {
+        "id": "int default",
+        "settings": "json",
+        "type": "enum(vmess,vless,trojan,shadowsocks)",
+        "user_id": "int null"
+      },
+      "user_usage_logs": {
+        "id": "int default",
+        "reset_at": "datetime null",
+        "used_traffic_at_reset": "bigint",
+        "user_id": "int null"
+      },
+      "users": {
+        "admin_id": "int null",
+        "auto_delete_in_days": "int null",
+        "created_at": "datetime null default",
+        "data_limit": "bigint null",
+        "data_limit_reset_strategy": "enum(no_reset,day,week,month,year) default",
+        "edit_at": "datetime null",
+        "expire": "int null",
+        "id": "int default",
+        "last_status_change": "datetime null",
+        "note": "varchar(500) null",
+        "on_hold_expire_duration": "bigint null",
+        "on_hold_timeout": "datetime null",
+        "online_at": "datetime null",
+        "status": "enum(on_hold,active,limited,expired,disabled)",
+        "sub_last_user_agent": "varchar(512) null",
+        "sub_revoked_at": "datetime null",
+        "sub_updated_at": "datetime null",
+        "used_traffic": "bigint null",
+        "username": "varchar(34) null"
+      }
+    },
+    "unique": [
+      "admins(username)",
+      "inbounds(tag)",
+      "users(username)"
+    ],
+    "foreign": [
+      "exclude_inbounds_association.inbound_tag -> inbounds",
+      "exclude_inbounds_association.proxy_id -> proxies",
+      "hosts.inbound_tag -> inbounds",
+      "next_plans.user_id -> users",
+      "proxies.user_id -> users",
+      "user_usage_logs.user_id -> users",
+      "users.admin_id -> admins"
+    ]
+  },
+  "sqlite": {
+    "columns": {
+      "admins": {
+        "created_at": "datetime null",
+        "discord_webhook": "varchar(1024) null",
+        "hashed_password": "varchar(128) null",
+        "id": "integer default",
+        "is_sudo": "boolean null default",
+        "password_reset_at": "datetime null",
+        "telegram_id": "bigint null",
+        "username": "varchar(34) null",
+        "users_usage": "bigint default"
+      },
+      "exclude_inbounds_association": {
+        "inbound_tag": "varchar(256) null",
+        "proxy_id": "integer null"
+      },
+      "hosts": {
+        "address": "varchar(256)",
+        "alpn": "varchar(14) default",
+        "fingerprint": "varchar(10) default",
+        "id": "integer default",
+        "inbound_tag": "varchar(256)",
+        "is_disabled": "boolean null",
+        "mux_enable": "boolean default",
+        "random_user_agent": "boolean default",
+        "remark": "varchar(256)",
+        "security": "varchar(15) default",
+        "use_sni_as_host": "boolean default"
+      },
+      "inbounds": {
+        "id": "integer default",
+        "tag": "varchar(256)"
+      },
+      "jwt": {
+        "id": "integer default",
+        "secret_key": "varchar(64)"
+      },
+      "next_plans": {
+        "add_remaining_traffic": "boolean default",
+        "data_limit": "bigint",
+        "expire": "integer null",
+        "fire_on_either": "boolean default",
+        "id": "integer default",
+        "user_id": "integer"
+      },
+      "proxies": {
+        "id": "integer default",
+        "settings": "json",
+        "type": "varchar(11)",
+        "user_id": "integer null"
+      },
+      "user_usage_logs": {
+        "id": "integer default",
+        "reset_at": "datetime null",
+        "used_traffic_at_reset": "bigint",
+        "user_id": "integer null"
+      },
+      "users": {
+        "admin_id": "integer null",
+        "auto_delete_in_days": "integer null",
+        "created_at": "datetime null default",
+        "data_limit": "bigint null",
+        "data_limit_reset_strategy": "varchar(8) default",
+        "edit_at": "datetime null",
+        "expire": "integer null",
+        "id": "integer default",
+        "last_status_change": "datetime null",
+        "note": "varchar(500) null",
+        "on_hold_expire_duration": "bigint null",
+        "on_hold_timeout": "datetime null",
+        "online_at": "datetime null",
+        "status": "varchar(8)",
+        "sub_last_user_agent": "varchar(64) null",
+        "sub_revoked_at": "datetime null",
+        "sub_updated_at": "datetime null",
+        "used_traffic": "bigint null",
+        "username": "varchar(34) null"
+      }
+    },
+    "unique": [
+      "admins(username)",
+      "inbounds(tag)",
+      "users(username)"
+    ],
+    "foreign": [
+      "exclude_inbounds_association.inbound_tag -> inbounds",
+      "exclude_inbounds_association.proxy_id -> proxies",
+      "hosts.inbound_tag -> inbounds",
+      "next_plans.user_id -> users",
+      "proxies.user_id -> users",
+      "user_usage_logs.user_id -> users",
+      "users.admin_id -> admins"
+    ]
+  }
+}

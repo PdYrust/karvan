@@ -1,0 +1,490 @@
+{
+  "mariadb": {
+    "columns": {
+      "admin_roles": {
+        "access": "longtext",
+        "features": "longtext",
+        "id": "bigint default",
+        "is_owner": "boolean default",
+        "limits": "longtext",
+        "name": "varchar(64)"
+      },
+      "admins": {
+        "created_at": "datetime",
+        "data_limit": "bigint null",
+        "discord_webhook": "varchar(1024) null",
+        "hashed_password": "varchar(128)",
+        "id": "bigint default",
+        "last_status_change": "datetime null",
+        "note": "varchar(500) null",
+        "password_reset_at": "datetime null",
+        "permission_overrides": "longtext null",
+        "role_id": "bigint",
+        "status": "enum(active,disabled,limited)",
+        "telegram_id": "bigint null",
+        "used_traffic": "bigint default",
+        "username": "varchar(34)"
+      },
+      "core_configs": {
+        "config": "longtext",
+        "id": "bigint default",
+        "type": "enum(xray,wg,mtproto,singbox) default"
+      },
+      "groups": {
+        "id": "bigint default",
+        "is_disabled": "boolean default",
+        "name": "varchar(64)"
+      },
+      "hosts": {
+        "id": "bigint default",
+        "inbound_tag": "varchar(256) null",
+        "is_disabled": "boolean null"
+      },
+      "inbounds": {
+        "id": "bigint default",
+        "tag": "varchar(256)"
+      },
+      "inbounds_groups_association": {
+        "group_id": "bigint",
+        "inbound_id": "bigint"
+      },
+      "jwt": {
+        "id": "bigint default",
+        "secret_key": "varchar(64)"
+      },
+      "next_plans": {
+        "add_remaining_traffic": "boolean default",
+        "data_limit": "bigint",
+        "expire": "int null",
+        "id": "bigint default",
+        "user_id": "bigint",
+        "user_template_id": "bigint null"
+      },
+      "settings": {
+        "id": "bigint default",
+        "subscription": "longtext"
+      },
+      "user_usage_logs": {
+        "id": "bigint default",
+        "reset_at": "datetime",
+        "used_traffic_at_reset": "bigint",
+        "user_id": "bigint null"
+      },
+      "users": {
+        "admin_id": "bigint null",
+        "auto_delete_in_days": "int null",
+        "created_at": "datetime default",
+        "data_limit": "bigint null",
+        "data_limit_reset_strategy": "enum(no_reset,day,week,month,year) default",
+        "edit_at": "datetime null",
+        "expire": "datetime null",
+        "hwid_limit": "bigint null",
+        "id": "bigint default",
+        "last_status_change": "datetime null",
+        "note": "varchar(500) null",
+        "on_hold_expire_duration": "bigint null",
+        "on_hold_timeout": "datetime null",
+        "online_at": "datetime null",
+        "proxy_settings": "longtext",
+        "status": "enum(active,disabled,limited,expired,on_hold)",
+        "sub_revoked_at": "datetime null",
+        "used_traffic": "bigint",
+        "username": "varchar(128)"
+      },
+      "users_groups_association": {
+        "groups_id": "bigint",
+        "user_id": "bigint"
+      },
+      "wireguard_subnets": {
+        "free_offsets": "longtext",
+        "id": "bigint default",
+        "network": "varchar(64)",
+        "next_offset": "bigint default"
+      }
+    },
+    "unique": [
+      "admin_roles(name)",
+      "admins(username)",
+      "inbounds(tag)",
+      "users(username)",
+      "wireguard_subnets(network)"
+    ],
+    "foreign": [
+      "admins.role_id -> admin_roles",
+      "hosts.inbound_tag -> inbounds",
+      "inbounds_groups_association.group_id -> groups",
+      "inbounds_groups_association.inbound_id -> inbounds",
+      "next_plans.user_id -> users",
+      "user_usage_logs.user_id -> users",
+      "users.admin_id -> admins",
+      "users_groups_association.groups_id -> groups",
+      "users_groups_association.user_id -> users"
+    ]
+  },
+  "mysql": {
+    "columns": {
+      "admin_roles": {
+        "access": "json",
+        "features": "json",
+        "id": "bigint default",
+        "is_owner": "boolean default",
+        "limits": "json",
+        "name": "varchar(64)"
+      },
+      "admins": {
+        "created_at": "datetime",
+        "data_limit": "bigint null",
+        "discord_webhook": "varchar(1024) null",
+        "hashed_password": "varchar(128)",
+        "id": "bigint default",
+        "last_status_change": "datetime null",
+        "note": "varchar(500) null",
+        "password_reset_at": "datetime null",
+        "permission_overrides": "json null",
+        "role_id": "bigint",
+        "status": "enum(active,disabled,limited)",
+        "telegram_id": "bigint null",
+        "used_traffic": "bigint default",
+        "username": "varchar(34)"
+      },
+      "core_configs": {
+        "config": "json",
+        "id": "bigint default",
+        "type": "enum(xray,wg,mtproto,singbox) default"
+      },
+      "groups": {
+        "id": "bigint default",
+        "is_disabled": "boolean default",
+        "name": "varchar(64)"
+      },
+      "hosts": {
+        "id": "bigint default",
+        "inbound_tag": "varchar(256) null",
+        "is_disabled": "boolean null"
+      },
+      "inbounds": {
+        "id": "bigint default",
+        "tag": "varchar(256)"
+      },
+      "inbounds_groups_association": {
+        "group_id": "bigint",
+        "inbound_id": "bigint"
+      },
+      "jwt": {
+        "id": "bigint default",
+        "secret_key": "varchar(64)"
+      },
+      "next_plans": {
+        "add_remaining_traffic": "boolean default",
+        "data_limit": "bigint",
+        "expire": "int null",
+        "id": "bigint default",
+        "user_id": "bigint",
+        "user_template_id": "bigint null"
+      },
+      "settings": {
+        "id": "bigint default",
+        "subscription": "json"
+      },
+      "user_usage_logs": {
+        "id": "bigint default",
+        "reset_at": "datetime",
+        "used_traffic_at_reset": "bigint",
+        "user_id": "bigint null"
+      },
+      "users": {
+        "admin_id": "bigint null",
+        "auto_delete_in_days": "int null",
+        "created_at": "datetime default",
+        "data_limit": "bigint null",
+        "data_limit_reset_strategy": "enum(no_reset,day,week,month,year) default",
+        "edit_at": "datetime null",
+        "expire": "datetime null",
+        "hwid_limit": "bigint null",
+        "id": "bigint default",
+        "last_status_change": "datetime null",
+        "note": "varchar(500) null",
+        "on_hold_expire_duration": "bigint null",
+        "on_hold_timeout": "datetime null",
+        "online_at": "datetime null",
+        "proxy_settings": "json",
+        "status": "enum(active,disabled,limited,expired,on_hold)",
+        "sub_revoked_at": "datetime null",
+        "used_traffic": "bigint",
+        "username": "varchar(128)"
+      },
+      "users_groups_association": {
+        "groups_id": "bigint",
+        "user_id": "bigint"
+      },
+      "wireguard_subnets": {
+        "free_offsets": "json",
+        "id": "bigint default",
+        "network": "varchar(64)",
+        "next_offset": "bigint default"
+      }
+    },
+    "unique": [
+      "admin_roles(name)",
+      "admins(username)",
+      "inbounds(tag)",
+      "users(username)",
+      "wireguard_subnets(network)"
+    ],
+    "foreign": [
+      "admins.role_id -> admin_roles",
+      "hosts.inbound_tag -> inbounds",
+      "inbounds_groups_association.group_id -> groups",
+      "inbounds_groups_association.inbound_id -> inbounds",
+      "next_plans.user_id -> users",
+      "user_usage_logs.user_id -> users",
+      "users.admin_id -> admins",
+      "users_groups_association.groups_id -> groups",
+      "users_groups_association.user_id -> users"
+    ]
+  },
+  "postgres": {
+    "columns": {
+      "admin_roles": {
+        "access": "jsonb",
+        "features": "jsonb",
+        "id": "bigint default",
+        "is_owner": "boolean default",
+        "limits": "jsonb",
+        "name": "varchar(64)"
+      },
+      "admins": {
+        "created_at": "timestamptz",
+        "data_limit": "bigint null",
+        "discord_webhook": "varchar(1024) null",
+        "hashed_password": "varchar(128)",
+        "id": "bigint default",
+        "last_status_change": "timestamptz null",
+        "note": "varchar(500) null",
+        "password_reset_at": "timestamptz null",
+        "permission_overrides": "jsonb null",
+        "role_id": "bigint",
+        "status": "enum(active,disabled,limited) default",
+        "telegram_id": "bigint null",
+        "used_traffic": "bigint default",
+        "username": "varchar(34)"
+      },
+      "core_configs": {
+        "config": "json",
+        "id": "bigint default",
+        "type": "enum(xray,wg,mtproto,singbox) default"
+      },
+      "groups": {
+        "id": "bigint default",
+        "is_disabled": "boolean default",
+        "name": "varchar(64)"
+      },
+      "hosts": {
+        "id": "bigint default",
+        "inbound_tag": "varchar(256) null",
+        "is_disabled": "boolean null"
+      },
+      "inbounds": {
+        "id": "bigint default",
+        "tag": "varchar(256)"
+      },
+      "inbounds_groups_association": {
+        "group_id": "bigint",
+        "inbound_id": "bigint"
+      },
+      "jwt": {
+        "id": "bigint default",
+        "secret_key": "varchar(64)"
+      },
+      "next_plans": {
+        "add_remaining_traffic": "boolean default",
+        "data_limit": "bigint",
+        "expire": "integer null",
+        "id": "bigint default",
+        "user_id": "bigint",
+        "user_template_id": "bigint null"
+      },
+      "settings": {
+        "id": "bigint default",
+        "subscription": "json"
+      },
+      "user_usage_logs": {
+        "id": "bigint default",
+        "reset_at": "timestamptz",
+        "used_traffic_at_reset": "bigint",
+        "user_id": "bigint null"
+      },
+      "users": {
+        "admin_id": "bigint null",
+        "auto_delete_in_days": "integer null",
+        "created_at": "timestamptz default",
+        "data_limit": "bigint null",
+        "data_limit_reset_strategy": "enum(no_reset,day,week,month,year) default",
+        "edit_at": "timestamptz null",
+        "expire": "timestamptz null",
+        "hwid_limit": "bigint null",
+        "id": "bigint default",
+        "last_status_change": "timestamptz null",
+        "note": "varchar(500) null",
+        "on_hold_expire_duration": "bigint null",
+        "on_hold_timeout": "timestamptz null",
+        "online_at": "timestamptz null",
+        "proxy_settings": "json default",
+        "status": "enum(active,disabled,limited,expired,on_hold)",
+        "sub_revoked_at": "timestamptz null",
+        "used_traffic": "bigint",
+        "username": "varchar(128)"
+      },
+      "users_groups_association": {
+        "groups_id": "bigint",
+        "user_id": "bigint"
+      },
+      "wireguard_subnets": {
+        "free_offsets": "json",
+        "id": "bigint default",
+        "network": "varchar(64)",
+        "next_offset": "bigint default"
+      }
+    },
+    "unique": [
+      "admin_roles(name)",
+      "admins(username)",
+      "inbounds(tag)",
+      "users(username)",
+      "wireguard_subnets(network)"
+    ],
+    "foreign": [
+      "admins.role_id -> admin_roles",
+      "hosts.inbound_tag -> inbounds",
+      "inbounds_groups_association.group_id -> groups",
+      "inbounds_groups_association.inbound_id -> inbounds",
+      "next_plans.user_id -> users",
+      "user_usage_logs.user_id -> users",
+      "users.admin_id -> admins",
+      "users_groups_association.groups_id -> groups",
+      "users_groups_association.user_id -> users"
+    ]
+  },
+  "sqlite": {
+    "columns": {
+      "admin_roles": {
+        "access": "json",
+        "features": "json",
+        "id": "integer default",
+        "is_owner": "boolean default",
+        "limits": "json",
+        "name": "varchar(64)"
+      },
+      "admins": {
+        "created_at": "datetime",
+        "data_limit": "bigint null",
+        "discord_webhook": "varchar(1024) null",
+        "hashed_password": "varchar(128)",
+        "id": "integer default",
+        "last_status_change": "datetime null",
+        "note": "varchar(500) null",
+        "password_reset_at": "datetime null",
+        "permission_overrides": "json null",
+        "role_id": "integer",
+        "status": "varchar(8) default",
+        "telegram_id": "bigint null",
+        "used_traffic": "bigint default",
+        "username": "varchar(34)"
+      },
+      "core_configs": {
+        "config": "json",
+        "id": "integer default",
+        "type": "varchar(7) default"
+      },
+      "groups": {
+        "id": "integer default",
+        "is_disabled": "boolean default",
+        "name": "varchar(64)"
+      },
+      "hosts": {
+        "id": "integer default",
+        "inbound_tag": "varchar(256) null",
+        "is_disabled": "boolean null"
+      },
+      "inbounds": {
+        "id": "integer default",
+        "tag": "varchar(256)"
+      },
+      "inbounds_groups_association": {
+        "group_id": "integer",
+        "inbound_id": "integer"
+      },
+      "jwt": {
+        "id": "integer default",
+        "secret_key": "varchar(64)"
+      },
+      "next_plans": {
+        "add_remaining_traffic": "boolean default",
+        "data_limit": "bigint",
+        "expire": "integer null",
+        "id": "integer default",
+        "user_id": "integer",
+        "user_template_id": "integer null"
+      },
+      "settings": {
+        "id": "integer default",
+        "subscription": "json"
+      },
+      "user_usage_logs": {
+        "id": "integer default",
+        "reset_at": "datetime",
+        "used_traffic_at_reset": "bigint",
+        "user_id": "integer null"
+      },
+      "users": {
+        "admin_id": "integer null",
+        "auto_delete_in_days": "integer null",
+        "created_at": "datetime default",
+        "data_limit": "bigint null",
+        "data_limit_reset_strategy": "varchar(8) default",
+        "edit_at": "datetime null",
+        "expire": "datetime null",
+        "hwid_limit": "bigint null",
+        "id": "integer default",
+        "last_status_change": "datetime null",
+        "note": "varchar(500) null",
+        "on_hold_expire_duration": "bigint null",
+        "on_hold_timeout": "datetime null",
+        "online_at": "datetime null",
+        "proxy_settings": "json default",
+        "status": "varchar(8)",
+        "sub_revoked_at": "datetime null",
+        "used_traffic": "bigint",
+        "username": "varchar(128)"
+      },
+      "users_groups_association": {
+        "groups_id": "integer",
+        "user_id": "integer"
+      },
+      "wireguard_subnets": {
+        "free_offsets": "json",
+        "id": "integer default",
+        "network": "varchar(64)",
+        "next_offset": "integer default"
+      }
+    },
+    "unique": [
+      "admin_roles(name)",
+      "admins(username)",
+      "inbounds(tag)",
+      "users(username)",
+      "wireguard_subnets(network)"
+    ],
+    "foreign": [
+      "admins.role_id -> admin_roles",
+      "hosts.inbound_tag -> inbounds",
+      "inbounds_groups_association.group_id -> groups",
+      "inbounds_groups_association.inbound_id -> inbounds",
+      "next_plans.user_id -> users",
+      "user_usage_logs.user_id -> users",
+      "users.admin_id -> admins",
+      "users_groups_association.groups_id -> groups",
+      "users_groups_association.user_id -> users"
+    ]
+  }
+}

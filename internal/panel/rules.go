@@ -2,6 +2,7 @@ package panel
 
 import (
 	"fmt"
+	"strings"
 	"unicode"
 )
 
@@ -19,15 +20,25 @@ type Rules interface {
 	UserKey(name string) string
 }
 
-// VersionError means Karvan has no tested writer for this database.
+// VersionError means Karvan has no tested writer for this database: its
+// revision is not a known one and its schema differs from the known one.
 type VersionError struct {
 	Kind     Kind
 	Revision string
+	// Diffs name each table and column that differs, and how.
+	Diffs []string
 }
 
 func (e *VersionError) Error() string {
+	if len(e.Diffs) > 0 {
+		return fmt.Sprintf("%s revision %q is not supported: %s", e.Kind, e.Revision, strings.Join(e.Diffs, "; "))
+	}
 	return fmt.Sprintf("%s revision %q is not supported", e.Kind, e.Revision)
 }
+
+// RevisionChecked is the note for a database at a revision Karvan does
+// not know whose schema matched the known one, so Karvan uses it.
+const RevisionChecked = "schema checked, revision not known"
 
 // SchemaError means the database is at a known revision but its shape is
 // not what that revision creates (a fork, a hand edit, an extra table that
