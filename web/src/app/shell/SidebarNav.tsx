@@ -31,7 +31,7 @@ function SubRows({ onNavigate }: { onNavigate?: () => void }) {
       {panels.map((p) => (
         <li key={p.id}>
           <NavLink to={`/analytics/panels/${String(p.id)}`} onClick={onNavigate} className={row}>
-            <bdi dir="ltr" className="truncate">
+            <bdi dir="ltr" title={p.name} className="min-w-0 truncate">
               {p.name}
             </bdi>
           </NavLink>
@@ -72,7 +72,9 @@ function NavRow({
   return (
     <NavLink to={item.to} end={item.to === '/'} onClick={onNavigate} className={row}>
       <Icon size={16} aria-hidden="true" className="shrink-0 text-kumo-subtle" />
-      <span>{label}</span>
+      <span title={label} className="min-w-0 truncate">
+        {label}
+      </span>
     </NavLink>
   );
 }
@@ -108,8 +110,14 @@ function GroupRow({
         className={row}
       >
         <Icon size={16} aria-hidden="true" className="shrink-0 text-kumo-subtle" />
-        <span>{label}</span>
-        <Caret size={14} aria-hidden="true" className="ms-auto text-kumo-subtle rtl:-scale-x-100" />
+        <span title={label} className="min-w-0 truncate">
+          {label}
+        </span>
+        <Caret
+          size={14}
+          aria-hidden="true"
+          className="ms-auto shrink-0 text-kumo-subtle rtl:-scale-x-100"
+        />
       </button>
       <Collapse id={id} open={open}>
         <SubRows onNavigate={onNavigate} />

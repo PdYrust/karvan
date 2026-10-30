@@ -57,17 +57,24 @@ export function PanelSwitcher({ collapsed = false }: { collapsed?: boolean }) {
                     className="h-3.5 flex-1 k-bone rounded bg-kumo-recessed"
                   />
                 ) : (
-                  <span className="min-w-0 flex-1 truncate text-base font-medium text-kumo-default">
+                  <span
+                    title={label}
+                    className="min-w-0 flex-1 truncate text-base font-medium text-kumo-default"
+                  >
                     {label}
                   </span>
                 )}
-                <CaretUpDownIcon size={14} aria-hidden="true" className="text-kumo-subtle" />
+                <CaretUpDownIcon
+                  size={14}
+                  aria-hidden="true"
+                  className="shrink-0 text-kumo-subtle"
+                />
               </>
             )}
           </button>
         }
       />
-      <DropdownMenu.Content className="min-w-64">
+      <DropdownMenu.Content className="min-w-64 max-w-80">
         <DropdownMenu.Group>
           <DropdownMenu.Label>{t('panelsOnServer')}</DropdownMenu.Label>
           <DropdownMenu.RadioGroup
@@ -89,9 +96,11 @@ export function PanelSwitcher({ collapsed = false }: { collapsed?: boolean }) {
               const k = panelKind(p);
               return (
                 <DropdownMenu.RadioItem key={p.id} value={String(p.id)} closeOnClick>
-                  <span className="flex w-full items-center gap-2">
+                  <span className="flex w-full min-w-0 items-center gap-2">
                     {k ? <PanelMark kind={k} size={16} /> : null}
-                    <span className="truncate">{p.name}</span>
+                    <span title={p.name} className="min-w-0 truncate">
+                      {p.name}
+                    </span>
                     {p.ready ? null : (
                       <WarningCircleIcon
                         size={14}

@@ -11,7 +11,11 @@ import { SidebarNav } from './SidebarNav';
 // React's act() needs this flag outside a testing library.
 (globalThis as { IS_REACT_ACT_ENVIRONMENT?: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
 
-const panels = [{ id: 1, name: 'marzban-a', kind: 'marzban', ready: true }] as Panel[];
+const longName = 'pasarguard-production-panel-on-the-main-server-in-frankfurt-1';
+const panels = [
+  { id: 1, name: 'marzban-a', kind: 'marzban', ready: true },
+  { id: 2, name: longName, kind: 'pasarguard', ready: true },
+] as Panel[];
 
 let host: HTMLDivElement;
 let root: Root;
@@ -96,5 +100,16 @@ describe('SidebarNav', () => {
     expect(onNavigate).toHaveBeenCalledOnce();
     // Moving into the section keeps it open.
     expect(group()?.getAttribute('aria-expanded')).toBe('true');
+  });
+  it('keeps a long panel name on one line with its full name as a title', () => {
+    render('/analytics/server', vi.fn());
+    const name = host.querySelector<HTMLElement>(`[title="${longName}"]`);
+    expect(name?.textContent).toBe(longName);
+    expect(name?.className).toMatch(/\btruncate\b/);
+    expect(name?.className).toMatch(/\bmin-w-0\b/);
+    for (const label of host.querySelectorAll('a > span, button > span')) {
+      expect(label.className).toMatch(/\btruncate\b/);
+      expect(label.getAttribute('title')).toBe(label.textContent);
+    }
   });
 });

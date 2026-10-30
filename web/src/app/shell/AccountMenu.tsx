@@ -91,7 +91,10 @@ export function AccountMenu({ onShortcuts }: { onShortcuts: () => void }) {
       <DropdownMenu.Content className="w-48">
         <DropdownMenu.Group>
           <DropdownMenu.Label>
-            <span className="block truncate font-mono text-sm font-normal text-kumo-default">
+            <span
+              title={username}
+              className="block truncate font-mono text-sm font-normal text-kumo-default"
+            >
               <bdi dir="ltr">{username}</bdi>
             </span>
           </DropdownMenu.Label>

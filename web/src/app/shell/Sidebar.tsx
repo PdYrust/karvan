@@ -63,7 +63,7 @@ export function Sidebar({
         key={`body-${String(collapsed)}`}
         className={cn(
           shape,
-          'flex flex-1 flex-col gap-3 overflow-y-auto p-3',
+          'flex flex-1 flex-col gap-3 overflow-x-hidden overflow-y-auto p-3',
           collapsed && 'items-center px-2',
         )}
       >
