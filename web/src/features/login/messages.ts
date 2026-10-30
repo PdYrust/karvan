@@ -19,7 +19,7 @@ const en = {
   errorTotpInvalid: "That code didn't work. Try the new one.",
   errorLocked: 'Too many tries. Try again in {time}.',
   lostAccess: 'Forgot your password? Run this on the server:',
-  tagline: 'Take your users to another panel. Their configs stay the same.',
+  tagline: 'Take your users to another panel.',
 };
 
 type Key = keyof typeof en;
@@ -43,7 +43,7 @@ const fa: Record<Key, string> = {
   errorTotpInvalid: 'کد درست نیست. کد جدید را وارد کنید.',
   errorLocked: 'تعداد تلاش ها زیاد بود. {time} دیگر دوباره امتحان کنید.',
   lostAccess: 'رمز را فراموش کرده اید؟ این دستور را روی سرور اجرا کنید:',
-  tagline: 'کاربران را به پنل دیگری ببرید. کانفیگ ها تغییر نمیکنند.',
+  tagline: 'کاربران را به پنل دیگری ببرید.',
 };
 
 export const loginMessages: Messages<Key> = { en, fa };
