@@ -1,6 +1,6 @@
 /**
  * A few Phosphor icons in one weight only (regular, and bold for the row menus' "..."), drawn
- * inline (DESIGN.md section 6): the package's icon carries all six weights, which costs pages
+ * inline: the package's icon carries all six weights, which costs pages
  * near their budget about a KB each.
  */
 function Regular({ d, size }: { d: string; size: number }) {

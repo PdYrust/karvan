@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-/** Twice the longest close (DESIGN.md section 5), so a slow phone that starts it late still ends it. */
+/** Twice the longest close, so a slow phone that starts it late still ends it. */
 export const closeMotion = 440;
 /**
  * `value`, kept for `ms` after it goes away (turns null), so what shows it

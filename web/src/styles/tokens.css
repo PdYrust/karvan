@@ -2,7 +2,7 @@
  * Karvan color tokens. The only file in web/src allowed to hold color values.
  * Karvan uses Kumo's own palette as it ships (neutral surfaces, Kumo blue as
  * the brand); this file only adds what Kumo does not have, and darkens one
- * Kumo color. DESIGN.md section 2.
+ * Kumo color.
  */
 
 @theme {

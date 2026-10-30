@@ -9,7 +9,7 @@ function subscribe(onChange: () => void): () => void {
   return () => media.removeEventListener('change', onChange);
 }
 
-/** Whether the screen is a phone's, where the live scene stands up (DESIGN.md, Live progress). */
+/** Whether the screen is a phone's, where the live scene stands up. */
 export function useStacked(): boolean {
   return useSyncExternalStore(subscribe, () => matchMedia(query).matches);
 }

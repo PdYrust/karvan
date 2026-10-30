@@ -1,4 +1,4 @@
-// Checks the gzip size of what each page loads against CONSTRAINTS.md.
+// Checks the gzip size of what each page loads against the budgets below.
 // It follows the Vite manifest, so shared chunks count for every page that
 // loads them. Fonts are left out: they are budgeted apart and cached.
 import { readFileSync } from 'node:fs';

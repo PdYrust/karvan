@@ -1,7 +1,7 @@
 import { cn } from '@cloudflare/kumo/utils';
 import { useId, type ReactNode } from 'react';
 
-/** A titled white card with a hairline border and no shadow (DESIGN.md section 4). */
+/** A titled white card with a hairline border and no shadow. */
 export function Section({
   title,
   actions,

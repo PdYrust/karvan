@@ -10,7 +10,7 @@ export function Bar({
   className,
 }: {
   share: number;
-  /** Fill in from the start edge when it first shows: data, not progress (DESIGN.md section 5). */
+  /** Fill in from the start edge when it first shows: data, not progress. */
   grow?: boolean;
   className?: string;
 }) {

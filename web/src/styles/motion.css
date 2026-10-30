@@ -1,4 +1,4 @@
-/* Shared motion (DESIGN.md section 5): short, ease-out, transform and opacity
+/* Shared motion: short, ease-out, transform and opacity
    only. The reduced motion rule in app.css shortens all of it to 1 ms. */
 
 @keyframes k-fade-in {

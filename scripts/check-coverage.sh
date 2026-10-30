@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Statement coverage gate for the core Go packages listed in CONSTRAINTS.md.
+# Statement coverage gate for the core Go packages listed below.
 set -euo pipefail
 
 min=80

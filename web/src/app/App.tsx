@@ -164,7 +164,7 @@ export function App() {
               <Toasty>
                 <BrowserRouter basename={basename}>
                   <Routes>
-                    {/* A printable page has no shell around it (DESIGN.md). */}
+                    {/* A printable page has no shell around it. */}
                     <Route
                       path="migrations/:id/preview/print"
                       element={

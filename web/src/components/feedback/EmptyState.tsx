@@ -2,7 +2,7 @@ import { useId, type ReactNode } from 'react';
 
 /**
  * Nothing to show yet: an icon, what is missing, why, and one action. Kumo's
- * Empty in shape, with the card radius and heading size of DESIGN.md.
+ * Empty in shape, with the card radius and heading size of the other cards.
  */
 export function EmptyState({
   icon,

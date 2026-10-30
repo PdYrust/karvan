@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Floor rules from CONSTRAINTS.md that no linter covers. Exit 0 clean, 1 violation, 2 could not run.
+# Floor rules that no linter covers. Exit 0 clean, 1 violation, 2 could not run.
 set -euo pipefail
 
 top=$(git rev-parse --show-toplevel 2>/dev/null) || { echo "check-floor: not a git work tree" >&2; exit 2; }
@@ -7,7 +7,7 @@ cd "$top"
 
 self="scripts/check-floor.sh"
 mapfile -t files < <(git ls-files --cached --others --exclude-standard \
-  | grep -vE "^(LICENSE|$self|CONSTRAINTS\.md)$" \
+  | grep -vE "^(LICENSE|$self)$" \
   | grep -vE '(^|/)pnpm-lock\.yaml$|\.(woff2?|png|jpg|ico)$' \
   | while read -r f; do [ -f "$f" ] && echo "$f"; done)
 
@@ -38,7 +38,7 @@ if [ ${#web_src[@]} -gt 0 ]; then
   report raw-color "\b(bg|text|fill|stroke|border|ring|from|to|via)-(black|white)\b|:\s*(black|white)\b" "${web_src[@]}"
 fi
 
-# Writing rules (DESIGN.md section 9): punctuation that makes text read as machine-written.
+# Writing rules: punctuation that makes text read as machine-written.
 # Half-space, hamza on he, guillemets, Persian semicolon, ellipsis, en/em dash, curly quotes.
 writing=$(printf '\u200c|\u0654|\u06c0|\u00ab|\u00bb|\u061b|\u2026|\u2013|\u2014|\u2018|\u2019|\u201c|\u201d')
 hits=$(grep -nIP "$writing" "${files[@]}" 2>/dev/null | cut -c1-160 || true)

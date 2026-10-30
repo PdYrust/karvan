@@ -44,15 +44,15 @@
     display: none;
   }
 
-  /* Printed pages are dark text on white whatever the theme (DESIGN.md). */
+  /* Printed pages are dark text on white whatever the theme. */
   @media print {
     [data-mode='dark'] {
       color-scheme: light;
     }
   }
 
-  /* On touch screens a 36 px control keeps a 44 px hit area, 4 px past its edges (DESIGN.md,
-     Touch). Square controls grow every way; others only up and down, and inside a joined group
+  /* On touch screens a 36 px control keeps a 44 px hit area, 4 px past its edges.
+     Square controls grow every way; others only up and down, and inside a joined group
      (k-joined) nothing grows sideways, so no hit area covers a neighbour. In this layer, so a
      control placed with absolute keeps its position. */
   @media (pointer: coarse) {
@@ -92,7 +92,7 @@
   }
 }
 
-/* Controls draw 32 high with a mouse, a step under Kumo's base of 36 (DESIGN.md, section 4).
+/* Controls draw 32 high with a mouse, a step under Kumo's base of 36.
    Touch screens draw them 36 (pointer-coarse classes). Outside a layer so it wins over
    Kumo's h-9 and size-9; tailwind-merge drops those whenever a page sets its own size. */
 @media not (pointer: coarse) {

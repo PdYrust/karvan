@@ -14,7 +14,7 @@ export interface Curves {
 export type Lanes = Readonly<Record<Lane, string>>;
 
 /**
- * The scene's one animation loop (DESIGN.md, Live progress), outside React.
+ * The scene's one animation loop, outside React.
  * Dots live in fixed slots of pre-drawn circles, moved by setting their
  * attributes, so a frame never renders a component. The loop runs only
  * while dots fly, the scene is on screen and the tab is visible; a steady

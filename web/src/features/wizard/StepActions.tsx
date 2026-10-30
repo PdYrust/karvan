@@ -7,7 +7,7 @@ import { stepPath, type WizardStep } from './steps';
 
 /**
  * The bottom of a step: what stands in the way, if anything, then Back and
- * the way on, at the end (DESIGN.md Wizard).
+ * the way on, at the end.
  */
 export function StepActions({
   jobId,

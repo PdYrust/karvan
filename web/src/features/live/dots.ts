@@ -1,6 +1,6 @@
 /**
  * The moving dots of the live view, as plain math the scene draws each
- * frame (DESIGN.md, Live progress). Times are milliseconds on one clock,
+ * frame. Times are milliseconds on one clock,
  * such as performance.now().
  */
 
