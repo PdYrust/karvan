@@ -16,7 +16,7 @@ TESTDB_ENV := KARVAN_TEST_MYSQL='root:test@tcp(127.0.0.1:33061)/' \
 	KARVAN_TEST_MARIADB='root:test@tcp(127.0.0.1:33062)/' \
 	KARVAN_TEST_POSTGRES='postgres://postgres:test@127.0.0.1:54321/postgres' \
 	KARVAN_TEST_TIMESCALE='postgres://postgres:test@127.0.0.1:54322/postgres'
-.PHONY: build build-go web web-deps test lint lint-web fmt floor cover check check-web check-full vuln audit-web clean test-db testdb-seed testdb-down test-panels testpanels-down test-acme bench test-install release-dry ci-lint
+.PHONY: build build-go web web-deps test lint lint-web fmt floor cover check check-web check-full vuln audit-web clean test-db testdb-seed testdb-down test-panels testpanels-down test-acme bench bench-bridge bench-api test-install release-dry ci-lint
 
 build: web build-go
 
@@ -79,8 +79,23 @@ test-panels:
 test-acme:
 	./scripts/acmetest/up.sh
 	go test -tags acmetest -count=1 -run TestPebble ./internal/certorder/; s=$$?; ./scripts/acmetest/down.sh; exit $$s
+# The engine at 100k users, then check, resolve and execute at 2000 admins
+# (D37; the 2000 admin run takes about 20 minutes on a 2-core host).
 bench:
 	go test -run x -bench . -benchtime 3x ./internal/migration/...
+	go test -tags benchtest -count=1 -timeout 60m -v -run TestBenchEngine ./internal/migration/run/
+# The bridge with a million stored tokens under open-loop load, in a
+# container of 1 CPU and 1 GB on the release base image (needs Docker;
+# about 12 minutes).
+RELEASE_BASE := $(shell sed -n 's/^FROM //p' packaging/docker/Dockerfile)
+bench-bridge:
+	CGO_ENABLED=0 go test -c -tags benchtest -o bin/bench.test ./test/bench/
+	docker run --rm --cpus=1 --memory=1g -e KARVAN_BENCH_SCALE -v "$(CURDIR)/bin/bench.test:/bench.test:ro" $(RELEASE_BASE) \
+		/bench.test -test.run TestBridgeOverhead -test.v -test.timeout 40m
+# The HTTP API at 50 clients against a running Karvan (KARVAN_BENCH_URL,
+# KARVAN_BENCH_USER and KARVAN_BENCH_PASSWORD).
+bench-api:
+	go test -tags benchtest -count=1 -v -run TestAPILatency ./test/bench/
 # Install, update, roll back and remove Karvan in a clean Debian 12 system with systemd
 # (needs Docker). ARCHIVE=<release archive> tests that archive instead of
 # one packed from this tree.
