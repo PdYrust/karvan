@@ -40,7 +40,7 @@ const en = {
   method_core_restart: 'Restart the core',
   effect_operator_runs_command: 'Nothing reaches users until you restart the panel.',
   effect_wireguard_users_no_ip: 'WireGuard users get no address until someone edits them.',
-  effect_one_edit_per_user: 'Karvan edits each moved user once, a few each second.',
+  effect_one_edit_per_user: 'Karvan edits each moved user once, four at a time.',
   effect_notification_per_user: 'The panel sends a "user modified" notice for each one.',
   effect_short_disconnect_all: 'Every user on the panel drops for the seconds a restart takes.',
   effect_wireguard_users_touched: 'WireGuard users are edited first, so they get an address.',
@@ -54,7 +54,7 @@ const en = {
   safeOff: 'Off',
   safeUndo: 'Karvan backs up the destination first. If the run fails, it removes what it wrote.',
   safeBackup:
-    'Karvan backs up the destination first. If the run fails, it puts the backup back, with the panel stopped for a moment.',
+    'Karvan backs up the destination first. If the run fails, it stops the panel and puts the backup back.',
   safeOffBody:
     'Karvan takes no backup. If the run fails, what it wrote stays until you remove it from the migration.',
   safeChange: 'Change in Settings',
@@ -131,8 +131,7 @@ const fa: Messages<StartKey>['fa'] = {
   method_core_restart: 'ری استارت هسته',
   effect_operator_runs_command: 'تا وقتی پنل را ری استارت نکنید، چیزی به کاربرها نمیرسد.',
   effect_wireguard_users_no_ip: 'کاربرهای `WireGuard` تا وقتی ویرایش نشوند آدرس نمیگیرند.',
-  effect_one_edit_per_user:
-    'کاروان هر کاربر منتقل شده را یک بار ویرایش میکند، چند کاربر در هر ثانیه.',
+  effect_one_edit_per_user: 'کاروان هر کاربر منتقل شده را یک بار ویرایش میکند، چهار کاربر همزمان.',
   effect_notification_per_user: 'پنل برای هر کدام یک اعلان "ویرایش کاربر" میفرستد.',
   effect_short_disconnect_all: 'همه کاربرهای پنل چند ثانیه ای که ری استارت طول میکشد قطع میشوند.',
   effect_wireguard_users_touched: 'کاربرهای `WireGuard` اول ویرایش میشوند تا آدرس بگیرند.',
@@ -147,7 +146,7 @@ const fa: Messages<StartKey>['fa'] = {
   safeUndo:
     'کاروان اول از مقصد نسخه پشتیبان میگیرد. اگر اجرا شکست بخورد، هر چه نوشته است را پاک میکند.',
   safeBackup:
-    'کاروان اول از مقصد نسخه پشتیبان میگیرد. اگر اجرا شکست بخورد، نسخه پشتیبان را برمیگرداند و پنل برای لحظه ای متوقف میشود.',
+    'کاروان اول از مقصد نسخه پشتیبان میگیرد. اگر اجرا شکست بخورد، پنل را متوقف میکند و نسخه پشتیبان را برمیگرداند.',
   safeOffBody:
     'کاروان نسخه پشتیبان نمیگیرد. اگر اجرا شکست بخورد، هر چه نوشته است میماند تا آن را از همین انتقال پاک کنید.',
   safeChange: 'تغییر در تنظیمات',
