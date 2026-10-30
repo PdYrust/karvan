@@ -33,9 +33,11 @@ type Report struct {
 		Admin  string `json:"admin"`
 	} `json:"source"`
 	Destination struct {
-		Kind string `json:"kind"`
-		Name string `json:"name"`
-		DB   string `json:"db"`
+		Kind     string `json:"kind"`
+		Name     string `json:"name"`
+		DB       string `json:"db"`
+		Revision string `json:"revision,omitempty"`
+		Note     string `json:"note,omitempty"` // panel.RevisionChecked for a revision Karvan does not know
 	} `json:"destination"`
 	Admin struct {
 		Username string `json:"username"`
@@ -132,7 +134,7 @@ func newReport(j *Job, start time.Time) *Report {
 	if j.snapshot != nil {
 		r.Source.Admin = j.snapshot.Admin.Username
 	}
-	r.Destination.Kind = string(j.facts.Kind)
+	r.Destination.Kind, r.Destination.Revision, r.Destination.Note = string(j.facts.Kind), j.facts.Revision, j.facts.RevisionNote
 	if j.facts.Kind == "marzban" {
 		r.NotUndoable = append(r.NotUndoable, UndoInboundRows)
 	}

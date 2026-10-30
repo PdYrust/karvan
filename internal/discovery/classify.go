@@ -31,12 +31,12 @@ func classify(ctx context.Context, q paneldb.Querier, srv paneldb.Server, p *Pan
 		p.Kind = panel.PasarGuard
 		s, err := pasarguarddb.Inspect(ctx, q, srv)
 		p.Revision, unknown = s.Revision, s.UnknownChildren
-		noteSchema(p, err)
+		noteSchema(p, s.Checked, err)
 	case len(proxies) > 0:
 		p.Kind = panel.Marzban
 		s, err := marzbandb.Inspect(ctx, q, srv)
 		p.Revision, unknown = s.Revision, s.UnknownChildren
-		noteSchema(p, err)
+		noteSchema(p, s.Checked, err)
 		checkXray(p)
 	default:
 		p.note(NotAPanel, "no admin_roles or proxies table")
@@ -48,13 +48,17 @@ func classify(ctx context.Context, q paneldb.Querier, srv paneldb.Server, p *Pan
 	return nil
 }
 
-func noteSchema(p *Panel, err error) {
+func noteSchema(p *Panel, checked bool, err error) {
 	var ve *panel.VersionError
 	var se *panel.SchemaError
 	switch {
 	case err == nil:
+		if checked {
+			p.RevisionNote = panel.RevisionChecked
+		}
 	case errors.As(err, &ve):
 		p.note(UnknownRevision, ve.Revision)
+		p.SchemaDiffs = ve.Diffs
 	case errors.As(err, &se):
 		p.note(SchemaMismatch, se.Detail)
 	default:

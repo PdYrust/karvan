@@ -51,11 +51,16 @@ type Panel struct {
 	Kind     panel.Kind `json:"kind,omitempty"`
 	Hint     panel.Kind `json:"hint,omitempty"` // from the compose image name
 	Revision string     `json:"revision,omitempty"`
-	DB       string     `json:"db,omitempty"` // Target.String(), no password
-	Flavor   string     `json:"flavor,omitempty"`
-	Identity string     `json:"-"`
-	Settings Settings   `json:"settings"`
-	Findings []Finding  `json:"findings"`
+	// RevisionNote is panel.RevisionChecked when Revision is not a known
+	// one but its schema matched the known one.
+	RevisionNote string `json:"revisionNote,omitempty"`
+	// SchemaDiffs say what differs when an unknown revision did not match.
+	SchemaDiffs []string  `json:"schemaDiffs,omitempty"`
+	DB          string    `json:"db,omitempty"` // Target.String(), no password
+	Flavor      string    `json:"flavor,omitempty"`
+	Identity    string    `json:"-"`
+	Settings    Settings  `json:"settings"`
+	Findings    []Finding `json:"findings"`
 }
 
 // Settings are the ENV values Karvan uses, as the panel would read them.

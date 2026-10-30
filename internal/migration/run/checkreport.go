@@ -25,8 +25,10 @@ type CheckReport struct {
 		Admin  string `json:"admin"`
 	} `json:"source"`
 	Destination struct {
-		Kind string `json:"kind"`
-		Name string `json:"name"`
+		Kind     string `json:"kind"`
+		Name     string `json:"name"`
+		Revision string `json:"revision,omitempty"`
+		Note     string `json:"note,omitempty"` // panel.RevisionChecked for a revision Karvan does not know
 	} `json:"destination"`
 	Admin     engine.AdminSummary `json:"admin"`
 	Totals    CheckTotals         `json:"totals"`
@@ -87,6 +89,7 @@ func (s *Service) CheckReport(ctx context.Context, jobID string) (*CheckReport, 
 		r.Source.Admin = j.snapshot.Admin.Username
 	}
 	r.Destination.Kind, r.Destination.Name = string(j.facts.Kind), name
+	r.Destination.Revision, r.Destination.Note = j.facts.Revision, j.facts.RevisionNote
 	for _, it := range j.result.Items {
 		r.Users = append(r.Users, checkLine(it))
 		r.Totals.count(it)

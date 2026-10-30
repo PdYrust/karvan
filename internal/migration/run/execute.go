@@ -186,6 +186,9 @@ func (s *Service) execute(ctx context.Context, j *Job, hash string, o Options) {
 	defer j.running.Store(false)
 	rep := newReport(j, start)
 	j.report = rep
+	if j.facts.RevisionNote != "" {
+		slog.Info("destination revision not known, schema checked", "job", j.ID, "panel", j.facts.Kind, "revision", j.facts.Revision)
+	}
 	w, err := s.prepare(ctx, j, rep)
 	if errors.Is(err, errStale) {
 		s.backToChecked(j)

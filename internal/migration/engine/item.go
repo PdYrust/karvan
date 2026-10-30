@@ -46,6 +46,10 @@ type Dest struct {
 	TargetHosts map[string]int
 	// Roles are PasarGuard's admin roles; nil on Marzban.
 	Roles []panel.Role
+	// Revision is the database's alembic revision; RevisionNote is
+	// panel.RevisionChecked when Karvan does not know it but its schema
+	// matched the known one.
+	Revision, RevisionNote string
 }
 
 // Moved is a ledger entry for a source user moved earlier.

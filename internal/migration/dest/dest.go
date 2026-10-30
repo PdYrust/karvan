@@ -118,11 +118,12 @@ func (p *Panel) marzbanFacts(ctx context.Context, q paneldb.Querier, srv paneldb
 		return engine.Dest{}, err
 	}
 	return engine.Dest{Kind: panel.Marzban, Rules: rules, Index: x, Admins: found, Targets: targets, TargetProtocols: protos,
-		TargetHosts: hosts}, nil
+		TargetHosts: hosts, Revision: s.Revision, RevisionNote: revisionNote(s.Checked)}, nil
 }
 
 func pasarguardFacts(ctx context.Context, q paneldb.Querier, srv paneldb.Server, admins []string) (engine.Dest, error) {
-	if _, err := pasarguarddb.Inspect(ctx, q, srv); err != nil {
+	s, err := pasarguarddb.Inspect(ctx, q, srv)
+	if err != nil {
 		return engine.Dest{}, err
 	}
 	x, err := pasarguarddb.LoadIndex(ctx, q)
@@ -158,5 +159,12 @@ func pasarguardFacts(ctx context.Context, q paneldb.Querier, srv paneldb.Server,
 		return engine.Dest{}, err
 	}
 	return engine.Dest{Kind: panel.PasarGuard, Rules: pasarguard.Rules{}, Index: x, Admins: found, Targets: targets, TargetProtocols: protos,
-		TargetHosts: hosts, Roles: roles}, nil
+		TargetHosts: hosts, Roles: roles, Revision: s.Revision, RevisionNote: revisionNote(s.Checked)}, nil
+}
+
+func revisionNote(checked bool) string {
+	if checked {
+		return panel.RevisionChecked
+	}
+	return ""
 }
