@@ -82,7 +82,7 @@ func (a *API) Batches(w http.ResponseWriter, r *http.Request) {
 	if next != "" {
 		out["next"] = next
 	}
-	respond.JSON(w, http.StatusOK, out)
+	respond.Lists(w, http.StatusOK, out)
 }
 
 // Batch reads one batch; a deleted one is not found.
@@ -97,7 +97,7 @@ func (a *API) Batch(w http.ResponseWriter, r *http.Request) {
 		writeBatchError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, b)
+	respond.Lists(w, http.StatusOK, b)
 }
 
 // BatchUsers lists a batch's users, a page at a time: ?q=&cursor=&limit=.
@@ -119,7 +119,7 @@ func (a *API) BatchUsers(w http.ResponseWriter, r *http.Request) {
 	if next != "" {
 		out["next"] = next
 	}
-	respond.JSON(w, http.StatusOK, out)
+	respond.Lists(w, http.StatusOK, out)
 }
 
 // BatchUserLink builds a batch user's new subscription link on the
@@ -143,7 +143,7 @@ func (a *API) BatchUserLink(w http.ResponseWriter, r *http.Request) {
 		writeBatchError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, map[string]string{"url": link})
+	respond.Lists(w, http.StatusOK, map[string]string{"url": link})
 }
 
 // RenameBatch gives a batch a new name: PATCH {name}.
@@ -162,7 +162,7 @@ func (a *API) RenameBatch(w http.ResponseWriter, r *http.Request) {
 		writeBatchError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, b)
+	respond.Lists(w, http.StatusOK, b)
 }
 
 // DeleteBatch marks an inactive batch deleted (D20) once {confirm} is its
@@ -198,5 +198,5 @@ func (a *API) ReactivateBatch(w http.ResponseWriter, r *http.Request) {
 		writeBatchError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, b)
+	respond.Lists(w, http.StatusOK, b)
 }

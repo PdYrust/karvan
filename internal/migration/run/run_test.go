@@ -133,17 +133,18 @@ func (h *harness) count(table string) int {
 	return n
 }
 
-// each runs fn for the four directions on every loadable database.
+// each runs fn for the four directions on every loadable database, at
+// every known revision of the destination.
 func each(t *testing.T, fn func(t *testing.T, from, to panel.Kind, tg paneldb.Target)) {
-	dirs := map[panel.Kind][2]string{
-		panel.Marzban:    {"../../panel/marzbandb/testdata", marzbandb.Revision},
-		panel.PasarGuard: {"../../panel/pasarguarddb/testdata", pasarguarddb.Revision},
-	}
+	dirs := map[panel.Kind]string{panel.Marzban: "../../panel/marzbandb/testdata", panel.PasarGuard: "../../panel/pasarguarddb/testdata"}
+	revs := map[panel.Kind][]string{panel.Marzban: {marzbandb.Revision}, panel.PasarGuard: pasarguarddb.Revisions}
 	for _, from := range []panel.Kind{panel.Marzban, panel.PasarGuard} {
 		for _, to := range []panel.Kind{panel.Marzban, panel.PasarGuard} {
-			t.Run(string(from)+"-to-"+string(to), func(t *testing.T) {
-				paneldbtest.Each(t, dirs[to][0], dirs[to][1], func(t *testing.T, tg paneldb.Target) { fn(t, from, to, tg) })
-			})
+			for _, rev := range revs[to] {
+				t.Run(string(from)+"-to-"+string(to)+"/"+rev, func(t *testing.T) {
+					paneldbtest.Each(t, dirs[to], rev, func(t *testing.T, tg paneldb.Target) { fn(t, from, to, tg) })
+				})
+			}
 		}
 	}
 }

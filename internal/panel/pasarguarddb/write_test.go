@@ -65,7 +65,7 @@ func remove(t *testing.T, db *paneldb.Writer, u panel.User, userID, adminID int6
 }
 
 func TestWriteReadBackAndRemove(t *testing.T) {
-	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+	eachRevision(t, func(t *testing.T, tg paneldb.Target) {
 		seedShop(t, tg)
 		clean := paneldbtest.Checksum(t, tg)
 		ctx := context.Background()
@@ -104,7 +104,7 @@ func TestWriteReadBackAndRemove(t *testing.T) {
 }
 
 func TestReadUsersTakesMoreIDsThanAStatementBinds(t *testing.T) {
-	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+	eachRevision(t, func(t *testing.T, tg paneldb.Target) {
 		ids := make([]int64, 70_000) // more than SQLite (32766), MySQL and PostgreSQL (65535) bind at once
 		for i := range ids {
 			ids[i] = int64(1_000_000 + i)
@@ -122,9 +122,11 @@ func TestReadUsersTakesMoreIDsThanAStatementBinds(t *testing.T) {
 // Undo removes a moved admin that registered a passkey after the move: the
 // passkey and its challenges go with the admin, other challenges stay.
 func TestRemoveAdminWithPasskey(t *testing.T) {
-	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+	eachRevision(t, func(t *testing.T, tg paneldb.Target) {
 		exec(t, tg, toStmts(passkeyTables)...)
-		exec(t, tg, []any{"INSERT INTO passkey_challenges (id, admin_id, kind) VALUES (?, ?, ?)", 1, nil, "login"})
+		d, now := tg.Dialect, time.Now().UTC()
+		challenge := "INSERT INTO passkey_challenges (id, challenge, admin_id, kind, expires_at) VALUES (?, ?, ?, ?, ?)"
+		exec(t, tg, []any{challenge, 1, "c-login", nil, "login", paneldb.TimeArg(d, now)})
 		clean := paneldbtest.Checksum(t, tg)
 		ctx := context.Background()
 		db, err := paneldb.OpenWriter(ctx, tg)
@@ -132,7 +134,6 @@ func TestRemoveAdminWithPasskey(t *testing.T) {
 			t.Fatal(err)
 		}
 		defer db.Close()
-		d, now := db.Server().Dialect, time.Now().UTC()
 		var removed bool
 		err = db.Chunk(ctx, func(x paneldb.Execer) error {
 			id, err := Writer{Dialect: d}.InsertAdmin(ctx, x, panel.Admin{Username: "newshop"}, "$2a$12$h", OperatorRole, now)
@@ -140,8 +141,9 @@ func TestRemoveAdminWithPasskey(t *testing.T) {
 				return err
 			}
 			for _, s := range [][]any{
-				{"INSERT INTO admin_passkeys (id, admin_id, name) VALUES (?, ?, ?)", 1, id, "Phone"},
-				{"INSERT INTO passkey_challenges (id, admin_id, kind) VALUES (?, ?, ?)", 2, id, "register"},
+				{"INSERT INTO admin_passkeys (id, admin_id, credential_id, public_key, name) VALUES (?, ?, ?, ?, ?)",
+					1, id, "cred-1", "key-1", "Phone"},
+				{challenge, 2, "c-register", id, "register", paneldb.TimeArg(d, now)},
 			} {
 				if _, err := x.ExecContext(ctx, s[0].(string), s[1:]...); err != nil {
 					return err

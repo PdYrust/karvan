@@ -18,15 +18,62 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe('old link sites', () => {
   it('lists them with the ports that could not listen', async () => {
-    const body = { sites: [{ id: 1, name: 'old-443' }], portErrors: {} };
+    const site = {
+      id: 1,
+      name: 'old-443',
+      batches: [],
+      domains: [],
+      certificate: null,
+      warnings: [],
+    };
+    const body = { sites: [site], portErrors: {} };
     const f = vi.fn(() => Promise.resolve(new Response(JSON.stringify(body))));
     vi.stubGlobal('fetch', f);
     await expect(getLinkSites()).resolves.toEqual(body);
     expect((f.mock.calls.at(-1) as unknown as [string])[0]).toMatch(/api\/v1\/legacy-sites$/);
   });
-});
 
+  it('reads null lists as empty', async () => {
+    const facts = { domains: null, issuer: '', warnings: null };
+    const site = {
+      id: 1,
+      batches: null,
+      domains: null,
+      cert: facts,
+      certificate: { id: 2, facts },
+      warnings: null,
+    };
+    const f = vi.fn(() =>
+      Promise.resolve(new Response(JSON.stringify({ sites: [site], portErrors: null }))),
+    );
+    vi.stubGlobal('fetch', f);
+    const empty = { domains: [], issuer: '', warnings: [] };
+    await expect(getLinkSites()).resolves.toEqual({
+      sites: [
+        {
+          id: 1,
+          batches: [],
+          domains: [],
+          cert: empty,
+          certificate: { id: 2, facts: empty },
+          warnings: [],
+        },
+      ],
+      portErrors: {},
+    });
+  });
+});
 describe('redirect rules', () => {
+  it('read null lists as empty', async () => {
+    const r = { id: 1, domains: null, certificate: null, warnings: null };
+    const f = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ redirects: [r] }))));
+    vi.stubGlobal('fetch', f);
+    await expect(getRedirects()).resolves.toEqual({
+      redirects: [{ id: 1, domains: [], certificate: null, warnings: [] }],
+    });
+    f.mockImplementation(() => Promise.resolve(new Response(JSON.stringify({ redirects: null }))));
+    await expect(getRedirects()).resolves.toEqual({ redirects: [] });
+  });
   it('are read, added, changed and deleted at their own route', async () => {
     const f = vi.fn(() => Promise.resolve(new Response(JSON.stringify({ redirects: [] }))));
     vi.stubGlobal('fetch', f);

@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Starts Marzban 0.8.4 and PasarGuard 5.4.1 on SQLite for `make test-panels`
+# Starts Marzban 0.8.4 and PasarGuard 5.5.1 on SQLite for `make test-panels`
 # and waits until both answer. Each panel is laid out like the official
 # install scripts do it: its own folder with .env and docker-compose.yml,
 # started as the compose project named after the folder, so Karvan stops
@@ -40,7 +40,7 @@ services:
 EOF
 }
 compose "$m" marzban gozargah/marzban:v0.8.4
-compose "$p" pasarguard pasarguard/panel:v5.4.1
+compose "$p" pasarguard pasarguard/panel:v5.5.1@sha256:16765ab9838197ce10b9431e72721b23276c66375a9d481ce8c2777b035576c3
 
 # The inbound tags match migrationtest.XrayInbounds; all listen on loopback.
 cat >"$m/xray_config.json" <<'EOF'

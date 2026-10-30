@@ -43,7 +43,13 @@ describe('the batch list', () => {
 
 describe('one batch', () => {
   it('is read by its id', async () => {
-    const last = stubFetch({ id: 3, name: 'root' });
+    const last = stubFetch({
+      id: 3,
+      name: 'root',
+      admins: [],
+      oldLinks: { path: '', hosts: [], port: 0 },
+      rules: [],
+    });
     await expect(getBatch(3)).resolves.toMatchObject({ name: 'root' });
     expect(last()[0]).toMatch(/batches\/3$/);
   });
@@ -54,13 +60,32 @@ describe('one batch', () => {
     expect(url.pathname).toMatch(/batches\/3\/users$/);
     expect(Object.fromEntries(url.searchParams)).toEqual({ q: 'ali', cursor: '12', limit: '50' });
   });
+  it('reads null lists as empty', async () => {
+    stubFetch({ id: 3, admins: null, oldLinks: { path: '', hosts: null, port: 0 }, rules: null });
+    await expect(getBatch(3)).resolves.toEqual({
+      id: 3,
+      admins: [],
+      oldLinks: { path: '', hosts: [], port: 0 },
+      rules: [],
+    });
+    stubFetch({ batches: null });
+    await expect(listBatches()).resolves.toEqual({ batches: [] });
+    stubFetch({ users: null });
+    await expect(listBatchUsers(3)).resolves.toEqual({ users: [] });
+  });
   it('lists its users without an empty search', async () => {
     const last = stubFetch({ users: [] });
     await listBatchUsers(3, { q: '  ' });
     expect(last()[0]).toMatch(/batches\/3\/users$/);
   });
   it('is renamed with a PATCH of the name', async () => {
-    const last = stubFetch({ id: 3, name: 'resellers' });
+    const last = stubFetch({
+      id: 3,
+      name: 'resellers',
+      admins: [],
+      oldLinks: { path: '', hosts: [], port: 0 },
+      rules: [],
+    });
     await renameBatch(3, 'resellers');
     const [url, init] = last();
     expect(url).toMatch(/batches\/3$/);
@@ -76,7 +101,10 @@ describe('one batch', () => {
     expect(JSON.parse(init.body as string)).toEqual({ confirm: 'root' });
   });
   it('is made active again with a POST', async () => {
-    const last = stubFetch({ id: 3, state: 'active' });
+    const last = stubFetch({
+      ...{ id: 3, name: 'root', admins: [], oldLinks: { path: '', hosts: [], port: 0 }, rules: [] },
+      state: 'active',
+    });
     await reactivateBatch(3);
     const [url, init] = last();
     expect(url).toMatch(/batches\/3\/reactivate$/);

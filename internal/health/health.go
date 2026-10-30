@@ -73,11 +73,16 @@ func Probe(ctx context.Context, addr string) error {
 	return nil // bytes, a close or a reset all come from the server
 }
 
+// errNotServing is a round before the panel serves, with nothing to probe
+// yet; it is not logged.
+var errNotServing = errors.New("the panel is not served yet")
+
 // Monitor runs the probe and reports while it passes.
 type Monitor struct {
 	Socket    string // NOTIFY_SOCKET
 	Heartbeat string // file path
-	// Addrs lists the addresses to probe, read again on every round.
+	// Addrs lists the addresses to probe, read again on every round; none
+	// means the panel is not served yet.
 	Addrs func() []string
 	Log   *slog.Logger
 }
@@ -91,7 +96,9 @@ func (m *Monitor) Run(ctx context.Context) {
 			if ctx.Err() != nil {
 				return
 			}
-			m.Log.Error("the self-probe failed", "err", err)
+			if !errors.Is(err, errNotServing) {
+				m.Log.Error("the self-probe failed", "err", err)
+			}
 		} else {
 			if !ready {
 				ready = true
@@ -115,7 +122,11 @@ func (m *Monitor) Run(ctx context.Context) {
 }
 
 func (m *Monitor) probe(ctx context.Context) error {
-	for _, a := range m.Addrs() {
+	addrs := m.Addrs()
+	if len(addrs) == 0 {
+		return errNotServing
+	}
+	for _, a := range addrs {
 		if err := Probe(ctx, a); err != nil {
 			return err
 		}

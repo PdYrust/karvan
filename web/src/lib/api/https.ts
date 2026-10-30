@@ -1,5 +1,6 @@
 import type { Reauth } from './account';
 import { api } from './client';
+import { list } from './lists';
 
 /** How the panel is served (D4): plain HTTP, a self-signed certificate, or a domain's certificate. */
 export type TlsMode = 'off' | 'self' | 'domain';
@@ -30,8 +31,9 @@ export interface Https extends HttpsSite {
 
 export const httpsKeys = { all: ['settings', 'https'] as const };
 
-export function getHttps(): Promise<Https> {
-  return api<Https>('GET', 'settings/https');
+export async function getHttps(): Promise<Https> {
+  const h = await api<Https>('GET', 'settings/https');
+  return { ...h, sharedPorts: list(h.sharedPorts) };
 }
 
 /** The change to start; port 0 keeps the port. */

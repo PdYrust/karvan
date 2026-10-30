@@ -89,10 +89,12 @@ func TestDryRunWritesNothing(t *testing.T) {
 				dryRun(t, from, tg, panel.Marzban)
 			})
 		})
-		t.Run(string(from)+"-to-pasarguard", func(t *testing.T) {
-			paneldbtest.Each(t, "../../panel/pasarguarddb/testdata", pasarguarddb.Revision, func(t *testing.T, tg paneldb.Target) {
-				dryRun(t, from, tg, panel.PasarGuard)
+		for _, rev := range pasarguarddb.Revisions {
+			t.Run(string(from)+"-to-pasarguard/"+rev, func(t *testing.T) {
+				paneldbtest.Each(t, "../../panel/pasarguarddb/testdata", rev, func(t *testing.T, tg paneldb.Target) {
+					dryRun(t, from, tg, panel.PasarGuard)
+				})
 			})
-		})
+		}
 	}
 }

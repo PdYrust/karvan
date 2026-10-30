@@ -1,4 +1,5 @@
 import { api } from './client';
+import { factsOf, list } from './lists';
 import type { CertFacts } from './rules';
 
 /** A panel rule or a redirect rule, as the certificate pages name it. */
@@ -32,8 +33,18 @@ export const certificateKeys = {
   all: ['certificates'] as const,
 };
 
-export function getCertificates(): Promise<{ certificates: Certificate[] }> {
-  return api('GET', 'certificates');
+function certificateOf(c: Certificate): Certificate {
+  return {
+    ...c,
+    facts: factsOf(c.facts),
+    domains: list(c.domains).map((d) => ({ ...d, warnings: list(d.warnings) })),
+    rules: list(c.rules).map((r) => ({ ...r, warnings: list(r.warnings) })),
+  };
+}
+
+export async function getCertificates(): Promise<{ certificates: Certificate[] }> {
+  const r = await api<{ certificates: Certificate[] | null }>('GET', 'certificates');
+  return { certificates: list(r.certificates).map(certificateOf) };
 }
 
 /** A file pair, or a pasted certificate; an empty `keyPem` on a change keeps the stored key. */
@@ -46,10 +57,11 @@ export interface CertificateInput {
 }
 
 /** Adds a certificate (no id) or replaces one; 400 certificate_invalid names the field. */
-export function saveCertificate(input: CertificateInput, id?: number): Promise<Certificate> {
-  return id
-    ? api('PATCH', `certificates/${String(id)}`, input)
-    : api('POST', 'certificates', input);
+export async function saveCertificate(input: CertificateInput, id?: number): Promise<Certificate> {
+  const c = await (id
+    ? api<Certificate>('PATCH', `certificates/${String(id)}`, input)
+    : api<Certificate>('POST', 'certificates', input));
+  return certificateOf(c);
 }
 
 /** 409 certificate_in_use while a domain, a pin or a rule uses it. */
@@ -75,6 +87,10 @@ export interface ScanResult {
 }
 
 /** Looks in the server's known places, read only; 409 busy while a scan runs (D51). */
-export function scanCertificates(): Promise<ScanResult> {
-  return api('POST', 'certificates/scan');
+export async function scanCertificates(): Promise<ScanResult> {
+  const r = await api<ScanResult>('POST', 'certificates/scan');
+  return {
+    found: list(r.found).map((f) => ({ ...f, facts: factsOf(f.facts) })),
+    skipped: list(r.skipped),
+  };
 }

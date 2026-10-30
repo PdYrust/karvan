@@ -118,7 +118,7 @@ func (b *Bridge) domains(ctx context.Context, id int64) ([]Domain, error) {
 	if err != nil {
 		return nil, err
 	}
-	var out []Domain
+	out := []Domain{}
 	err = b.st.each(ctx, fmt.Sprintf("SELECT id, name, COALESCE(certificate_id, 0), cert_filled FROM domains WHERE %d IN (0, id) "+
 		"ORDER BY name", id), func(r *sql.Rows) error {
 		var d Domain

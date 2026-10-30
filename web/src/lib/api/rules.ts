@@ -1,4 +1,5 @@
 import { api } from './client';
+import { factsOf, list } from './lists';
 import type { PanelKind } from './panels';
 
 /** What is wrong with a certificate, as the server names it (api-resources.md 5.0). */
@@ -80,8 +81,29 @@ export const linkKeys = {
   upload: (id: number) => ['legacy-sites', 'upload', id] as const,
 };
 
-export function getLinkSites(): Promise<LinkSites> {
-  return api<LinkSites>('GET', 'legacy-sites');
+/** A rule's certificate with its lists. */
+function certOf(c: RuleCertificate | null): RuleCertificate | null {
+  return c && { ...c, facts: factsOf(c.facts) };
+}
+
+/** A panel rule with its lists, whatever the server wrote for an empty one. */
+function siteOf(s: LinkSite): LinkSite {
+  return {
+    ...s,
+    batches: list(s.batches),
+    domains: list(s.domains),
+    cert: s.cert && factsOf(s.cert),
+    certificate: certOf(s.certificate),
+    warnings: list(s.warnings),
+  };
+}
+
+export async function getLinkSites(): Promise<LinkSites> {
+  const r = await api<{ sites: LinkSite[] | null; portErrors: LinkSites['portErrors'] | null }>(
+    'GET',
+    'legacy-sites',
+  );
+  return { sites: list(r.sites).map(siteOf), portErrors: r.portErrors ?? {} };
 }
 
 /**
@@ -107,10 +129,11 @@ export interface SiteInput {
 }
 
 /** Adds a site (no id) or replaces one; 400 site_invalid names the field in `detail.field`. */
-export function saveSite(input: SiteInput, id?: number): Promise<LinkSite> {
-  return id
-    ? api('PATCH', `legacy-sites/${String(id)}`, input)
-    : api('POST', 'legacy-sites', input);
+export async function saveSite(input: SiteInput, id?: number): Promise<LinkSite> {
+  const s = await (id
+    ? api<LinkSite>('PATCH', `legacy-sites/${String(id)}`, input)
+    : api<LinkSite>('POST', 'legacy-sites', input));
+  return siteOf(s);
 }
 
 export function deleteSite(id: number): Promise<void> {
@@ -141,14 +164,26 @@ export type RedirectInput = Omit<
 export const redirectKeys = {
   all: ['link-redirects'] as const,
 };
-export function getRedirects(): Promise<{ redirects: Redirect[] }> {
-  return api('GET', 'link-redirects');
+/** A redirect rule with its lists, whatever the server wrote for an empty one. */
+function redirectOf(r: Redirect): Redirect {
+  return {
+    ...r,
+    domains: list(r.domains),
+    certificate: certOf(r.certificate),
+    warnings: list(r.warnings),
+  };
+}
+
+export async function getRedirects(): Promise<{ redirects: Redirect[] }> {
+  const r = await api<{ redirects: Redirect[] | null }>('GET', 'link-redirects');
+  return { redirects: list(r.redirects).map(redirectOf) };
 }
 /** Adds a redirect (no id) or replaces one; 400 redirect_invalid names the field. */
-export function saveRedirect(input: RedirectInput, id?: number): Promise<Redirect> {
-  return id
-    ? api('PATCH', `link-redirects/${String(id)}`, input)
-    : api('POST', 'link-redirects', input);
+export async function saveRedirect(input: RedirectInput, id?: number): Promise<Redirect> {
+  const r = await (id
+    ? api<Redirect>('PATCH', `link-redirects/${String(id)}`, input)
+    : api<Redirect>('POST', 'link-redirects', input));
+  return redirectOf(r);
 }
 export function deleteRedirect(id: number): Promise<void> {
   return api('DELETE', `link-redirects/${String(id)}`);

@@ -178,12 +178,15 @@ docker cp "$work/signin.sh" "$NAME:/srv/signin.sh" >/dev/null
 
 # show_install prints the install output without the password.
 show_install() { sys 'grep -v "Password  " /root/install.out' >&2 || true; }
+# show_journal prints the service's last log lines, which say why it is not healthy.
+show_journal() { sys 'journalctl -u karvan -n 50 --no-pager' >&2 || true; }
 
 # one_liner installs the README's way, from the get.sh with no version
 # stamped in, with the arguments after @ install in $2.
 one_liner() {
 	sys "KARVAN_IP_URL=${IP_URL:-http://127.0.0.1:$PORT/ip} bash -c \"\$(curl -fsSL http://127.0.0.1:$PORT/get-latest.sh)\" @ install $2 >$1 2>&1" || {
 		sys "grep -v 'Password  ' $1" >&2
+		show_journal
 		fail "the one-liner install"
 	}
 }
@@ -213,7 +216,7 @@ expect_mode /etc/karvan 700
 expect_mode /etc/karvan/config.json 600
 expect_mode /etc/karvan/secret.key 600
 [ "$(sys 'readlink /usr/local/lib/karvan/current')" = "$VERSION" ] || fail "current does not point at $VERSION"
-sys 'karvan health' || fail "karvan health"
+sys 'karvan health' || { show_journal && fail "karvan health"; }
 signed_in
 echo "ok   installed, running as root, modes as D18, sign-in answers"
 
@@ -223,7 +226,7 @@ on_version() {
 	[ "$(sys 'readlink /usr/local/lib/karvan/current')" = "$1" ] || fail "current is not $1"
 	prev=$(sys 'readlink /usr/local/lib/karvan/previous || echo -')
 	[ "$prev" = "$2" ] || fail "previous is $prev, want $2"
-	sys 'systemctl is-active --quiet karvan && karvan health >/dev/null' || fail "$1 is not healthy"
+	sys 'systemctl is-active --quiet karvan && karvan health >/dev/null' || { show_journal && fail "$1 is not healthy"; }
 	signed_in
 }
 # data_kept fails unless the test data marker is there and every file in

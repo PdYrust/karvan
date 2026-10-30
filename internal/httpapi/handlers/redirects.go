@@ -34,7 +34,7 @@ func (a *API) Redirects(w http.ResponseWriter, r *http.Request) {
 		respond.Internal(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, map[string]any{"redirects": list})
+	respond.Lists(w, http.StatusOK, map[string]any{"redirects": list})
 }
 
 // SaveRedirect adds (POST) or changes (PATCH /{id}) a redirect rule. A
@@ -71,7 +71,7 @@ func (a *API) SaveRedirect(w http.ResponseWriter, r *http.Request) {
 		writeRedirectError(w, r, err)
 		return
 	}
-	respond.JSON(w, status, saved)
+	respond.Lists(w, status, saved)
 }
 
 // DeleteRedirect removes a redirect rule.

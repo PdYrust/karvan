@@ -1,4 +1,7 @@
-# The full gate on every push to main and every pull request (D30).
+# The full gate on every push to main and every pull request (D30). The
+# jobs run in parallel and together run every target of make check-full;
+# the last job, check-full, is the required check and passes only when all
+# of them passed.
 name: CI
 on:
   push:
@@ -10,9 +13,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 jobs:
-  check-full:
+  # make floor lint vuln
+  lint:
     runs-on: ubuntu-24.04
-    timeout-minutes: 75
+    timeout-minutes: 20
     steps:
       # The floor check reads the whole history, so take all of it, and the
       # pull request's own head: the merge commit GitHub makes has another author.
@@ -24,18 +28,44 @@ jobs:
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: go.mod
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          package_json_file: web/package.json
           cache: true
-          cache_dependency_path: web/pnpm-lock.yaml
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: web/package.json
+          cache-dependency-path: go.sum
       - name: Install the Go tools
         run: |
           go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
           go install golang.org/x/vuln/cmd/govulncheck@v1.9.0
+      - run: make floor lint vuln
+
+  # make cover test: the tests once with coverage, then under the race detector.
+  go-test:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+      - run: make cover test
+
+  # make test-db: the destination tests on every database server.
+  test-db:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
       # The PostgreSQL test servers are 17 and pg_dump refuses a newer
       # server, so take the client from the PostgreSQL apt repository; the
       # runner's own is 16. The MySQL and MariaDB tests run their dump tools
@@ -59,7 +89,80 @@ jobs:
           sudo ln -sf /usr/lib/postgresql/17/bin/psql /usr/local/bin/psql
           pg_dump --version
           psql --version
-      - name: Install the web dependencies
-        run: make web-deps
-      - name: make check-full
-        run: make check-full
+      - run: make test-db
+
+  # make test-panels: the run against real Marzban and PasarGuard containers.
+  test-panels:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+      - run: make test-panels
+
+  # make test-acme: Let's Encrypt orders against Pebble.
+  test-acme:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+      - run: make test-acme
+
+  # make check-web audit-web web: types, lint, format, tests, the audit, the
+  # build and the bundle budgets.
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      # The version is given here as well as in packageManager (keep the two
+      # the same): from the file alone the action installs its own pnpm,
+      # which then downloads this one on every run.
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 12.8.1
+          package_json_file: web/package.json
+          cache: true
+          cache_dependency_path: web/pnpm-lock.yaml
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: web/package.json
+      - run: make web-deps
+      - run: make check-web audit-web web
+
+  # The required check: passes only when every job above passed.
+  check-full:
+    if: always()
+    needs: [lint, go-test, test-db, test-panels, test-acme, web]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - name: Every job passed
+        env:
+          RESULTS: ${{ join(needs.*.result, ' ') }}
+        run: |
+          echo "$RESULTS"
+          for r in $RESULTS; do
+            if [ "$r" != success ]; then
+              echo "::error::A job of the full gate ended with $r."
+              exit 1
+            fi
+          done

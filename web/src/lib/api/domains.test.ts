@@ -15,10 +15,31 @@ function stubFetch(body: unknown = {}, status = 200) {
 
 describe('domains', () => {
   it('are listed with their certificates, rules and warnings', async () => {
-    const body = { domains: [{ id: 1, name: 'old.example.com', warnings: [] }] };
+    const d = { id: 1, name: 'old.example.com', certificate: null, certificates: [], pins: [] };
+    const body = { domains: [{ ...d, acme: null, rules: [], warnings: [] }] };
     const last = stubFetch(body);
     await expect(getDomains()).resolves.toEqual(body);
     expect(last()[0]).toMatch(/api\/v1\/domains$/);
+  });
+
+  it('read every null list as empty', async () => {
+    stubFetch({ domains: null });
+    await expect(getDomains()).resolves.toEqual({ domains: [] });
+    const facts = { domains: null, issuer: '', warnings: null };
+    const d = { id: 1, certificate: { id: 2, facts }, certificates: null, pins: null };
+    stubFetch({ domains: [{ ...d, rules: null, warnings: null }] });
+    await expect(getDomains()).resolves.toEqual({
+      domains: [
+        {
+          id: 1,
+          certificate: { id: 2, facts: { domains: [], issuer: '', warnings: [] } },
+          certificates: [],
+          pins: [],
+          rules: [],
+          warnings: [],
+        },
+      ],
+    });
   });
 
   it('are added by name, trimmed, with their certificate', async () => {

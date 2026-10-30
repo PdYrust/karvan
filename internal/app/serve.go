@@ -131,6 +131,9 @@ func (a *App) monitor(bind string, srv *address.Server) *health.Monitor {
 		Log:       a.Logger,
 		Addrs: func() []string {
 			st := srv.Status()
+			if st.Current.Port == 0 { // Serve has not started on the port yet
+				return nil
+			}
 			ports := []int{st.Current.Port}
 			if p := st.Pending; p != nil && p.Port != st.Current.Port {
 				ports = append(ports, p.Port)

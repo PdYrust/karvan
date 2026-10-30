@@ -1,6 +1,13 @@
 # Builds, tests, attests and publishes a release for a pushed v* tag (D31).
 # Run by hand with dry_run (the default) it builds, tests and attests the
 # same files but pushes no image and makes no release.
+#
+# The jobs: version picks the version and checks the release notes, web
+# builds the panel once, build packs each architecture's archive in its own
+# job from that panel, install-test installs the amd64 archive, image builds
+# (and on a release pushes) each architecture's image, index joins the two,
+# and release checksums, attests and checks everything and makes the release.
+# Nothing is pushed before the notes are found and the install test passed.
 name: Release
 on:
   push:
@@ -15,36 +22,22 @@ permissions: {}
 concurrency:
   group: release-${{ github.ref }}
   cancel-in-progress: false
+env:
+  IMAGE: ghcr.io/pdyrust/karvan
+  DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
 jobs:
-  release:
+  # The version, and on a release the notes, passed on to the release job.
+  version:
     runs-on: ubuntu-24.04
-    timeout-minutes: 60
+    timeout-minutes: 5
     permissions:
-      contents: write
-      packages: write
-      id-token: write
-      attestations: write
-    env:
-      IMAGE: ghcr.io/pdyrust/karvan
-      DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
-      ATTEST: ${{ github.event.repository.private == false }}
-      GH_TOKEN: ${{ github.token }}
-      GH_REPO: ${{ github.repository }}
+      contents: read
+    outputs:
+      version: ${{ steps.version.outputs.version }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: go.mod
-      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
-        with:
-          package_json_file: web/package.json
-          cache: true
-          cache_dependency_path: web/pnpm-lock.yaml
-      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
-        with:
-          node-version-file: web/package.json
       - name: Pick the version and the release notes
         id: version
         run: |
@@ -66,16 +59,124 @@ jobs:
             fi
           fi
           echo "version=$version" >>"$GITHUB_OUTPUT"
-      - name: Build the release files
+      - if: env.DRY_RUN != 'true'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: notes
+          path: ${{ runner.temp }}/notes.md
+          if-no-files-found: error
+          retention-days: 1
+  # make web: the panel and its bundle budgets, built once for both archives.
+  web:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      # The version is given here as well as in packageManager (keep the two
+      # the same): from the file alone the action installs its own pnpm,
+      # which then downloads this one on every run.
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          version: 12.8.1
+          package_json_file: web/package.json
+          cache: true
+          cache_dependency_path: web/pnpm-lock.yaml
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: web/package.json
+      - run: make web
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: web-dist
+          path: web/dist/
+          # The panel's .vite/manifest.json is a hidden file, which the
+          # action leaves out unless told to, and serve needs it.
+          include-hidden-files: true
+          if-no-files-found: error
+          retention-days: 1
+  # One archive per architecture, with the image build context, checked
+  # against its own SHA256SUMS.
+  build:
+    needs: [version, web]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+          cache: true
+          cache-dependency-path: go.sum
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: web-dist
+          path: web/dist
+      - name: Build the ${{ matrix.arch }} release files
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.version.outputs.version }}
+          ARCHES: ${{ matrix.arch }}
+          SKIP_WEB: "1"
         run: |
           scripts/release/build.sh
           scripts/release/verify.sh dist
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: release-${{ matrix.arch }}
+          path: |
+            dist/karvan_*_linux_${{ matrix.arch }}.tar.gz
+            dist/image/linux_${{ matrix.arch }}/karvan
+          if-no-files-found: error
+          retention-days: 1
+  install-test:
+    needs: [version, build]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-amd64
+          path: dist
       - name: Install test on the amd64 archive
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.version.outputs.version }}
         run: ARCHIVE="$PWD/dist/karvan_${VERSION}_linux_amd64.tar.gz" make test-install
+  # The Dockerfile only copies the binary of each architecture, so both
+  # build on amd64 runners without QEMU. A dry run keeps them local and
+  # uses the image ID as the digest, as make release-dry does.
+  image:
+    needs: [version, build, install-test]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        arch: [amd64, arm64]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-${{ matrix.arch }}
+          path: dist
       - name: Sign in to ghcr.io
         if: env.DRY_RUN != 'true'
         uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
@@ -83,36 +184,99 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ github.token }}
-      # The Dockerfile only copies the binary of each architecture, so both
-      # build on this runner without QEMU. A dry run keeps them local and
-      # uses the image ID as the digest, as make release-dry does.
-      - name: Build the images
-        id: image
+      - name: Build the ${{ matrix.arch }} image
         env:
-          VERSION: ${{ steps.version.outputs.version }}
+          VERSION: ${{ needs.version.outputs.version }}
+          ARCH: ${{ matrix.arch }}
         run: |
-          : >dist/image-digests
-          for arch in amd64 arm64; do
-            tag=$IMAGE:$VERSION-$arch
-            docker buildx build --load --provenance=false --platform "linux/$arch" -t "$tag" \
-              --build-arg VERSION="$VERSION" -f packaging/docker/Dockerfile dist/image
-            if [ "$DRY_RUN" = true ]; then
-              digest=$(docker image inspect -f '{{.Id}}' "$tag")
-            else
-              docker push -q "$tag"
-              digest=$(docker image inspect -f '{{index .RepoDigests 0}}' "$tag")
-              digest=${digest#*@}
-            fi
-            echo "linux/$arch $IMAGE@$digest" >>dist/image-digests
-            echo "$arch=$digest" >>"$GITHUB_OUTPUT"
-          done
-          if [ "$DRY_RUN" != true ]; then
-            docker buildx imagetools create -t "$IMAGE:$VERSION" "$IMAGE:$VERSION-amd64" "$IMAGE:$VERSION-arm64"
-            index=$(docker buildx imagetools inspect "$IMAGE:$VERSION" | awk '$1 == "Digest:" { print $2; exit }')
-            echo "$index" | grep -Eqx 'sha256:[0-9a-f]{64}'
-            echo "index=$index" >>"$GITHUB_OUTPUT"
+          tag=$IMAGE:$VERSION-$ARCH
+          docker buildx build --load --provenance=false --platform "linux/$ARCH" -t "$tag" \
+            --build-arg VERSION="$VERSION" -f packaging/docker/Dockerfile dist/image
+          if [ "$DRY_RUN" = true ]; then
+            digest=$(docker image inspect -f '{{.Id}}' "$tag")
+          else
+            docker push -q "$tag"
+            digest=$(docker image inspect -f '{{index .RepoDigests 0}}' "$tag")
+            digest=${digest#*@}
           fi
+          mkdir -p digests
+          echo "linux/$ARCH $IMAGE@$digest" | tee "digests/$ARCH"
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: image-${{ matrix.arch }}
+          path: digests/${{ matrix.arch }}
+          if-no-files-found: error
+          retention-days: 1
+  # The multi-architecture index <version> over the two pushed images; a dry
+  # run pushed none, so it has nothing to join.
+  index:
+    needs: [version, image]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      packages: write
+    outputs:
+      index: ${{ steps.index.outputs.index }}
+    steps:
+      - name: Sign in to ghcr.io
+        if: env.DRY_RUN != 'true'
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
+      - name: Join the images
+        id: index
+        if: env.DRY_RUN != 'true'
+        env:
+          VERSION: ${{ needs.version.outputs.version }}
+        run: |
+          docker buildx imagetools create -t "$IMAGE:$VERSION" "$IMAGE:$VERSION-amd64" "$IMAGE:$VERSION-arm64"
+          index=$(docker buildx imagetools inspect "$IMAGE:$VERSION" | awk '$1 == "Digest:" { print $2; exit }')
+          echo "$index" | grep -Eqx 'sha256:[0-9a-f]{64}'
+          echo "index=$index" >>"$GITHUB_OUTPUT"
+  # SHA256SUMS over both archives, the attestations and their check, and the
+  # GitHub release. It signs in to ghcr.io because a release stores the
+  # image attestations in the registry next to the images.
+  release:
+    needs: [version, build, install-test, image, index]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    permissions:
+      contents: write
+      packages: write
+      id-token: write
+      attestations: write
+    env:
+      ATTEST: ${{ github.event.repository.private == false }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      VERSION: ${{ needs.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: release-*
+          path: dist
+          merge-multiple: true
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: image-*
+          path: ${{ runner.temp }}/digests
+          merge-multiple: true
+      - name: Write SHA256SUMS and the image digests
+        id: image
+        run: |
+          (cd dist && sha256sum karvan_"${VERSION}"_linux_*.tar.gz >SHA256SUMS)
+          scripts/release/verify.sh dist
+          cat "$RUNNER_TEMP/digests/amd64" "$RUNNER_TEMP/digests/arm64" >dist/image-digests
           cat dist/image-digests
+          for arch in amd64 arm64; do
+            digest=$(awk -v p="linux/$arch" '$1 == p { print $2 }' dist/image-digests)
+            echo "$arch=${digest#*@}" >>"$GITHUB_OUTPUT"
+          done
       - name: List the attestation subjects
         run: |
           scripts/release/subjects.sh dist >"$RUNNER_TEMP/subjects"
@@ -124,6 +288,13 @@ jobs:
             cat dist/image-digests
             echo '```'
           } >>"$GITHUB_STEP_SUMMARY"
+      - name: Sign in to ghcr.io
+        if: env.DRY_RUN != 'true'
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6 # v4.7.0
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ github.token }}
       - name: Attest the files
         if: env.ATTEST == 'true'
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
@@ -148,12 +319,10 @@ jobs:
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-name: ${{ env.IMAGE }}
-          subject-digest: ${{ steps.image.outputs.index }}
+          subject-digest: ${{ needs.index.outputs.index }}
           push-to-registry: true
       - name: Check the attestations
         if: env.ATTEST == 'true'
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
           for f in dist/karvan_*.tar.gz dist/SHA256SUMS; do
             gh attestation verify "$f" -R "$GITHUB_REPOSITORY"
@@ -161,11 +330,14 @@ jobs:
           if [ "$DRY_RUN" != true ]; then
             gh attestation verify "oci://$IMAGE:$VERSION" -R "$GITHUB_REPOSITORY"
           fi
+      - if: env.DRY_RUN != 'true'
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: notes
+          path: ${{ runner.temp }}/notes
       - name: Create the GitHub release
         if: env.DRY_RUN != 'true'
-        env:
-          VERSION: ${{ steps.version.outputs.version }}
         run: |
-          set -- --verify-tag --title "Karvan $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
+          set -- --verify-tag --title "Karvan $VERSION" --notes-file "$RUNNER_TEMP/notes/notes.md"
           case $VERSION in *-*) set -- "$@" --prerelease ;; esac
           gh release create "$GITHUB_REF_NAME" "$@" dist/karvan_*.tar.gz dist/SHA256SUMS

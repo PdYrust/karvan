@@ -5,18 +5,26 @@ package pasarguarddb
 import (
 	"context"
 	_ "embed"
+	"slices"
 
 	"github.com/PdYrust/karvan/internal/panel"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 	"github.com/PdYrust/karvan/internal/panel/panelstats"
 )
 
-// Revision is the alembic head of PasarGuard 5.4.1, the known version.
-// Other revisions are used when their schema matches this one's
-// (CheckShape).
+// Revision is the alembic head of PasarGuard 5.4.1.
 const Revision = "48a6bcb8bba1"
 
-// columns are the columns Karvan reads or writes, per table, at Revision.
+// Revision551 is the alembic head of PasarGuard 5.5.1, which adds admin
+// passkeys (admin_passkeys, passkey_challenges).
+const Revision551 = "c8d2e4f6a1b3"
+
+// Revisions are the known revisions. Each has fixtures the write, check
+// and undo tests run on, and the shape in schema.json. Other revisions are
+// used when their schema matches that shape (CheckShape).
+var Revisions = []string{Revision, Revision551}
+
+// columns are the columns Karvan reads or writes, per table, at each of Revisions.
 var columns = map[string][]string{
 	"admins": {"id", "username", "hashed_password", "created_at", "password_reset_at", "telegram_id",
 		"discord_webhook", "used_traffic", "note", "role_id", "status", "data_limit", "last_status_change", "permission_overrides"},
@@ -41,7 +49,7 @@ var columns = map[string][]string{
 // inserts are the tables Karvan adds rows to (write.go).
 var inserts = []string{"admins", "users", "users_groups_association", "next_plans", "user_usage_logs"}
 
-// knownJSON is the shape of columns at Revision on each server flavor,
+// knownJSON is the shape of columns at Revisions on each server flavor,
 // read from the fixtures (go test -tags dbtest -run TestKnownSchema -update).
 //
 //go:embed schema.json
@@ -93,7 +101,7 @@ type Schema struct {
 	UnknownChildren []paneldb.ForeignKey
 }
 
-// Inspect checks that the database is PasarGuard at Revision, or at
+// Inspect checks that the database is PasarGuard at one of Revisions, or at
 // another revision with the same shape for what Karvan uses, with the
 // expected columns, and reads the admin collation and foreign keys. User
 // names are case-sensitive on every backend (CaseSensitiveString).
@@ -104,7 +112,7 @@ func Inspect(ctx context.Context, q paneldb.Querier, srv paneldb.Server) (Schema
 		return s, err
 	}
 	s.Revision = rev
-	if rev != Revision {
+	if !slices.Contains(Revisions, rev) {
 		diffs, err := paneldb.CheckShape(ctx, q, srv, known, inserts)
 		if err != nil {
 			return s, err

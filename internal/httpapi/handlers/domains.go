@@ -16,7 +16,7 @@ func (a *API) Domains(w http.ResponseWriter, r *http.Request) {
 		respond.Internal(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, map[string]any{"domains": list})
+	respond.Lists(w, http.StatusOK, map[string]any{"domains": list})
 }
 
 // AddDomain stores a domain name (a host, one leading wildcard or an IP)
@@ -42,7 +42,7 @@ func (a *API) AddDomain(w http.ResponseWriter, r *http.Request) {
 		writeACMEError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusCreated, d)
+	respond.Lists(w, http.StatusCreated, d)
 }
 
 // SetDomainCertificate changes a domain's certificate (D65): its pins go
@@ -77,7 +77,7 @@ func (a *API) SetDomainCertificate(w http.ResponseWriter, r *http.Request) {
 		writeACMEError(w, r, err)
 		return
 	}
-	respond.JSON(w, status, d)
+	respond.Lists(w, status, d)
 }
 
 // DeleteDomain removes a domain no rule holds; its orders go with it.

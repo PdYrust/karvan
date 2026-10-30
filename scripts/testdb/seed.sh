@@ -9,9 +9,12 @@ set -euo pipefail
 cd "$(git rev-parse --show-toplevel)"
 
 MARZBAN_IMAGE=gozargah/marzban:v0.8.4
-PASARGUARD_IMAGE=pasarguard/panel:v5.4.1
 MARZBAN_REV=2b231de97dc3
-PASARGUARD_REV=48a6bcb8bba1
+# Each PasarGuard version Karvan knows: its image and its alembic head.
+PASARGUARD=(
+  pasarguard/panel:v5.4.1=48a6bcb8bba1
+  pasarguard/panel:v5.5.1@sha256:16765ab9838197ce10b9431e72721b23276c66375a9d481ce8c2777b035576c3=c8d2e4f6a1b3
+)
 COMPOSE=(docker compose -f test/db/compose.yml)
 
 work=$(mktemp -d)
@@ -24,9 +27,12 @@ chmod 777 "$work"
 migrate() {
   local image=$1 url=$2
   local entry=(--entrypoint alembic)
-  [ "$image" = "$PASARGUARD_IMAGE" ] && entry=(--entrypoint python)
   local args=(upgrade head)
-  [ "$image" = "$PASARGUARD_IMAGE" ] && args=(-m alembic upgrade head)
+  case $image in pasarguard/*)
+    entry=(--entrypoint python)
+    args=(-m alembic upgrade head)
+    ;;
+  esac
   docker run --rm --network host --user "$(id -u):$(id -g)" -w /code -v "$work:/data" \
     -e SQLALCHEMY_DATABASE_URL="$url" "${entry[@]}" "$image" "${args[@]}" >/dev/null 2>"$work/migrate.log" ||
     { cat "$work/migrate.log" >&2; exit 1; }
@@ -66,29 +72,35 @@ echo "marzban sqlite"
 migrate "$MARZBAN_IMAGE" "sqlite:////data/m.sqlite3"
 dump_sqlite m.sqlite3 >"$out_m/$MARZBAN_REV.sqlite.sql"
 
-echo "pasarguard sqlite"
-migrate "$PASARGUARD_IMAGE" "sqlite+aiosqlite:////data/p.sqlite3"
-dump_sqlite p.sqlite3 >"$out_p/$PASARGUARD_REV.sqlite.sql"
-
 for pair in mysql:mysql:mysqldump:33061 mariadb:mariadb:mariadb-dump:33062; do
   IFS=: read -r svc client tool port <<<"$pair"
   echo "marzban $svc"
   fresh_mysql "$svc" "$client"
   migrate "$MARZBAN_IMAGE" "mysql+pymysql://root:test@127.0.0.1:$port/seed"
   dump_mysql "$svc" "$tool" seed >"$out_m/$MARZBAN_REV.$svc.sql"
-
-  echo "pasarguard $svc"
-  fresh_mysql "$svc" "$client"
-  migrate "$PASARGUARD_IMAGE" "mysql+asyncmy://root:test@127.0.0.1:$port/seed"
-  dump_mysql "$svc" "$tool" seed >"$out_p/$PASARGUARD_REV.$svc.sql"
 done
 
-for pair in postgres:54321 timescale:54322; do
-  IFS=: read -r svc port <<<"$pair"
-  echo "pasarguard $svc"
-  fresh_pg "$svc"
-  migrate "$PASARGUARD_IMAGE" "postgresql+asyncpg://postgres:test@127.0.0.1:$port/seed"
-  dump_pg "$svc" seed >"$out_p/$PASARGUARD_REV.$svc.sql"
+for version in "${PASARGUARD[@]}"; do
+  image=${version%=*}
+  rev=${version##*=}
+  echo "pasarguard $rev sqlite"
+  rm -f "$work/p.sqlite3"
+  migrate "$image" "sqlite+aiosqlite:////data/p.sqlite3"
+  dump_sqlite p.sqlite3 >"$out_p/$rev.sqlite.sql"
+  for pair in mysql:mysql:mysqldump:33061 mariadb:mariadb:mariadb-dump:33062; do
+    IFS=: read -r svc client tool port <<<"$pair"
+    echo "pasarguard $rev $svc"
+    fresh_mysql "$svc" "$client"
+    migrate "$image" "mysql+asyncmy://root:test@127.0.0.1:$port/seed"
+    dump_mysql "$svc" "$tool" seed >"$out_p/$rev.$svc.sql"
+  done
+  for pair in postgres:54321 timescale:54322; do
+    IFS=: read -r svc port <<<"$pair"
+    echo "pasarguard $rev $svc"
+    fresh_pg "$svc"
+    migrate "$image" "postgresql+asyncpg://postgres:test@127.0.0.1:$port/seed"
+    dump_pg "$svc" seed >"$out_p/$rev.$svc.sql"
+  done
 done
 
 echo "fixtures written"

@@ -79,7 +79,7 @@ func (a *API) GetHTTPS(w http.ResponseWriter, r *http.Request) {
 	if self {
 		out.Fingerprint = a.fingerprint(r)
 	}
-	respond.JSON(w, http.StatusOK, out)
+	respond.Lists(w, http.StatusOK, out)
 }
 
 // sharedPorts lists each (domain, port) an HTTPS rule holds, sorted.
@@ -177,7 +177,7 @@ func (a *API) PutHTTPS(w http.ResponseWriter, r *http.Request) {
 		out.Fingerprint = a.fingerprint(r)
 	}
 	w.Header().Set("Cache-Control", "no-store")
-	respond.JSON(w, http.StatusOK, out)
+	respond.Lists(w, http.StatusOK, out)
 }
 
 func httpsInvalid(field, reason string) *respond.APIError {

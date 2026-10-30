@@ -53,7 +53,7 @@ func (a *API) Certificates(w http.ResponseWriter, r *http.Request) {
 		respond.Internal(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, map[string]any{"certificates": list})
+	respond.Lists(w, http.StatusOK, map[string]any{"certificates": list})
 }
 
 // SaveCertificate adds (POST) or changes (PATCH /{id}) a certificate: a
@@ -81,7 +81,7 @@ func (a *API) SaveCertificate(w http.ResponseWriter, r *http.Request) {
 		writeCertError(w, r, err)
 		return
 	}
-	respond.JSON(w, status, c)
+	respond.Lists(w, status, c)
 }
 
 // DeleteCertificate removes a certificate no rule uses.
@@ -114,7 +114,7 @@ func (a *API) ScanCertificates(w http.ResponseWriter, r *http.Request) {
 	}
 	a.record(r, audit.ActionCertScan, audit.Success, map[string]string{"found": strconv.Itoa(len(res.Found)),
 		"skipped": strconv.Itoa(len(res.Skipped))})
-	respond.JSON(w, http.StatusOK, res)
+	respond.Lists(w, http.StatusOK, res)
 }
 
 // InspectCert says what a certificate covers and what is wrong with it,
@@ -130,5 +130,5 @@ func (a *API) InspectCert(w http.ResponseWriter, r *http.Request) {
 		writeSiteError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, facts)
+	respond.Lists(w, http.StatusOK, facts)
 }

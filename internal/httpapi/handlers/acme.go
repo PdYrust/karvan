@@ -64,7 +64,7 @@ func (a *API) ACME(w http.ResponseWriter, r *http.Request) {
 		writeACMEError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, st)
+	respond.Lists(w, http.StatusOK, st)
 }
 
 // StartACME starts an order for a domain now, also to renew ahead of time.
@@ -87,7 +87,7 @@ func (a *API) StartACME(w http.ResponseWriter, r *http.Request) {
 		writeACMEError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusAccepted, o)
+	respond.Lists(w, http.StatusAccepted, o)
 }
 
 // CheckACME finishes a DNS-01 order once its TXT record is there; force
@@ -110,7 +110,7 @@ func (a *API) CheckACME(w http.ResponseWriter, r *http.Request) {
 		writeACMEError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusAccepted, o)
+	respond.Lists(w, http.StatusAccepted, o)
 }
 
 // CancelACME cancels a domain's running order.
@@ -135,7 +135,7 @@ func (a *API) ACMESettings(w http.ResponseWriter, r *http.Request) {
 		respond.Internal(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, v)
+	respond.Lists(w, http.StatusOK, v)
 }
 
 // PutACMESettings stores the Let's Encrypt settings; turning keepPort80

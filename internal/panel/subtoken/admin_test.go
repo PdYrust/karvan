@@ -35,6 +35,9 @@ func TestAdminToken(t *testing.T) {
 			t.Errorf("%s = %v, want %v", k, got[k], v)
 		}
 	}
+	if _, ok := got["binding"]; ok {
+		t.Error("a token with no binding carries one")
+	}
 	if _, ok := Parse(tok); ok {
 		t.Error("an admin token must not read as a subscription token")
 	}
@@ -42,5 +45,20 @@ func TestAdminToken(t *testing.T) {
 	raw, _ = base64.RawURLEncoding.DecodeString(strings.Split(m, ".")[1])
 	if strings.Contains(string(raw), "aid") {
 		t.Errorf("Marzban token carries aid: %s", raw)
+	}
+}
+
+// The binding is PasarGuard 5.5's: hex HMAC-SHA256 of
+// "admin-token-binding:" and the password hash, under the jwt secret.
+func TestAdminBinding(t *testing.T) {
+	// hmac.new(b"s3cret", b"admin-token-binding:$2b$12$x", sha256).hexdigest()
+	const want = "04fd508267544aaa353629fead2bdaa3b4c21f0668fecf271494beb3b93568f1"
+	if got := AdminBinding("$2b$12$x", "s3cret"); got != want {
+		t.Fatalf("binding = %s, want %s", got, want)
+	}
+	tok := AdminToken(AdminClaims{Sub: "owner", Access: "admin", AdminID: 7, Binding: want}, "s3cret", time.Unix(0, 0), time.Minute)
+	raw, _ := base64.RawURLEncoding.DecodeString(strings.Split(tok, ".")[1])
+	if !strings.Contains(string(raw), `"binding":"`+want+`"`) {
+		t.Fatalf("claims %s", raw)
 	}
 }

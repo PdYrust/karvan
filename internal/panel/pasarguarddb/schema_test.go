@@ -47,8 +47,17 @@ func exec(t *testing.T, tg paneldb.Target, stmts ...[]any) {
 	}
 }
 
+// eachRevision runs fn on the fixtures of every known revision, on every
+// database server.
+func eachRevision(t *testing.T, fn func(t *testing.T, tg paneldb.Target)) {
+	t.Helper()
+	for _, rev := range Revisions {
+		t.Run(rev, func(t *testing.T) { paneldbtest.Each(t, "testdata", rev, fn) })
+	}
+}
+
 func TestInspectFixtures(t *testing.T) {
-	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+	eachRevision(t, func(t *testing.T, tg paneldb.Target) {
 		view(t, tg, func(q paneldb.Querier, srv paneldb.Server) error {
 			s, err := Inspect(context.Background(), q, srv)
 			if err != nil {
@@ -71,7 +80,7 @@ func TestInspectFixtures(t *testing.T) {
 var update = flag.Bool("update", false, "rewrite schema.json from the fixtures")
 
 func TestKnownSchema(t *testing.T) {
-	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+	eachRevision(t, func(t *testing.T, tg paneldb.Target) {
 		paneldbtest.KnownSpec(t, tg, "schema.json", columns, inserts, *update)
 	})
 }
@@ -105,7 +114,7 @@ func toStmts(stmts []string) [][]any {
 // A revision Karvan does not know is used when what Karvan reads and
 // writes has the known shape. A new nullable column changes nothing.
 func TestInspectChecksOtherRevisions(t *testing.T) {
-	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+	eachRevision(t, func(t *testing.T, tg paneldb.Target) {
 		s, err := inspectRevision(t, tg, "ALTER TABLE users ADD COLUMN nickname VARCHAR(64)")
 		if err != nil || !s.Checked || s.Revision != "c9b48df42f10" {
 			t.Fatalf("schema = %+v, err = %v", s, err)
@@ -114,7 +123,7 @@ func TestInspectChecksOtherRevisions(t *testing.T) {
 }
 
 func TestInspectRefusesOtherRevisionsThatDiffer(t *testing.T) {
-	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+	eachRevision(t, func(t *testing.T, tg paneldb.Target) {
 		_, err := inspectRevision(t, tg, "ALTER TABLE users DROP COLUMN note")
 		var ve *panel.VersionError
 		if !errors.As(err, &ve) || ve.Kind != panel.PasarGuard || !slices.Equal(ve.Diffs, []string{"users.note missing"}) {
@@ -143,7 +152,7 @@ func seedShop(t *testing.T, tg paneldb.Target) {
 }
 
 func TestLoadIndex(t *testing.T) {
-	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+	eachRevision(t, func(t *testing.T, tg paneldb.Target) {
 		seedShop(t, tg)
 		view(t, tg, func(q paneldb.Querier, _ paneldb.Server) error {
 			x, err := LoadIndex(context.Background(), q)
@@ -162,7 +171,7 @@ func TestLoadIndex(t *testing.T) {
 }
 
 func TestTargets(t *testing.T) {
-	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+	eachRevision(t, func(t *testing.T, tg paneldb.Target) {
 		seedShop(t, tg)
 		view(t, tg, func(q paneldb.Querier, _ paneldb.Server) error {
 			targets, err := Targets(context.Background(), q, tg.Dialect)
@@ -177,7 +186,7 @@ func TestTargets(t *testing.T) {
 // The default Xray core lists its inbounds; a WireGuard core is one
 // inbound named by interface_name. Found on the running panel.
 func TestInboundProtocols(t *testing.T) {
-	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+	eachRevision(t, func(t *testing.T, tg paneldb.Target) {
 		now := paneldb.TimeArg(tg.Dialect, time.Date(2026, 1, 2, 3, 4, 5, 0, time.UTC))
 		exec(t, tg, []any{"INSERT INTO core_configs (id, created_at, name, config, type) VALUES (?, ?, ?, ?, ?)",
 			2, now, "wg", `{"interface_name": " wg0 ", "listen_port": 51820, "address": ["10.77.0.1/24"]}`, "wg"})
@@ -192,7 +201,7 @@ func TestInboundProtocols(t *testing.T) {
 }
 
 func TestRolesAndAdmins(t *testing.T) {
-	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+	eachRevision(t, func(t *testing.T, tg paneldb.Target) {
 		seedShop(t, tg)
 		view(t, tg, func(q paneldb.Querier, _ paneldb.Server) error {
 			ctx := context.Background()
@@ -212,18 +221,21 @@ func TestRolesAndAdmins(t *testing.T) {
 	})
 }
 
-// passkeyTables are the tables PasarGuard 5.5 adds (revision 9a5c2e7f1b4d),
-// keyed to admins with ON DELETE CASCADE.
+// passkeyTables stand in, on 5.4.1, for the tables PasarGuard 5.5 adds
+// (revision 9a5c2e7f1b4d), keyed to admins with ON DELETE CASCADE. The
+// 5.5.1 fixtures have the real ones, so these leave them alone.
 var passkeyTables = []string{
-	"CREATE TABLE admin_passkeys (id BIGINT NOT NULL PRIMARY KEY, admin_id BIGINT NOT NULL, name VARCHAR(128) NOT NULL, " +
+	"CREATE TABLE IF NOT EXISTS admin_passkeys (id BIGINT NOT NULL PRIMARY KEY, admin_id BIGINT NOT NULL, " +
+		"credential_id VARCHAR(64) NOT NULL, public_key VARCHAR(64) NOT NULL, name VARCHAR(128) NOT NULL, " +
 		"FOREIGN KEY (admin_id) REFERENCES admins (id) ON DELETE CASCADE)",
-	"CREATE TABLE passkey_challenges (id BIGINT NOT NULL PRIMARY KEY, admin_id BIGINT, kind VARCHAR(16) NOT NULL, " +
+	"CREATE TABLE IF NOT EXISTS passkey_challenges (id BIGINT NOT NULL PRIMARY KEY, challenge VARCHAR(64) NOT NULL, " +
+		"admin_id BIGINT, kind VARCHAR(16) NOT NULL, expires_at TIMESTAMP NOT NULL, " +
 		"FOREIGN KEY (admin_id) REFERENCES admins (id) ON DELETE CASCADE)",
 }
 
 // The passkey tables are PasarGuard's own, not an add-on's.
 func TestInspectKnowsPasskeyTables(t *testing.T) {
-	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+	eachRevision(t, func(t *testing.T, tg paneldb.Target) {
 		s, err := inspectRevision(t, tg, passkeyTables...)
 		if err != nil || !s.Checked || len(s.UnknownChildren) > 0 {
 			t.Fatalf("schema = %+v, err = %v", s, err)
@@ -233,7 +245,7 @@ func TestInspectKnowsPasskeyTables(t *testing.T) {
 
 // A table that is not PasarGuard's still stops undo.
 func TestInspectReportsUnknownChildren(t *testing.T) {
-	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+	eachRevision(t, func(t *testing.T, tg paneldb.Target) {
 		s, err := inspectRevision(t, tg, "CREATE TABLE addon_notes (id BIGINT NOT NULL PRIMARY KEY, admin_id BIGINT, "+
 			"FOREIGN KEY (admin_id) REFERENCES admins (id))")
 		u := s.UnknownChildren

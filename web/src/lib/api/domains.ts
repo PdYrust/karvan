@@ -1,6 +1,7 @@
 import type { AcmeError, AcmeMethod, AcmeOrder } from './acme';
 import type { RuleRef } from './certificates';
 import { api } from './client';
+import { factsOf, list } from './lists';
 import type { CertFacts } from './rules';
 
 /** What is wrong with a domain: its own codes, then those of its certificate (D50). */
@@ -52,21 +53,34 @@ export const domainKeys = {
   all: ['domains'] as const,
 };
 
-export function getDomains(): Promise<{ domains: Domain[] }> {
-  return api('GET', 'domains');
+/** A domain with its lists, whatever the server wrote for an empty one. */
+function domainOf(d: Domain): Domain {
+  return {
+    ...d,
+    certificate: d.certificate && { ...d.certificate, facts: factsOf(d.certificate.facts) },
+    certificates: list(d.certificates),
+    pins: list(d.pins),
+    rules: list(d.rules),
+    warnings: list(d.warnings),
+  };
+}
+
+export async function getDomains(): Promise<{ domains: Domain[] }> {
+  const r = await api<{ domains: Domain[] | null }>('GET', 'domains');
+  return { domains: list(r.domains).map(domainOf) };
 }
 
 /** 400 domain_invalid or certificate_invalid names the field, 409 name_taken for a name already there. */
-export function addDomain(name: string, certificate: CertChoice): Promise<Domain> {
-  return api('POST', 'domains', { name: name.trim(), certificate });
+export async function addDomain(name: string, certificate: CertChoice): Promise<Domain> {
+  return domainOf(await api<Domain>('POST', 'domains', { name: name.trim(), certificate }));
 }
 
 /**
  * Changes a domain's certificate; 409 domain_in_use for none while an HTTPS rule holds it (D65).
  * The acme way starts an order (202) and keeps the current certificate until it is done.
  */
-export function setDomainCertificate(id: number, certificate: CertChoice): Promise<Domain> {
-  return api('PUT', `domains/${String(id)}/certificate`, { certificate });
+export async function setDomainCertificate(id: number, certificate: CertChoice): Promise<Domain> {
+  return domainOf(await api<Domain>('PUT', `domains/${String(id)}/certificate`, { certificate }));
 }
 
 /** 409 domain_in_use while a rule holds it. */

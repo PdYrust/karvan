@@ -50,7 +50,7 @@ func (a *API) Sites(w http.ResponseWriter, r *http.Request) {
 		respond.Internal(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, map[string]any{"sites": vs, "portErrors": a.Bridge.Status()})
+	respond.Lists(w, http.StatusOK, map[string]any{"sites": vs, "portErrors": a.Bridge.Status()})
 }
 
 // siteInvalid is the field a site_invalid answer names, its reason when
@@ -110,7 +110,7 @@ func (a *API) SaveSite(w http.ResponseWriter, r *http.Request) {
 		writeSiteError(w, r, err)
 		return
 	}
-	respond.JSON(w, status, a.Bridge.View(r.Context(), saved))
+	respond.Lists(w, status, a.Bridge.View(r.Context(), saved))
 }
 
 // DeleteSite removes a legacy site and its verified tokens.
@@ -155,7 +155,7 @@ func (a *API) UploadTokens(w http.ResponseWriter, r *http.Request) {
 		writeSiteError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusAccepted, p)
+	respond.Lists(w, http.StatusAccepted, p)
 }
 
 // UploadStatus is the progress of a site's latest token list.
@@ -170,7 +170,7 @@ func (a *API) UploadStatus(w http.ResponseWriter, r *http.Request) {
 		writeSiteError(w, r, err)
 		return
 	}
-	respond.JSON(w, http.StatusOK, p)
+	respond.Lists(w, http.StatusOK, p)
 }
 
 func outcomeOf(err error) audit.Outcome {

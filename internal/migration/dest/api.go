@@ -27,6 +27,9 @@ type API struct {
 	Admin   string // the full admin the token is for
 	AdminID int64  // 0 for the ENV sudoer
 	secret  secret.Value
+	// binding ties a PasarGuard token to the admin's password hash (5.5);
+	// empty for Marzban and the ENV sudoer.
+	binding secret.Value
 }
 
 // tokenTTL is short (D47): one call never takes this long, and Token
@@ -35,7 +38,7 @@ const tokenTTL = 5 * time.Minute
 
 // Token mints an admin token valid from now.
 func (a API) Token(now time.Time) string {
-	c := subtoken.AdminClaims{Sub: a.Admin, Access: "admin", AdminID: a.AdminID}
+	c := subtoken.AdminClaims{Sub: a.Admin, Access: "admin", AdminID: a.AdminID, Binding: a.binding.Reveal()}
 	if a.Kind == panel.Marzban {
 		c.Access = "sudo" // an ENV sudoer needs it; a DB sudo admin accepts it
 		c.AdminID = 0
@@ -59,7 +62,11 @@ func (p *Panel) API(ctx context.Context) (API, error) {
 			return fmt.Errorf("read the panel's jwt secret: %w", err)
 		}
 		a.secret = secret.NewValue(key)
-		a.Admin, a.AdminID, err = fullAdmin(ctx, q, a.Kind)
+		var hash string
+		a.Admin, a.AdminID, hash, err = fullAdmin(ctx, q, a.Kind)
+		if err == nil && a.Kind == panel.PasarGuard {
+			a.binding = secret.NewValue(subtoken.AdminBinding(hash, key))
+		}
 		return err
 	})
 	if errors.Is(err, sql.ErrNoRows) {
@@ -73,15 +80,13 @@ func (p *Panel) API(ctx context.Context) (API, error) {
 
 // fullAdmin picks the oldest admin with full rights: Marzban is_sudo,
 // PasarGuard an active admin with an owner role.
-func fullAdmin(ctx context.Context, q paneldb.Querier, kind panel.Kind) (string, int64, error) {
-	query := "SELECT username, id FROM admins WHERE is_sudo = ? ORDER BY id LIMIT 1"
+func fullAdmin(ctx context.Context, q paneldb.Querier, kind panel.Kind) (name string, id int64, hash string, err error) {
+	query := "SELECT username, id, hashed_password FROM admins WHERE is_sudo = ? ORDER BY id LIMIT 1"
 	args := []any{true}
 	if kind == panel.PasarGuard {
-		query = "SELECT a.username, a.id FROM admins a JOIN admin_roles r ON r.id = a.role_id " +
+		query = "SELECT a.username, a.id, a.hashed_password FROM admins a JOIN admin_roles r ON r.id = a.role_id " +
 			"WHERE r.is_owner = ? AND a.status <> 'disabled' ORDER BY a.id LIMIT 1"
 	}
-	var name string
-	var id int64
-	err := q.QueryRowContext(ctx, query, args...).Scan(&name, &id)
-	return name, id, err
+	err = q.QueryRowContext(ctx, query, args...).Scan(&name, &id, &hash)
+	return name, id, hash, err
 }

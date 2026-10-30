@@ -1,4 +1,5 @@
 import { api } from './client';
+import { list } from './lists';
 import type { PanelKind } from './panels';
 
 /** Why a batch went inactive: a backup restore under way, done, or failed after it began. */
@@ -66,24 +67,35 @@ function withQuery(path: string, q: URLSearchParams): string {
   return query ? `${path}?${query}` : path;
 }
 
+/** A batch with its lists, whatever the server wrote for an empty one. */
+function batchOf(b: Batch): Batch {
+  return {
+    ...b,
+    admins: list(b.admins),
+    oldLinks: { ...b.oldLinks, hosts: list(b.oldLinks.hosts) },
+    rules: list(b.rules),
+  };
+}
+
 /** Batches newest first, a page at a time, never deleted ones. */
-export function listBatches(f: BatchFilter = {}): Promise<BatchPage> {
+export async function listBatches(f: BatchFilter = {}): Promise<BatchPage> {
   const q = new URLSearchParams();
   if (f.panel) q.set('panel', String(f.panel));
   if (f.state) q.set('state', f.state);
   if (f.cursor) q.set('cursor', f.cursor);
   if (f.limit) q.set('limit', String(f.limit));
-  return api<BatchPage>('GET', withQuery('batches', q));
+  const page = await api<BatchPage>('GET', withQuery('batches', q));
+  return { ...page, batches: list(page.batches).map(batchOf) };
 }
 
 const batchPath = (id: number, rest = '') => `batches/${String(id)}${rest}`;
 
-export function getBatch(id: number): Promise<Batch> {
-  return api<Batch>('GET', batchPath(id));
+export async function getBatch(id: number): Promise<Batch> {
+  return batchOf(await api<Batch>('GET', batchPath(id)));
 }
 
 /** A batch's users, a page at a time; the server searches old and new usernames. */
-export function listBatchUsers(
+export async function listBatchUsers(
   id: number,
   f: { q?: string; cursor?: string; limit?: number } = {},
 ): Promise<BatchUserPage> {
@@ -92,11 +104,12 @@ export function listBatchUsers(
   if (term) q.set('q', term);
   if (f.cursor) q.set('cursor', f.cursor);
   if (f.limit) q.set('limit', String(f.limit));
-  return api<BatchUserPage>('GET', withQuery(batchPath(id, '/users'), q));
+  const page = await api<BatchUserPage>('GET', withQuery(batchPath(id, '/users'), q));
+  return { ...page, users: list(page.users) };
 }
 
-export function renameBatch(id: number, name: string): Promise<Batch> {
-  return api<Batch>('PATCH', batchPath(id), { name });
+export async function renameBatch(id: number, name: string): Promise<Batch> {
+  return batchOf(await api<Batch>('PATCH', batchPath(id), { name }));
 }
 
 /** Marks an inactive batch deleted once its name is typed (D20). */
@@ -105,8 +118,8 @@ export function deleteBatch(id: number, confirm: string): Promise<void> {
 }
 
 /** Only after a failed restore. */
-export function reactivateBatch(id: number): Promise<Batch> {
-  return api<Batch>('POST', batchPath(id, '/reactivate'));
+export async function reactivateBatch(id: number): Promise<Batch> {
+  return batchOf(await api<Batch>('POST', batchPath(id, '/reactivate')));
 }
 
 /** A user's new subscription link, read from the new panel on each call and never kept. */

@@ -27,8 +27,8 @@ It builds `0.5.0-beta-dry` into `dist/` (both archives, `SHA256SUMS`, both image
 
 `VERSION=<version> scripts/release/build.sh` builds the release files alone; `scripts/release/verify.sh dist` checks them.
 ## The workflows
-- `.github/workflows/ci.yml` runs `make check-full` on every push to `main` and every pull request. It can only read the repository.
-- `.github/workflows/release.yml` runs when a `v*` tag is pushed. It builds the release files, runs the install test on the amd64 archive, pushes `ghcr.io/pdyrust/karvan:<version>` (plus `<version>-amd64` and `<version>-arm64`, the two images it joins), attests every file and image, checks the attestations with `gh attestation verify`, and creates the GitHub release with the two archives and `SHA256SUMS`. A tag with a `-`, such as `v0.5.0-beta`, makes a pre-release. The release notes are the tag's section of this file (`## Release notes 0.5.0-beta`, below); without that section the workflow stops before it pushes anything.
+- `.github/workflows/ci.yml` runs every target of `make check-full` on every push to `main` and every pull request, split into parallel jobs (lint, Go tests, database tests, panel tests, Let's Encrypt tests, web); the job `check-full` passes when all of them passed. A run takes about 15 minutes, the length of the race test job. It can only read the repository.
+- `.github/workflows/release.yml` runs when a `v*` tag is pushed, split into jobs: `version` picks the version and reads the notes, `web` builds the panel once, `build` packs the amd64 and arm64 archives in parallel from that panel, `install-test` installs the amd64 archive, `image` builds the two images in parallel, `index` joins them, and `release` writes `SHA256SUMS` and does the attestations and the release. A run takes about 10 minutes, most of it the install test. It builds the release files, runs the install test on the amd64 archive, pushes `ghcr.io/pdyrust/karvan:<version>` (plus `<version>-amd64` and `<version>-arm64`, the two images it joins), attests every file and image, checks the attestations with `gh attestation verify`, and creates the GitHub release with the two archives and `SHA256SUMS`. A tag with a `-`, such as `v0.5.0-beta`, makes a pre-release. The release notes are the tag's section of this file (`## Release notes 0.5.0-beta`, below); without that section the workflow stops before it pushes anything.
 - Run it by hand from the Actions tab (Release, Run workflow) to try it: with `dry_run` on, the default, it builds, tests and attests the files, builds both images without pushing them, and makes no release. The run's summary lists the attested files and digests.
 - `make ci-lint` checks both workflows with actionlint and every shell script with shellcheck, without pushing.
 Every action in the workflows is pinned by its full commit SHA. No secret is stored: the workflows use the token GitHub gives each run.
@@ -40,6 +40,12 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - the owner has read every Persian string.
 
+## Release notes 0.5.3-beta
+Karvan 0.5.3-beta opens every page on a fresh install and is tested on PasarGuard 5.5.1.
+### Fixes
+- On an install with no domains or certificates yet, the Domains and certificates page showed an error instead of opening. Empty lists now come back as empty lists, never as null, and the other new pages (Rules, Batches, the HTTPS settings, Add domain) open on an empty install too.
+- PasarGuard 5.5 ties each admin token to the admin's password. Karvan's tokens for the reload after a move now carry that tie, so PasarGuard 5.5 no longer refuses them.
+- PasarGuard 5.5.1 is a known version: the write, check and undo tests run on it as well as on 5.4.1, on every database server, and the live panel tests run on it.
 ## Release notes 0.5.2-beta
 
 Karvan 0.5.2-beta works with PasarGuard 5.5.

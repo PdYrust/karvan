@@ -3,6 +3,9 @@
 # panel, karvan_<version>_linux_<arch>.tar.gz for amd64 and arm64 (D16),
 # each with get.sh stamped with the version, SHA256SUMS over both, and
 # image/linux_<arch>/karvan, the build context of packaging/docker/Dockerfile.
+# ARCHES=<arch> builds only that architecture, and SKIP_WEB=1 uses the web
+# panel already in web/dist; the release workflow builds each architecture in
+# its own job that way.
 # The archives are packed the same way every time: sorted names, root owner,
 # the commit time as file time and no gzip name or time.
 set -eu
@@ -17,7 +20,11 @@ mtime=$(git -C "$ROOT" log -1 --format=%ct)
 rm -rf "$OUT"
 mkdir -p "$OUT/image"
 [ -n "${SKIP_WEB:-}" ] || make -s -C "$ROOT" web
-for arch in amd64 arm64; do
+# serve stops without these, so a web/dist copied in from elsewhere is checked.
+for f in login.html index.html .vite/manifest.json; do
+	[ -s "$ROOT/web/dist/$f" ] || { echo "web/dist/$f is missing: run make web" >&2 && exit 1; }
+done
+for arch in ${ARCHES:-amd64 arm64}; do
 	name=karvan_${VERSION}_linux_$arch
 	dir=$OUT/$name
 	mkdir -p "$dir/lib" "$OUT/image/linux_$arch"
