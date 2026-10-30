@@ -17,10 +17,11 @@ const sniffTimeout = 10 * time.Second
 const tlsRecordHandshake = 0x16
 
 // connListener hands each connection of a port to plain HTTP or to TLS by
-// the schemes its addresses use. While a change of scheme waits for its
-// confirmation on the same port, both are served there and the first byte
-// decides (D7). A connection that does not send it in time is dropped
-// without holding up the others.
+// the schemes its addresses use. On a port with an HTTPS address the first
+// byte decides: TLS goes to TLS, and plain HTTP is served too, so a change
+// of scheme can wait for its confirmation there (D7) and a plain request
+// for an HTTPS address can be sent on to it. A connection that does not
+// send that byte in time is dropped without holding up the others.
 type connListener struct {
 	net.Listener
 	l     *listener
@@ -87,12 +88,8 @@ func (c *connListener) hand(raw net.Conn) {
 
 // wrap is raw as plain HTTP or TLS, nil when it says nothing in time.
 func (c *connListener) wrap(raw net.Conn) net.Conn {
-	plain, secure := c.l.schemes()
-	switch {
-	case !secure:
+	if !c.l.secure() {
 		return raw
-	case !plain:
-		return tls.Server(raw, c.l.tlsConfig)
 	}
 	_ = raw.SetReadDeadline(time.Now().Add(sniffTimeout))
 	br := bufio.NewReaderSize(raw, 1)
@@ -116,16 +113,14 @@ type peekedConn struct {
 
 func (p *peekedConn) Read(b []byte) (int, error) { return p.r.Read(b) }
 
-// schemes reports whether the port's addresses use plain HTTP and HTTPS.
-func (l *listener) schemes() (plain, secure bool) {
+// secure reports whether any of the port's addresses uses HTTPS.
+func (l *listener) secure() bool {
 	for _, s := range *l.sites.Load() {
 		if s.TLS.On() {
-			secure = true
-		} else {
-			plain = true
+			return true
 		}
 	}
-	return plain, secure
+	return false
 }
 
 // certificate is the certificate of the port's HTTPS addresses: the first

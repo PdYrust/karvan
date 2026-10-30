@@ -149,7 +149,27 @@ func (l *listener) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	if !secure && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
+		for _, s := range *l.sites.Load() {
+			if s.TLS.On() && middleware.UnderBase(r.URL.Path, s.BasePath) {
+				toHTTPS(w, r)
+				return
+			}
+		}
+	}
 	middleware.NotFound(w, r)
+}
+
+// toHTTPS sends a plain HTTP request for an HTTPS address on to the same
+// address over HTTPS. Only a request that already names the hidden path
+// gets here, so the redirect reveals nothing; it is temporary, so a later
+// change back to plain HTTP is not held up by a browser's cache.
+func toHTTPS(w http.ResponseWriter, r *http.Request) {
+	h := w.Header()
+	h.Set("Location", "https://"+r.Host+r.URL.RequestURI())
+	h.Set("Cache-Control", "no-store")
+	h.Set("Content-Length", "0")
+	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
 // ServeHTTP serves a request that came through s.

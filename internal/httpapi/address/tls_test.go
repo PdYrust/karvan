@@ -69,6 +69,22 @@ func (f *fixture) fetch(scheme string, port int, path string) (string, string) {
 	return string(b), res.Header.Get("Strict-Transport-Security")
 }
 
+func noRedirects() *http.Client {
+	return &http.Client{Timeout: 5 * time.Second, Transport: &http.Transport{DisableKeepAlives: true},
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+}
+
+// plainGet is the status and Location of a plain HTTP GET of path.
+func plainGet(t *testing.T, port int, path string) string {
+	t.Helper()
+	res, err := noRedirects().Get(fmt.Sprintf("http://127.0.0.1:%d%s", port, path))
+	if err != nil {
+		return "refused"
+	}
+	res.Body.Close()
+	return fmt.Sprintf("%d %s", res.StatusCode, res.Header.Get("Location"))
+}
+
 // D7: a change to HTTPS on the same port serves both schemes there until
 // it is confirmed from the HTTPS address; then plain HTTP stops.
 func TestSchemeChangeOnTheSamePort(t *testing.T) {
@@ -92,7 +108,7 @@ func TestSchemeChangeOnTheSamePort(t *testing.T) {
 		t.Fatal(err)
 	}
 	f.confirmed(p.Site)
-	if got, _ := f.fetch("http", f.port, oldPath); got == "refused" || strings.HasPrefix(got, oldPath) {
+	if got := plainGet(t, f.port, "/"+oldPath+"/"); got != fmt.Sprintf("307 https://127.0.0.1:%d/%s/", f.port, oldPath) {
 		t.Fatalf("plain HTTP after the confirm: %s", got)
 	}
 	if got, _ := f.fetch("https", f.port, oldPath); !strings.HasPrefix(got, oldPath+" via") {
@@ -117,8 +133,48 @@ func TestHSTSOnlyInDomainMode(t *testing.T) {
 	if _, hsts := f.fetch("http", f.port, oldPath); hsts != "" {
 		t.Fatalf("plain HTTP sent HSTS %q", hsts)
 	}
-	if got, _ := f.fetch("http", port, oldPath); got != "400" && got != "refused" {
-		t.Fatalf("plain HTTP on an HTTPS-only port: %s", got)
+}
+
+// Plain HTTP on an HTTPS-only port: a GET or HEAD under the hidden path is
+// sent on to HTTPS, anything else gets the plain 404, so the redirect never
+// shows the path to someone who does not know it.
+func TestPlainHTTPOnAnHTTPSPort(t *testing.T) {
+	f := newFixture(t, 0)
+	f.withCerts()
+	port := freePort(t)
+	if _, err := f.srv.Start(Change{Port: port, TLS: &self}); err != nil {
+		t.Fatal(err)
+	}
+	c := noRedirects()
+	base := fmt.Sprintf("http://127.0.0.1:%d", port)
+	for _, tc := range []struct{ method, path, want string }{
+		{http.MethodGet, "/" + oldPath + "/", "307 https://127.0.0.1:" + fmt.Sprint(port) + "/" + oldPath + "/"},
+		{http.MethodGet, "/" + oldPath + "/login?x=1", "307 https://127.0.0.1:" + fmt.Sprint(port) + "/" + oldPath + "/login?x=1"},
+		{http.MethodHead, "/" + oldPath, "307 https://127.0.0.1:" + fmt.Sprint(port) + "/" + oldPath},
+		{http.MethodGet, "/", "404 "},
+		{http.MethodGet, "/wrong/", "404 "},
+		{http.MethodGet, "/" + oldPath + "x/", "404 "},
+		{http.MethodPost, "/" + oldPath + "/", "404 "},
+	} {
+		req, err := http.NewRequest(tc.method, base+tc.path, nil)
+		if err != nil {
+			t.Fatal(err)
+		}
+		res, err := c.Do(req)
+		if err != nil {
+			t.Fatalf("%s %s: %v", tc.method, tc.path, err)
+		}
+		body, _ := io.ReadAll(res.Body)
+		res.Body.Close()
+		if got := fmt.Sprintf("%d %s", res.StatusCode, res.Header.Get("Location")); got != tc.want {
+			t.Errorf("%s %s = %s, want %s", tc.method, tc.path, got, tc.want)
+		}
+		if res.StatusCode == http.StatusNotFound && strings.Contains(string(body), oldPath) {
+			t.Errorf("%s %s: the 404 shows the hidden path", tc.method, tc.path)
+		}
+	}
+	if got, _ := f.fetch("https", port, oldPath); !strings.HasPrefix(got, oldPath+" via") {
+		t.Fatalf("HTTPS next to plain HTTP: %s", got)
 	}
 }
 
