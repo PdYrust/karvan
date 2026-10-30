@@ -28,6 +28,42 @@ type Credentials struct {
 	// browser shows.
 	HTTPS       bool
 	Fingerprint string
+	// Host is the server's address or domain for the panel's address;
+	// empty when it is not known.
+	Host string
+	// Notice says why init did not set up what was asked, in plain words.
+	Notice string
+}
+
+// InitOptions choose how a new installation serves its panel.
+type InitOptions struct {
+	Port int    // 0 picks a random one
+	TLS  string // settings.TLSOff, TLSSelf or TLSDomain; "" means TLSSelf
+	// Domain and Email are the domain to get a Let's Encrypt certificate
+	// for, in domain mode, and the optional contact for its account.
+	Domain, Email string
+	// Host is shown in the address when the panel is not on a domain.
+	Host string
+}
+
+// Validate checks the options before anything is created.
+func (o InitOptions) Validate() error {
+	switch o.TLS {
+	case "", settings.TLSOff, settings.TLSSelf:
+		if o.Domain != "" || o.Email != "" {
+			return errors.New("a domain and an email go with domain mode only")
+		}
+	case settings.TLSDomain:
+		if o.Domain == "" {
+			return errors.New("domain mode needs a domain")
+		}
+	default:
+		return fmt.Errorf("tls mode %q must be off, self or domain", o.TLS)
+	}
+	if o.Port < 0 || o.Port > 65535 {
+		return errors.New("the port must be 1 to 65535")
+	}
+	return settings.ACME{Email: o.Email}.Validate()
 }
 
 // Initialize creates the key, the database and the operator account of a
@@ -39,7 +75,17 @@ func Initialize(ctx context.Context, cfg config.Config, logger *slog.Logger) (Cr
 }
 
 // InitializeOnPort is Initialize on the given port; 0 picks a random one.
-func InitializeOnPort(ctx context.Context, cfg config.Config, port int, logger *slog.Logger) (creds Credentials, err error) {
+func InitializeOnPort(ctx context.Context, cfg config.Config, port int, logger *slog.Logger) (Credentials, error) {
+	return InitializeWith(ctx, cfg, InitOptions{Port: port}, logger)
+}
+
+// InitializeWith is Initialize with the options of the installer. When
+// domain mode cannot get its certificate, the panel stays on its own
+// self-signed one and Notice says why.
+func InitializeWith(ctx context.Context, cfg config.Config, o InitOptions, logger *slog.Logger) (creds Credentials, err error) {
+	if err := o.Validate(); err != nil {
+		return Credentials{}, err
+	}
 	exists, err := store.Exists(cfg.DataDir)
 	if err != nil {
 		return Credentials{}, err
@@ -73,9 +119,10 @@ func InitializeOnPort(ctx context.Context, cfg config.Config, port int, logger *
 	if err != nil {
 		return Credentials{}, err
 	}
-	if port != 0 {
-		creds.Port = port
+	if o.Port != 0 {
+		creds.Port = o.Port
 	}
+	creds.Host = o.Host
 	hash, err := auth.HashPassword(creds.Password.Reveal())
 	if err != nil {
 		return Credentials{}, err
@@ -83,18 +130,52 @@ func InitializeOnPort(ctx context.Context, cfg config.Config, port int, logger *
 	if _, err := a.Auth.Operators.Create(ctx, creds.Username, hash); err != nil {
 		return Credentials{}, err
 	}
-	// A new installation starts on HTTPS with its own certificate (D5).
-	h := settings.HTTP{Port: creds.Port, BasePath: creds.BasePath, TLS: settings.TLS{Mode: settings.TLSSelf}}
-	if err := a.Settings.SetHTTP(ctx, h); err != nil {
-		return Credentials{}, err
-	}
-	if err := a.describeTLS(ctx, h.TLS, &creds); err != nil {
+	if err := a.initHTTP(ctx, o, &creds); err != nil {
 		return Credentials{}, err
 	}
 	if err = a.Audit.Record(ctx, audit.Event{Actor: audit.ActorCLI, Action: audit.ActionInit, Outcome: audit.Success}); err != nil {
 		return Credentials{}, err
 	}
 	return creds, nil
+}
+
+// initHTTP stores the panel's address and how it is served. A new
+// installation starts on HTTPS with its own certificate (D5), unless the
+// operator chose otherwise.
+func (a *App) initHTTP(ctx context.Context, o InitOptions, creds *Credentials) error {
+	h := settings.HTTP{Port: creds.Port, BasePath: creds.BasePath, TLS: settings.TLS{Mode: settings.TLSSelf}}
+	if o.TLS == settings.TLSOff {
+		h.TLS = settings.TLS{}
+	}
+	if err := a.Settings.SetHTTP(ctx, h); err != nil {
+		return err
+	}
+	if o.TLS == settings.TLSDomain {
+		if err := a.initDomain(ctx, o, &h, creds); err != nil {
+			return err
+		}
+	}
+	return a.describeTLS(ctx, h.TLS, creds)
+}
+
+// initDomain serves the panel on domain o.Domain once its certificate is
+// issued; otherwise h stays in self mode and creds.Notice says why.
+func (a *App) initDomain(ctx context.Context, o InitOptions, h *settings.HTTP, creds *Credentials) error {
+	id, err := a.panelDomain(ctx, o.Domain, o.Email, h.Port)
+	if err != nil {
+		if ctx.Err() != nil {
+			return ctx.Err()
+		}
+		port := a.Config.ACMEHTTPPort
+		if port == 0 {
+			port = 80
+		}
+		creds.Notice = domainNotice(o.Domain, port, err)
+		return nil
+	}
+	h.TLS = settings.TLS{Mode: settings.TLSDomain, DomainID: id}
+	creds.Host = o.Domain
+	return a.Settings.SetHTTP(ctx, *h)
 }
 
 // removeInstallation deletes the files a failed Initialize created. Only

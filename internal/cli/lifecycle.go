@@ -110,7 +110,7 @@ func ownedByRoot(path string, dir bool) error {
 // caller cannot swap the tools it runs as root.
 func scriptEnv() []string {
 	env := []string{"PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"}
-	for _, k := range []string{"TERM", "LANG"} {
+	for _, k := range []string{"TERM", "LANG", "NO_COLOR"} {
 		if v, ok := os.LookupEnv(k); ok {
 			env = append(env, k+"="+v)
 		}
