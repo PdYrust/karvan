@@ -211,3 +211,34 @@ func TestRolesAndAdmins(t *testing.T) {
 		})
 	})
 }
+
+// passkeyTables are the tables PasarGuard 5.5 adds (revision 9a5c2e7f1b4d),
+// keyed to admins with ON DELETE CASCADE.
+var passkeyTables = []string{
+	"CREATE TABLE admin_passkeys (id BIGINT NOT NULL PRIMARY KEY, admin_id BIGINT NOT NULL, name VARCHAR(128) NOT NULL, " +
+		"FOREIGN KEY (admin_id) REFERENCES admins (id) ON DELETE CASCADE)",
+	"CREATE TABLE passkey_challenges (id BIGINT NOT NULL PRIMARY KEY, admin_id BIGINT, kind VARCHAR(16) NOT NULL, " +
+		"FOREIGN KEY (admin_id) REFERENCES admins (id) ON DELETE CASCADE)",
+}
+
+// The passkey tables are PasarGuard's own, not an add-on's.
+func TestInspectKnowsPasskeyTables(t *testing.T) {
+	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+		s, err := inspectRevision(t, tg, passkeyTables...)
+		if err != nil || !s.Checked || len(s.UnknownChildren) > 0 {
+			t.Fatalf("schema = %+v, err = %v", s, err)
+		}
+	})
+}
+
+// A table that is not PasarGuard's still stops undo.
+func TestInspectReportsUnknownChildren(t *testing.T) {
+	paneldbtest.Each(t, "testdata", Revision, func(t *testing.T, tg paneldb.Target) {
+		s, err := inspectRevision(t, tg, "CREATE TABLE addon_notes (id BIGINT NOT NULL PRIMARY KEY, admin_id BIGINT, "+
+			"FOREIGN KEY (admin_id) REFERENCES admins (id))")
+		u := s.UnknownChildren
+		if err != nil || len(u) != 1 || u[0].Table != "addon_notes" || u[0].Column != "admin_id" || u[0].RefTable != "admins" {
+			t.Fatalf("schema = %+v, err = %v", s, err)
+		}
+	})
+}

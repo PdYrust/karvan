@@ -72,6 +72,14 @@ var children = []paneldb.ForeignKey{
 	{Table: "admin_usage_logs", Column: "admin_id", RefTable: "admins"},
 	{Table: "api_keys", Column: "admin_id", RefTable: "admins"},
 	{Table: "admin_notification_reminders", Column: "admin_id", RefTable: "admins"},
+	// The passkey tables come with PasarGuard 5.5 (revision 9a5c2e7f1b4d):
+	// a row per passkey an admin registers, and a short-lived row per
+	// passkey sign-in or registration challenge (admin_id may be null).
+	// Both keys are ON DELETE CASCADE, so deleting an admin Karvan created
+	// also deletes its rows (RemoveAdmin), on SQLite too: the writer turns
+	// foreign keys on. Older revisions do not have these tables.
+	{Table: "admin_passkeys", Column: "admin_id", RefTable: "admins"},
+	{Table: "passkey_challenges", Column: "admin_id", RefTable: "admins"},
 }
 
 // Schema is what Inspect learned about a destination database.

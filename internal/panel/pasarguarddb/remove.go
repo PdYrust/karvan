@@ -129,7 +129,8 @@ func RemoveUsers(ctx context.Context, x paneldb.Execer, d paneldb.Dialect, rows 
 }
 
 // RemoveAdmin deletes an admin Karvan created, only if it owns no user
-// and no API key (someone made one meanwhile).
+// and no API key (someone made one meanwhile). Its passkeys and passkey
+// challenges, on revisions that have them, go with it by ON DELETE CASCADE.
 func RemoveAdmin(ctx context.Context, x paneldb.Execer, d paneldb.Dialect, a panel.Row) (bool, error) {
 	var name string
 	var created paneldb.NullTime
