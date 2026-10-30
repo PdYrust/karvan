@@ -198,3 +198,16 @@ func freeTCPPort(t *testing.T) int {
 	defer ln.Close()
 	return ln.Addr().(*net.TCPAddr).Port
 }
+
+// The installer reads the details as name=value lines and shows them itself.
+func TestInitForTheInstaller(t *testing.T) {
+	code, out, errOut := doInit(t, t.TempDir(), "-installer", "-tls", "off", "-host", "203.0.113.7", "-port", "31234")
+	for _, want := range []string{"scheme=http\n", "host=203.0.113.7\n", "port=31234\n", "fingerprint=\n", "notice=\n"} {
+		if !strings.Contains(out, want) {
+			t.Fatalf("missing %q: %d %q %s", want, code, out, errOut)
+		}
+	}
+	if !regexp.MustCompile(`(?m)^path=\w{16}$`).MatchString(out) || !regexp.MustCompile(`(?m)^password=\S+$`).MatchString(out) {
+		t.Fatalf("stdout = %q", out)
+	}
+}

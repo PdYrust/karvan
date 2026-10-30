@@ -39,12 +39,14 @@ var hostName = regexp.MustCompile(`^[A-Za-z0-9]([A-Za-z0-9.-]{0,251}[A-Za-z0-9])
 
 func runInit(ctx context.Context, streams IO, args []string) error {
 	var o app.InitOptions
+	installer := false
 	cfg, err := loadConfig("init", streams, args, func(fs *flagSetter) {
 		fs.IntVar(&o.Port, "port", 0, "panel port, 1 to 65535 (default 0: a random one)")
 		fs.StringVar(&o.TLS, "tls", settings.TLSSelf, "how the panel is served: off (plain HTTP), self (Karvan's own certificate) or domain")
 		fs.StringVar(&o.Domain, "domain", "", "with -tls domain: the domain to get a Let's Encrypt certificate for, by HTTP-01 on port 80")
 		fs.StringVar(&o.Email, "email", "", "with -tls domain: an optional contact address for Let's Encrypt")
 		fs.StringVar(&o.Host, "host", "", "this server's address, shown in the panel's address")
+		fs.BoolVar(&installer, "installer", false, "print name=value lines for the installer, which shows them once")
 	})
 	if err != nil {
 		return err
@@ -61,6 +63,10 @@ func runInit(ctx context.Context, streams IO, args []string) error {
 	creds, err := app.InitializeWith(ctx, cfg, o, newLogger(streams.Stderr, cfg))
 	if err != nil {
 		return err
+	}
+	if installer {
+		printForInstaller(streams.Stdout, creds)
+		return nil
 	}
 	if creds.Notice != "" {
 		fmt.Fprintf(streams.Stdout, "\n%s\n", creds.Notice)
@@ -112,4 +118,21 @@ func printCredentials(streams IO, title string, c app.Credentials) {
 		fmt.Fprintf(&b, "  Password  %s\n", c.Password.Reveal())
 	}
 	fmt.Fprint(streams.Stdout, b.String()+"\n")
+}
+
+// printForInstaller writes the sign-in details as name=value lines. The
+// installer reads them into memory and shows them on its terminal.
+func printForInstaller(w io.Writer, c app.Credentials) {
+	host := c.Host
+	if ip, err := netip.ParseAddr(host); err == nil && ip.Is6() {
+		host = "[" + host + "]"
+	}
+	scheme := "http"
+	if c.HTTPS {
+		scheme = "https"
+	}
+	var b strings.Builder
+	fmt.Fprintf(&b, "scheme=%s\nhost=%s\nport=%d\npath=%s\n", scheme, host, c.Port, c.BasePath)
+	fmt.Fprintf(&b, "username=%s\npassword=%s\nfingerprint=%s\nnotice=%s\n", c.Username, c.Password.Reveal(), c.Fingerprint, c.Notice)
+	fmt.Fprint(w, b.String())
 }
