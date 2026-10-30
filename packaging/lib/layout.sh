@@ -83,11 +83,6 @@ make_dirs() {
 	chmod 0600 "$CONFIG"
 }
 
-# install_unit puts the service in place and starts it.
-install_unit() {
-	put_unit
-	systemctl enable --now karvan.service
-}
 # put_unit copies the unit of the current version in place.
 put_unit() {
 	install -m 0644 -o root -g root "$LIB_DIR/current/karvan.service" "$UNIT"
@@ -99,6 +94,6 @@ remove_path() {
 	if [ -e "$1" ] || [ -L "$1" ]; then
 		rm -rf "$1"
 	else
-		echo "skipped $1: already gone" >&2
+		detail "$1 was already gone" >&2
 	fi
 }

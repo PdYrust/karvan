@@ -41,7 +41,8 @@ check_system() {
 	need_tool sha256sum coreutils
 	need_tool tar tar
 	if [ -n "$problems" ]; then
-		printf 'Karvan was not installed; nothing was changed:\n%s' "$problems" >&2
+		fail "Karvan was not installed; nothing was changed:"
+		printf '%s' "$problems" | sed 's/^  /    /' >&2
 		exit 1
 	fi
 }
