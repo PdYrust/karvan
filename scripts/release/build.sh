@@ -27,7 +27,7 @@ for arch in amd64 arm64; do
 	cp "$dir/karvan" "$OUT/image/linux_$arch/karvan"
 	cp "$OUT/get.sh" "$ROOT/packaging/install.sh" "$ROOT/packaging/karvan.service" "$dir/"
 	cp "$ROOT"/packaging/lib/*.sh "$dir/lib/"
-	cp "$ROOT/README.md" "$ROOT/LICENSE" "$ROOT/CHANGELOG.md" "$dir/"
+	cp "$ROOT/README.md" "$ROOT/LICENSE" "$dir/"
 	chmod 0755 "$dir/install.sh"
 	tar --sort=name --owner=0 --group=0 --numeric-owner --mode=u+rwX,go+rX,go-w --mtime="@$mtime" \
 		-cf - -C "$OUT" "$name" | gzip -n -9 >"$OUT/$name.tar.gz"

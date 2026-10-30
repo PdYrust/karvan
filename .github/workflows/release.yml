@@ -59,9 +59,9 @@ jobs:
             ;;
           esac
           if [ "$DRY_RUN" != true ]; then
-            awk -v h="## $version" '$0 == h { on = 1; next } on && /^## / { exit } on' CHANGELOG.md >"$RUNNER_TEMP/notes.md"
+            awk -v h="## Release notes $version" '$0 == h { on = 1; next } on && /^## / { exit } on' docs/release.md >"$RUNNER_TEMP/notes.md"
             if [ ! -s "$RUNNER_TEMP/notes.md" ]; then
-              echo "::error::CHANGELOG.md has no '## $version' section."
+              echo "::error::docs/release.md has no '## Release notes $version' section."
               exit 1
             fi
           fi

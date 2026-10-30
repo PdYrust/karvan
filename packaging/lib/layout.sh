@@ -20,7 +20,7 @@ install_version() {
 	install -d -m 0755 -o root -g root "$tmp" "$tmp/lib"
 	install -m 0755 -o root -g root "$src/karvan" "$src/install.sh" "$src/get.sh" "$tmp/"
 	install -m 0644 -o root -g root "$src"/lib/*.sh "$tmp/lib/"
-	for f in karvan.service README.md LICENSE CHANGELOG.md; do
+	for f in karvan.service README.md LICENSE; do
 		[ -f "$src/$f" ] && install -m 0644 -o root -g root "$src/$f" "$tmp/"
 	done
 	rm -rf "$dst"
