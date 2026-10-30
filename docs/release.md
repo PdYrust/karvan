@@ -47,7 +47,7 @@ Beta. The first beta of Karvan. Try it on a test server or with Safe Mode on bef
 
 ### Install and run
 
-- One-line install from GitHub Releases for amd64 and arm64: `get.sh` checks the archive against `SHA256SUMS`, installs Karvan as a systemd service and prints the address, username and password once.
+- One-line install for amd64 and arm64: `sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/get.sh)" @ install` takes the newest release (`--version` picks one; `@ update` and `@ uninstall [--purge]` too). It checks the archive against `SHA256SUMS`, installs Karvan as a systemd service and prints the address, username and password once.
 - `karvan update`, `karvan rollback` and `karvan uninstall` (with `-purge` to delete the data too). An update backs up first and goes back by itself when the new version is not healthy within 60 seconds.
 - A Docker image, `ghcr.io/pdyrust/karvan:0.5.0-beta`, with only the binary in it. See `docs/docker.md`.
 - Karvan runs as root. Its data folder, config and key are open to root only.

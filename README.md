@@ -13,28 +13,39 @@ Karvan ships as one binary with a bilingual (Persian and English) web panel.
 > Status: beta (0.5.0-beta). Try it on a test server or with Safe Mode on before you use it on a panel with real users.
 
 ## Install
+On a Linux server (amd64 or arm64) with systemd:
 
-On a Linux server (amd64 or arm64) with systemd, as root:
-
+**Newest release** (pre-releases included):
 ```sh
-curl -fsSL https://github.com/PdYrust/karvan/releases/download/v0.5.0-beta/get.sh | sudo sh
+sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/get.sh)" @ install
 ```
-
-`get.sh` downloads the release archive, checks it against `SHA256SUMS` and installs Karvan as a systemd service. At the end it prints the panel address, username and password once. Save them. The panel starts on HTTPS with its own certificate. The browser warns about it once; go on only if it shows the fingerprint the install printed.
+**A chosen version:**
+```sh
+sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/get.sh)" @ install --version 0.5.0-beta
+```
+**Update** (newest release, or add `--version`):
+```sh
+sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/get.sh)" @ update
+```
+**Remove** (keeps the data, config and backups; `--purge` also deletes them after you type to confirm):
+```sh
+sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/get.sh)" @ uninstall
+```
+### After installation
+- The install downloads the release archive, checks it against `SHA256SUMS` and installs Karvan as a systemd service. On any failure nothing is installed.
+- At the end it prints the panel address, username and password once. Save them.
+- The panel starts on HTTPS with its own certificate. The browser warns about it once; go on only if it shows the fingerprint the install printed.
+- Files: `/usr/local/lib/karvan`. Config: `/etc/karvan/config.json`. Data: `/var/lib/karvan`.
 
 Karvan runs as root: it reads and writes the panels' databases and folders, and stops and starts their containers for a Safe Mode restore. Its data folder `/var/lib/karvan` is open to root only, and `/etc/karvan/config.json` and `secret.key` too.
-
-## Update, roll back, remove
-
+## Update, roll back, remove with the karvan command
 ```sh
 sudo karvan update        # newest release; your data and settings stay
 sudo karvan rollback      # back to the version before the last update
 sudo karvan uninstall     # removes Karvan, keeps its data, config and backups
 sudo karvan uninstall -purge   # also deletes them, after you type to confirm
 ```
-
 An update backs up the data first. If the new version does not start healthy within 60 seconds, it goes back to the old one by itself.
-
 ## Docker
 
 The image `ghcr.io/pdyrust/karvan:0.5.0-beta` holds only the binary. Volumes, ports and the Docker socket are explained in [docs/docker.md](docs/docker.md). Read its warning about the socket before you start it.
@@ -45,7 +56,7 @@ Settings, HTTPS: keep the self-signed certificate, pick one of your domains with
 
 ## Check a download (optional)
 
-`get.sh` checks the checksum by itself. To also check that a file was built by this repository's release workflow, with the [GitHub CLI](https://cli.github.com/):
+The install checks the checksum by itself. To also check that a file was built by this repository's release workflow, with the [GitHub CLI](https://cli.github.com/):
 
 ```sh
 gh attestation verify karvan_0.5.0-beta_linux_amd64.tar.gz -R PdYrust/karvan
