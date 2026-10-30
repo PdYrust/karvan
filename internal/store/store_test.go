@@ -176,3 +176,28 @@ func TestLoadMigrationsRequiresContiguousNumbers(t *testing.T) {
 		t.Fatal("gap in migration numbers accepted")
 	}
 }
+
+// A burst of parallel readers (the bridge under load) must find open
+// connections afterwards: reopening one parses the schema again.
+func TestOpenKeepsConnectionsForParallelReaders(t *testing.T) {
+	ctx := context.Background()
+	db, err := Open(ctx, t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	conns := make([]interface{ Close() error }, 8)
+	for i := range conns {
+		c, err := db.Conn(ctx)
+		if err != nil {
+			t.Fatal(err)
+		}
+		conns[i] = c
+	}
+	for _, c := range conns {
+		_ = c.Close()
+	}
+	if s := db.Stats(); s.Idle != len(conns) || s.MaxIdleClosed != 0 {
+		t.Fatalf("idle %d, closed for the idle limit %d", s.Idle, s.MaxIdleClosed)
+	}
+}

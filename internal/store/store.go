@@ -10,12 +10,16 @@ import (
 	"net/url"
 	"os"
 	"path/filepath"
+	"time"
 
 	_ "modernc.org/sqlite" // registers the "sqlite" driver
 )
 
 // FileName is the database file inside the data directory.
 const FileName = "karvan.db"
+
+// maxIdleConns is how many open connections wait for the next query.
+const maxIdleConns = 16
 
 // Path returns the database path for a data directory.
 func Path(dataDir string) string { return filepath.Join(dataDir, FileName) }
@@ -58,6 +62,12 @@ func Open(ctx context.Context, dataDir string) (*sql.DB, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open database: %w", err)
 	}
+	// database/sql keeps 2 idle connections by default, so parallel
+	// readers (the bridge under load) would open a connection and parse
+	// the schema on almost every request. Idle ones close after a quiet
+	// period, so a burst does not hold them for good.
+	db.SetMaxIdleConns(maxIdleConns)
+	db.SetConnMaxIdleTime(5 * time.Minute)
 	if err := migrate(ctx, db); err != nil {
 		_ = db.Close()
 		return nil, err
