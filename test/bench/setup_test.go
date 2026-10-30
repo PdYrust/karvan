@@ -17,6 +17,7 @@ import (
 	"net"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -53,8 +54,9 @@ type fakePanel struct {
 	client *http.Client // one, as the bridge's panel client is
 }
 
-func newFakePanel(t *testing.T) *fakePanel {
-	f := &fakePanel{srv: httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+// newFakePanel listens on addr.
+func newFakePanel(t *testing.T, addr string) *fakePanel {
+	f := &fakePanel{srv: httptest.NewUnstartedServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if !strings.HasPrefix(r.URL.Path, "/sub/") {
 			http.NotFound(w, r)
 			return
@@ -63,7 +65,14 @@ func newFakePanel(t *testing.T) *fakePanel {
 		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
 		_, _ = io.WriteString(w, body)
 	}))}
+	l, err := net.Listen("tcp", addr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_ = f.srv.Listener.Close()
+	f.srv.Listener = l
 	f.srv.Config.ReadHeaderTimeout = 10 * time.Second
+	f.srv.Start()
 	f.client = &http.Client{Transport: &http.Transport{MaxIdleConnsPerHost: 512, IdleConnTimeout: time.Minute}}
 	t.Cleanup(f.srv.Close)
 	return f
@@ -91,14 +100,9 @@ func userName(id int64) string { return fmt.Sprintf("user%07d", id) }
 // oldToken is user id's old link token; every one is stored as verified.
 func oldToken(id int64) string { return fmt.Sprintf("oldtoken%016d", id) }
 
-// rig is a bridge serving one panel rule with users stored tokens.
-type rig struct {
-	panel  *fakePanel
-	bridge string // the bridge's address
-	users  int64
-}
-
-func newRig(t *testing.T, users int64) *rig {
+// newRig serves one panel rule on port with users stored tokens, and
+// the fake panel on panelAddr.
+func newRig(t *testing.T, users int64, port int, panelAddr string) {
 	t.Helper()
 	ctx := context.Background()
 	dir := t.TempDir()
@@ -108,12 +112,11 @@ func newRig(t *testing.T, users int64) *rig {
 	}
 	t.Cleanup(func() { _ = db.Close() })
 	key := newKey(t, dir)
-	f := newFakePanel(t)
+	f := newFakePanel(t, panelAddr)
 	b := bridge.New(bridge.Deps{DB: db, Key: key, Log: slog.New(slog.DiscardHandler),
 		OpenDest: func(context.Context, string) (bridge.Destination, error) { return f, nil }})
 	exec(t, db, "INSERT INTO panels (id, env_path, name, kind, scanned_at) VALUES (1, '/opt/new/.env', 'new', 'pasarguard', 0)")
 	exec(t, db, "INSERT INTO domains (name, created_at, updated_at) VALUES (?, 1, 1)", oldDomain)
-	port := freePort(t)
 	off := false
 	site, err := b.SaveSite(ctx, bridge.Site{Name: "bench", PanelID: 1, SourceKind: panel.Marzban, SourceURL: oldURL,
 		OldPath: "sub", Domains: []string{oldDomain}, Port: port, PlainHTTPOK: true, HTTPS: &off})
@@ -123,8 +126,11 @@ func newRig(t *testing.T, users int64) *rig {
 	t.Cleanup(func() { _ = b.DeleteSite(context.Background(), site.ID) })
 	start := time.Now()
 	fill(t, db, key.Derive("bridge/token-mac"), site.ID, users)
-	t.Logf("stored %d users and tokens in %.1f s", users, time.Since(start).Seconds())
-	return &rig{panel: f, bridge: fmt.Sprintf("127.0.0.1:%d", port), users: users}
+	size := int64(0)
+	if fi, err := os.Stat(kstore.Path(dir)); err == nil {
+		size = fi.Size()
+	}
+	t.Logf("stored %d users and tokens in %.1f s, database %d MiB", users, time.Since(start).Seconds(), size>>20)
 }
 
 func newKey(t *testing.T, dir string) *secret.Key {
@@ -145,16 +151,6 @@ func exec(t *testing.T, db *sql.DB, q string, args ...any) {
 	if _, err := db.Exec(q, args...); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func freePort(t *testing.T) int {
-	t.Helper()
-	l, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
-	}
-	defer l.Close()
-	return l.Addr().(*net.TCPAddr).Port
 }
 
 // fill stores users moved users with one verified old token each, as
