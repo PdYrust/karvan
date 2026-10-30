@@ -1,6 +1,6 @@
 #!/bin/sh
 # Prints the attestation subjects of the release in DIR (default dist/), one
-# per line: the path of both archives, SHA256SUMS and get.sh, then the image
+# per line: the path of both archives and SHA256SUMS, then the image
 # of each architecture as <name>@sha256:<digest>, read from DIR/image-digests
 # (lines "linux/<arch> <name>@sha256:<digest>", written by the image build).
 # Fails, printing nothing, when any subject is missing (D33).
@@ -17,11 +17,9 @@ for arch in amd64 arm64; do
 	files="$files$1
 "
 done
-for f in SHA256SUMS get.sh; do
-	[ -f "$DIR/$f" ] || fail "no $f in $DIR"
-	files="$files$DIR/$f
+[ -f "$DIR/SHA256SUMS" ] || fail "no SHA256SUMS in $DIR"
+files="$files$DIR/SHA256SUMS
 "
-done
 [ -f "$DIR/image-digests" ] || fail "no image-digests in $DIR"
 images=
 for arch in amd64 arm64; do

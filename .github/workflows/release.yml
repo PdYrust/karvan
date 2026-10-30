@@ -155,7 +155,7 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
-          for f in dist/karvan_*.tar.gz dist/get.sh dist/SHA256SUMS; do
+          for f in dist/karvan_*.tar.gz dist/SHA256SUMS; do
             gh attestation verify "$f" -R "$GITHUB_REPOSITORY"
           done
           if [ "$DRY_RUN" != true ]; then
@@ -168,4 +168,4 @@ jobs:
         run: |
           set -- --verify-tag --title "Karvan $VERSION" --notes-file "$RUNNER_TEMP/notes.md"
           case $VERSION in *-*) set -- "$@" --prerelease ;; esac
-          gh release create "$GITHUB_REF_NAME" "$@" dist/karvan_*.tar.gz dist/get.sh dist/SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" "$@" dist/karvan_*.tar.gz dist/SHA256SUMS

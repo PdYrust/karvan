@@ -30,7 +30,7 @@ step "build $VERSION"
 "$REL/build.sh"
 step "check SHA256SUMS"
 "$REL/verify.sh" "$OUT"
-cp "$OUT"/*.tar.gz "$OUT/get.sh" "$OUT/SHA256SUMS" "$work/"
+cp "$OUT"/*.tar.gz "$OUT/SHA256SUMS" "$work/"
 f=$work/karvan_${VERSION}_linux_amd64.tar.gz
 b=$(od -An -tu1 -j 100 -N 1 "$f" | tr -d ' ')
 printf '%b' "\\0$(printf '%03o' $(((b + 1) % 256)))" | dd of="$f" bs=1 seek=100 conv=notrunc status=none
@@ -52,18 +52,17 @@ cat "$work/subjects"
 {
 	ls "$OUT"/karvan_*_linux_*.tar.gz
 	echo "$OUT/SHA256SUMS"
-	echo "$OUT/get.sh"
 	awk '{ print $2 }' "$OUT/image-digests"
 } | sort >"$work/want"
 sort "$work/subjects" | diff "$work/want" - || fail "the subject list differs from the release files"
-echo "ok: every archive, SHA256SUMS, get.sh and both image digests"
+echo "ok: both archives, SHA256SUMS and both image digests"
 step "no tool names in the archives"
 mkdir "$work/unpacked"
 for a in "$OUT"/*.tar.gz; do tar -xzf "$a" -C "$work/unpacked"; done
 # The same names the floor check bans in the tree.
 names=$(sed -n "s/^report ai-reference '\([^']*\)'.*/\1/p" "$ROOT/scripts/check-floor.sh")
 [ -n "$names" ] || fail "no name list in scripts/check-floor.sh"
-if grep -rnaE "$names" "$work/unpacked" "$OUT/get.sh"; then fail "tool names in the release files"; fi
+if grep -rnaE "$names" "$work/unpacked"; then fail "tool names in the release files"; fi
 echo "ok: none"
 step "image check on linux/$host"
 IMAGE=karvan-release-dry:$VERSION-$host "$ROOT/scripts/dockertest/run.sh"
