@@ -1,5 +1,5 @@
-# Copies of the data folder taken by an update (D23) and put back by a
-# rollback across a schema change (D24).
+# Copies of the data folder taken by an update and put back by a
+# rollback across a schema change.
 # shellcheck shell=sh
 BACKUP_DIR=/var/lib/karvan-backups
 # take_backup copies $DATA_DIR to $BACKUP_DIR/<$1>-<UTC time>/ while the

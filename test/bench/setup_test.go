@@ -1,6 +1,6 @@
 //go:build benchtest
 
-// Package bench holds the load tests of D37 and D38: the bridge under
+// Package bench holds the load tests: the bridge under
 // open-loop load with a million stored tokens, and the HTTP API at 50
 // clients. They run with make bench-bridge and make bench-api, never
 // in make check.

@@ -4,7 +4,7 @@ import type { Role } from '../../../lib/api/migrations';
 import { protocolName } from '../protocols';
 import { compareMessages } from './messages';
 
-/** The enabled groups a role gives users (D31), with their protocols and hosts; read only. */
+/** The enabled groups a role gives users, with their protocols and hosts; read only. */
 export function RoleGroups({ role }: { role: Role }) {
   const t = useT(compareMessages);
   const groups = role.groups.filter((g) => !g.disabled);

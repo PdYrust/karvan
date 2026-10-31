@@ -13,7 +13,7 @@ import (
 	"github.com/PdYrust/karvan/internal/panel/pasarguarddb"
 )
 
-// UsageLog is the one usage log row a moved user gets (D19).
+// UsageLog is the one usage log row a moved user gets.
 type UsageLog struct {
 	Traffic int64
 	ResetAt time.Time

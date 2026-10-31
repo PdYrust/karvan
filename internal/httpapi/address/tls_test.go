@@ -85,7 +85,7 @@ func plainGet(t *testing.T, port int, path string) string {
 	return fmt.Sprintf("%d %s", res.StatusCode, res.Header.Get("Location"))
 }
 
-// D7: a change to HTTPS on the same port serves both schemes there until
+// A change to HTTPS on the same port serves both schemes there until
 // it is confirmed from the HTTPS address; then plain HTTP stops.
 func TestSchemeChangeOnTheSamePort(t *testing.T) {
 	f := newFixture(t, 0)
@@ -119,7 +119,7 @@ func TestSchemeChangeOnTheSamePort(t *testing.T) {
 	}
 }
 
-// D8: HSTS only in domain mode, for a day.
+// HSTS only in domain mode, for a day.
 func TestHSTSOnlyInDomainMode(t *testing.T) {
 	f := newFixture(t, 0)
 	f.withCerts()

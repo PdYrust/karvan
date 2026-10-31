@@ -17,11 +17,11 @@ export const preflightKeys = {
   reload: (id: string) => ['migrations', 'job', id, 'reload-options'] as const,
 };
 
-/** The preview's filters beside everyone (api-migration.md 2.6). */
+/** The preview's filters beside everyone. */
 export const previewFilters = ['', 'renamed', 'configChanged', 'skipped'] as const;
 export type PreviewFilter = (typeof previewFilters)[number];
 
-/** Users as they will land, a page at a time (D5), searched by name on the server. */
+/** Users as they will land, a page at a time, searched by name on the server. */
 export function getPreview(id: string, query: UserQuery = {}): Promise<UserPage> {
   const q = new URLSearchParams();
   if (query.group) q.set('group', query.group);
@@ -59,7 +59,7 @@ export interface AdminOutcome {
   roleId: number;
 }
 
-/** What the last read of the panels changed in the outcome (B3). */
+/** What the last read of the panels changed in the outcome. */
 export interface Changes {
   planVersion: number;
   checkedAt: string;
@@ -94,7 +94,7 @@ export interface CheckUser {
   changesLink: boolean;
 }
 
-/** The pre-flight report, karvan.check/v1 (B7). */
+/** The pre-flight report, karvan.check/v1. */
 export interface CheckReport {
   schema: string;
   jobId: string;
@@ -126,7 +126,7 @@ export function getCheckReport(id: string): Promise<CheckReport> {
 
 export type ReloadMethod = 'manual' | 'touch' | 'core_restart';
 
-/** A reload method as the final step shows it (api-migration.md 9.1). */
+/** A reload method as the final step shows it. */
 export interface ReloadOption {
   method: ReloadMethod;
   available: boolean;
@@ -160,7 +160,7 @@ export function fileNameOf(disposition: string | null, fallback: string): string
 }
 
 /**
- * Downloads a file through fetch and a blob (D12), so a failure is an
+ * Downloads a file through fetch and a blob, so a failure is an
  * ApiError the page can say in words, and nothing leaves the session.
  */
 export async function download(

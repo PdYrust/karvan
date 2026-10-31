@@ -73,7 +73,7 @@ func (e *env) domainNames() []string {
 }
 
 // A rule made from batches takes its destination, old panel, old path,
-// address and pin from them, and its domains and port by default (D56).
+// address and pin from them, and its domains and port by default.
 func TestBatchRuleTakesItsFieldsFromTheBatches(t *testing.T) {
 	e := newEnv(t, "ali", "bob")
 	ctx := context.Background()
@@ -81,7 +81,7 @@ func TestBatchRuleTakesItsFieldsFromTheBatches(t *testing.T) {
 	b := e.batch("active", "", "bob")
 	e.factsOf(a, "sub", `["old.example.com"]`, 8443, "127.0.0.1", "")
 	e.factsOf(b, "sub", `["cdn.example.com","old.example.com","new.example.org"]`, 2096, "127.0.0.2", strings.Repeat("ab", 32))
-	e.addDomain("cdn.example.com") // new.example.org is not registered, so the rule leaves it out (D56)
+	e.addDomain("cdn.example.com") // new.example.org is not registered, so the rule leaves it out
 	s, err := e.b.st.Save(ctx, fromBatches("both", b, a))
 	if err != nil {
 		t.Fatal(err)
@@ -231,7 +231,7 @@ func TestBatchRuleChanges(t *testing.T) {
 }
 
 // A token proven while its row was in the rule's scope stays stored when
-// the row leaves the scope, but the rule no longer serves it (D23).
+// the row leaves the scope, but the rule no longer serves it.
 func TestTokenLeavingTheScopeStaysStored(t *testing.T) {
 	e := newEnv(t, "ali", "bob")
 	ctx := context.Background()
@@ -262,7 +262,7 @@ func TestTokenLeavingTheScopeStaysStored(t *testing.T) {
 }
 
 // A newer batch of the same old panel and destination joins the batch
-// rules of the older one by itself, and its users are served (D26).
+// rules of the older one by itself, and its users are served.
 func TestNewerBatchJoinsTheRule(t *testing.T) {
 	e := newEnv(t, "ali", "bob")
 	ctx := context.Background()
@@ -350,7 +350,7 @@ func (e *env) ownColumns(id int64) string {
 // A site whose certificate was not adopted cannot be saved while its
 // domains have no certificate; once they have one, the save takes it,
 // clears its own columns in the same transaction, and the handshake then
-// serves the domain's certificate (D54).
+// serves the domain's certificate.
 func TestSiteNotAdoptedNeedsACertificate(t *testing.T) {
 	e := newCertEnv(t)
 	ctx := context.Background()

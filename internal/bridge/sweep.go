@@ -9,12 +9,12 @@ import (
 )
 
 // SweepEvery is how often Run closes the old links of users the new
-// panel revoked or deleted, before anyone asks (owner rule).
+// panel revoked or deleted, before anyone asks.
 const SweepEvery = time.Hour
 
 // recheck asks the old panel again, in the background, about a token
 // verified more than a day ago. A revoke there drops the token; an old
-// panel that does not answer keeps it (D60, D62).
+// panel that does not answer keeps it.
 func (b *Bridge) recheck(q request, e ledger.Entry) {
 	if plainHTTPRefused(q.site) {
 		return
@@ -30,7 +30,7 @@ func (b *Bridge) recheck(q request, e ledger.Entry) {
 		ctx, cancel := context.WithTimeout(context.Background(), lazyTimeout)
 		defer cancel()
 		if _, row, ok, err := b.st.token(ctx, q.mac, q.site, q.dest.Key()); err != nil || !ok || row.held {
-			return // a held batch's tokens stay as they are (D22)
+			return // a held batch's tokens stay as they are
 		}
 		o, err := b.old(q.site)
 		if err != nil {
@@ -48,7 +48,7 @@ func (b *Bridge) recheck(q request, e ledger.Entry) {
 
 // Sweep checks every served user of every site against the new panel
 // and closes the old links of those it revoked or deleted. Users in an
-// inactive or deleted batch are skipped (D22). It returns how many users
+// inactive or deleted batch are skipped. It returns how many users
 // it closed.
 func (b *Bridge) Sweep(ctx context.Context) (int, error) {
 	sites, err := b.st.Sites(ctx)

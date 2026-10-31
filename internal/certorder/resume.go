@@ -8,7 +8,7 @@ import (
 	"golang.org/x/crypto/acme"
 )
 
-// resume works every running order again after a start (D69): from its
+// resume works every running order again after a start: from its
 // order URL, pending goes back to validating (HTTP-01, with the port) or
 // waiting_dns, ready or valid goes on to issuing, and an order the CA no
 // longer has, or has made invalid or expired, fails.

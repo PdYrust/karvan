@@ -5,8 +5,8 @@ import type { Plan, PlanEdit } from '../../lib/plan/plan';
 import { PlanConflict, saveEdit } from '../../lib/plan/save';
 
 /**
- * A job's plan and the way to change it. Every edit is a pure function
- * (D6); saves run one after another, and the screen shows the edits still
+ * A job's plan and the way to change it. Every edit is a pure function;
+ * saves run one after another, and the screen shows the edits still
  * on their way on top of the saved plan, so a choice shows at once. After
  * a save the job's other reads (groups, users, summary) load again.
  */
@@ -15,7 +15,7 @@ export function usePlan(jobId: string) {
   const key = migrationKeys.plan(jobId);
   const load = () => qc.fetchQuery({ queryKey: key, queryFn: () => getPlan(jobId), staleTime: 0 });
   const query = useQuery({ queryKey: key, queryFn: () => getPlan(jobId) });
-  // The edit a second conflict stopped, until the operator decides (D7).
+  // The edit a second conflict stopped, until the operator decides.
   const [conflict, setConflict] = useState<PlanEdit | null>(null);
   const mutationKey = ['migrations', 'plan-edit', jobId];
   const save = useMutation({

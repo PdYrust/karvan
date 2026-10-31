@@ -16,7 +16,7 @@ import (
 // and browsers keep it open.
 const keepAlive = 20 * time.Second
 
-// Events streams a job's events as server-sent events (D50). A client
+// Events streams a job's events as server-sent events. A client
 // that reconnects sends Last-Event-ID and gets only what it missed;
 // events are numbered, so nothing is shown twice.
 func (a *API) Events(w http.ResponseWriter, r *http.Request) {

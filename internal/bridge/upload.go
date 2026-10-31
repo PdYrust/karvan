@@ -20,7 +20,7 @@ var ErrPlainHTTP = errors.New("the old panel is plain http; turn on the plain ht
 const maxUpload = 16 << 20
 
 // uploadWorkers is how many tokens are checked against the old panel at
-// once (D64).
+// once.
 const uploadWorkers = 4
 
 // UploadResult counts what happened to an uploaded token list.
@@ -151,7 +151,7 @@ func (b *Bridge) uploadOne(ctx context.Context, q request) uploadOutcome {
 	case status == 0:
 		return outStored
 	case status == http.StatusNotFound && len(cands) == 0:
-		return outNoUser // none in the rule's scope, or held (D22)
+		return outNoUser // none in the rule's scope, or held
 	case status == http.StatusNotFound:
 		return outRefused
 	}

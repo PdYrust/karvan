@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// EventsKept is how long the events of an ended job are kept (B17).
+// EventsKept is how long the events of an ended job are kept.
 const EventsKept = 90 * 24 * time.Hour
 
 // TrimEvents drops the events of jobs that ended, and were last changed,

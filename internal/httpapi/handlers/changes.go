@@ -8,8 +8,8 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/engine"
 )
 
-// Changes is what the last read of the panels changed in the outcome
-// (B3): users new, gone or changed, a page at a time, with the admins and
+// Changes is what the last read of the panels changed in the outcome:
+// users new, gone or changed, a page at a time, with the admins and
 // the job-level conflicts. Nothing changed since the operator reviewed it
 // when changed is false; otherwise planVersion went up, and the next run
 // must send it.

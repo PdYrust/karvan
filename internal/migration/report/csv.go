@@ -1,5 +1,5 @@
 // Package report writes a run report as the CSV files an operator
-// downloads (D52). They open in Excel with Persian intact: UTF-8 with a
+// downloads. They open in Excel with Persian intact: UTF-8 with a
 // byte order mark.
 package report
 
@@ -66,7 +66,7 @@ func WriteLinks(w io.Writer, r *run.Report) error {
 }
 
 // WriteCheck writes the pre-flight report, one row per user: what the run
-// would do with them (B7).
+// would do with them.
 func WriteCheck(w io.Writer, r *run.CheckReport) error {
 	if _, err := io.WriteString(w, bom); err != nil {
 		return err

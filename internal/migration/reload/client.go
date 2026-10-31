@@ -1,5 +1,5 @@
 // Package reload makes a running destination panel pick up the users
-// Karvan wrote into its database (D46), through the panel's own API on
+// Karvan wrote into its database, through the panel's own API on
 // this server: a no-op edit per user ("touch") or one core restart.
 package reload
 

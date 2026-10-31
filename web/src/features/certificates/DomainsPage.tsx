@@ -53,7 +53,7 @@ function AddButton() {
   );
 }
 
-/** Domains and certificates (D46, D61): the domains with their certificates, then the certificates. */
+/** Domains and certificates: the domains with their certificates, then the certificates. */
 export function DomainsPage() {
   const t = useT(certificatesMessages);
   usePageTitle(t('title'));

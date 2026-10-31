@@ -13,7 +13,7 @@ import { httpsMessages } from './messages';
 
 const modes: readonly TlsMode[] = ['off', 'self', 'domain'];
 
-/** The mode as radio cards, the domain in domain mode, then the port (D9, D10, D12). */
+/** The mode as radio cards, the domain in domain mode, then the port. */
 export function HttpsFields({
   form,
   https,

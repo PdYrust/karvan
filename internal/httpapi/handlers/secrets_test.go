@@ -37,7 +37,7 @@ func (l *lockedBuffer) String() string {
 	return l.b.String()
 }
 
-// D51: after a whole run through the API (with Safe Mode, the downloads
+// After a whole run through the API (with Safe Mode, the downloads
 // and a bridge token upload), no secret used anywhere is in the logs or
 // in any file under Karvan's data directory: the database, its WAL and
 // the Safe Mode backup.
@@ -58,7 +58,7 @@ func TestNoSecretLeavesTheRun(t *testing.T) {
 	}
 	m.runs.Wait()
 	secrets = append(secrets, csvColumn(t, m.do(http.MethodGet, api+"/migrations/"+id+"/links.csv", nil).body, 2, true)...)
-	// The second admin's generated password (D34), from its one download.
+	// The second admin's generated password, from its one download.
 	secrets = append(secrets, csvColumn(t, m.do(http.MethodPost, api+"/migrations/"+id+"/passwords.csv", nil).body, 1, false)...)
 	secrets = append(secrets, uploadOldToken(t, m))
 	if len(secrets) < 10 {

@@ -4,7 +4,7 @@ import { api } from './client';
 import { factsOf, list } from './lists';
 import type { CertFacts } from './rules';
 
-/** What is wrong with a domain: its own codes, then those of its certificate (D50). */
+/** What is wrong with a domain: its own codes, then those of its certificate. */
 export type DomainWarning =
   | 'no_certificate'
   | 'cert_conflict'
@@ -19,17 +19,17 @@ export type DomainWarning =
   | 'not_yet_valid'
   | 'expires_soon';
 
-/** A domain rules can answer: a host, one leading `*.` wildcard or an IP (D48). */
+/** A domain rules can answer: a host, one leading `*.` wildcard or an IP. */
 export interface Domain {
   id: number;
   name: string;
-  /** Its certificate (D61); null is plain HTTP. */
+  /** Its certificate; null is plain HTTP. */
   certificate: { id: number; name: string; origin: '' | 'acme'; facts: CertFacts } | null;
   /** The stored certificates that cover it. */
   certificates: { id: number; name: string }[];
-  /** Ports that keep serving another certificate for it since the move (D62). */
+  /** Ports that keep serving another certificate for it since the move. */
   pins: { port: number; certificate: { id: number; name: string } }[];
-  /** Its Let's Encrypt state (D69, D70); null unless its certificate or an order is from Let's Encrypt. */
+  /** Its Let's Encrypt state; null unless its certificate or an order is from Let's Encrypt. */
   acme: {
     method: AcmeMethod | '';
     nextRenewal: string | null;
@@ -41,7 +41,7 @@ export interface Domain {
   warnings: DomainWarning[];
 }
 
-/** How a domain gets its certificate (D61). Keys go in and never come back. */
+/** How a domain gets its certificate. Keys go in and never come back. */
 export type CertChoice =
   | { kind: 'stored'; certificateId: number }
   | { kind: 'file'; certFile: string; keyFile: string; name?: string }
@@ -76,7 +76,7 @@ export async function addDomain(name: string, certificate: CertChoice): Promise<
 }
 
 /**
- * Changes a domain's certificate; 409 domain_in_use for none while an HTTPS rule holds it (D65).
+ * Changes a domain's certificate; 409 domain_in_use for none while an HTTPS rule holds it.
  * The acme way starts an order (202) and keeps the current certificate until it is done.
  */
 export async function setDomainCertificate(id: number, certificate: CertChoice): Promise<Domain> {

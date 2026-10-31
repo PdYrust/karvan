@@ -19,7 +19,7 @@ import { listMessages } from './list-messages';
 import { MigrationsTable } from './MigrationsTable';
 import { useJobList, useStateFilter } from './use-job-list';
 
-/** Drafts, runs and finished jobs, newest first (4.4). */
+/** Drafts, runs and finished jobs, newest first. */
 export function MigrationsPage() {
   const t = useT(listMessages);
   usePageTitle(t('title'));

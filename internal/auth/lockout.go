@@ -23,7 +23,7 @@ type LockoutPolicy struct {
 	AccountForgive time.Duration
 }
 
-// DefaultLockout is the policy from the phase 2 spec (D10).
+// DefaultLockout is the sign-in lockout policy.
 var DefaultLockout = LockoutPolicy{
 	IPMaxFailures:      5,
 	IPWindow:           15 * time.Minute,

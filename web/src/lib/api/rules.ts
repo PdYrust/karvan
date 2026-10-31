@@ -2,7 +2,7 @@ import { api } from './client';
 import { factsOf, list } from './lists';
 import type { PanelKind } from './panels';
 
-/** What is wrong with a certificate, as the server names it (api-resources.md 5.0). */
+/** What is wrong with a certificate, as the server names it. */
 export type CertWarning =
   | 'unreadable'
   | 'no_key'
@@ -28,13 +28,13 @@ export interface SiteStats {
   closed: number;
 }
 
-/** A batch a panel rule serves (phase 4.1 D25). */
+/** A batch a panel rule serves. */
 export interface RuleBatch {
   id: number;
   name: string;
   state: 'active' | 'inactive' | 'deleted';
 }
-/** The certificate a rule serves a handshake without a known name with (D63); read only. */
+/** The certificate a rule serves a handshake without a known name with; read only. */
 export interface RuleCertificate {
   id: number;
   name: string;
@@ -59,12 +59,12 @@ export interface LinkSite {
   port: number;
   lazy: boolean;
   plainHttpOk: boolean;
-  /** Whether the rule answers over HTTPS; its certificate comes from its domains (D63). */
+  /** Whether the rule answers over HTTPS; its certificate comes from its domains. */
   https: boolean;
   /** Only with HTTPS. */
   cert?: CertFacts;
   certificate: RuleCertificate | null;
-  /** Its domains' warnings, and certificate_not_adopted (api-resources.md 5.0c). */
+  /** Its domains' warnings, and certificate_not_adopted. */
   warnings: string[];
   /** Missing when the destination did not answer. */
   stats?: SiteStats;
@@ -113,7 +113,7 @@ export async function getLinkSites(): Promise<LinkSites> {
 export interface SiteInput {
   name: string;
   mode: LinkSite['mode'];
-  /** A rule of batches takes the panel, the old panel and its pin from them (5.0a). */
+  /** A rule of batches takes the panel, the old panel and its pin from them. */
   batchIds?: number[];
   panelId?: number;
   sourceKind?: PanelKind;
@@ -140,7 +140,7 @@ export function deleteSite(id: number): Promise<void> {
   return api('DELETE', `legacy-sites/${String(id)}`);
 }
 
-/** A rule that answers matching old links with a 302 to a fixed address (section 11). */
+/** A rule that answers matching old links with a 302 to a fixed address. */
 export interface Redirect {
   id: number;
   name: string;

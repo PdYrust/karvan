@@ -10,7 +10,7 @@ How it runs: the bridge and a fake new panel share one container limited to `--c
 
 ### Result: PASS
 
-Run on 2026-10-30 on the owner's server, next to its own services (phpMyAdmin, PHP, MySQL), which were left alone:
+Run on a 4-core AMD EPYC server running other services (phpMyAdmin, PHP, MySQL), which were left alone:
 
 | | |
 |---|---|
@@ -49,7 +49,7 @@ The same test on the development laptop (Intel Pentium 2117U, 2 cores, load aver
 
 ## Development laptop numbers
 
-All below ran on the laptop above (Intel Pentium 2117U, 2 cores, 11.6 GB, load average 7 to 15 during the runs, Go 1.27.3), on 2026-10-29 and 2026-10-30.
+All below ran on the laptop above (Intel Pentium 2117U, 2 cores, 11.6 GB, load average 7 to 15 during the runs, Go 1.27.3).
 
 ### Engine at 2000 admins
 

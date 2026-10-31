@@ -26,7 +26,7 @@ const (
 	SkipTime       = "time"
 )
 
-// Scan limits (phase-4.1 D51).
+// Scan limits.
 const (
 	maxScanDepth   = 3 // folder levels below a place
 	maxScanEntries = 2000
@@ -81,7 +81,7 @@ type scanPlace struct {
 }
 
 // ScanCertificates looks for certificates with their keys in the fixed
-// places of D51 on this server. It only reads: every file is opened
+// places on this server. It only reads: every file is opened
 // through its place's os.Root, so no link leads out of a place, and
 // Karvan's data dir and key file are never read.
 func (b *Bridge) ScanCertificates(ctx context.Context) (ScanResult, error) {
@@ -155,7 +155,7 @@ func (o ownFiles) isOwn(info os.FileInfo) bool {
 	return slices.ContainsFunc(o.dirs, func(d os.FileInfo) bool { return os.SameFile(d, info) })
 }
 
-// scanPlaces lists the places of D51, each once: /root/cert, Let's
+// scanPlaces lists the scan places, each once: /root/cert, Let's
 // Encrypt live, and for every panel ENV /var/lib/<folder>/certs and the
 // folders of its certificate and key paths (those folders' own files).
 func (b *Bridge) scanPlaces(ctx context.Context) ([]scanPlace, error) {
@@ -272,7 +272,7 @@ func (s *scan) place(p scanPlace) {
 	}
 }
 
-// openPlace checks p against D51 and opens its boundary as an os.Root,
+// openPlace checks p against the scan limits and opens its boundary as an os.Root,
 // or says why it is skipped.
 func openPlace(p scanPlace, own ownFiles) (*os.Root, string) {
 	if tooShort(p.dir) {

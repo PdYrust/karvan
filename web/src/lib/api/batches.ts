@@ -5,7 +5,7 @@ import type { PanelKind } from './panels';
 /** Why a batch went inactive: a backup restore under way, done, or failed after it began. */
 export type InactiveReason = 'restoring' | 'rolled_back' | 'restore_failed';
 
-/** A finished migration's users, admins and old links (phase 4.1 D1, api-migration.md). */
+/** A finished migration's users, admins and old links. */
 export interface Batch {
   id: number;
   name: string;
@@ -37,7 +37,7 @@ export interface BatchPage {
 /** How a user came into the batch: moved by its run, already on the new panel, or from an earlier run. */
 export type Joined = 'moved' | 'adopted' | 'carried';
 
-/** One user of a batch. No old token ever leaves the server (D57). */
+/** One user of a batch. No old token ever leaves the server. */
 export interface BatchUser {
   /** The ledger row, for the new link. */
   id: number;
@@ -112,7 +112,7 @@ export async function renameBatch(id: number, name: string): Promise<Batch> {
   return batchOf(await api<Batch>('PATCH', batchPath(id), { name }));
 }
 
-/** Marks an inactive batch deleted once its name is typed (D20). */
+/** Marks an inactive batch deleted once its name is typed. */
 export function deleteBatch(id: number, confirm: string): Promise<void> {
   return api<undefined>('DELETE', batchPath(id), { confirm });
 }

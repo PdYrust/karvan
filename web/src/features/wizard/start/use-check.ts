@@ -17,7 +17,7 @@ export function checkStatus(stream: JobStream, since: number | null): CompareSta
   return stream.startSeq <= since ? 'reading' : compareStatus(stream);
 }
 /**
- * "Check again" (B3): reads both panels again through a compare, follows
+ * "Check again": reads both panels again through a compare, follows
  * it on the job's stream, then reads what changed. Start waits for a check
  * of this visit, and for the operator to accept any change.
  */

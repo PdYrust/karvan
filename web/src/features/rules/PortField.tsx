@@ -8,7 +8,7 @@ import { oldPort, portHint } from './port-hint';
 import type { FieldsProps } from './SiteFields';
 import { TextField } from './TextField';
 
-/** The port a rule answers on, with a free port proposed when it is empty or taken (D14). */
+/** The port a rule answers on, with a free port proposed when it is empty or taken. */
 export function PortField({ id, values, set, errorOf }: FieldsProps & { id: string }) {
   const t = useT(siteFormMessages);
   const prefer = oldPort(values.sourceUrl, values.domains);

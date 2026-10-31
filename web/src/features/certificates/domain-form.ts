@@ -5,7 +5,7 @@ import type { CertChoice } from '../../lib/api/domains';
 import type { CertFacts, CertWarning } from '../../lib/api/rules';
 
 /**
- * The ways a domain gets its certificate (D61): one on this server, a new one
+ * The ways a domain gets its certificate: one on this server, a new one
  * from Let's Encrypt by either check, uploaded or pasted text, typed file paths,
  * or none.
  */
@@ -154,7 +154,7 @@ export function bestCert(list: readonly ServerCert[], now: Date): ServerCert | u
   return best;
 }
 
-/** Let's Encrypt checks a wildcard only by a TXT record (D66). */
+/** Let's Encrypt checks a wildcard only by a TXT record. */
 export function acmeMethodsFor(name: string): AcmeMethod[] {
   return domainName(name).startsWith('*.') ? ['dns-01'] : ['http-01', 'dns-01'];
 }

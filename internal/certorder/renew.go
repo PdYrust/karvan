@@ -8,10 +8,10 @@ import (
 )
 
 // renewBefore is how long before expiry a certificate renews, unless a
-// third of its life is shorter (D70).
+// third of its life is shorter.
 const renewBefore = 30 * 24 * time.Hour
 
-// maxBackoff is the longest wait between two renewal tries (D70).
+// maxBackoff is the longest wait between two renewal tries.
 const maxBackoff = 24 * time.Hour
 
 // renewAt is when leaf renews: expiry minus 30 days, or minus a third of
@@ -33,7 +33,7 @@ func backoff(tries int) time.Duration {
 
 // renewDue fails DNS-01 orders the CA has expired while they waited for
 // Check, then starts a renewal for every due domain without a running
-// order (D70). A start that fails counts as a failed renewal.
+// order. A start that fails counts as a failed renewal.
 func (s *Service) renewDue(ctx context.Context) {
 	now := s.Now().Unix()
 	var expired []orderRow

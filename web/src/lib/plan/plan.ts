@@ -1,8 +1,8 @@
 /**
- * A migration's plan as the API sends it (api-migration.md section 6),
+ * A migration's plan as the API sends it,
  * and the edits the wizard makes to it. Every edit is a pure function
- * from one plan to the next (D6), so a conflicting save can replay it on
- * the plan another tab wrote (D7).
+ * from one plan to the next, so a conflicting save can replay it on
+ * the plan another tab wrote.
  */
 export interface Op {
   kind: string;
@@ -48,11 +48,11 @@ export interface AdminPlan {
 export interface Plan {
   version: number;
   now: string;
-  /** How each admin lands, keyed by its name on the old panel (D35). */
+  /** How each admin lands, keyed by its name on the old panel. */
   admins?: Record<string, AdminPlan>;
-  /** A plan from before Phase 4.1; read by the server over admins, so an edit drops it. */
+  /** A plan from an older version; read by the server over admins, so an edit drops it. */
   admin?: AdminPlan;
-  /** Always empty: the role decides where users go (D31, D32). */
+  /** Always empty: the role decides where users go. */
   targets: string[] | null;
   tree: PlanNode[] | null;
   problems?: Record<string, Op[]>;
@@ -101,7 +101,7 @@ export function setAdmin(source: string, patch: AdminPlan): PlanEdit {
     return out;
   };
 }
-/** "Same role for all": gives each of these admins the role (D34). */
+/** "Same role for all": gives each of these admins the role. */
 export function setRoleForAll(sources: readonly string[], roleId: number): PlanEdit {
   return (p) => sources.reduce((q, s) => setAdmin(s, { roleId })(q), p);
 }

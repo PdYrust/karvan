@@ -10,7 +10,7 @@ import (
 	"unicode/utf8"
 )
 
-// Errors of the operator's actions on a batch (D8, D20).
+// Errors of the operator's actions on a batch.
 var (
 	ErrInvalidName      = errors.New("batch name: 1 to 64 characters, no control characters")
 	ErrActive           = errors.New("an active batch cannot be deleted")
@@ -59,7 +59,7 @@ func (s *Store) Rename(ctx context.Context, id int64, name string) (Batch, error
 	return s.Get(ctx, id)
 }
 
-// Delete marks an inactive batch deleted (D20) once confirm equals its
+// Delete marks an inactive batch deleted once confirm equals its
 // name. Its row, name and job stay for history and its ledger rows keep
 // batch_id, so its users stay out of every rule and out of later batches;
 // its verified tokens and its links to rules go. The only batch of a rule
@@ -110,7 +110,7 @@ func (s *Store) Delete(ctx context.Context, id int64, confirm string) error {
 	return tx.Commit()
 }
 
-// Reactivate makes a batch whose restore failed active again (D8): the
+// Reactivate makes a batch whose restore failed active again: the
 // operator checked the destination and its users are there.
 func (s *Store) Reactivate(ctx context.Context, id int64) (Batch, error) {
 	res, err := s.db.ExecContext(ctx, `UPDATE batches SET state = 'active', inactive_reason = '', inactive_at = 0, updated_at = ?

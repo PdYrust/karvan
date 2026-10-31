@@ -8,7 +8,7 @@ import (
 	"github.com/PdYrust/karvan/internal/panel"
 )
 
-// Reload methods (D46). The operator picks one on the final step.
+// Reload methods. The operator picks one on the final step.
 const (
 	ReloadManual = "manual"       // show the restart command
 	ReloadTouch  = "touch"        // a no-op edit per user through the panel API
@@ -23,7 +23,7 @@ type ReloadTarget struct {
 }
 
 // ReloadResult says what the panel picked up. A reload never rolls back
-// data (D48).
+// data.
 type ReloadResult struct {
 	Method  string   `json:"method"`
 	OK      int      `json:"ok"`
@@ -111,8 +111,8 @@ func (s *Service) reloadUsers(ctx context.Context, j *Job, rep *Report, method s
 	return nil
 }
 
-// ReloadOption is one reload method as the final step shows it (owner
-// decision Q5: every method is shown and the operator picks).
+// ReloadOption is one reload method as the final step shows it:
+// every method is shown and the operator picks.
 type ReloadOption struct {
 	Method    string   `json:"method"`
 	Available bool     `json:"available"`

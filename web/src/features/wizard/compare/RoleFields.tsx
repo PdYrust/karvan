@@ -18,7 +18,7 @@ import { RoleGroups } from './RoleGroups';
 import { Reveal } from '../../../components/feedback/Reveal';
 import { useFirstLoad } from '../../../lib/motion/use-first-load';
 
-/** The role warnings of the whole job (api-migration.md section 4). */
+/** The role warnings of the whole job. */
 const roleConflicts = ['C09', 'C33', 'C34', 'C35', 'C37'];
 
 /** The roles as Select items, an owner role marked. */
@@ -72,7 +72,7 @@ function RoleFacts({ role }: { role: Role }) {
 
 /**
  * The PasarGuard role one admin gets, first on its card: a picker, or the
- * existing admin's own role as text on a merge (D33); then its warnings,
+ * existing admin's own role as text on a merge; then its warnings,
  * the groups it gives users and what it allows.
  */
 export function RoleFields({

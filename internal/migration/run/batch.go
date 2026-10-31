@@ -11,7 +11,7 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/dest"
 )
 
-// oldLinkFacts reads the old link facts of a run (D7) before the job
+// oldLinkFacts reads the old link facts of a run before the job
 // drops its login and snapshot. The caller holds mu.
 func oldLinkFacts(j *Job) batch.Facts {
 	f := batch.Facts{SourcePin: strings.ToLower(strings.ReplaceAll(j.login.PinSHA256, ":", ""))}
@@ -31,7 +31,7 @@ func oldLinkFacts(j *Job) batch.Facts {
 }
 
 // ensureBatch makes the batch of a run that just ended done. A failure
-// leaves the job done; the next start makes the batch (D5).
+// leaves the job done; the next start makes the batch.
 func (s *Service) ensureBatch(j *Job, dest string, f batch.Facts) {
 	if _, err := s.batches.Ensure(context.Background(), j.ID, dest, f); err != nil {
 		slog.Warn("batch not stored", "job", j.ID, "err", err)
@@ -54,7 +54,7 @@ func (s *Service) recoverBatches(ctx context.Context) error {
 	return errors.Join(errs...)
 }
 
-// endRestore ends a restore's hold on its batches (D18, D19), given the
+// endRestore ends a restore's hold on its batches, given the
 // restore's error and whether putting the backup back started: rolled
 // back when the backup is back, restore_failed once the put-back started,
 // as they were when nothing was put back. A failure leaves them restoring
@@ -78,7 +78,7 @@ func endRestore(ctx context.Context, h *batch.Restore, err error, started bool) 
 func (s *Service) Batches() *batch.Store { return s.batches }
 
 // UserLink builds a batch user's subscription link the way the
-// destination panel does (D57, Q7 B). Karvan never stores it. A panel
+// destination panel does. Karvan never stores it. A panel
 // that now points at another database than the batch's gives
 // ErrPanelChanged.
 func (s *Service) UserLink(ctx context.Context, m batch.Member) (string, error) {

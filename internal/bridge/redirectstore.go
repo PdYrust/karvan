@@ -71,8 +71,8 @@ func (st *store) redirect(ctx context.Context, id int64) (Redirect, error) {
 }
 
 // saveRedirect creates (ID 0) or changes a redirect: the fields, its
-// registered domains and derived certificate (D48, D63), Karvan's own
-// port, every other rule (D52) and a loop, in that order; then it is
+// registered domains and derived certificate, Karvan's own
+// port, every other rule and a loop, in that order; then it is
 // written.
 func (st *store) saveRedirect(ctx context.Context, d Redirect) (Redirect, error) {
 	st.saveMu.Lock()
@@ -89,7 +89,7 @@ func (st *store) saveRedirect(ctx context.Context, d Redirect) (Redirect, error)
 	if err := d.normalize(); err != nil {
 		return d, err
 	}
-	if d.FromPath != storedFrom && reservedPath(d.FromPath) { // a stored one stays editable (D67)
+	if d.FromPath != storedFrom && reservedPath(d.FromPath) { // a stored one stays editable
 		return d, &RedirectInvalidError{Field: "fromPath", Reason: ReasonReserved}
 	}
 	in.port, in.domains = d.Port, d.Domains
@@ -218,7 +218,7 @@ func (b *Bridge) DeleteRedirect(ctx context.Context, id int64) error {
 }
 
 // redirectView is a redirect with its fallback certificate and its
-// domains' warnings (D50, D63).
+// domains' warnings.
 func (b *Bridge) redirectView(d Redirect, warns map[string][]string) RedirectView {
 	v := RedirectView{Redirect: d, Warnings: ruleWarnings(d.Domains, warns, false)}
 	if d.CertificateID != 0 {

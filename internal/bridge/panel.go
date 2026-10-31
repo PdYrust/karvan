@@ -13,7 +13,7 @@ import (
 // certificate.
 var ErrNoPanelCertificate = errors.New("the panel's domain has no certificate")
 
-// PanelCertificate is the certificate of domain id for the web panel (D6).
+// PanelCertificate is the certificate of domain id for the web panel.
 // It is read on each handshake through the same kind of cache as the
 // rules' certificates, so a renewal, a new upload or a changed file is
 // served without a restart.
@@ -34,7 +34,7 @@ func (b *Bridge) PanelCertificate(ctx context.Context, id int64) (*tls.Certifica
 }
 
 // ServesHTTPS reports whether an HTTPS rule on port holds the domain name
-// (D10: a shared panel port must be one).
+// (a shared panel port must be one).
 func (b *Bridge) ServesHTTPS(ctx context.Context, port int, name string) (bool, error) {
 	rules, err := b.st.rules(ctx)
 	if err != nil {
@@ -56,8 +56,8 @@ type RulePort struct {
 	Domains []string
 }
 
-// RulePorts lists the port of every rule (D14, and the ports a shared
-// panel address can use).
+// RulePorts lists the port of every rule (for the port proposal, and the
+// ports a shared panel address can use).
 func (b *Bridge) RulePorts(ctx context.Context) ([]RulePort, error) {
 	rules, err := b.st.rules(ctx)
 	if err != nil {

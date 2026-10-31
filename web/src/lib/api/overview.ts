@@ -29,7 +29,7 @@ export interface Overview {
   security: {
     totpEnabled: boolean;
     previousSignIn: { at: string; ip: string } | null;
-    /** How the panel is served (D9). */
+    /** How the panel is served. */
     tls: 'off' | 'self' | 'domain';
   };
   migrations: MigrationTotals;

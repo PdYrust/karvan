@@ -38,7 +38,7 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 
 - the release dry run on GitHub (Actions, Release, Run workflow) passes,
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
-- the owner has read every Persian string.
+- a native Persian speaker has read every Persian string.
 
 ## Release notes 0.5.4-beta
 Karvan 0.5.4-beta fits wide screens. Every page now sits centered next to the sidebar and grows up to 1760 px, so a Full HD or QHD screen no longer leaves a large empty area on one side.

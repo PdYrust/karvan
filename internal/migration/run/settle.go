@@ -9,7 +9,7 @@ import (
 )
 
 // settle resolves pending ledger rows for this source and destination by
-// reading the destination (D33): a row that still has the recorded id,
+// reading the destination: a row that still has the recorded id,
 // username and created_at committed; anything else is unknown, which
 // behaves like "moved, then deleted" so nobody is created twice. It only
 // updates the ledger.

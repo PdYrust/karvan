@@ -9,8 +9,8 @@ import (
 	"syscall"
 )
 
-// The update, rollback and uninstall work is in the installer's scripts
-// (D22). These commands only check the script and hand over to it.
+// The update, rollback and uninstall work is in the installer's scripts.
+// These commands only check the script and hand over to it.
 var (
 	lifecycleDir = "/usr/local/lib/karvan/current"
 	geteuid      = os.Geteuid

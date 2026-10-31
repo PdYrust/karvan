@@ -10,7 +10,7 @@ import { useErrorText } from '../../lib/errors/errors';
 import { liveMessages } from './messages';
 
 /**
- * Roll back (B5) asks first and says what it removes. Once the server
+ * Roll back asks first and says what it removes. Once the server
  * holds the panel, the undo follows on the job's stream and this page shows it.
  */
 export function RollBackButton({ jobId, backup }: { jobId: string; backup: boolean }) {

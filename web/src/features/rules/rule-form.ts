@@ -138,7 +138,7 @@ export function domainState(d: Domain): 'https' | 'plain' | 'pending' {
   return isRunning(d.acme?.order) ? 'pending' : 'plain';
 }
 
-/** HTTPS needs domains that all have a certificate (D63). */
+/** HTTPS needs domains that all have a certificate. */
 export function httpsAllowed(names: readonly string[], domains: readonly Domain[]): boolean {
   return (
     names.length > 0 &&
@@ -160,7 +160,7 @@ export function unregistered(hosts: readonly string[], domains: readonly Domain[
   return hosts.filter((h) => !domains.some((d) => d.name === h));
 }
 
-/** Batches of one old panel and destination, which one rule can serve together (D25). */
+/** Batches of one old panel and destination, which one rule can serve together. */
 function fits(a: Batch, b: Batch): boolean {
   return (
     a.source.kind === b.source.kind &&
@@ -193,7 +193,7 @@ export function batchGroups(batches: readonly Batch[]): BatchGroup[] {
   return [...groups.values()];
 }
 
-/** What picked batches fill in: the newest batch that knows a fact gives it (5.0a). */
+/** What picked batches fill in: the newest batch that knows a fact gives it. */
 export function batchDefaults(picked: readonly Batch[], domains: readonly Domain[]) {
   const newest = [...picked].sort((a, b) => b.id - a.id);
   const hosts = [...new Set(picked.flatMap((b) => b.oldLinks.hosts))].sort();
@@ -232,7 +232,7 @@ export function isPlainHttp(url: string): boolean {
   return /^http:\/\//i.test(url.trim());
 }
 
-/** HTTPS goes only with domains; with none the port's certificate decides (D63). */
+/** HTTPS goes only with domains; with none the port's certificate decides. */
 const httpsOf = (v: RuleValues) => (v.domains.length > 0 ? { https: v.https } : {});
 
 /** A panel rule as sent. A rule of batches sends only what its batches do not know. */
@@ -268,7 +268,7 @@ export function siteInputOf(v: RuleValues, picked: readonly Batch[]): SiteInput 
   };
 }
 
-/** The parts of an old subscription link a single link rule answers (D55). */
+/** The parts of an old subscription link a single link rule answers. */
 export function parseOldLink(
   text: string,
 ): { host: string; port: number; path: string } | undefined {

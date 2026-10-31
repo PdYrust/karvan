@@ -13,7 +13,7 @@ import (
 )
 
 // Restorer puts a backup back. The panel must be stopped first: restoring
-// under a running panel mixes its writes into the restored data (D36).
+// under a running panel mixes its writes into the restored data.
 type Restorer struct {
 	Key *secret.Key
 	Run Runner

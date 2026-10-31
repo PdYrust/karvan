@@ -19,7 +19,7 @@ type fillResult struct {
 type leftDomain struct{ domain, rule string }
 
 // fillDomains gives every domain from before 0012 the certificate its
-// rules serve it with (D64), after the adoption and before the first
+// rules serve it with, after the adoption and before the first
 // Reload. A domain held by a rule still served from its own certificate
 // stays unfilled, so its ports keep today's pick, and is tried again at
 // the next start.
@@ -38,9 +38,9 @@ func (b *Bridge) fillDomains(ctx context.Context) {
 }
 
 // fillDomains fills every domain with cert_filled 0 in one transaction:
-// its certificate is the D53 pick for its name on the TLS port of the
-// first rule (table order) that holds it, and every other TLS port whose
-// D53 pick differs gets a pin, so no handshake changes. Rules keep their
+// its certificate is the table-order pick for its name on the TLS port
+// of the first rule (table order) that holds it, and every other TLS port
+// whose table-order pick differs gets a pin, so no handshake changes. Rules keep their
 // stored certificate_id. Nothing else is written, so a second run with
 // nothing left changes nothing.
 func (st *store) fillDomains(ctx context.Context) (fillResult, error) {

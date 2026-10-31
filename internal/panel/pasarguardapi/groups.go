@@ -35,7 +35,7 @@ type inboundJSON struct {
 
 // Groups reads every group with the protocols of its inbounds, from GET
 // /api/groups (no offset or limit: the whole list) and GET
-// /api/inbounds/details, so a user's current protocols can be told (D36).
+// /api/inbounds/details, so a user's current protocols can be told.
 func (s *Source) Groups(ctx context.Context) ([]panel.SourceGroup, error) {
 	var gs groupsJSON
 	if err := s.getJSON(ctx, "/api/groups", &gs); err != nil {

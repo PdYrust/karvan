@@ -14,8 +14,8 @@ import { ImpactBar } from '../ImpactBar';
 import { StepActions } from '../StepActions';
 import { useFirstLoad } from '../../../lib/motion/use-first-load';
 /**
- * Step 5: what the plan does in numbers, the pre-flight report (B7), and
- * every user as they will land, paged on the server (4.5, D5).
+ * Step 5: what the plan does in numbers, the pre-flight report, and
+ * every user as they will land, paged on the server.
  */
 export function PreviewStep() {
   const t = useT(previewMessages);

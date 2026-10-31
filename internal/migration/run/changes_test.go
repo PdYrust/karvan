@@ -10,8 +10,8 @@ import (
 )
 
 // A compare that changes the outcome names what changed and raises the
-// plan version, so the version the operator reviewed no longer runs
-// (B3). A compare that finds nothing new keeps the version.
+// plan version, so the version the operator reviewed no longer runs.
+// A compare that finds nothing new keeps the version.
 func TestCompareNamesWhatChanged(t *testing.T) {
 	h := newHarness(t, panel.Marzban, panel.PasarGuard, pasarGuardDB(t), 3)
 	j := h.job(nil)

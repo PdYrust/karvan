@@ -26,7 +26,7 @@ import { ImpactBar } from '../ImpactBar';
 import { useFirstLoad } from '../../../lib/motion/use-first-load';
 /**
  * Step 6: check again, the reload method, Safe Mode, what changes for
- * users, then Start (4.5, B3). Nothing is written before Start.
+ * users, then Start. Nothing is written before Start.
  */
 export function StartStep() {
   const t = useT(startMessages);
@@ -73,7 +73,7 @@ export function StartStep() {
     );
   }
   const s = summary.data;
-  // The server judges the password at Start (D11); Compare already checks it as it is typed.
+  // The server judges the password at Start; Compare already checks it as it is typed.
   const valid = password.value !== '';
   const admin = adminLine(s, password, valid);
   const changes = check.changes?.data;

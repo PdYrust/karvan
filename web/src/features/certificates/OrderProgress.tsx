@@ -53,7 +53,7 @@ function Steps({ order }: { order: AcmeOrder }) {
 }
 
 /**
- * A domain's Let's Encrypt order (D69): its steps, read every 2 seconds while
+ * A domain's Let's Encrypt order: its steps, read every 2 seconds while
  * it runs, the TXT record of a manual order, and its end.
  */
 export function OrderProgress({ domainId }: { domainId: number }) {

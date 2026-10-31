@@ -3,7 +3,7 @@ import type { Conflict, Counts, JobState } from './migrations';
 import type { PanelKind } from './panels';
 import { download } from './preflight';
 
-/** What the reload did (api-migration.md 10.1). `error` and `failed` are server text: never shown. */
+/** What the reload did. `error` and `failed` are server text: never shown. */
 export interface ReloadResult {
   /** "" when the run ended before its reload. */
   method: string;
@@ -75,17 +75,17 @@ export function getReport(id: string): Promise<Report> {
   return api('GET', jobPath(id, '/report'));
 }
 
-/** Takes back what a failed or interrupted job wrote; the undo follows on the job's stream (B5). */
+/** Takes back what a failed or interrupted job wrote; the undo follows on the job's stream. */
 export function rollbackJob(id: string): Promise<{ id: string }> {
   return api('POST', jobPath(id, '/rollback'));
 }
 
-/** A finished job's files, each through fetch and a blob (D12). */
+/** A finished job's files, each through fetch and a blob. */
 export const reportFiles = {
   json: (id: string) => download(jobPath(id, '/report'), `karvan-report-${id}.json`),
   csv: (id: string) => download(jobPath(id, '/report.csv'), `karvan-report-${id}.csv`),
   links: (id: string) => download(jobPath(id, '/links.csv'), `karvan-links-${id}.csv`),
-  /** Once only: the first download empties it (B9). Only on a click, never retried. */
+  /** Once only: the first download empties it. Only on a click, never retried. */
   passwords: (id: string) =>
     download(jobPath(id, '/passwords.csv'), `karvan-passwords-${id}.csv`, 'POST'),
 };

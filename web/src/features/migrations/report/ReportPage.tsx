@@ -121,7 +121,7 @@ function HeaderLine({ report }: { report: Report }) {
   );
 }
 
-/** One finished job's report (4.7). */
+/** One finished job's report. */
 export function ReportPage() {
   const { id = '' } = useParams();
   const t = useT(reportsMessages);

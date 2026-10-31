@@ -83,7 +83,7 @@ func TestGetCountsAdminsAndRules(t *testing.T) {
 	}
 }
 
-// D34: each user counts under the admin row of its own source admin, and
+// Each user counts under the admin row of its own source admin, and
 // a link is built with that admin.
 func TestGetSplitsAJobsAdmins(t *testing.T) {
 	s, db := open(t)
@@ -244,7 +244,7 @@ func TestUsersSearchesAndPages(t *testing.T) {
 }
 
 // No token, MAC or other secret column reaches the JSON of a batch or its
-// users (D57).
+// users.
 func TestNoTokenInTheJSON(t *testing.T) {
 	s, ids := twoBatches(t)
 	b, _ := s.Get(context.Background(), ids["a"])

@@ -18,7 +18,7 @@ const fileWords: Readonly<Record<File, LiveKey>> = {
 };
 
 /**
- * The admin password file, once (B9): a warning first, then one POST from
+ * The admin password file, once: a warning first, then one POST from
  * this click. Nothing is kept in the page or retried; a second try says it
  * is gone.
  */
@@ -75,7 +75,7 @@ function PasswordFile({ jobId, admin }: { jobId: string; admin: string }) {
   );
 }
 
-/** A finished job's files (4.6): the report, the new links, and the admin password once. */
+/** A finished job's files: the report, the new links, and the admin password once. */
 export function Files({
   jobId,
   links,

@@ -7,7 +7,7 @@ import (
 )
 
 // GET /settings/install says whether Karvan runs as root, for the read-only
-// row in Settings (D19); signed out it is a 401 like every other route.
+// row in Settings; signed out it is a 401 like every other route.
 func TestInstallSettingsSayWhetherKarvanRunsAsRoot(t *testing.T) {
 	e := newEnv(t)
 	if res := e.do(http.MethodGet, api+"/settings/install", nil); res.status != http.StatusUnauthorized {

@@ -40,7 +40,7 @@ func openSource(ctx context.Context, l Login, opts source.Options) (panel.Source
 	return src, kind, ledger.Origin(c.Base()), c, nil
 }
 
-// detect tells the panels apart by /api/admin (D5): Marzban answers with
+// detect tells the panels apart by /api/admin: Marzban answers with
 // users_usage, PasarGuard with used_traffic and an id. An API key only
 // exists on PasarGuard.
 func detect(ctx context.Context, c *source.Client, l Login) (panel.Kind, error) {

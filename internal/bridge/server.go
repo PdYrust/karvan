@@ -77,7 +77,7 @@ func (b *Bridge) Reload(ctx context.Context) error {
 	b.keepSharedPorts(want)
 	b.mu.Lock()
 	if _, ok := want[b.ChallengePort]; !ok && len(b.chal.holders) > 0 {
-		want[b.ChallengePort] = false // plain HTTP for Let's Encrypt only (D67)
+		want[b.ChallengePort] = false // plain HTTP for Let's Encrypt only
 	}
 	b.load(sites, redirects)
 	b.shakes, b.certRows = buildShakes(b.routes, facts), facts.certs
@@ -107,7 +107,7 @@ func (b *Bridge) Reload(ctx context.Context) error {
 }
 
 // keepSharedPorts adds the ports the panel is shared on to want, so the
-// panel stays reachable with no rule left there (D12).
+// panel stays reachable with no rule left there.
 func (b *Bridge) keepSharedPorts(want map[int]bool) {
 	for _, port := range b.sharedPorts() {
 		if _, ok := want[port]; !ok {

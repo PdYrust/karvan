@@ -9,7 +9,7 @@ import (
 	"github.com/PdYrust/karvan/internal/audit"
 )
 
-// One process per data directory (D30); the services start and stop with
+// One process per data directory; the services start and stop with
 // the context, and a restore refuses while Karvan runs.
 func TestServicesAndTheDataDirLock(t *testing.T) {
 	ctx := context.Background()

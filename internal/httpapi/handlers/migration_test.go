@@ -119,7 +119,7 @@ func (h headerTransport) RoundTrip(r *http.Request) (*http.Response, error) {
 	return h.next.RoundTrip(r)
 }
 
-// The owner's five steps over the API: summary, compare, plan, preview,
+// The five wizard steps over the API: summary, compare, plan, preview,
 // run with live events, then the downloads.
 func TestMigrationOverTheAPI(t *testing.T) {
 	m := newMigrationEnv(t, 3)
@@ -290,7 +290,7 @@ func TestMigrationRoutesNeedASession(t *testing.T) {
 	}
 }
 
-// The template routes are gone (D40): they answer the router's plain
+// The template routes are gone: they answer the router's plain
 // 404, not an API error.
 func TestTemplateRoutesAreGone(t *testing.T) {
 	m := newMigrationEnv(t, 1)

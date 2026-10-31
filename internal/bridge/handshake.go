@@ -29,18 +29,18 @@ type shakeFacts struct {
 	certs   map[int64]certSnap       // certificates rows by id
 }
 
-// shakeDomain is a domain's certificate (0: none) and whether the D64
+// shakeDomain is a domain's certificate (0: none) and whether the domain
 // fill has given it one yet.
 type shakeDomain struct {
 	certID int64
 	filled bool
 }
 
-// portShake is how one TLS port picks its certificate (D62).
+// portShake is how one TLS port picks its certificate.
 type portShake struct {
 	// legacy: a rule on the port is served from its own certificate, or a
 	// domain its rules hold is not filled yet, so every handshake takes
-	// the D53 pick, as before the move (D64).
+	// the table-order pick, as before the move.
 	legacy bool
 	names  map[string]int64 // the domains its HTTPS rules hold: certificate id, the port's pin first
 }
@@ -132,7 +132,7 @@ func buildShakes(t table, f shakeFacts) map[int]portShake {
 }
 
 // certSource is what a handshake serves: a certificates row, or a panel
-// rule's own certificate columns (D54).
+// rule's own certificate columns.
 type certSource struct {
 	id   int64
 	snap certSnap
@@ -140,10 +140,10 @@ type certSource struct {
 }
 
 // pickCert picks the certificate for the SNI name (lower case, "" for
-// none) on port (D62): the domain the port's HTTPS rules hold with that
+// none) on port: the domain the port's HTTPS rules hold with that
 // exact name, else the "*." wildcard that covers it; the port's pin of
 // that domain first, else its certificate. With no SNI or no such
-// domain, and on a port not moved yet, it is the D53 pick.
+// domain, and on a port not moved yet, it is the table-order pick.
 func (b *Bridge) pickCert(port int, name string) (certSource, bool) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -175,7 +175,7 @@ func (b *Bridge) rowSource(id int64) (certSource, bool) {
 	return certSource{id: id, snap: c}, ok
 }
 
-// d53 is the D53 order on one port's routes: the first in table order
+// d53 is the table-order pick on one port's routes: the first in table order
 // (panel rules by id, then redirect rules by id) whose domains cover
 // name; else the first with no domains; else the first (a client without
 // SNI, or an IP address).
@@ -266,7 +266,7 @@ func (c *certCache) load(key string, snap certSnap, read func() (*tls.Certificat
 
 // rowCert reads certificates row id: its certificate and key come from
 // one read of the row, so a rewritten row never pairs an old certificate
-// with a new key (D62).
+// with a new key.
 func (st *store) rowCert(ctx context.Context, id int64) (*tls.Certificate, certSnap, error) {
 	var c certSnap
 	var sealed []byte
@@ -291,7 +291,7 @@ func (st *store) rowCert(ctx context.Context, id int64) (*tls.Certificate, certS
 }
 
 // readSiteCert reads a panel rule's own certificate, as stored before its
-// adoption (D54).
+// adoption.
 func (b *Bridge) readSiteCert(ctx context.Context, s Site) (*tls.Certificate, error) {
 	if s.CertFile != "" {
 		c, err := tls.LoadX509KeyPair(s.CertFile, s.KeyFile)

@@ -93,7 +93,7 @@ func (l *Live) ensureGroup(name, inbound string, port int, core func() map[strin
 
 // EnsureRole gives the test PasarGuard a role named name that allows only
 // group, with the operator role's permissions, and returns its id. Users
-// moved under it get only that group (D31). A second call adds nothing.
+// moved under it get only that group. A second call adds nothing.
 func EnsureRole(l *Live, name string, group int64) int64 {
 	l.t.Helper()
 	var roles struct {

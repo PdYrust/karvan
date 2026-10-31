@@ -13,7 +13,7 @@ import { protocolName } from '../protocols';
 import type { OpForm, OpKind } from './build';
 import { changesMessages, type ChangesKey } from './messages';
 
-/** Protocols cred.new takes (api-migration.md section 5). */
+/** Protocols cred.new takes. */
 const credProtocols = ['vmess', 'vless', 'trojan', 'shadowsocks', 'hysteria', 'wireguard'];
 
 interface FieldsProps {

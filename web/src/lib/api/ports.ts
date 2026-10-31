@@ -1,11 +1,11 @@
 import { api } from './client';
 
-/** Who holds a listening port (D13). */
+/** Who holds a listening port. */
 export type PortOwner = 'panel' | 'rule' | 'acme' | 'other';
 
 export interface Ports {
   ports: { port: number; owner: PortOwner }[];
-  /** The port D14 proposes for a new rule; 0 when none is free. */
+  /** The port the server proposes for a new rule; 0 when none is free. */
   proposal: number;
 }
 

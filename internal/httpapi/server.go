@@ -41,7 +41,7 @@ type Deps struct {
 	Version        string
 	Logger         *slog.Logger
 
-	// Phase 3: migrations, Safe Mode and the subscription bridge.
+	// Migrations, Safe Mode and the subscription bridge.
 	Runs      *run.Service
 	Bridge    *bridge.Bridge
 	Orders    *certorder.Service
@@ -195,7 +195,7 @@ func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(htt
 	}
 }
 
-// subscriptionRoutes are the domains, certificates and redirect rules of the bridge (phase-4.1 section 4).
+// subscriptionRoutes are the domains, certificates and redirect rules of the bridge.
 func subscriptionRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.HandlerFunc) http.Handler) {
 	for pattern, h := range map[string]http.HandlerFunc{
 		"GET /api/v1/domains":                  api.Domains,

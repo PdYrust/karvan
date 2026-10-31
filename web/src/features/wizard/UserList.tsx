@@ -39,7 +39,7 @@ function UserName({ row }: { row: UserRow }) {
 
 /**
  * Users of one group or category, read a page at a time with a search on
- * the server (D5). `end` draws what sits at the end of each row.
+ * the server. `end` draws what sits at the end of each row.
  */
 export function UserList({
   jobId,

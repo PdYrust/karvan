@@ -89,7 +89,7 @@ func TestHTTPSListsSharedPorts(t *testing.T) {
 	}
 }
 
-// The overview says how the panel is served, for its plain HTTP warning (D9).
+// The overview says how the panel is served, for its plain HTTP warning.
 func TestOverviewSaysHowThePanelIsServed(t *testing.T) {
 	a := newHTTPSEnv(t, 0)
 	var o struct {

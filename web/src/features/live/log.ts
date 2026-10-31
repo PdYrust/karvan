@@ -3,7 +3,7 @@ import type { MigrationEvent } from '../../lib/api/events';
 import { errorKey, type ErrorKey } from '../../lib/errors/errors';
 import type { LiveKey } from './messages';
 
-/** A sentence from the live view's words, or from the error sentences every page shares (D4). */
+/** A sentence from the live view's words, or from the error sentences every page shares. */
 export type Sentence =
   { from: 'live'; key: LiveKey; params?: Params } | { from: 'error'; key: ErrorKey };
 
@@ -24,7 +24,7 @@ const endSentences: Readonly<Record<string, LiveKey>> = {
   checked: 'end_checked',
 };
 
-/** Codes only a run's stream logs (api-migration.md section 3); the rest are shared error codes. */
+/** Codes only a run's stream logs; the rest are shared error codes. */
 const runCodes: Readonly<Record<string, LiveKey>> = {
   plan_stale: 'code_plan_stale',
   verify_failed: 'code_verify_failed',

@@ -112,7 +112,7 @@ function NameFields({ source, mode, name }: { source: string; mode: Mode; name: 
   );
 }
 
-/** An admin other than the login's always gets a password Karvan makes (D34). */
+/** An admin other than the login's always gets a password Karvan makes. */
 function MadePassword() {
   const t = useT(compareMessages);
   return (

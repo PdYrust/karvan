@@ -113,7 +113,7 @@ func (b createBody) valid() bool {
 }
 
 // CreateMigration starts a job: the old panel's login and the destination.
-// The login stays in memory only (D11).
+// The login stays in memory only.
 func (a *API) CreateMigration(w http.ResponseWriter, r *http.Request) {
 	var b createBody
 	if err := respond.Decode(w, r, &b); err != nil || !b.valid() {
@@ -173,7 +173,7 @@ func (a *API) DeleteMigration(w http.ResponseWriter, r *http.Request) {
 }
 
 // Compare reads both panels again in the background and rebuilds the
-// plan (steps 1 and 2, B2): reading many users can take longer than a
+// plan (steps 1 and 2): reading many users can take longer than a
 // request may. Progress and the outcome come on the job's event stream.
 func (a *API) Compare(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")

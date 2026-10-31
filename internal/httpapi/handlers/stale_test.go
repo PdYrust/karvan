@@ -9,7 +9,7 @@ import (
 
 // A run whose re-check finds the old panel changed ends with done in
 // state checked: nothing was written, the changes say what moved, and
-// the new plan version runs (B4).
+// the new plan version runs.
 func TestStaleRunGoesBackToChecked(t *testing.T) {
 	m := newMigrationEnv(t, 3)
 	id := m.create()

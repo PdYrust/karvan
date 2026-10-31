@@ -27,7 +27,7 @@ export function TwoStepTab() {
   const session = useSession();
   const queryClient = useQueryClient();
   const toasts = useKumoToastManager();
-  // The secret is a one-time value (D10): component state only, gone on unmount.
+  // The secret is a one-time value: component state only, gone on unmount.
   const [setup, setSetup] = useState<TotpSetup | null>(null);
   const [turningOff, setTurningOff] = useState(false);
   const begin = useMutation({ mutationFn: beginTotp, gcTime: 0, onSuccess: setSetup });

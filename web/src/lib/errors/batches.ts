@@ -3,7 +3,7 @@ import type { Messages } from '../../i18n/locale';
 import { errorOf } from './errors';
 
 /**
- * Sentences for the codes only the Batches page meets (D58). They load
+ * Sentences for the codes only the Batches page meets. They load
  * with that page; errors.ts keeps the codes every page can meet.
  */
 const en = {

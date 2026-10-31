@@ -1,19 +1,19 @@
 import { api } from './client';
 
-/** How Let's Encrypt checks the domain (D66): automatic over HTTP, or a TXT record. */
+/** How Let's Encrypt checks the domain: automatic over HTTP, or a TXT record. */
 export type AcmeMethod = 'http-01' | 'dns-01';
 
 export type AcmeState =
   'starting' | 'waiting_dns' | 'validating' | 'issuing' | 'done' | 'failed' | 'cancelled';
 
-/** A D71 code with the CA's text; retryAt comes with a rate limit. */
+/** An order error code with the CA's text; retryAt comes with a rate limit. */
 export interface AcmeError {
   code: string;
   detail: string;
   retryAt?: string;
 }
 
-/** A Let's Encrypt order (D69). */
+/** A Let's Encrypt order. */
 export interface AcmeOrder {
   id: number;
   method: AcmeMethod;
@@ -60,7 +60,7 @@ export const acmeKeys = {
 
 const path = (id: number) => `domains/${String(id)}/acme`;
 
-/** The latest order and the renewal; polled every 2 seconds while an order runs (D69). */
+/** The latest order and the renewal; polled every 2 seconds while an order runs. */
 export function getAcme(
   id: number,
 ): Promise<{ order: AcmeOrder | null; renewal: AcmeRenewal | null }> {

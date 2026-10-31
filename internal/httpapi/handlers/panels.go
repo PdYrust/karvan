@@ -115,7 +115,7 @@ func (a *API) dropCopies(r *http.Request, copies map[string]string) ([]panelJSON
 }
 
 // ScanPanels looks for panels under the scan roots, plus ENV files the
-// operator names, and registers every one it recognizes (D53).
+// operator names, and registers every one it recognizes.
 func (a *API) ScanPanels(w http.ResponseWriter, r *http.Request) {
 	var b struct {
 		Extra []string `json:"extra"`

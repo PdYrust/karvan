@@ -2,7 +2,7 @@ import type { FixOption, ProblemGroup, Severity, UserRow } from '../../../lib/ap
 import type { Plan, Resolution } from '../../../lib/plan/plan';
 import type { ConflictKey } from './conflict-messages';
 
-/** How serious each per-user conflict is before a fix (api-migration.md section 4). */
+/** How serious each per-user conflict is before a fix. */
 const severities: Readonly<Record<string, Severity>> = {
   C02: 'blocker',
   C03: 'blocker',
@@ -96,7 +96,7 @@ export function typeWords(type: string): ConflictKey {
   return typeKeys.has(type) ? (`type_${type}` as ConflictKey) : 'type_unknown';
 }
 
-/** The words of a fix; accept on a user whose config stops working moves them anyway (D37, D38). */
+/** The words of a fix; accept on a user whose config stops working moves them anyway. */
 export function fixWords(fix: string, type?: string): ConflictKey {
   if (fix === 'accept' && (type === 'C10' || type === 'C38')) return 'fix_move_anyway';
   return fixes.has(fix) ? (`fix_${fix}` as ConflictKey) : 'fix_unknown';

@@ -48,7 +48,7 @@ func (e *orderEnv) httpsRule(name string) int {
 	return port
 }
 
-// D65, D70: a renewal rewrites the domain's row and reloads, so a warm
+// A renewal rewrites the domain's row and reloads, so a warm
 // listener and a fresh one both serve the new certificate.
 func TestRenewalServesTheNewCertificate(t *testing.T) {
 	e := newOrderEnv(t)
@@ -84,7 +84,7 @@ func TestRenewalServesTheNewCertificate(t *testing.T) {
 	}
 }
 
-// D70: a certificate living 6 days renews 2 days before expiry, never in
+// A certificate living 6 days renews 2 days before expiry, never in
 // a loop.
 func TestShortLivedCertificateDoesNotLoop(t *testing.T) {
 	e := newOrderEnv(t)
@@ -119,7 +119,7 @@ func (e *orderEnv) waitTries(id int64, tries int) bridge.Domain {
 	}
 }
 
-// D70: a failed renewal keeps the old certificate, shows renewal_failed
+// A failed renewal keeps the old certificate, shows renewal_failed
 // and tries again after 1, then 2 hours; a success clears it.
 func TestRenewalBacksOff(t *testing.T) {
 	e := newOrderEnv(t)
@@ -147,7 +147,7 @@ func TestRenewalBacksOff(t *testing.T) {
 	}
 }
 
-// D70: an HTTP-01 renewal that cannot open the challenge port stores
+// An HTTP-01 renewal that cannot open the challenge port stores
 // why, with the same backoff.
 func TestRenewalPortFailures(t *testing.T) {
 	e := newOrderEnv(t)
@@ -172,7 +172,7 @@ func TestRenewalPortFailures(t *testing.T) {
 	}
 }
 
-// D70: a DNS-01 renewal waits for Check; when the CA expires it, the
+// A DNS-01 renewal waits for Check; when the CA expires it, the
 // domain counts acme_expired and the next due run starts a new order with
 // a new record.
 func TestExpiredDNSRenewalStartsAgain(t *testing.T) {
@@ -205,7 +205,7 @@ func TestExpiredDNSRenewalStartsAgain(t *testing.T) {
 	}
 }
 
-// D73: a change of directory (the staging switch) changes new orders
+// A change of directory (the staging switch) changes new orders
 // only; a renewal keeps the account of the domain's certificate.
 func TestRenewalKeepsItsDirectory(t *testing.T) {
 	e := newOrderEnv(t)

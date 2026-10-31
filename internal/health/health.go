@@ -1,4 +1,4 @@
-// Package health tells systemd and Docker that serve is alive (D15). While
+// Package health tells systemd and Docker that serve is alive. While
 // a self-probe of each panel listener succeeds, it sends WATCHDOG=1 to the
 // systemd notification socket and writes the heartbeat file that
 // "karvan health" reads.

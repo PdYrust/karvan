@@ -9,7 +9,7 @@ import (
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 )
 
-// headroom is kept free on top of the estimate (D44).
+// headroom is kept free on top of the estimate.
 const headroom = 100 << 20
 
 // Size estimates how big the database is.

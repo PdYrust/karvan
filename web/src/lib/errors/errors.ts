@@ -3,7 +3,7 @@ import { useT, type Messages } from '../../i18n/locale';
 import { ApiError } from '../api/client';
 
 /**
- * One sentence for every error code the API sends (D4), and for the codes a
+ * One sentence for every error code the API sends, and for the codes a
  * migration's event stream logs when a compare fails. Each says what
  * happened and what to do; no server text reaches the screen.
  */

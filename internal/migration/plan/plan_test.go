@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// D35: a plan from before Phase 4.1 names one admin; it is the login's.
+// A plan from an older version names one admin; it is the login's.
 func TestForLoginReadsTheOldAdmin(t *testing.T) {
 	var p Plan
 	if err := json.Unmarshal([]byte(`{"admin":{"username":"boss","mode":"merge","roleId":7}}`), &p); err != nil {

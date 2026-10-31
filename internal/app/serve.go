@@ -47,7 +47,7 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 	go tlsm.Run(ctx)
 	go a.monitor(h.Bind, srv).Run(ctx)
 	if h.TLS.On() {
-		// A certificate that cannot be loaded is logged now, not at the first visit (D11).
+		// A certificate that cannot be loaded is logged now, not at the first visit.
 		if _, err := tlsm.Certificate(ctx, h.TLS); err != nil {
 			a.Logger.Error("the panel certificate cannot be loaded", "err", err)
 		}
@@ -78,7 +78,7 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 		return httpapi.New(d)
 	}
 	var ln net.Listener
-	if !h.TLS.Shared { // a shared port is the bridge's (D12)
+	if !h.TLS.Shared { // a shared port is the bridge's
 		if ln, err = net.Listen("tcp", h.Addr()); err != nil {
 			return fmt.Errorf("listen on %s: %w", h.Addr(), err)
 		}
@@ -111,8 +111,8 @@ func (a *App) addressServer(bind string, onShutdown func()) *address.Server {
 	}
 }
 
-// monitor probes the panel's listeners for systemd and the heartbeat
-// (D15). The socket is kept from the panel commands Karvan runs.
+// monitor probes the panel's listeners for systemd and the heartbeat.
+// The socket is kept from the panel commands Karvan runs.
 func (a *App) monitor(bind string, srv *address.Server) *health.Monitor {
 	socket := os.Getenv("NOTIFY_SOCKET")
 	_ = os.Unsetenv("NOTIFY_SOCKET")

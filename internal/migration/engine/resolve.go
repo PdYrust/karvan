@@ -168,7 +168,7 @@ func accept(it *Item, c Conflict) bool {
 		if creds.WireGuard == nil || creds.WireGuard.PeerIPs == nil {
 			return false
 		}
-		creds.WireGuard.PeerIPs = nil // reassigned on write (D21)
+		creds.WireGuard.PeerIPs = nil // reassigned on write
 	default:
 		return false
 	}

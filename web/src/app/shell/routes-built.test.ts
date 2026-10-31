@@ -17,7 +17,7 @@ describe('built routes', () => {
       ['groupServer', ['/panels', '/backups']],
     ]);
   });
-  it('opens each page the spec names with g then its letter', () => {
+  it('opens each page with g then its letter', () => {
     const targets = gotoTargets();
     expect({
       o: targets.KeyO,

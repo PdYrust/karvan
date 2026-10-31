@@ -14,7 +14,7 @@ const lanes: Readonly<Record<Lane, string>> = {
 };
 
 /**
- * A backup going back (4.6): the backup's tile, the panel offline at the
+ * A backup going back: the backup's tile, the panel offline at the
  * other end, and dots flowing into it while the restore runs. A restore has
  * no chunks, so the dots say only that it is under way; the timer is text.
  * The panel reads Online again once it started.

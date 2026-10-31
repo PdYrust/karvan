@@ -1,4 +1,4 @@
-# Where Karvan's files go (D18) and the steps that put them there.
+# Where Karvan's files go and the steps that put them there.
 # shellcheck shell=sh
 
 LIB_DIR=/usr/local/lib/karvan

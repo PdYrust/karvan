@@ -48,7 +48,7 @@ const fieldIds: Partial<Record<MissingField, string>> = {
 /**
  * Connect's state: the form, the job it made (kept in `?job=` so a reload
  * follows the same read), the read's events, and the one certificate the
- * operator chose to trust. The sign-in stays in component state (D10).
+ * operator chose to trust. The sign-in stays in component state.
  */
 export function useConnect() {
   const [params, setParams] = useSearchParams();
@@ -73,7 +73,7 @@ export function useConnect() {
   const compare = useMutation({ mutationFn: compareJob });
   const cancel = useMutation({ mutationFn: cancelJob });
   const create = useMutation({
-    // The request carries the old panel's password: never keep it in the cache (D10).
+    // The request carries the old panel's password: never keep it in the cache.
     gcTime: 0,
     mutationFn: (job: NewJob) => createJob(job),
     onSuccess: ({ id }) => {

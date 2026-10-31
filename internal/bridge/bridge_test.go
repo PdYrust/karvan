@@ -50,7 +50,7 @@ func TestNativeTokenPassesThrough(t *testing.T) {
 	}
 }
 
-// Owner rule: a revoke on the new panel closes the user's old links,
+// Revoke rule: a revoke on the new panel closes the user's old links,
 // including fresh links from the old panel.
 func TestRevokeOnNewPanelClosesForGood(t *testing.T) {
 	e := newEnv(t, "ali")

@@ -78,7 +78,7 @@ func (r *restoreSet) hold(t *testing.T) *Restore {
 	return h
 }
 
-// D17: before anything is put back, every batch on the destination made
+// Before anything is put back, every batch on the destination made
 // after the backup is inactive with reason restoring, the restored job's
 // own and every later one, a batch whose earlier restore failed included.
 // Batches made before the backup, on another destination, deleted or
@@ -100,7 +100,7 @@ func TestRestoringHoldsTheJobsOwnBatch(t *testing.T) {
 	r.check(t, map[*int64]string{&r.j: "inactive restoring 39.000", &r.k: "active  00.000", &r.failed: "inactive restore_failed 06.500"})
 }
 
-// D19: a restore that fails before the put-back step sets every batch
+// A restore that fails before the put-back step sets every batch
 // back as it was.
 func TestRestoreCancelPutsBatchesBack(t *testing.T) {
 	r := newRestoreSet(t)
@@ -110,7 +110,7 @@ func TestRestoreCancelPutsBatchesBack(t *testing.T) {
 	r.check(t, map[*int64]string{&r.j: "active  00.000", &r.k: "active  00.000", &r.failed: "inactive restore_failed 06.500"})
 }
 
-// D19: a restore that fails after the put-back started leaves its
+// A restore that fails after the put-back started leaves its
 // batches restore_failed, and changes no ledger row.
 func TestRestoreFailLeavesRestoreFailed(t *testing.T) {
 	r := newRestoreSet(t)
@@ -124,7 +124,7 @@ func TestRestoreFailLeavesRestoreFailed(t *testing.T) {
 	}
 }
 
-// D18: after a successful restore the held batches are rolled back.
+// After a successful restore the held batches are rolled back.
 // Their rows in done, pending or unknown, and the restored job's own,
 // become compensated; their adopted rows, and done rows written before
 // the backup, leave the batch as they are. Rows of other batches are not
@@ -136,7 +136,7 @@ func TestRestoreDoneSettlesTheLedger(t *testing.T) {
 	kUnknown := row(t, r.db, "user", "k", "unknown", origin, dest, 4900)
 	jAdmin := row(t, r.db, "admin", "j", "done", origin, dest, 2900)
 	// A user an earlier failed run wrote before the backup, which k
-	// claimed (D4): the backup holds it, so it stays done and leaves k.
+	// claimed: the backup holds it, so it stays done and leaves k.
 	job(t, r.db, "f", "failed", origin, "alice", 1500)
 	kClaimed := row(t, r.db, "user", "f", "done", origin, dest, 1400)
 	exec(t, r.db, "UPDATE ledger SET batch_id = ? WHERE id = ?", r.j, jAdopted)
@@ -172,7 +172,7 @@ func TestRestoreDoneSettlesTheLedger(t *testing.T) {
 	}
 }
 
-// D19: at start, a batch still restoring has no restore running (Karvan
+// At start, a batch still restoring has no restore running (Karvan
 // stopped during it), so it becomes restore_failed.
 func TestFailRestoring(t *testing.T) {
 	r := newRestoreSet(t)

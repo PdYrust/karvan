@@ -14,7 +14,7 @@ import (
 	"github.com/PdYrust/karvan/internal/bridge"
 )
 
-// Order error codes (D71). Each has words in the web panel (D58).
+// Order error codes. Each has words in the web panel.
 const (
 	CodeRateLimited     = "acme_rate_limited"
 	CodeChallengeFailed = "acme_challenge_failed"
@@ -29,14 +29,14 @@ const (
 	CodePortTLS         = "acme_port_tls"
 )
 
-// maxDetail is the most of the CA's detail that is kept (D71).
+// maxDetail is the most of the CA's detail that is kept.
 const maxDetail = 300
 
 // errExpired means the CA expired the order or authorization, or no
 // longer knows it.
 var errExpired = errors.New("the order expired")
 
-// problemCodes maps the CA's problem types to codes (D71).
+// problemCodes maps the CA's problem types to codes.
 var problemCodes = map[string]string{
 	"rateLimited":             CodeRateLimited,
 	"unauthorized":            CodeChallengeFailed,

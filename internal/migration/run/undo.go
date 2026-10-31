@@ -13,8 +13,8 @@ import (
 	"github.com/PdYrust/karvan/internal/safemode"
 )
 
-// rollBack takes a failed job back the way the Safe Mode setting says
-// (owner, 2026-10-16): undo the job's own rows (D35, D36), or put the
+// rollBack takes a failed job back the way the Safe Mode setting says:
+// undo the job's own rows, or put the
 // whole backup back. A backup that cannot be put back falls back to the
 // undo, so the job's rows still go.
 func (s *Service) rollBack(ctx context.Context, j *Job, p *prepared, rep *Report) {
@@ -33,7 +33,7 @@ func (s *Service) rollBack(ctx context.Context, j *Job, p *prepared, rep *Report
 
 // undo removes exactly this job's rows, newest chunk first, each chunk in
 // its own short transaction, and checks nothing of the job is left. Users
-// a later batch holds stay (D14): they are listed as left with
+// a later batch holds stay: they are listed as left with
 // LeftInBatch and do not make the undo incomplete. If the undo failed or
 // something else is left, it puts the backup back when orRestore is set.
 func (s *Service) undo(ctx context.Context, j *Job, p *prepared, rep *Report, orRestore bool) {
@@ -93,7 +93,7 @@ func (s *Service) compensate(ctx context.Context, j *Job, p *prepared, rep *Repo
 		handled += len(chunks[n])
 		s.emit(j, StageUndo, EventProgress, map[string]any{"done": handled, "total": total})
 	}
-	// Each created admin goes once it owns nothing else (D34).
+	// Each created admin goes once it owns nothing else.
 	for _, a := range admins {
 		if err := s.removeAdmin(ctx, p, a); err != nil {
 			return err
@@ -140,7 +140,7 @@ func (s *Service) removeAdmin(ctx context.Context, p *prepared, e ledger.Entry) 
 }
 
 // leftovers lists destination ids the job wrote that are still done:
-// left, and held, the ones a later batch holds (D14).
+// left, and held, the ones a later batch holds.
 func (s *Service) leftovers(ctx context.Context, j *Job) (left, held []int64, err error) {
 	rows, err := s.ledger.Job(ctx, j.ID, ledger.Done, ledger.Pending)
 	if err != nil {
@@ -163,8 +163,8 @@ func (s *Service) leftovers(ctx context.Context, j *Job) (left, held []int64, er
 }
 
 // restore puts the Safe Mode backup back with the panel stopped, then
-// starts the panel again (D36). The batches made after the backup are
-// held before the panel stops (D17). It reports whether the backup is
+// starts the panel again. The batches made after the backup are
+// held before the panel stops. It reports whether the backup is
 // back.
 func (s *Service) restore(ctx context.Context, j *Job, p *prepared, rep *Report) bool {
 	if j.backupID == "" {
@@ -202,7 +202,7 @@ func (s *Service) restore(ctx context.Context, j *Job, p *prepared, rep *Report)
 	return true
 }
 
-// Log codes of a restore's steps (B12), so the live view can show the
+// Log codes of a restore's steps, so the live view can show the
 // panel going offline and coming back.
 const (
 	codePanelStopped = "panel_stopped"

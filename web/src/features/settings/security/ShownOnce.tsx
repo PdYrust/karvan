@@ -6,7 +6,7 @@ import { CopyValue } from './CopyValue';
 import { securityMessages } from './messages';
 
 /**
- * Values Karvan shows once (D10): each with Copy, a warning, and "I saved
+ * Values Karvan shows once: each with Copy, a warning, and "I saved
  * them" as the only way to close the card. They live in the caller's state.
  */
 export function ShownOnce({

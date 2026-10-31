@@ -34,7 +34,7 @@ type UserRow struct {
 	User    panel.User
 	AdminID int64
 	Targets []string // "<protocol>/<tag>"
-	// UsageLog, when set, is the one user_usage_logs row (D19).
+	// UsageLog, when set, is the one user_usage_logs row.
 	UsageLog *UsageLog
 }
 

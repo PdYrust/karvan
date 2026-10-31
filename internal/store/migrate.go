@@ -89,7 +89,7 @@ func migrateFrom(ctx context.Context, db *sql.DB, fsys fs.FS) error {
 
 // copyBefore writes <db>.before-<v>, a copy of the database as it is
 // before migration v, and deletes the copies taken before older
-// migrations (phase 4.1 D43). It is the way back for a migration that
+// migrations. It is the way back for a migration that
 // changes existing data. VACUUM INTO refuses an existing file and creates
 // it with the umask, hence the tmp name and the chmod; the data folder is
 // 0700, so no other user can open the file before the chmod.

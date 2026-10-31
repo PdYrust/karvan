@@ -1,6 +1,5 @@
 // Package netports reads the TCP ports this host listens on from
-// /proc/net/tcp and /proc/net/tcp6 (D13), and proposes a bridge port
-// (D14).
+// /proc/net/tcp and /proc/net/tcp6, and proposes a bridge port.
 package netports
 
 import (
@@ -84,7 +83,7 @@ func Parse(r io.Reader) ([]int, error) {
 // order they are proposed after 443.
 var fallbacks = []int{8443, 2053, 2083, 2087, 2096}
 
-// Propose is the bridge port for a new rule (D14): 443 when usable, else
+// Propose is the bridge port for a new rule: 443 when usable, else
 // prefer (the old domain's own port) when set and usable, else the first
 // usable fallback; 0 when none is.
 func Propose(usable func(port int) bool, prefer int) int {
@@ -102,7 +101,7 @@ func Propose(usable func(port int) bool, prefer int) int {
 	return 0
 }
 
-// The range "karvan ports --free" picks the panel's port from (D20), clear
+// The range "karvan ports --free" picks the panel's port from, clear
 // of the usual panel and VPN ports.
 const (
 	FreeLow  = 20000

@@ -11,7 +11,7 @@ func folder(dir, identity string) Panel {
 	return Panel{Dir: dir, EnvPath: dir + "/.env", Kind: panel.PasarGuard, Identity: identity}
 }
 
-// The owner's server: the update script's backups and the real folder on
+// A real server layout: the update script's backups and the real folder on
 // one MySQL database.
 func TestCopies(t *testing.T) {
 	db := "mysql:127.0.0.1:3306/pasarguard"

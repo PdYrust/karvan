@@ -1,4 +1,4 @@
--- Legacy subscription sites: old links answered for moved users (D55-D64).
+-- Legacy subscription sites: old links answered for moved users.
 -- Times are unix seconds.
 CREATE TABLE legacy_sites (
     id            INTEGER PRIMARY KEY,
@@ -22,7 +22,7 @@ CREATE TABLE legacy_sites (
 ) STRICT;
 
 -- Old tokens proven to belong to a moved user. Only an HMAC of the token
--- is kept, so this table alone cannot rebuild a working link (D57).
+-- is kept, so this table alone cannot rebuild a working link.
 CREATE TABLE legacy_tokens (
     mac         BLOB    PRIMARY KEY,
     site_id     INTEGER NOT NULL REFERENCES legacy_sites (id) ON DELETE CASCADE,
@@ -34,7 +34,7 @@ CREATE TABLE legacy_tokens (
 CREATE INDEX legacy_tokens_ledger ON legacy_tokens (ledger_id);
 
 -- Users whose old links stay closed for good: revoked or deleted on the
--- new panel (owner rule, D58).
+-- new panel.
 CREATE TABLE legacy_closed (
     ledger_id INTEGER PRIMARY KEY REFERENCES ledger (id),
     reason    TEXT    NOT NULL,

@@ -27,7 +27,7 @@ type ExistingUser struct {
 }
 
 // Row names one written row by what cannot change behind Karvan's back:
-// its id, username and created_at (D33). A row only counts as Karvan's if
+// its id, username and created_at. A row only counts as Karvan's if
 // all three still match.
 type Row struct {
 	ID        int64

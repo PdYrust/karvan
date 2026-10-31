@@ -14,8 +14,8 @@ import (
 // defaults do: uuid4 ids, secrets.token_urlsafe(24) passwords (32
 // characters, long enough for PasarGuard's shadowsocks rule) and X25519
 // WireGuard keys in standard base64 (generate_wireguard_keypair). Used for
-// protocols a user lacks (D20, D67) and for fixes the operator chose (D25).
-// PasarGuard gives a new WireGuard key its peer IP itself (D21).
+// protocols a user lacks and for fixes the operator chose.
+// PasarGuard gives a new WireGuard key its peer IP itself.
 func generate(protocol string) panel.Credentials {
 	switch protocol {
 	case "vmess":

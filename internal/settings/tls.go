@@ -16,7 +16,7 @@ const (
 	keySelfKey   = "http.tls_self_key"
 )
 
-// How the web panel is served (D4).
+// How the web panel is served.
 const (
 	TLSOff    = "off"    // plain HTTP
 	TLSSelf   = "self"   // HTTPS with Karvan's own self-signed certificate
@@ -28,7 +28,7 @@ const (
 type TLS struct {
 	Mode     string // TLSOff, TLSSelf or TLSDomain; "" means off
 	DomainID int64  // the domain whose certificate is served, in domain mode
-	Shared   bool   // served on a bridge HTTPS port of that domain (D12)
+	Shared   bool   // served on a bridge HTTPS port of that domain
 }
 
 // On reports whether the panel is served over HTTPS.

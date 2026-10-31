@@ -51,7 +51,7 @@ const pages = new Map();
 for (const key of new Set(lazyKeys)) {
   if (manifest['login.html'].dynamicImports?.includes(key) || key === wizardFrame) continue;
   const step = key.match(/src\/features\/wizard\/([^/]+)\//)?.[1];
-  // Add domain and Change certificate are one lazy route that loads alone (owner, 2026-10-29).
+  // Add domain and Change certificate are one lazy route that loads alone.
   const domainForm = key === 'src/features/certificates/DomainFormPage.tsx';
   const page = step
     ? `wizard ${step}`

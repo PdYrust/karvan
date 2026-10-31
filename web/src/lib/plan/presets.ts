@@ -1,8 +1,8 @@
 import type { Condition } from './plan';
 
 /**
- * Ready-made categories: one click adds a category with these conditions
- * (api-migration.md 6.3). The key becomes the new category's id and names
+ * Ready-made categories: one click adds a category with these conditions.
+ * The key becomes the new category's id and names
  * its words in the page's messages.
  */
 export const presetKeys = [

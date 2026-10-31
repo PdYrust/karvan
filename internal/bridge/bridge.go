@@ -31,7 +31,7 @@ type Deps struct {
 	// may take them.
 	PanelPorts func() []int
 	// ChallengePort is where Let's Encrypt asks for HTTP-01 tokens
-	// (acmeHttpPort, D67); 0 means 80.
+	// (acmeHttpPort); 0 means 80.
 	ChallengePort int
 }
 
@@ -40,7 +40,7 @@ type Deps struct {
 const destTTL = 10 * time.Minute
 
 // recheckAfter is how old a token's last check against the old panel may
-// get before the next request checks it again (D60).
+// get before the next request checks it again.
 const recheckAfter = 24 * time.Hour
 
 // Bridge answers old links for every site.
@@ -56,17 +56,17 @@ type Bridge struct {
 	reloadMu sync.Mutex
 	mu       sync.Mutex
 	sites    []Site
-	routes   table              // built from sites and the redirect rules (D52)
-	shakes   map[int]portShake  // the certificate pick of each TLS port (D62), by port
+	routes   table              // built from sites and the redirect rules
+	shakes   map[int]portShake  // the certificate pick of each TLS port, by port
 	certRows map[int64]certSnap // the certificates rows the picks read, by id
 	// panelCerts holds the web panel's certificate in domain mode.
 	panelCerts certCache
-	panel      atomic.Pointer[[]sharedPanel] // the panel on shared ports (D12)
+	panel      atomic.Pointer[[]sharedPanel] // the panel on shared ports
 	dests      map[int64]*openDest           // by panel id
 	olds       map[int64]OldPanel            // by site id
 	servers    map[int]*listener             // by port
 	errs       map[int]error                 // ports that could not listen
-	chal       challenges                    // the challenge port's holders and live tokens (D67)
+	chal       challenges                    // the challenge port's holders and live tokens
 	wg         sync.WaitGroup
 	// bg is cancelled when Run ends, which stops token lists in the background.
 	bg     context.Context

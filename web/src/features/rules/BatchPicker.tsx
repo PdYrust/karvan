@@ -11,7 +11,7 @@ import { batchGroups, canPickBatch } from './rule-form';
 
 /**
  * The active batches in groups of one old panel and destination. Picking one
- * leaves only the batches one rule can serve with it (D25).
+ * leaves only the batches one rule can serve with it.
  */
 export function BatchPicker({
   batches,

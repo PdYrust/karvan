@@ -15,7 +15,7 @@ import (
 	"github.com/PdYrust/karvan/internal/safemode"
 )
 
-// Summary is step 1 of the owner's flow and the counts of step 2.
+// Summary is step 1 of the wizard and the counts of step 2.
 type Summary struct {
 	State       string         `json:"state"`
 	PlanVersion int            `json:"planVersion"`
@@ -47,20 +47,19 @@ type Summary struct {
 	// CanKeepPassword is true when a run without a typed password keeps
 	// the reseller's own one; otherwise Karvan generates one.
 	CanKeepPassword bool `json:"canKeepPassword"`
-	// Admins has one entry per source admin, the login's first (D34);
+	// Admins has one entry per source admin, the login's first;
 	// RoleID, UserTargets and NewAdmin above are the login's.
 	Admins []AdminInfo `json:"admins"`
 }
 
-// AdminInfo is one source admin as the summary and the roles show it
-// (D34).
+// AdminInfo is one source admin as the summary and the roles show it.
 type AdminInfo struct {
 	Username    string              `json:"username"` // its name on the old panel
 	IsLogin     bool                `json:"isLogin"`
 	Users       int                 `json:"users"` // its users the run moves
 	Moves       bool                `json:"moves"` // false: no user of its moves, so it is not written
 	RoleID      int64               `json:"roleId"`
-	RoleFixed   bool                `json:"roleFixed"` // a merge keeps the existing admin's role (D33)
+	RoleFixed   bool                `json:"roleFixed"` // a merge keeps the existing admin's role
 	NewAdmin    engine.AdminSummary `json:"newAdmin"`
 	UserTargets []string            `json:"userTargets"`
 }
@@ -139,9 +138,9 @@ type RoleInfo struct {
 }
 
 // RolesView is the destination's admin roles and the one each moved
-// admin gets now (D65, D34); RoleID and RoleFixed are the login's admin.
+// admin gets now; RoleID and RoleFixed are the login's admin.
 // RoleFixed is true on a merge: the role is the existing admin's own and
-// cannot change (D33). A Marzban destination has none.
+// cannot change. A Marzban destination has none.
 type RolesView struct {
 	RoleID    int64       `json:"roleId"`
 	RoleFixed bool        `json:"roleFixed"`
@@ -224,7 +223,7 @@ func (s *Service) Summary(jobID string) (Summary, error) {
 }
 
 // TakePasswords returns the generated admin passwords once, then forgets
-// them (D22).
+// them.
 func (s *Service) TakePasswords(jobID string) (map[string]string, error) {
 	j, err := s.job(jobID)
 	if err != nil {

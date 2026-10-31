@@ -1,4 +1,4 @@
-# The full gate on every push to main and every pull request (D30). The
+# The full gate on every push to main and every pull request. The
 # jobs run in parallel and together run every target of make check-full;
 # the last job, check-full, is the required check and passes only when all
 # of them passed.

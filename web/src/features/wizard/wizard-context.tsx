@@ -14,7 +14,7 @@ export interface AdminPassword {
 interface Wizard {
   jobId: string;
   plan: PlanApi;
-  /** Lives in this state only, until the wizard closes (D10). */
+  /** Lives in this state only, until the wizard closes. */
   password: AdminPassword;
   setPassword: (p: AdminPassword) => void;
 }
@@ -28,7 +28,7 @@ export function useWizard(): Wizard {
   return w;
 }
 
-/** Asks what to do with an edit that met a second conflict (D7). */
+/** Asks what to do with an edit that met a second conflict. */
 function ConflictDialog({ plan }: { plan: PlanApi }) {
   const t = useT(wizardMessages);
   return (

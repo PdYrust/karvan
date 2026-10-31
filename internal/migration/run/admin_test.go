@@ -52,7 +52,7 @@ func TestAPlanEditLooksUpANewAdminName(t *testing.T) {
 	if err != nil || res.Login().Merge == nil || slices.ContainsFunc(res.Conflicts, func(c engine.Conflict) bool { return c.Type == engine.AdminTaken }) {
 		t.Fatalf("a merge into root: %+v %v", res.Conflicts, err)
 	}
-	// D35: the old admin field is stored as the login's entry in admins.
+	// The old admin field is stored as the login's entry in admins.
 	if _, p, _, _ = h.svc.View(j.ID); p.Admin != (plan.AdminPlan{}) || p.Admins[j.snapshot.Admin.Username].Username != "root" {
 		t.Fatalf("stored plan %+v", p)
 	}

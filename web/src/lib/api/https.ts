@@ -2,13 +2,13 @@ import type { Reauth } from './account';
 import { api } from './client';
 import { list } from './lists';
 
-/** How the panel is served (D4): plain HTTP, a self-signed certificate, or a domain's certificate. */
+/** How the panel is served: plain HTTP, a self-signed certificate, or a domain's certificate. */
 export type TlsMode = 'off' | 'self' | 'domain';
 
 export interface HttpsSite {
   tls: TlsMode;
   domainId: number;
-  /** On a bridge HTTPS port, under the hidden path (D12). */
+  /** On a bridge HTTPS port, under the hidden path. */
   shared: boolean;
   port: number;
 }
@@ -44,7 +44,7 @@ export interface HttpsStart {
   shared: boolean;
 }
 
-/** Serves the new mode next to the current address until it is confirmed from there (D7, D10). */
+/** Serves the new mode next to the current address until it is confirmed from there. */
 export function startHttps(
   change: HttpsStart,
   r: Reauth,

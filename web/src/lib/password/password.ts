@@ -1,6 +1,6 @@
 import type { PanelKind } from '../api/panels';
 
-/** The rules an admin password can break, named as the API names them (B10). */
+/** The rules an admin password can break, named as the API names them. */
 export type PasswordRule =
   'password_short' | 'password_long' | 'password_weak' | 'password_has_name' | 'password_has_quote';
 
@@ -13,7 +13,7 @@ const byteLength = (s: string) => new TextEncoder().encode(s).length;
  * The first rule a password breaks for the admin named username, or null.
  * It mirrors the policy Karvan checks before a run (PasarGuard's own,
  * panel/pasarguard/password.go); on Marzban only the length counts. The
- * server still judges the password when the run starts (D11).
+ * server still judges the password when the run starts.
  */
 export function passwordRule(
   password: string,
@@ -68,7 +68,7 @@ function below(n: number, fill: RandomFill): number {
 
 /**
  * A 20 character password that meets the policy for the admin named
- * username, made in the browser (D11). It never starts with a character a
+ * username, made in the browser. It never starts with a character a
  * spreadsheet reads as a formula, as Karvan's own generator does.
  */
 export function generatePassword(username: string, fill: RandomFill = cryptoFill): string {

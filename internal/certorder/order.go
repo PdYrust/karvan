@@ -42,7 +42,7 @@ func (s *Service) load(ctx context.Context, id int64) (orderRow, error) {
 	return o, err
 }
 
-// checkMethod checks a method for the domain name (D66).
+// checkMethod checks a method for the domain name.
 func checkMethod(name, method string) error {
 	switch {
 	case method != HTTP01 && method != DNS01:
@@ -122,7 +122,7 @@ func (s *Service) start(ctx context.Context, domainID int64, name, method string
 
 // orderAccount is the account a new order uses: a renewal keeps the
 // account, and so the directory, of the domain's last certificate, since
-// the staging switch changes new orders only (D73); a new order uses the
+// the staging switch changes new orders only; a new order uses the
 // directory in use now.
 func (s *Service) orderAccount(ctx context.Context, domainID int64, agree, renewal bool) (int64, error) {
 	if renewal {
@@ -141,7 +141,7 @@ func (s *Service) orderAccount(ctx context.Context, domainID int64, agree, renew
 }
 
 // AddDomain adds a domain whose certificate comes from Let's Encrypt
-// (CertChoice acme, D61): plain until the order stores it.
+// (CertChoice acme): plain until the order stores it.
 func (s *Service) AddDomain(ctx context.Context, name, method string, agree bool) (bridge.Domain, error) {
 	n := bridge.NormalDomain(name)
 	if n == "" {
@@ -223,8 +223,8 @@ func (s *Service) advance(ctx context.Context, id int64, from, q string, args ..
 	return nil
 }
 
-// fail stores err on order o in words (D71). A failed renewal also counts
-// on the domain and retries with the backoff (D70).
+// fail stores err on order o in words. A failed renewal also counts
+// on the domain and retries with the backoff.
 func (s *Service) fail(ctx context.Context, o orderRow, err error) {
 	e, problem := classify(err, s.Now())
 	e.Detail = s.redact(ctx, o, e.Detail)
@@ -250,7 +250,7 @@ func (s *Service) fail(ctx context.Context, o orderRow, err error) {
 }
 
 // redact leaves the order's account URL and key authorization, which a
-// CA may quote, out of its detail (D71).
+// CA may quote, out of its detail.
 func (s *Service) redact(ctx context.Context, o orderRow, detail string) string {
 	a, err := s.loadAccount(ctx, o.accountID)
 	if err != nil || detail == "" {
@@ -265,7 +265,7 @@ func (s *Service) redact(ctx context.Context, o orderRow, detail string) string 
 	return detail
 }
 
-// renewFailed counts a failed renewal of the domain (D70).
+// renewFailed counts a failed renewal of the domain.
 func (s *Service) renewFailed(ctx context.Context, id int64, name string, e bridge.ACMEError) {
 	if err := s.Bridge.RenewFailed(ctx, id, e, backoff); err != nil {
 		s.Log.Error("certorder: store renewal failure", "domain", name, "err", err)

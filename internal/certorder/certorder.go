@@ -1,5 +1,5 @@
-// Package certorder gets certificates for domains from Let's Encrypt
-// (phase-4.1 D66 to D73): one ACME account per directory, orders by
+// Package certorder gets certificates for domains from Let's Encrypt:
+// one ACME account per directory, orders by
 // HTTP-01 through the bridge's challenge port or by DNS-01 with a Check,
 // resume at start, and renewal before expiry. The certificates are stored
 // through the bridge, which serves them.
@@ -22,19 +22,19 @@ import (
 	"github.com/PdYrust/karvan/internal/settings"
 )
 
-// Let's Encrypt directories (D66).
+// Let's Encrypt directories.
 const (
 	Production = "https://acme-v02.api.letsencrypt.org/directory"
 	Staging    = "https://acme-staging-v02.api.letsencrypt.org/directory"
 )
 
-// Methods (D66).
+// Methods.
 const (
 	HTTP01 = "http-01"
 	DNS01  = "dns-01"
 )
 
-// Order states (D69).
+// Order states.
 const (
 	stateStarting   = "starting"
 	stateWaitingDNS = "waiting_dns"
@@ -48,7 +48,7 @@ const (
 // runningStates is the SQL list of the states the running index covers.
 const runningStates = "('starting', 'waiting_dns', 'validating', 'issuing')"
 
-// talking is how many orders may talk to the CA at once (D69).
+// talking is how many orders may talk to the CA at once.
 const talking = 3
 
 var (
@@ -75,7 +75,7 @@ type Deps struct {
 	Log      *slog.Logger
 	Now      func() time.Time
 	// TestDirectory replaces both Let's Encrypt directories
-	// (acmeTestDirectory, D74).
+	// (acmeTestDirectory).
 	TestDirectory string
 	// HTTPClient talks to the CA; nil: http.DefaultClient.
 	HTTPClient *http.Client
@@ -126,7 +126,7 @@ func New(d Deps) *Service {
 }
 
 // directory is where new orders go: the test CA from the config, else
-// staging or production as the setting says (D66, D74).
+// staging or production as the setting says.
 func (s *Service) directory(ctx context.Context) (string, error) {
 	if s.TestDirectory != "" {
 		return s.TestDirectory, nil
@@ -206,7 +206,7 @@ func (s *Service) Forget(domainID int64) {
 
 // Run resumes the running orders, opens the challenge port when
 // acme.keepPort80 is on, and renews due certificates at start and
-// hourly until ctx ends (D69, D70).
+// hourly until ctx ends.
 func (s *Service) Run(ctx context.Context) {
 	if a, err := s.Settings.ACME(ctx); err != nil {
 		s.Log.Warn("certorder: read settings", "err", err)

@@ -12,7 +12,7 @@ import (
 	"github.com/PdYrust/karvan/internal/safemode"
 )
 
-// Restoring is what a backup restore on request answers (B12): the job
+// Restoring is what a backup restore on request answers: the job
 // whose stream follows the restore, and its last event before it.
 type Restoring struct {
 	JobID string `json:"jobId"`
@@ -29,7 +29,7 @@ type restoreTask struct {
 	target paneldb.Target
 	unlock func()
 	rep    *Report
-	hold   *batch.Restore // the batches the backup takes back (D17)
+	hold   *batch.Restore // the batches the backup takes back
 }
 
 func (t *restoreTask) release() {
@@ -37,7 +37,7 @@ func (t *restoreTask) release() {
 	_ = t.w.Close()
 }
 
-// StartRestore puts a Safe Mode backup back in the background (B12):
+// StartRestore puts a Safe Mode backup back in the background:
 // Karvan stops the panel, restores and starts it again. It returns once
 // the destination is locked; the restore stage, its steps (panel_stopped,
 // backup_put_back, panel_started) and done follow on the job's stream, and
@@ -101,7 +101,7 @@ func (s *Service) prepareRestore(ctx context.Context, id string, stopped bool) (
 		return nil, err
 	}
 	// Before anything is put back, so the bridge stops serving the users
-	// the backup takes away (D17).
+	// the backup takes away.
 	if t.hold, err = s.batches.Restoring(ctx, d.Target.String(), jobID, b.CreatedAt); err != nil {
 		t.release()
 		return nil, err

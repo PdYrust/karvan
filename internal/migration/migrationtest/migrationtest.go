@@ -16,7 +16,7 @@ import (
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 )
 
-// XrayInbounds are the Marzban test inbounds. Users get all of them (D32).
+// XrayInbounds are the Marzban test inbounds. Users get all of them.
 const XrayInbounds = `{"inbounds": [{"tag": "VLESS TCP", "protocol": "vless"}, {"tag": "VMess WS", "protocol": "vmess"},
  {"tag": "Trojan WS", "protocol": "trojan"}, {"tag": "Shadowsocks TCP", "protocol": "shadowsocks"}]}`
 

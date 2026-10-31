@@ -88,7 +88,7 @@ const countOf: Record<PreviewFilter, keyof Impact> = {
   configChanged: 'configChanged',
   skipped: 'skipped',
 };
-/** Every user as the run will write them: filters, a search on the server, 50 a page (D5). */
+/** Every user as the run will write them: filters, a search on the server, 50 a page. */
 export function PreviewList({ jobId, impact }: { jobId: string; impact: Impact | undefined }) {
   const t = useT(previewMessages);
   const tw = useT(wizardMessages);

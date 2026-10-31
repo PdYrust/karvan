@@ -2,7 +2,7 @@ import type { JobStream, StageInfo } from '../../lib/api/events';
 import type { Counts, JobRow, JobState } from '../../lib/api/migrations';
 import type { Report, StageTime } from '../../lib/api/report';
 
-/** The stages every run shows, in order (4.6); Undo and Restore join only when they run. */
+/** The stages every run shows, in order; Undo and Restore join only when they run. */
 export const runStages = ['check', 'backup', 'execute', 'verify', 'reload'] as const;
 export const extraStages = ['undo', 'restore'] as const;
 export type RunStage = (typeof runStages)[number] | (typeof extraStages)[number];
@@ -111,7 +111,7 @@ export function counterOf(stream: JobStream, phase: Phase): Counter | null {
 
 /** The restore running now, or the last one: its stage on the stream. */
 const lastRestore = (stream: JobStream) => stream.stages.findLast((s) => s.stage === 'restore');
-/** Whether the panel came online again during the restore that runs now (B12). */
+/** Whether the panel came online again during the restore that runs now. */
 export function panelBack(stream: JobStream): boolean {
   const r = lastRestore(stream);
   if (!r) return false;

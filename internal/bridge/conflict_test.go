@@ -27,7 +27,7 @@ func (e *env) saveAs(name string, edit func(s *Site)) (Site, error) {
 	return e.b.st.Save(context.Background(), s)
 }
 
-// Only an identical host key and path key is an overlap (D52), checked
+// Only an identical host key and path key is an overlap, checked
 // against panel and redirect rules alike.
 func TestSaveRefusesASecondRuleForTheSameRequests(t *testing.T) {
 	e := newEnv(t)
@@ -60,7 +60,7 @@ func TestSaveRefusesASecondRuleForTheSameRequests(t *testing.T) {
 }
 
 // Rules on one port that one name can reach may take other certificates
-// now: each domain has its own, and an exact name beats a wildcard (D53).
+// now: each domain has its own, and an exact name beats a wildcard.
 func TestSaveTakesOtherCertificatesForOneName(t *testing.T) {
 	e := newCertEnv(t)
 	t.Cleanup(e.b.stopAll)
@@ -127,7 +127,7 @@ func TestSaveRefusesKarvansPanelPort(t *testing.T) {
 
 // Rows stored before the move whose rules on one port use other
 // certificates keep today's handshake pick, and their cards no longer
-// carry cert_conflict: only a pin does (D50).
+// carry cert_conflict: only a pin does.
 func TestStoredRulesWithOtherCertificatesServeAsBefore(t *testing.T) {
 	e := newCertEnv(t)
 	port := freePort(t)

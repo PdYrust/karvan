@@ -10,19 +10,19 @@ import (
 	"unicode/utf8"
 )
 
-// Ways a domain gets its certificate (D61).
+// Ways a domain gets its certificate.
 const (
 	ChoiceStored = "stored" // a certificates row that covers the name
 	ChoiceFile   = "file"   // a file pair on this server
 	ChoicePasted = "pasted" // a pasted certificate with its key
 	ChoiceNone   = "none"   // plain HTTP, confirmed with plainOk
-	ChoiceACME   = "acme"   // Let's Encrypt (D66)
+	ChoiceACME   = "acme"   // Let's Encrypt
 )
 
 // ReasonNotCovered means a domain's certificate does not cover its name.
 const ReasonNotCovered = "not_covered"
 
-// CertChoice is how a domain gets its certificate (D61). Only the fields
+// CertChoice is how a domain gets its certificate. Only the fields
 // of its kind are read; a key goes in and never out.
 type CertChoice struct {
 	Kind          string `json:"kind"`
@@ -71,15 +71,14 @@ type DomainCert struct {
 }
 
 // DomainPin is a port that keeps serving another certificate for the
-// domain (D62).
+// domain.
 type DomainPin struct {
 	Port        int `json:"port"`
 	Certificate Ref `json:"certificate"`
 }
 
 // Domain is a domains row: its certificate, the stored certificates that
-// cover it, its pins, the rules that hold it and its warnings (D48, D50,
-// D61).
+// cover it, its pins, the rules that hold it and its warnings.
 type Domain struct {
 	ID           int64       `json:"id"`
 	Name         string      `json:"name"`
@@ -162,7 +161,7 @@ func (st *store) pins(ctx context.Context) (map[int64][]DomainPin, error) {
 }
 
 // fillDomain adds a domain's certificate, the certificates that cover it,
-// its rules and its warnings (D50): its certificate's warnings and
+// its rules and its warnings: its certificate's warnings and
 // domain_mismatch, no_certificate without one (certificate_not_adopted
 // while a rule served from its own certificate keeps it unfilled), and
 // cert_conflict with pins.
@@ -210,8 +209,8 @@ func (b *Bridge) domain(ctx context.Context, id int64) (Domain, error) {
 	return list[0], nil
 }
 
-// AddDomain stores a domain name in its normal form with its certificate
-// (D61), in one transaction.
+// AddDomain stores a domain name in its normal form with its certificate,
+// in one transaction.
 func (b *Bridge) AddDomain(ctx context.Context, name string, ch CertChoice) (Domain, error) {
 	if name = normalDomain(name); name == "" {
 		return Domain{}, &DomainInvalidError{Field: "name"}
@@ -339,7 +338,7 @@ func (st *store) insertChosen(ctx context.Context, tx *sql.Tx, domain, name stri
 }
 
 // insertCert writes a new certificates row; a pasted key is sealed under
-// the new id in the same transaction (D49).
+// the new id in the same transaction.
 func (st *store) insertCert(ctx context.Context, tx *sql.Tx, name string, p certParts) (int64, error) {
 	id, err := writeCertificate(ctx, tx, 0, name, p, st.now().Unix())
 	if err != nil {
@@ -348,7 +347,7 @@ func (st *store) insertCert(ctx context.Context, tx *sql.Tx, name string, p cert
 	return id, st.sealCertKey(ctx, tx, id, p.key)
 }
 
-// SetDomainCertificate changes a domain's certificate (D65): its pins go,
+// SetDomainCertificate changes a domain's certificate: its pins go,
 // every HTTPS rule that holds it takes it again, and the bridge reloads.
 // None is refused while an HTTPS rule holds the domain.
 func (b *Bridge) SetDomainCertificate(ctx context.Context, id int64, ch CertChoice) (Domain, error) {
@@ -411,9 +410,9 @@ func (st *store) setDomainCert(ctx context.Context, id int64, ch CertChoice) err
 	return tx.Commit()
 }
 
-// rederive sets the certificate_id of HTTPS rule r again from its domains
-// (D63, D65). A rule served from its own certificate keeps it until its
-// own save (D54).
+// rederive sets the certificate_id of HTTPS rule r again from its domains.
+// A rule served from its own certificate keeps it until its
+// own save.
 func rederive(ctx context.Context, tx *sql.Tx, r rule) error {
 	if r.site != nil {
 		return nil
@@ -438,7 +437,7 @@ type querier interface {
 }
 
 // domainsCert is the certificate a rule on port with domains (sorted)
-// takes (D63): for the first domain that has one, the port's pin of it,
+// takes: for the first domain that has one, the port's pin of it,
 // else its certificate; 0 when none has one.
 func domainsCert(ctx context.Context, q querier, port int, domains []string) (int64, error) {
 	for _, d := range domains {

@@ -7,7 +7,7 @@ import { eventSentence } from './log';
 import { liveMessages } from './messages';
 
 /**
- * The readable log (4.6): one plain sentence per stage, log line and end,
+ * The readable log: one plain sentence per stage, log line and end,
  * with its time to the second in the operator's zone, oldest first. New
  * lines are read out politely.
  */

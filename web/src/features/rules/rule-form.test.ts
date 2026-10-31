@@ -148,7 +148,7 @@ describe('a saved rule', () => {
       batches: [{ id: 7, name: 'b', state: 'active' }],
     });
     expect(v).toMatchObject({ kind: 'batches', batchIds: [7] });
-    // The batches gave the IP; sending it back would be refused (5.0a).
+    // The batches gave the IP; sending it back would be refused.
     expect(valuesOfSite({ ...site, mode: 'batches', sourceIp: '203.0.113.9' }).sourceIp).toBe('');
     expect(valuesOfSite({ ...site, sourceIp: '203.0.113.9' }).sourceIp).toBe('203.0.113.9');
   });

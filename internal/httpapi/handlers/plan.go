@@ -106,7 +106,7 @@ func impact(res *engine.Result) map[string]int {
 	return out
 }
 
-// addedProtocols lists the protocols a user gets that it lacked (D67).
+// addedProtocols lists the protocols a user gets that it lacked.
 func addedProtocols(it *engine.Item) []string {
 	var out []string
 	for _, a := range it.Applied {
@@ -117,7 +117,7 @@ func addedProtocols(it *engine.Item) []string {
 	return out
 }
 
-// ReloadOptions lists every reload method for the final step (Q5).
+// ReloadOptions lists every reload method for the final step.
 func (a *API) ReloadOptions(w http.ResponseWriter, r *http.Request) {
 	opts, err := a.Runs.ReloadOptions(r.Context(), r.PathValue("id"))
 	if err != nil {
@@ -173,7 +173,7 @@ func (a *API) CancelMigration(w http.ResponseWriter, r *http.Request) {
 	respond.NoContent(w)
 }
 
-// RollbackMigration starts undoing a failed or interrupted job (D39, B5);
+// RollbackMigration starts undoing a failed or interrupted job;
 // the outcome follows on the job's event stream.
 func (a *API) RollbackMigration(w http.ResponseWriter, r *http.Request) {
 	id := r.PathValue("id")
@@ -197,7 +197,7 @@ func (a *API) RollbackMigration(w http.ResponseWriter, r *http.Request) {
 
 // Roles lists the destination's admin roles for the final admin step:
 // each with its groups, host counts, limits and features, the role the
-// moved admin gets now (D65) and whether a merge fixes it (D33). Empty on
+// moved admin gets now and whether a merge fixes it. Empty on
 // a Marzban destination.
 func (a *API) Roles(w http.ResponseWriter, r *http.Request) {
 	roles, err := a.Runs.Roles(r.PathValue("id"))

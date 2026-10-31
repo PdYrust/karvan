@@ -21,7 +21,7 @@ import { certificatesMessages } from './messages';
 const states = ['all', 'active', 'plain', 'attention', 'broken'] as const;
 type StateFilter = (typeof states)[number];
 
-/** Every domain rules can answer, as a list like Migrations; problems open from each state (D50, D61). */
+/** Every domain rules can answer, as a list like Migrations; problems open from each state. */
 export function DomainsSection({
   domains,
   actions,

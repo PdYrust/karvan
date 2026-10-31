@@ -8,8 +8,7 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/run"
 )
 
-// The pre-flight report downloads as JSON and CSV before anything runs
-// (B7).
+// The pre-flight report downloads as JSON and CSV before anything runs.
 func TestCheckReportDownloads(t *testing.T) {
 	m := newMigrationEnv(t, 3)
 	id := m.create()

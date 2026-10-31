@@ -9,14 +9,14 @@ import (
 	"github.com/PdYrust/karvan/internal/panel"
 )
 
-// AdminOutcome is where one source admin lands (D34).
+// AdminOutcome is where one source admin lands.
 type AdminOutcome struct {
 	Source   panel.Admin          // as read; a user's owner the login cannot read is known by name only
 	IsLogin  bool                 // the admin whose login reads the old panel
 	Username string               // its name on the destination
 	Merge    *panel.ExistingAdmin // set when merging into an existing admin
 	RoleID   int64
-	Targets  []string // where its users go: its role's groups, or every inbound (D31, D32)
+	Targets  []string // where its users go: its role's groups, or every inbound
 	Users    int      // its users this build moves
 
 	// role is the PasarGuard role it gets, and limits that role's limits
@@ -48,7 +48,7 @@ func dropIdle(admins []AdminOutcome, cs []Conflict) []Conflict {
 // ownerOf is the source admin u belongs to: its owner, else the login's.
 func ownerOf(u panel.User, login string) string { return cmp.Or(u.OwnerUsername, login) }
 
-// sourceAdmins are the admins that move (D34): the login's first, then
+// sourceAdmins are the admins that move: the login's first, then
 // every other owner of a source user, by name. One read by the source
 // keeps its facts; another is known by its name only.
 func sourceAdmins(src Source) []panel.Admin {

@@ -127,7 +127,7 @@ function UsersTable({
   );
 }
 
-/** A batch's users: the server's search, 50 a page, and Show new link on each (D57). */
+/** A batch's users: the server's search, 50 a page, and Show new link on each. */
 export function BatchUserList({ batchId }: { batchId: number }) {
   const t = useT(batchesMessages);
   const titleId = useId();

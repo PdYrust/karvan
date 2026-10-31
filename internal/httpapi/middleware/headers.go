@@ -11,7 +11,7 @@ const ContentSecurityPolicy = "default-src 'none'; script-src 'self'; style-src 
 	"form-action 'self'; frame-ancestors 'none'"
 
 // SecurityHeaders sets the browser protections on every response it wraps.
-// HSTS is not one of them: the listener sends it in domain mode only (D8).
+// HSTS is not one of them: the listener sends it in domain mode only.
 // Referrer-Policy no-referrer matters most here: it keeps the hidden path
 // out of the Referer header of any link the operator follows.
 func SecurityHeaders(next http.Handler) http.Handler {

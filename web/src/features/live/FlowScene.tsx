@@ -160,7 +160,7 @@ export function ArcLayer({
 }
 
 /**
- * Move and undo (4.6): the two panels as tiles, a dashed arc between them
+ * Move and undo: the two panels as tiles, a dashed arc between them
  * in the page direction, dots in step with each chunk, and the skipped
  * users' sink. The drawing is decoration; every number is text.
  */

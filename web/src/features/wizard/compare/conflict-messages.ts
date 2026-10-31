@@ -1,8 +1,8 @@
 import type { Messages } from '../../../i18n/locale';
 
 /**
- * What each conflict means and what each fix does, in the operator's words
- * (api-migration.md section 4). Per-user types title a problem group; job
+ * What each conflict means and what each fix does, in the operator's words.
+ * Per-user types title a problem group; job
  * types are sentences next to the part of the plan they are about.
  * Protocol names are machine values in backticks (CodeText).
  */

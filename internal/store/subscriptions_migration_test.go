@@ -68,7 +68,7 @@ func TestSubscriptionsDomainRows(t *testing.T) {
 	}
 }
 
-// Certificates stay on the sites until the bridge adopts them (D54): SQL
+// Certificates stay on the sites until the bridge adopts them: SQL
 // cannot reach the sealing key, so 0010 adds no certificate row.
 func TestSubscriptionsLeaveCertificatesToTheBridge(t *testing.T) {
 	db := migrateSeededV9(t)
@@ -81,7 +81,7 @@ func TestSubscriptionsLeaveCertificatesToTheBridge(t *testing.T) {
 	}
 }
 
-// The new tables refuse what section 3 rules out.
+// The new tables refuse what the schema rules out.
 func TestSubscriptionsChecks(t *testing.T) {
 	db := migrateSeededV9(t)
 	for _, q := range []string{

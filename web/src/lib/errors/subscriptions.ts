@@ -4,7 +4,7 @@ import { errorOf, useErrorText } from './errors';
 
 /**
  * Sentences for the codes only the Rules and Domains and certificates
- * pages meet (D58). They load with those pages; errors.ts keeps the codes
+ * pages meet. They load with those pages; errors.ts keeps the codes
  * every page can meet, and acme.ts the Let's Encrypt ones.
  */
 const en = {
@@ -103,7 +103,7 @@ const fa: Messages<SubscriptionErrorKey>['fa'] = {
 
 export const subscriptionErrorMessages: Messages<SubscriptionErrorKey> = { en, fa };
 
-/** Why a rule's domains or HTTPS were refused, for panel and redirect rules alike (D48, D63). */
+/** Why a rule's domains or HTTPS were refused, for panel and redirect rules alike. */
 const domainReasons = {
   not_registered: 'site_invalid_not_registered',
   pending: 'site_invalid_pending',

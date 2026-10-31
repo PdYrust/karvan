@@ -8,11 +8,11 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/engine"
 )
 
-// CheckSchema names the pre-flight report format (B7).
+// CheckSchema names the pre-flight report format.
 const CheckSchema = "karvan.check/v1"
 
 // CheckReport is what a run of the current plan would do, for the
-// operator to read, print or keep before anything runs (B7). Like the run
+// operator to read, print or keep before anything runs. Like the run
 // report it holds no secret: no password, UUID or token.
 type CheckReport struct {
 	Schema      string    `json:"schema"`

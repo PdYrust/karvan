@@ -33,7 +33,7 @@ function useFailure() {
   return (lead: string, err: unknown) => `${lead} ${batchErrorText(tb, shared, err)}`;
 }
 
-/** Rename, delete and make active again: the header buttons and their dialogs (D8). */
+/** Rename, delete and make active again: the header buttons and their dialogs. */
 export function useBatchActions(batch: Batch) {
   const t = useT(batchesMessages);
   const td = useT(dialogMessages);

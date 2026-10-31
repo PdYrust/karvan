@@ -114,7 +114,7 @@ const servedBefore = `SELECT t.site_id || ':' || hex(t.mac) FROM legacy_tokens t
 	WHERE l.state IN ('done', 'adopted') AND NOT EXISTS (SELECT 1 FROM legacy_closed c WHERE c.ledger_id = l.id)
 	ORDER BY 1`
 
-// servedAfter adds the manual rule scope of D23: the row's batch is active
+// servedAfter adds the manual rule scope: the row's batch is active
 // or the row has none.
 const servedAfter = `SELECT t.site_id || ':' || hex(t.mac) FROM legacy_tokens t JOIN ledger l ON l.id = t.ledger_id
 	LEFT JOIN batches b ON b.id = l.batch_id

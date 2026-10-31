@@ -7,7 +7,7 @@ services:
     image: ghcr.io/pdyrust/karvan:0.5.0-beta
     restart: unless-stopped
     # The bridge opens rule ports while it runs, and panel databases often
-    # listen on 127.0.0.1 (D27).
+    # listen on 127.0.0.1.
     network_mode: host
     volumes:
       - /var/lib/karvan:/var/lib/karvan

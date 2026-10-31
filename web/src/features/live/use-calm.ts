@@ -25,8 +25,8 @@ function subscribe(onChange: () => void): () => void {
 export const calmNow = () => matchMedia(query).matches || connection()?.saveData === true;
 
 /**
- * True when the operator asked for less motion, or the browser saves data
- * (D13): the live view then shows a plain meter instead of moving dots.
+ * True when the operator asked for less motion, or the browser saves data:
+ * the live view then shows a plain meter instead of moving dots.
  */
 export function useCalm(): boolean {
   return useSyncExternalStore(subscribe, calmNow, () => true);

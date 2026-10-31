@@ -32,7 +32,7 @@ function ReloadLine({ report }: { report: Report }) {
 }
 
 /**
- * When a job ends (4.6): its state, what that means, the counts, the
+ * When a job ends: its state, what that means, the counts, the
  * reload, the files, and what to do next.
  */
 export function ResultCard({

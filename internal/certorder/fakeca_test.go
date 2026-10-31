@@ -37,7 +37,7 @@ type fakeOrder struct {
 	expires                   time.Time
 }
 
-// fakeCA is an ACME server on httptest (D72): directory, nonce, account,
+// fakeCA is an ACME server on httptest: directory, nonce, account,
 // order, authorization, challenge, finalize and certificate, with
 // problem answers. Validation is the test's validate function.
 type fakeCA struct {

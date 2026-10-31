@@ -2,7 +2,7 @@
 // operator's plan into the exact outcome per user: operations applied,
 // conflicts found and resolved, until nothing changes. It is pure: no I/O,
 // no clock, no randomness except through Inputs, so the same inputs always
-// give the same result (D23).
+// give the same result.
 package engine
 
 import (
@@ -19,12 +19,12 @@ type Source struct {
 	Origin string      // normalized panel address, the ledger's source panel
 	Admin  panel.Admin // the login's admin
 	// Admins are the other admins the login can read; a user's owner
-	// missing here moves by its name only (D34).
+	// missing here moves by its name only.
 	Admins []panel.Admin
 	Users  []panel.User
 	Skew   time.Duration // the panel's clock minus ours
 	// Groups are an old PasarGuard panel's groups; GroupsRead is false
-	// when the login could not read them (D38).
+	// when the login could not read them.
 	Groups     []panel.SourceGroup
 	GroupsRead bool
 }
@@ -84,7 +84,7 @@ type Inputs struct {
 // Item is one user on its way through the build.
 type Item struct {
 	Key     string     // source identity: PasarGuard id or Marzban username
-	Admin   string     // the source admin it belongs to (D34)
+	Admin   string     // the source admin it belongs to
 	Source  panel.User // as read; never changed
 	User    panel.User // the working copy that will be written
 	Include bool
@@ -102,7 +102,7 @@ type Item struct {
 	steady []string // protocols whose credentials Diff compares; nil for all
 }
 
-// KeyOf is the source identity of u for a source kind (D31).
+// KeyOf is the source identity of u for a source kind.
 func KeyOf(k panel.Kind, u panel.User) string {
 	if k == panel.PasarGuard {
 		return strconv.FormatInt(u.SourceID, 10)
@@ -154,7 +154,7 @@ func compareKeys(a, b string) int {
 func (it *Item) note(s string) { it.Applied = append(it.Applied, s) }
 
 // AlreadyMoved reports whether an earlier migration moved the user (C16),
-// so a re-run leaves it as it is (phase 4.1 D9).
+// so a re-run leaves it as it is.
 func (it *Item) AlreadyMoved() bool {
 	is := func(c Conflict) bool { return c.Type == AlreadyMoved }
 	return slices.ContainsFunc(it.Conflicts, is) || slices.ContainsFunc(it.Resolved, is)

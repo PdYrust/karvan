@@ -10,7 +10,7 @@ import (
 	"github.com/PdYrust/karvan/internal/panel"
 )
 
-// D32: a plan save with targets is refused on either panel and leaves the
+// A plan save with targets is refused on either panel and leaves the
 // plan and its version as they were.
 func TestSetPlanRefusesTargets(t *testing.T) {
 	for _, to := range []panel.Kind{panel.Marzban, panel.PasarGuard} {
@@ -34,7 +34,7 @@ func TestSetPlanRefusesTargets(t *testing.T) {
 	}
 }
 
-// D32: a draft plan stored with targets is read with them cleared; a
+// A draft plan stored with targets is read with them cleared; a
 // finished job shows its plan as it was stored.
 func TestDraftPlanTargetsAreCleared(t *testing.T) {
 	h := newHarness(t, panel.Marzban, panel.PasarGuard, pasarGuardDB(t), 1)
@@ -53,7 +53,7 @@ func TestDraftPlanTargetsAreCleared(t *testing.T) {
 	}
 }
 
-// D33: on a merge the role is the existing admin's own, marked fixed.
+// On a merge the role is the existing admin's own, marked fixed.
 func TestRolesMarkAMergedAdminsRoleFixed(t *testing.T) {
 	tg := pasarGuardDB(t)
 	h := newHarness(t, panel.Marzban, panel.PasarGuard, tg, 1)

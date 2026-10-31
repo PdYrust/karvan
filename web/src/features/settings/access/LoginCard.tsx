@@ -17,7 +17,7 @@ export function LoginCard() {
   const session = useSession();
   const queryClient = useQueryClient();
   const [asking, setAsking] = useState(false);
-  // One-time values (D10): component state only, gone on "I saved them" or unmount.
+  // One-time values: component state only, gone on "I saved them" or unmount.
   const [made, setMade] = useState<NewLogin | null>(null);
   const renew = useMutation({
     mutationFn: renewLogin,

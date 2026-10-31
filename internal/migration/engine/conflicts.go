@@ -7,7 +7,8 @@ import (
 	"github.com/PdYrust/karvan/internal/panel"
 )
 
-// Conflict types. Numbers follow panel-diff.md section 3 and phase-3 D24.
+// Conflict types. The numbers are stable codes: the web panel and the
+// reports name conflicts by them.
 const (
 	AdminTaken     = "C01"
 	NameTaken      = "C02"
@@ -216,7 +217,7 @@ func (d *detector) credentialShape(it *Item) {
 		it.add(FlowDropped, Blocker, map[string]string{"flow": c.VLESS.Flow})
 	}
 	if c.WireGuard != nil && len(c.WireGuard.PeerIPs) > 0 {
-		// The panel gives new peer IPs (D21); a client config holding the
+		// The panel gives new peer IPs; a client config holding the
 		// old ones must change. A WireGuard key Karvan added has none.
 		it.add(WireGuardIPs, Blocker, nil)
 	}

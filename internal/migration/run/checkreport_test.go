@@ -12,7 +12,7 @@ import (
 )
 
 // The pre-flight report says what a run of the current plan would do,
-// before anything runs (B7).
+// before anything runs.
 func TestCheckReportOfTheCurrentPlan(t *testing.T) {
 	h := newHarness(t, panel.Marzban, panel.PasarGuard, pasarGuardDB(t), 3)
 	j := h.job(func(p *plan.Plan) { p.Users = map[string]plan.UserDecision{"user001": {Exclude: true}} })
@@ -49,7 +49,7 @@ func TestCheckReportNeedsACheck(t *testing.T) {
 	}
 }
 
-// D9: users moved before count as skipped and as already moved.
+// Users moved before count as skipped and as already moved.
 func TestCheckTotalsAlreadyMoved(t *testing.T) {
 	var tt CheckTotals
 	tt.count(&engine.Item{Conflicts: []engine.Conflict{{Type: engine.AlreadyMoved, Fix: engine.OptSkip}}})

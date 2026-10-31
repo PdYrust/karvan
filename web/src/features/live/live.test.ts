@@ -298,7 +298,7 @@ describe('log sentences', () => {
   });
 });
 
-describe('a backup restore on request (B12)', () => {
+describe('a backup restore on request', () => {
   const ranDone = () => [
     stage('check', 'start'),
     stage('check', 'done'),

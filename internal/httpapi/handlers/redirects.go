@@ -39,7 +39,7 @@ func (a *API) Redirects(w http.ResponseWriter, r *http.Request) {
 
 // SaveRedirect adds (POST) or changes (PATCH /{id}) a redirect rule. A
 // change sends the whole rule. Its certificate comes from its domains and
-// https (D63), so certificateId is not part of the body.
+// https, so certificateId is not part of the body.
 func (a *API) SaveRedirect(w http.ResponseWriter, r *http.Request) {
 	var body struct {
 		bridge.Redirect

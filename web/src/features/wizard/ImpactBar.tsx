@@ -15,7 +15,7 @@ export function ImpactBar({
   impact: Impact | undefined;
   blockers: number;
   saving: boolean;
-  /** The preview splits new users from those moved before (phase 4.1 D9). */
+  /** The preview splits new users from those moved before. */
   view?: 'plan' | 'preview';
 }) {
   const t = useT(wizardMessages);

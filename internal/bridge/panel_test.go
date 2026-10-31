@@ -22,7 +22,7 @@ func leafOf(t *testing.T, certPEM string) []byte {
 	return b.Bytes
 }
 
-// D6: the panel reads its domain's certificate through the cache, and a
+// The panel reads its domain's certificate through the cache, and a
 // renewed file is served without a restart.
 func TestPanelCertificateFollowsARenewedFile(t *testing.T) {
 	e := newEnv(t)

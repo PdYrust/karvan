@@ -23,7 +23,7 @@ import (
 	"github.com/PdYrust/karvan/internal/secret"
 )
 
-// oldSite is a site as Phase 4 stored it: its own certificate columns, no
+// oldSite is a site as stored before the certificates table: its own certificate columns, no
 // certificate_id, the key of a pasted certificate sealed under the site.
 type oldSite struct {
 	id                int64
@@ -89,7 +89,8 @@ func handshake(t *testing.T, port int, sni string) string {
 // restart is a new bridge on the same database, as at the next start.
 func (e *env) restart(log *slog.Logger) *Bridge { return e.start(log, true) }
 
-// restartWithoutAdoption serves the sites as Phase 4 did.
+// restartWithoutAdoption serves the sites as before the certificates
+// table.
 func (e *env) restartWithoutAdoption() *Bridge { return e.start(slog.New(slog.DiscardHandler), false) }
 
 func (e *env) start(log *slog.Logger, adopt bool) *Bridge {
@@ -112,7 +113,7 @@ type adoptCase struct {
 	names      map[int][]string // SNI names tried per port
 }
 
-// newAdoptCase seeds the sites of section 3's P41-14 test: a file pair, a
+// newAdoptCase seeds the sites of the adoption test: a file pair, a
 // pasted certificate, two more sites on the first pair, plain HTTP (the
 // env's own site), a wildcard domain and no domains.
 func newAdoptCase(t *testing.T) *adoptCase {
@@ -211,7 +212,7 @@ func (e *env) strs(q string) []string {
 	return out
 }
 
-// D54: a restart moves every site certificate into a certificates row,
+// A restart moves every site certificate into a certificates row,
 // one per file pair and per paste, with the same sites, tokens,
 // handshakes and answers.
 func TestAdoptionKeepsHandshakesAndTokens(t *testing.T) {

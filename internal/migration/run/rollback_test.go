@@ -70,7 +70,7 @@ func (h *harness) runWith(j *Job, rollback string) (*Report, error) {
 	return h.svc.Report(j.ID)
 }
 
-// The owner's choice: on failure, put the whole backup back, with the
+// On failure, put the whole backup back, with the
 // panel stopped and started again, and nothing of the job left.
 func TestBackupRollbackPutsTheWholeBackupBack(t *testing.T) {
 	ctl := &fakeControl{}

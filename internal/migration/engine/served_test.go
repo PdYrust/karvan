@@ -136,7 +136,7 @@ func TestC10AcceptKeepsUserAndFlagsConfig(t *testing.T) {
 	}
 }
 
-// D39: a PasarGuard user to Marzban who also uses WireGuard or Hysteria
+// A PasarGuard user to Marzban who also uses WireGuard or Hysteria
 // loses that config.
 func TestLostProtocolCountsAsConfigChange(t *testing.T) {
 	in := pgSource(inputs(panel.PasarGuard, marzbanDest(), pgUser(1, 1, 2), pgUser(2, 2)))
@@ -171,7 +171,7 @@ func TestGroupsUnknownRaisesNoBlocker(t *testing.T) {
 	}
 }
 
-// D9: a user is already moved when C16 was raised for it, open or fixed.
+// A user is already moved when C16 was raised for it, open or fixed.
 func TestItemAlreadyMoved(t *testing.T) {
 	open := &Item{Conflicts: []Conflict{{Type: AlreadyMoved, Fix: OptSkip}}}
 	fixed := &Item{Resolved: []Conflict{{Type: AlreadyMoved, Fix: OptSkip}}}

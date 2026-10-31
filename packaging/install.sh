@@ -237,7 +237,7 @@ start_healthy() {
 	systemctl start --no-block karvan.service && wait_healthy
 }
 
-# do_update follows D23: back up with the service stopped, switch, start,
+# do_update: back up with the service stopped, switch, start,
 # and switch back when the new version is not healthy in 60 seconds.
 do_update() {
 	read_archive
@@ -286,7 +286,7 @@ do_update() {
 	die "Karvan $old is running again." "See why $version failed: journalctl -u karvan"
 }
 
-# do_rollback follows D24: an old binary never starts on data it cannot
+# do_rollback: an old binary never starts on data it cannot
 # read, so a schema change restores the backup, after asking.
 do_rollback() {
 	[ "$(id -u)" = 0 ] || die "Run it as root, for example with sudo."

@@ -34,7 +34,7 @@ type oldPanel struct {
 }
 
 // pinnedResolver answers every lookup with the address the migration
-// used, because the old domain may point at this server by now (D60).
+// used, because the old domain may point at this server by now.
 type pinnedResolver struct{ addr netip.Addr }
 
 func (p pinnedResolver) LookupNetIP(context.Context, string, string) ([]netip.Addr, error) {

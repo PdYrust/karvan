@@ -6,7 +6,7 @@ import (
 	"github.com/PdYrust/karvan/internal/panel"
 )
 
-// Conflict types about the protocols a user's old config uses (D36 to D38).
+// Conflict types about the protocols a user's old config uses.
 const (
 	WireGuardOnly = "C38" // PasarGuard to Marzban, only WireGuard or Hysteria
 	// GroupsUnknown is the job-level info line when the old PasarGuard
@@ -14,7 +14,7 @@ const (
 	GroupsUnknown = "source_groups_unknown"
 )
 
-// currentProtocols are the protocols the user's old config uses (D36).
+// currentProtocols are the protocols the user's old config uses.
 // Marzban: the protocols with at least one inbound for the user.
 // PasarGuard: the protocols of the inbounds in the user's enabled groups
 // that the user has credentials for, since the panel fills every
@@ -101,8 +101,7 @@ func (d *detector) served(it *Item) {
 }
 
 // markLostProtocols flags a PasarGuard to Marzban user whose current
-// protocols include WireGuard or Hysteria: that config stops working
-// (D39).
+// protocols include WireGuard or Hysteria: that config stops working.
 func markLostProtocols(it *Item, in Inputs) {
 	if !toMarzban(in) {
 		return

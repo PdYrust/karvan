@@ -103,7 +103,7 @@ func (a *addressEnv) startSelf() string {
 	return n.Fingerprint
 }
 
-// D7: a change to HTTPS keeps the old address until it is confirmed from
+// A change to HTTPS keeps the old address until it is confirmed from
 // the HTTPS one.
 func TestHTTPSIsConfirmedFromTheNewAddress(t *testing.T) {
 	a := newHTTPSEnv(t, 0)
@@ -127,7 +127,7 @@ func TestHTTPSIsConfirmedFromTheNewAddress(t *testing.T) {
 	}
 }
 
-// D10: every refused change says why, and nothing waits after it.
+// Every refused change says why, and nothing waits after it.
 func TestHTTPSChangeIsChecked(t *testing.T) {
 	a := newHTTPSEnv(t, 0)
 	plain := a.addDomain(t, "plain.example.com", "", "")

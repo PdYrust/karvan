@@ -1,6 +1,6 @@
 // Package fakepanel serves fake Marzban and PasarGuard APIs for tests,
-// built from .tmp/specs (the routes, shapes and quirks Karvan relies on),
-// with switches for the failures a real panel or its proxy can produce.
+// built from the routes, shapes and quirks of the real panels that Karvan
+// relies on, with switches for the failures a real panel or its proxy can produce.
 package fakepanel
 
 import (

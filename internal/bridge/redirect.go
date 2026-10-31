@@ -13,7 +13,7 @@ import (
 	"unicode/utf8"
 )
 
-// How a redirect rule matches its path (section 4).
+// How a redirect rule matches its path.
 const (
 	MatchExact  = "exact"  // the path itself only
 	MatchPrefix = "prefix" // the path and anything under it, passed on as a tail
@@ -23,7 +23,7 @@ const (
 // Karvan answers.
 const ReasonLoop = "loop"
 
-// Limits of a redirect rule (section 4).
+// Limits of a redirect rule.
 const (
 	maxRedirectPath = 2048
 	maxRedirectURL  = 2048
@@ -57,7 +57,7 @@ func (e *RedirectInvalidError) Is(target error) bool { return target == ErrInval
 func redirectInvalid(field string) error { return &RedirectInvalidError{Field: field} }
 
 // Redirect is a redirect rule: a request on its port, domains and path is
-// sent to ToURL with a 302 (D28, D29). Karvan never fetches the target (D30).
+// sent to ToURL with a 302. Karvan never fetches the target.
 type Redirect struct {
 	ID       int64    `json:"id"`
 	Name     string   `json:"name"`
@@ -67,10 +67,10 @@ type Redirect struct {
 	Match    string   `json:"match"`
 	ToURL    string   `json:"toUrl"`
 	// HTTPS is whether the rule answers over HTTPS, as for panel rules: nil
-	// in a body keeps the stored value on PATCH and takes the D63 default
-	// on POST.
+	// in a body keeps the stored value on PATCH and on POST is on only when
+	// every domain has a certificate.
 	HTTPS *bool `json:"https"`
-	// CertificateID is derived from the domains on every save (D63).
+	// CertificateID is derived from the domains on every save.
 	CertificateID int64    `json:"-"`
 	cert          certRow  // its certificates row, when CertificateID is set
 	target        *url.URL // ToURL parsed; nil when the stored value no longer passes the check
@@ -178,7 +178,7 @@ func parseTarget(raw string) (*url.URL, bool) {
 }
 
 // location is the target with the checked tail added to its path. Scheme
-// and host are the stored ones only (D29).
+// and host are the stored ones only.
 func (d *Redirect) location(tail string) string {
 	u := *d.target
 	if tail != "" {

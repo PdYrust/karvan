@@ -8,7 +8,7 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/report"
 )
 
-// CheckReport is the pre-flight report (B7): what a run of the current
+// CheckReport is the pre-flight report: what a run of the current
 // plan would do, as JSON (karvan.check/v1), before anything runs.
 func (a *API) CheckReport(w http.ResponseWriter, r *http.Request) {
 	rep, err := a.Runs.CheckReport(r.Context(), r.PathValue("id"))

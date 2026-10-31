@@ -22,7 +22,7 @@ function useSince(from: string | undefined, on: boolean): number {
   return from ? Math.max(0, (now - Date.parse(from)) / 1000) : 0;
 }
 
-/** What the drawing's tiles say, as plain text in place of it (D13): nothing moves. */
+/** What the drawing's tiles say, as plain text in place of it: nothing moves. */
 function CalmNumbers({ counter, skipped }: { counter: Counter | null; skipped: number }) {
   const t = useT(liveMessages);
   if (counter?.kind !== 'move') return null;
@@ -47,7 +47,7 @@ export interface SceneProps {
 }
 
 /**
- * The live card (4.6): what happens now in heading size, the server's
+ * The live card: what happens now in heading size, the server's
  * estimate, Stop, a meter, and the scene of the phase; with less motion
  * asked for, or Data Saver on, the meter and the numbers alone.
  */

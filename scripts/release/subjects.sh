@@ -3,7 +3,7 @@
 # per line: the path of both archives and SHA256SUMS, then the image
 # of each architecture as <name>@sha256:<digest>, read from DIR/image-digests
 # (lines "linux/<arch> <name>@sha256:<digest>", written by the image build).
-# Fails, printing nothing, when any subject is missing (D33).
+# Fails, printing nothing, when any subject is missing.
 set -eu
 DIR=${1:-$(cd "$(dirname "$0")/../.." && pwd)/dist}
 fail() {

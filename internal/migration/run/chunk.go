@@ -17,7 +17,7 @@ import (
 	"github.com/PdYrust/karvan/internal/safemode"
 )
 
-// backup takes the Safe Mode backup (D42-D44) and records it.
+// backup takes the Safe Mode backup and records it.
 func (s *Service) backup(ctx context.Context, j *Job, p *prepared) error {
 	srv := p.db.Server()
 	if err := safemode.Probe(ctx, srv, s.Tools); err != nil {
@@ -55,7 +55,7 @@ func (s *Service) backup(ctx context.Context, j *Job, p *prepared) error {
 }
 
 // write creates the admins and the users, chunk by chunk, with the ledger
-// protocol of D32.
+// protocol: each chunk in one transaction, its rows recorded with it.
 func (s *Service) write(ctx context.Context, j *Job, p *prepared, hash string, rep *Report) error {
 	return s.stage(j, rep, StageExecute, func() error {
 		if err := s.adopt(ctx, j, p); err != nil {
@@ -148,7 +148,7 @@ type newAdmin struct {
 }
 
 // writeAdmins records the merges and creates every other admin that
-// moves in chunk 0, one ledger row each (D34). The login's admin gets
+// moves in chunk 0, one ledger row each. The login's admin gets
 // hash; every other one a generated password, kept for passwords.csv.
 func (s *Service) writeAdmins(ctx context.Context, j *Job, p *prepared, hash string, rep *Report) error {
 	p.admins = map[string]int64{}
@@ -185,7 +185,7 @@ func (s *Service) writeAdmins(ctx context.Context, j *Job, p *prepared, hash str
 }
 
 // adminHash is the password hash of an admin the job creates: hash for
-// the login's, a generated password's for any other (D34).
+// the login's, a generated password's for any other.
 func (s *Service) adminHash(j *Job, out *engine.AdminOutcome, hash string) (string, error) {
 	if out.IsLogin {
 		return hash, nil
@@ -240,7 +240,7 @@ func (s *Service) createAdmins(ctx context.Context, j *Job, p *prepared, created
 	return s.ledger.Set(ctx, ledger.Done, ids)
 }
 
-// writeChunk is one destination transaction (D32): insert (ids come back),
+// writeChunk is one destination transaction: insert (ids come back),
 // ledger rows pending with those ids (Karvan commit), destination commit,
 // ledger rows done.
 func (s *Service) writeChunk(ctx context.Context, j *Job, p *prepared, n int, items []*engine.Item, rep *Report) error {
@@ -275,7 +275,7 @@ func (s *Service) writeChunk(ctx context.Context, j *Job, p *prepared, n int, it
 	return s.ledger.Set(ctx, ledger.Done, ids)
 }
 
-// afterFailedChunk settles a chunk whose outcome is not clean (D32, D33):
+// afterFailedChunk settles a chunk whose outcome is not clean:
 // rolled back rows become compensated, an unknown commit is read back.
 func (s *Service) afterFailedChunk(ctx context.Context, j *Job, p *prepared, ids []int64, cause error) error {
 	if len(ids) == 0 {

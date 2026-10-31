@@ -20,8 +20,8 @@ import (
 	"github.com/PdYrust/karvan/internal/bridge"
 )
 
-// The live test runs against Pebble from scripts/acmetest (make test-acme,
-// D72): the bridge answers HTTP-01 on 5002, where Pebble checks it, and
+// The live test runs against Pebble from scripts/acmetest (make test-acme):
+// the bridge answers HTTP-01 on 5002, where Pebble checks it, and
 // DNS-01 records are set on the challenge server, whose DNS the Check and
 // Pebble both ask.
 const (

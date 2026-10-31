@@ -16,7 +16,7 @@ import (
 )
 
 // DefaultSocket is where the Docker daemon listens. Karvan's Docker image
-// has no Docker CLI and reaches the daemon through this socket (D29).
+// has no Docker CLI and reaches the daemon through this socket.
 const DefaultSocket = "/var/run/docker.sock"
 
 // Labels Docker Compose puts on every container it creates.

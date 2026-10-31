@@ -107,7 +107,7 @@ func TestRollbackOfAnInterruptedJobAfterARestart(t *testing.T) {
 	}
 }
 
-// D14: a roll back of a failed job leaves the users a later batch claimed
+// A roll back of a failed job leaves the users a later batch claimed
 // and lists them as left with in_batch; the job still counts as rolled
 // back, and nothing else is undone.
 func TestRollbackLeavesUsersOfALaterBatch(t *testing.T) {

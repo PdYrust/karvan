@@ -79,7 +79,7 @@ func (h *harness) adopt(batchID int64) int64 {
 }
 
 // checkAdoptedServed makes sure an adopted row left its batch and stays
-// adopted, so manual rules serve it and a later batch can claim it (D18).
+// adopted, so manual rules serve it and a later batch can claim it.
 func (h *harness) checkAdoptedServed(id int64) {
 	h.t.Helper()
 	var st string
@@ -89,7 +89,7 @@ func (h *harness) checkAdoptedServed(id int64) {
 	}
 }
 
-// D17, D18: restoring the latest job's backup takes its batch inactive
+// Restoring the latest job's backup takes its batch inactive
 // with reason restoring before the panel stops, then rolled back; its
 // written users are compensated and its adopted user leaves the batch.
 func TestRestoreRollsBackTheJobsBatch(t *testing.T) {
@@ -143,7 +143,7 @@ func (h *harness) earlyBatch() int64 {
 	return id
 }
 
-// D17, D18: restoring an earlier job's backup takes back every batch made
+// Restoring an earlier job's backup takes back every batch made
 // after it on that destination, and only those: the batch made before
 // the backup stays active with its user served.
 func TestRestoreOfAnEarlierBackup(t *testing.T) {
@@ -179,7 +179,7 @@ func TestRestoreOfAnEarlierBackup(t *testing.T) {
 	h.checkAdoptedServed(adopted)
 }
 
-// D19: a restore that fails before anything is put back (the panel would
+// A restore that fails before anything is put back (the panel would
 // not stop) sets the batch back to active.
 func TestRestoreThatFailsBeforePutBack(t *testing.T) {
 	h, rep, _ := doneJob(t, &fakeControl{failStop: true})
@@ -196,7 +196,7 @@ func TestRestoreThatFailsBeforePutBack(t *testing.T) {
 	}
 }
 
-// D19: a restore that fails once it started putting the backup back (the
+// A restore that fails once it started putting the backup back (the
 // backup file is gone) leaves the batch restore_failed and its rows as
 // they were; the operator can make it active again.
 func TestRestoreThatFailsAfterPutBackStarted(t *testing.T) {
@@ -253,7 +253,7 @@ func TestRestoreThatCannotHoldItsBatches(t *testing.T) {
 	}
 }
 
-// D19: Karvan stopped while a restore held its batches (a crash); at the
+// Karvan stopped while a restore held its batches (a crash); at the
 // next start no restore runs, so the batch becomes restore_failed.
 func TestRecoverEndsARestoreThatCrashed(t *testing.T) {
 	h, rep, _ := doneJob(t, &fakeControl{})
@@ -276,7 +276,7 @@ func TestRecoverEndsARestoreThatCrashed(t *testing.T) {
 
 // A roll back on request with the backup choice puts back a backup that
 // later batches wrote over: a failed job's users that a later batch
-// claimed (D4) go with that batch, which is rolled back (D17, D18).
+// claimed go with that batch, which is rolled back.
 func TestRollbackByBackupTakesALaterBatchDown(t *testing.T) {
 	h, rep, before := doneJob(t, &fakeControl{})
 	ctx := context.Background()

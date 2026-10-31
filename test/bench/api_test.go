@@ -19,7 +19,7 @@ import (
 	"time"
 )
 
-// The HTTP API part of D37: 50 clients at once, each signed in on its
+// The HTTP API benchmark: 50 clients at once, each signed in on its
 // own, against a running Karvan. KARVAN_BENCH_URL is the panel address
 // with its hidden path; KARVAN_BENCH_USER and KARVAN_BENCH_PASSWORD
 // sign in.

@@ -42,7 +42,7 @@ type rankContext struct {
 	count map[string]int // conflicts per type in this build
 }
 
-// optionTable is the fixed rule table (D25): each type's options in their
+// optionTable is the fixed rule table: each type's options in their
 // default order. Reordering happens only in Options, by stated rules.
 var optionTable = map[string][]Option{
 	AdminTaken:     {rename, {ID: OptMerge}},
@@ -67,7 +67,7 @@ var optionTable = map[string][]Option{
 	RoleFeature:    {{ID: OptKeep}, {ID: OptRemove}, skip},
 }
 
-// manyRenames is when "prefix all" beats "suffix each" (D25): with five or
+// manyRenames is when "prefix all" beats "suffix each": with five or
 // more taken names, one shared prefix reads better than numbered names.
 const manyRenames = 5
 

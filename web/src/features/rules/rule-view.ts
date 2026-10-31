@@ -10,7 +10,7 @@ export interface WarningLine {
 /** Plain HTTP is in the card's summary already; a domain not filled yet is the rule's line. */
 const hidden: ReadonlySet<DomainWarning> = new Set(['no_certificate', 'certificate_not_adopted']);
 
-/** The rule's own line first, then each of its domains' warnings (D50). */
+/** The rule's own line first, then each of its domains' warnings. */
 export function warningLines(
   names: readonly string[] | null,
   warnings: readonly string[],

@@ -35,7 +35,7 @@ function useModeText() {
   };
 }
 
-/** How the panel is served, changed through a new address that waits 10 minutes for a confirm (D7, D9). */
+/** How the panel is served, changed through a new address that waits 10 minutes for a confirm. */
 export function HttpsTab() {
   const t = useT(httpsMessages);
   const ta = useT(accessMessages);

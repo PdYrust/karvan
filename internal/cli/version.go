@@ -10,7 +10,7 @@ import (
 )
 
 // versionJSON is what "karvan version --json" prints for the installer:
-// schema is the store schema version this build migrates to (D24).
+// schema is the store schema version this build migrates to.
 type versionJSON struct {
 	Version string `json:"version"`
 	Commit  string `json:"commit"`

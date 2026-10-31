@@ -13,7 +13,7 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/engine"
 )
 
-// ReportSchema names the JSON report format (D52).
+// ReportSchema names the JSON report format.
 const ReportSchema = "karvan.report/v1"
 
 // Report is the full record of one run. It holds no secret: no password,
@@ -46,7 +46,7 @@ type Report struct {
 		RoleID   int64  `json:"roleId,omitempty"`
 		Password string `json:"password,omitempty"` // kept, typed or generated
 	} `json:"admin"` // the login's admin, as in Admins
-	Admins      []AdminLine       `json:"admins"` // every admin that moved, the login's first (D34)
+	Admins      []AdminLine       `json:"admins"` // every admin that moved, the login's first
 	Counts      Counts            `json:"counts"`
 	Users       []UserLine        `json:"users"`
 	Conflicts   []engine.Conflict `json:"conflicts,omitempty"`
@@ -60,7 +60,7 @@ type Report struct {
 	LeftReasons map[int64]string `json:"leftReasons,omitempty"`
 }
 
-// LeftInBatch is the reason for a row a later batch holds (D14): a
+// LeftInBatch is the reason for a row a later batch holds: a
 // rollback leaves it.
 const LeftInBatch = "in_batch"
 
@@ -69,18 +69,18 @@ type Counts struct {
 	Read    int `json:"read"`
 	Moved   int `json:"moved"`
 	Skipped int `json:"skipped"`
-	// AlreadyMoved counts users an earlier migration moved (C16, D9), also in Skipped.
+	// AlreadyMoved counts users an earlier migration moved (C16), also in Skipped.
 	AlreadyMoved int `json:"alreadyMoved"`
 	Adopted      int `json:"adopted"`
 	Undone       int `json:"undone"`
 	Changed      int `json:"configChanged"`
 	Renamed      int `json:"renamed"`
-	// ProtocolsAdded counts users who got protocols they lacked (D67).
+	// ProtocolsAdded counts users who got protocols they lacked.
 	ProtocolsAdded int `json:"protocolsAdded"`
 	Verified       int `json:"verified"`
 }
 
-// AdminLine is where one source admin went (D34).
+// AdminLine is where one source admin went.
 type AdminLine struct {
 	Source   string `json:"source"`   // its name on the old panel
 	Username string `json:"username"` // its name on the destination
@@ -115,7 +115,7 @@ type StageTime struct {
 	OK      bool      `json:"ok"`
 }
 
-// Things a rollback cannot take back (D40).
+// Things a rollback cannot take back.
 const (
 	UndoNotifications = "notifications_sent"
 	UndoConnections   = "client_connections"

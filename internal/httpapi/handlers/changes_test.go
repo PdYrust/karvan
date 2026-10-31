@@ -54,7 +54,7 @@ func changes(t *testing.T, m *migrationEnv, id, query string) string {
 }
 
 // After a compare, GET changes says what the read changed, a page at a
-// time, and the plan version the next run must send (B3).
+// time, and the plan version the next run must send.
 func TestChangesAfterACompare(t *testing.T) {
 	m := newMigrationEnv(t, 3)
 	id := m.create()

@@ -160,7 +160,7 @@ function LiveBody({ id, live }: { id: string; live: Live }) {
   );
 }
 
-/** Where Start leads (4.6): the stage rail, the live scene, the log, and the result once it ends. */
+/** Where Start leads: the stage rail, the live scene, the log, and the result once it ends. */
 export function LivePage() {
   const { id = '' } = useParams();
   const [params] = useSearchParams();

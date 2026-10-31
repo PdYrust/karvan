@@ -45,7 +45,7 @@ func (s *Service) Create(ctx context.Context, l Login, panelID int64, sourceOpts
 }
 
 // Compare reads both panels again in the background and builds the plan
-// over them (steps 1 and 2, B2). It returns once the read is under way.
+// over them (steps 1 and 2). It returns once the read is under way.
 // Progress and the outcome come as events: the read stage with a progress
 // event for each page of users, then the build stage. Cancel and
 // Shutdown stop it.
@@ -205,7 +205,7 @@ type groupReader interface {
 }
 
 // readGroups reads an old PasarGuard panel's groups for the users'
-// current protocols (D36). A login that cannot read them leaves
+// current protocols. A login that cannot read them leaves
 // GroupsRead false, and the build says so instead of raising C10 or C38.
 func readGroups(ctx context.Context, from panel.Source, src *engine.Source) error {
 	g, ok := from.(groupReader)
@@ -253,7 +253,7 @@ func skewOf(src panel.Source) time.Duration {
 // readLedger maps live ledger rows to the users of a source read, and
 // finds the admins earlier runs moved, by source admin. A row only counts if the source
 // user still has the same created_at; otherwise it is someone new with a
-// reused id or name (D31).
+// reused id or name.
 func (s *Service) readLedger(ctx context.Context, src *engine.Source, destID string) (map[string]engine.Moved, map[string]string, error) {
 	live, err := s.ledger.Live(ctx, src.Origin, destID)
 	if err != nil {
@@ -281,7 +281,7 @@ func (s *Service) readLedger(ctx context.Context, src *engine.Source, destID str
 }
 
 // install builds the plan over a fresh reading and makes both the job's
-// own, with what changed since the build before (B3). When the outcome
+// own, with what changed since the build before. When the outcome
 // changed, the plan version goes up: the operator reviewed another one.
 // A plan that does not build leaves the previous reading and build.
 func (s *Service) install(j *Job, r reading) (engine.Changes, error) {
@@ -309,7 +309,7 @@ func (s *Service) rebuild(j *Job) error {
 }
 
 // Changes is what the last read of the panels changed in the outcome: a
-// compare's, or a run's own re-check (B3). It comes with the plan version
+// compare's, or a run's own re-check. It comes with the plan version
 // and when the panels were read.
 func (s *Service) Changes(jobID string) (engine.Changes, int, time.Time, error) {
 	j, err := s.job(jobID)
@@ -334,7 +334,7 @@ func (s *Service) SetPlan(ctx context.Context, jobID string, version int, p plan
 		return nil, 0, err
 	}
 	if len(p.Targets) > 0 {
-		return nil, 0, &engine.PlanError{Where: "targets", Problem: "not_allowed"} // D32
+		return nil, 0, &engine.PlanError{Where: "targets", Problem: "not_allowed"} // groups come from the role
 	}
 	if !j.lockIdle() {
 		return nil, 0, ErrBusy
@@ -349,7 +349,7 @@ func (s *Service) SetPlan(ctx context.Context, jobID string, version int, p plan
 		return nil, j.version, ErrNotChecked
 	}
 	p.Now = j.plan.Now
-	p = p.ForLogin(j.snapshot.Admin.Username) // D35
+	p = p.ForLogin(j.snapshot.Admin.Username) // an old one-admin plan is the login's
 	if err := s.askAdmins(ctx, j, p); err != nil {
 		return nil, j.version, err
 	}
@@ -397,9 +397,9 @@ func (s *Service) askAdmins(ctx context.Context, j *Job, p plan.Plan) error {
 	return nil
 }
 
-// View returns the job's last build and plan version. A draft made before
-// Phase 4.1 may hold targets; they are cleared, as no build uses them
-// (D32). A finished job keeps its plan as stored.
+// View returns the job's last build and plan version. A draft made by
+// an older version may hold targets; they are cleared, as no build uses them.
+// A finished job keeps its plan as stored.
 func (s *Service) View(jobID string) (*engine.Result, plan.Plan, int, error) {
 	j, err := s.job(jobID)
 	if err != nil {

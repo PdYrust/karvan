@@ -59,7 +59,7 @@ export function RedirectFields({ values, set, errorOf }: FieldsProps) {
   );
 }
 
-/** One old link: Karvan reads its host, port and path as it is typed (D55). */
+/** One old link: Karvan reads its host, port and path as it is typed. */
 export function LinkFields({ values, set, errorOf }: FieldsProps) {
   const t = useT(siteFormMessages);
   const link = parseOldLink(values.link);

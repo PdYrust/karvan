@@ -7,11 +7,11 @@ import type { SceneEnds } from './FlowScene';
 import { canStop, counterOf, endStateOf, phaseOf, railOf, stagesOfReport } from './live';
 
 /**
- * Everything the live view reads (4.6, D3): the job's row by id (it answers
+ * Everything the live view reads: the job's row by id (it answers
  * while the job runs and after a restart), its event stream, the plan's
  * skipped users while it runs, and the report once it ends (and while a
  * backup goes back, for the backup's id). `after` is the last event before
- * a backup restore this page follows (B12).
+ * a backup restore this page follows.
  */
 export function useLive(id: string, after = 0) {
   const qc = useQueryClient();

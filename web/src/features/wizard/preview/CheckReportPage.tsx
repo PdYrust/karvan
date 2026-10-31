@@ -76,7 +76,7 @@ function Head({ report }: { report: CheckReport }) {
   );
 }
 /**
- * The pre-flight report as a page to print (B7, D12): outside the shell,
+ * The pre-flight report as a page to print: outside the shell,
  * one column, a bar that does not print.
  */
 export function CheckReportPage() {

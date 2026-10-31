@@ -9,10 +9,10 @@ import (
 	"slices"
 )
 
-// OriginACME marks a certificate Karvan got from Let's Encrypt (D49).
+// OriginACME marks a certificate Karvan got from Let's Encrypt.
 const OriginACME = "acme"
 
-// Kinds of rule (D47) and of certificate (D49).
+// Kinds of rule and of certificate.
 const (
 	RulePanel      = "panel"    // a legacy_sites row
 	RuleRedirect   = "redirect" // a link_redirects row
@@ -20,10 +20,10 @@ const (
 	CertKindPasted = "pasted"   // a pasted certificate, its key sealed
 )
 
-// Domain warnings beyond the certificate ones (D50).
+// Domain warnings beyond the certificate ones.
 const (
 	WarnNoCertificate = "no_certificate" // the domain has no certificate
-	WarnCertConflict  = "cert_conflict"  // a port keeps serving another certificate for the domain through a pin (D62)
+	WarnCertConflict  = "cert_conflict"  // a port keeps serving another certificate for the domain through a pin
 )
 
 // ErrInUse means a rule uses the domain or certificate; an *InUseError
@@ -70,7 +70,7 @@ type CertRule struct {
 }
 
 // Certificate is a certificates row with its facts and the rules that use
-// it. The private key never leaves the store (D49).
+// it. The private key never leaves the store.
 type Certificate struct {
 	ID       int64        `json:"id"`
 	Name     string       `json:"name"`
@@ -93,7 +93,7 @@ type rule struct {
 	domains  []string
 	port     int
 	certID   int64 // its certificates row, or 0
-	site     *Site // a panel rule still served from its own columns (D54)
+	site     *Site // a panel rule still served from its own columns
 	tls      bool
 	path     string    // its path without the outer slashes: a panel rule's old path, a redirect's from path
 	exact    bool      // the path must match exactly; else it is a prefix

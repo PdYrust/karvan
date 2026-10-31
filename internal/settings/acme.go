@@ -20,7 +20,7 @@ const maxACMEEmail = 254
 // ErrACMEEmail means the Let's Encrypt contact is not one plain address.
 var ErrACMEEmail = errors.New("the Let's Encrypt contact must be one email address")
 
-// ACME are the Let's Encrypt settings (D73). All are off or empty until
+// ACME are the Let's Encrypt settings. All are off or empty until
 // the operator changes them.
 type ACME struct {
 	Staging    bool   `json:"staging"`    // new orders use the Let's Encrypt test server

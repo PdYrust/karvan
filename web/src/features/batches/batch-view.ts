@@ -25,7 +25,7 @@ export function batchLook(b: Pick<Batch, 'state' | 'inactiveReason'>): {
 }
 
 /**
- * What the operator may do besides renaming (D8): delete an inactive batch
+ * What the operator may do besides renaming: delete an inactive batch
  * once no restore runs, and make one active again after a failed restore.
  */
 export function batchActions(b: Pick<Batch, 'state' | 'inactiveReason'>) {

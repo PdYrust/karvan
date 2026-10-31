@@ -1,5 +1,5 @@
 // Package safemode takes the destination backup before a migration writes
-// anything (D42-D45): SQLite through VACUUM INTO, MySQL and MariaDB through
+// anything: SQLite through VACUUM INTO, MySQL and MariaDB through
 // their dump tool, PostgreSQL through pg_dump. Backups are encrypted as
 // they are written and kept outside any rotation.
 package safemode

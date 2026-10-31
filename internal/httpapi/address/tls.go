@@ -19,7 +19,7 @@ const tlsRecordHandshake = 0x16
 // connListener hands each connection of a port to plain HTTP or to TLS by
 // the schemes its addresses use. On a port with an HTTPS address the first
 // byte decides: TLS goes to TLS, and plain HTTP is served too, so a change
-// of scheme can wait for its confirmation there (D7) and a plain request
+// of scheme can wait for its confirmation there and a plain request
 // for an HTTPS address can be sent on to it. A connection that does not
 // send that byte in time is dropped without holding up the others.
 type connListener struct {

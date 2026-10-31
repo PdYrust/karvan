@@ -72,8 +72,8 @@ func TestDomainCertificatesKeepEveryRow(t *testing.T) {
 	}
 }
 
-// The new columns and tables refuse what section 3 rules out, and one
-// running order per domain is the index's rule (D69).
+// The new columns and tables refuse what the schema rules out, and one
+// running order per domain is the index's rule.
 func TestDomainCertificatesChecks(t *testing.T) {
 	db := migrateSeededV11(t)
 	const order = "INSERT INTO acme_orders (domain_id, account_id, method, state, created_at, updated_at) VALUES (1, 1, 'http-01', '%s', 1, 1)"

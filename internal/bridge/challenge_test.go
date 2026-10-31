@@ -42,7 +42,7 @@ func (e *env) openChallenge(holder string) {
 	}
 }
 
-// D67: on a port opened only for challenges, the live token on its own
+// On a port opened only for challenges, the live token on its own
 // host answers and everything else gets the plain 404, with no redirect.
 func TestChallengeOnlyPortAnswersTheLiveTokenAlone(t *testing.T) {
 	e := challengeEnv(t)
@@ -185,7 +185,7 @@ func (e *env) httpsRedirect(name string) Redirect {
 		ToURL: "https://new.example.com/"}
 }
 
-// D63, D67: while an order or keepPort80 holds the challenge port open,
+// While an order or keepPort80 holds the challenge port open,
 // no HTTPS rule is saved on it; WantChallengePort refuses a port an HTTPS
 // rule uses.
 func TestChallengePortAndHTTPSRulesExcludeEachOther(t *testing.T) {
@@ -247,7 +247,7 @@ func TestChallengePortErrors(t *testing.T) {
 	}
 }
 
-// D67: a redirect cannot take the challenge path on POST or on a PATCH
+// A redirect cannot take the challenge path on POST or on a PATCH
 // that changes fromPath; a stored one stays editable.
 func TestRedirectFromPathUnderTheChallengeIsReserved(t *testing.T) {
 	e := newEnv(t)

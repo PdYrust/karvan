@@ -1,7 +1,7 @@
 import { api, setCsrfToken } from './client';
 import type { Outcome } from './overview';
 
-/** The current password, and the code when two-step sign-in is on (api-resources 8.1). */
+/** The current password, and the code when two-step sign-in is on. */
 export interface Reauth {
   password: string;
   code: string;

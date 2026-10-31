@@ -8,7 +8,7 @@ import { NotFoundPage } from '../not-found/NotFoundPage';
 import { jobPlace } from './job-place';
 import { listMessages } from './list-messages';
 
-/** `/migrations/:id` reads the job's row and opens what its state needs (4.1). */
+/** `/migrations/:id` reads the job's row and opens what its state needs. */
 export function JobRedirect() {
   const { id = '' } = useParams();
   const t = useT(listMessages);

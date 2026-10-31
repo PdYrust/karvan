@@ -21,7 +21,7 @@ func (e *VerifyError) Error() string {
 }
 
 // verify reads back every user the job wrote and compares name, created
-// time, owner, credentials and targets with the plan (D49).
+// time, owner, credentials and targets with the plan.
 func (s *Service) verify(ctx context.Context, j *Job, p *prepared, rep *Report) error {
 	return s.stage(j, rep, StageVerify, func() error {
 		rows, err := s.ledger.Job(ctx, j.ID, ledger.Done)

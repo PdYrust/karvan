@@ -22,11 +22,11 @@ export function startGate(s: {
   if (s.adminMissing) return 'adminMissing';
   return null;
 }
-/** The live view of a job (4.6). */
+/** The live view of a job. */
 export const livePath = (jobId: string) => `/migrations/${encodeURIComponent(jobId)}/live`;
 /**
  * Starts the run (POST run) with the plan version the check returned, the
- * chosen reload and the admin password typed in Compare (D10); then opens
+ * chosen reload and the admin password typed in Compare; then opens
  * the live view. A 412 means the outcome moved after the check.
  */
 export function useStart(jobId: string, onStale: () => void) {
@@ -34,7 +34,7 @@ export function useStart(jobId: string, onStale: () => void) {
   const navigate = useNavigate();
   const [confirming, setConfirming] = useState(false);
   const run = useMutation({
-    // The body can carry the admin password: never keep it in the cache (D10).
+    // The body can carry the admin password: never keep it in the cache.
     gcTime: 0,
     mutationFn: (v: { planVersion: number; reload: ReloadMethod; password: AdminPassword }) =>
       runJob(jobId, {

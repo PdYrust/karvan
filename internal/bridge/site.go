@@ -1,8 +1,8 @@
 // Package bridge answers old subscription links for users Karvan moved:
 // a request with an old token is checked against what Karvan recorded,
-// then served from the new panel with a fresh token for the same user
-// (D55-D64). The new panel stays the judge of its own users: a user it
-// revoked or deleted loses the old link too (owner rule).
+// then served from the new panel with a fresh token for the same user.
+// The new panel stays the judge of its own users: a user it
+// revoked or deleted loses the old link too.
 package bridge
 
 import (
@@ -26,7 +26,7 @@ type Site struct {
 	// Mode is ModeManual (the default) or ModeBatches, fixed when the rule
 	// is made. A rule of batches takes PanelID, SourceKind, SourceURL,
 	// SourcePin, and OldPath and SourceIP when they know them, from
-	// BatchIDs (D56); the body may not send them.
+	// BatchIDs; the body may not send them.
 	Mode        string     `json:"mode"`
 	BatchIDs    []int64    `json:"batchIds,omitempty"`
 	PanelID     int64      `json:"panelId"` // the destination panel
@@ -40,12 +40,12 @@ type Site struct {
 	Lazy        bool       `json:"lazy"`
 	PlainHTTPOK bool       `json:"plainHttpOk"`
 	// HTTPS is whether the rule answers over HTTPS: in a body, nil keeps
-	// the stored value on PATCH and takes the D63 default on POST; read
-	// back, whether it has a certificate.
+	// the stored value on PATCH and on POST is on only when every domain
+	// has a certificate; read back, whether it has a certificate.
 	HTTPS *bool `json:"https"`
 	// CertificateID is the certificates row the site is served with, or 0:
-	// plain HTTP, or its own certificate columns when not adopted (D54).
-	// It is derived from the domains on every save (D63), never sent.
+	// plain HTTP, or its own certificate columns when not adopted.
+	// It is derived from the domains on every save, never sent.
 	CertificateID int64 `json:"-"`
 	// The certificate the site is served with, read from its certificates
 	// row, else from its own columns. Never sent or taken as JSON.
@@ -58,7 +58,7 @@ type Site struct {
 	origin   string
 }
 
-// How a panel rule picks the users it serves (D23).
+// How a panel rule picks the users it serves.
 const (
 	ModeManual  = "manual"  // the users of its old panel and destination in an active batch or in none
 	ModeBatches = "batches" // the users of its batches, while the batch is active

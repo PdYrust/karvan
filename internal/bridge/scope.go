@@ -15,17 +15,17 @@ import (
 
 // scoped is a ledger row with what its batch means for one rule, read
 // on every request: a cached state could serve a user for a moment after
-// the batch went inactive (D21).
+// the batch went inactive.
 type scoped struct {
 	ledger.Entry
-	held    bool // the row's batch is inactive or deleted (D22)
+	held    bool // the row's batch is inactive or deleted
 	ofRule  bool // the row's batch is one of the rule's batches
-	inScope bool // the rule serves the row (D23)
+	inScope bool // the rule serves the row
 }
 
 // holds reports whether r is in a held batch of rule s: one of its
 // batches, or, for a manual rule, any batch of its old panel and
-// destination. Such a row answers 404 before the panel is asked (D22).
+// destination. Such a row answers 404 before the panel is asked.
 func (s Site) holds(r scoped) bool { return r.held && (s.Mode != ModeBatches || r.ofRule) }
 
 // The parts of the scope queries, over ledger l left joined with its
@@ -34,7 +34,7 @@ const (
 	fromLedger = " FROM ledger l LEFT JOIN batches b ON b.id = l.batch_id"
 	heldSQL    = "(l.batch_id IS NOT NULL AND b.state IS NOT 'active')"
 	ofRuleSQL  = "EXISTS (SELECT 1 FROM legacy_site_batches sb WHERE sb.site_id = ? AND sb.batch_id = l.batch_id)"
-	// scopeSQL is the condition for the rows a rule serves (D23): moved
+	// scopeSQL is the condition for the rows a rule serves: moved
 	// or adopted users of its old panel on its destination, in one of its
 	// batches while that batch is active (a rule of batches), or in an
 	// active batch or none (a manual rule). Its arguments are scopeArgs.
@@ -53,7 +53,7 @@ const (
 func scopeArgs(s Site, dest string) []any { return []any{s.origin, dest, s.Mode, s.ID} }
 
 // token reads a stored token with its ledger row and batch, for rule s
-// on destination dest, in one query (D21).
+// on destination dest, in one query.
 func (st *store) token(ctx context.Context, m []byte, s Site, dest string) (verified, scoped, bool, error) {
 	row := st.queryRow(ctx, tokenSQL, append(scopeArgs(s, dest), m)...)
 	var v verified
@@ -82,7 +82,7 @@ const (
 // named reads every moved or adopted user of rule s's old panel on dest
 // that a token's payload can name: by id on a PasarGuard old panel when
 // the payload has one, else by username. Only the old panel's answer
-// tells them apart (D24).
+// tells them apart.
 func (st *store) named(ctx context.Context, s Site, dest string, p subtoken.Payload) ([]scoped, error) {
 	q, key := namedByName, p.Username
 	if s.SourceKind == panel.PasarGuard && p.UserID > 0 {
@@ -127,7 +127,7 @@ func (st *store) served(ctx context.Context, s Site, dest string) ([]ledger.Entr
 }
 
 // ruleHeld reports whether s is a rule of batches none of which is
-// active: it answers 404 to every request, with no pass-through (D22).
+// active: it answers 404 to every request, with no pass-through.
 func (st *store) ruleHeld(ctx context.Context, s Site) (bool, error) {
 	if s.Mode != ModeBatches {
 		return false, nil

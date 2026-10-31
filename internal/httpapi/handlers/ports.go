@@ -9,7 +9,7 @@ import (
 	"github.com/PdYrust/karvan/internal/netports"
 )
 
-// Who holds a listening port (D13).
+// Who holds a listening port.
 const (
 	ownerPanel = "panel"
 	ownerRule  = "rule"
@@ -24,7 +24,7 @@ type portJSON struct {
 
 type portsJSON struct {
 	Ports []portJSON `json:"ports"`
-	// Proposal is the port D14 proposes for a new rule; 0 when none is free.
+	// Proposal is the port netports.Propose picks for a new rule; 0 when none is free.
 	Proposal int `json:"proposal"`
 }
 

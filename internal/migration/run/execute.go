@@ -21,7 +21,7 @@ import (
 // Options are the operator's last choices (step 5).
 type Options struct {
 	Version       int
-	AdminPassword secret.Value // empty: generate one (owner decision 1)
+	AdminPassword secret.Value // empty: generate one
 	Reload        string
 	SafeMode      bool
 	// Rollback is what Safe Mode does on failure: RollbackUndo (the
@@ -29,14 +29,14 @@ type Options struct {
 	Rollback string
 }
 
-// What Safe Mode does on failure (owner, 2026-10-16).
+// What Safe Mode does on failure.
 const (
 	RollbackUndo   = "undo"   // remove the job's rows; the backup only if some are left
 	RollbackBackup = "backup" // put the whole backup back
 )
 
 // errStale means the source or the destination changed since the plan
-// was approved (D29); the job's changes say how.
+// was approved; the job's changes say how.
 var errStale = errors.New("the outcome changed since the plan was approved")
 
 // bcryptCost matches PasarGuard (app/models/admin.py:26).
@@ -146,7 +146,7 @@ const (
 
 // adminPassword uses a typed password, else the reseller's own one from
 // the old panel's login, else generates one. A generated one is kept
-// until the operator downloads it once (D22).
+// until the operator downloads it once.
 func (s *Service) adminPassword(j *Job, typed secret.Value) (secret.Value, error) {
 	name := j.result.Login().Username
 	if j.result.Login().Merge != nil {
@@ -241,7 +241,7 @@ func (s *Service) saveEnded(j *Job) {
 	}
 }
 
-// backToChecked ends a run whose re-check found the outcome changed (B4).
+// backToChecked ends a run whose re-check found the outcome changed.
 // Nothing was written, so the job goes back to checked with the new build
 // and its changes, and keeps the login: the operator reviews the changes
 // and runs again with the new plan version. A password generated for this
@@ -257,7 +257,7 @@ func (s *Service) backToChecked(j *Job) {
 }
 
 // links adds each moved user's new subscription link to the report, as
-// its own admin's link (D34). A failure here only leaves the links out;
+// its own admin's link. A failure here only leaves the links out;
 // the move itself is done.
 func (s *Service) links(ctx context.Context, j *Job, p *prepared, rep *Report) {
 	if err := rep.addLinks(ctx, p.panel, s.now()); err != nil {
@@ -282,8 +282,7 @@ func (p *prepared) release() {
 	_ = p.db.Close()
 }
 
-// prepare re-checks (D29), locks the destination (D30) and backs it up
-// (D42).
+// prepare re-checks, locks the destination and backs it up.
 func (s *Service) prepare(ctx context.Context, j *Job, rep *Report) (*prepared, error) {
 	if err := s.stage(j, rep, StageCheck, func() error { return s.recheck(ctx, j) }); err != nil {
 		return nil, err

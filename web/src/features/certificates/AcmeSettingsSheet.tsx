@@ -95,7 +95,7 @@ function SettingsForm({ view, onDone }: { view: AcmeSettingsView; onDone: () => 
   );
 }
 
-/** The Let's Encrypt settings (D73) in a sheet on Domains and certificates. */
+/** The Let's Encrypt settings in a sheet on Domains and certificates. */
 export function AcmeSettingsSheet({
   open,
   onOpenChange,

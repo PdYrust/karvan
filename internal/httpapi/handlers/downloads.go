@@ -11,7 +11,7 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/run"
 )
 
-// Report is the JSON report of a run (D52), without the new links.
+// Report is the JSON report of a run, without the new links.
 func (a *API) Report(w http.ResponseWriter, r *http.Request) {
 	rep, ok := a.report(w, r)
 	if !ok {

@@ -13,7 +13,7 @@ import (
 	"github.com/PdYrust/karvan/internal/panel"
 )
 
-// D36 to D38 against the running panels, read as old panels over their
+// The served-protocol checks against the running panels, read as old panels over their
 // API: a PasarGuard user in the WireGuard group gets C38 on the way to
 // Marzban, a Marzban user under a role with only the WireGuard group gets
 // C10, and one under a role with only the VLESS group gets neither. Nothing is moved.

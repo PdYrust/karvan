@@ -40,7 +40,7 @@ describe('byRelevance', () => {
     ]).map((g) => g.type);
     expect(order).toEqual(['C11', 'C07', 'C02', 'C18', 'C26']);
   });
-  it('ranks C10 and C38 as blockers (phase 4.1 D37, D38)', () => {
+  it('ranks C10 and C38 as blockers', () => {
     const order = byRelevance([group('C18', 90), group('C38', 2), group('C10', 5)]);
     expect(order.map((g) => g.type)).toEqual(['C10', 'C38', 'C18']);
   });

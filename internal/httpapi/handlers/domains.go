@@ -9,7 +9,7 @@ import (
 )
 
 // Domains lists the domains with the certificates that cover them, the
-// rules that hold them and their warnings (D48, D50).
+// rules that hold them and their warnings.
 func (a *API) Domains(w http.ResponseWriter, r *http.Request) {
 	list, err := a.Bridge.Domains(r.Context())
 	if err != nil {
@@ -20,7 +20,7 @@ func (a *API) Domains(w http.ResponseWriter, r *http.Request) {
 }
 
 // AddDomain stores a domain name (a host, one leading wildcard or an IP)
-// with its certificate, chosen one of the D61 ways.
+// with its certificate, chosen one of the CertChoice ways.
 func (a *API) AddDomain(w http.ResponseWriter, r *http.Request) {
 	var b struct {
 		Name        string            `json:"name"`
@@ -45,7 +45,7 @@ func (a *API) AddDomain(w http.ResponseWriter, r *http.Request) {
 	respond.Lists(w, http.StatusCreated, d)
 }
 
-// SetDomainCertificate changes a domain's certificate (D65): its pins go
+// SetDomainCertificate changes a domain's certificate: its pins go
 // and the HTTPS rules that hold it serve the new one. The acme way starts
 // an order and keeps the current certificate until it is done; any other
 // way cancels a running order.

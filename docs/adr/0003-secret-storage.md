@@ -1,7 +1,6 @@
 # ADR 0003: How Karvan stores secrets
 
-## Status
-Accepted, 2026-10-16. Changed 2026-10-25: the web panel can make one-time values too, and shows them in the response that made them.
+Status: accepted
 
 ## Context
 Karvan will hold panel tokens, database passwords and SSH keys. A stolen database copy (a backup, a careless `scp`) must not be enough to read them.
@@ -21,6 +20,6 @@ Karvan will hold panel tokens, database passwords and SSH keys. A stolen databas
 - **Key derived from the operator's password:** the service would need the password to start after a reboot.
 
 ## Consequences
-- Losing the key file makes every stored secret unreadable. Backups (phase 7) must save it separately from the database and say so plainly.
+- Losing the key file makes every stored secret unreadable. Backups must save it separately from the database and say so plainly.
 - `init` never overwrites an existing key file, and it removes what it created if it fails part way.
 - A new login from the web panel is saved, every old session ends and the browser gets a new one in one transaction. If the response is lost after that, the values are gone with it; `karvan reset` on the server makes new ones.

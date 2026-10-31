@@ -66,7 +66,7 @@ function Result({ check }: { check: Check }) {
     </div>
   );
 }
-/** Reads both panels again and says what changed since the operator reviewed (B3). */
+/** Reads both panels again and says what changed since the operator reviewed. */
 export function CheckAgain({ check }: { check: Check }) {
   const t = useT(startMessages);
   const errorText = useErrorText();

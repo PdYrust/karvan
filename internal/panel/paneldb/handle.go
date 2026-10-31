@@ -70,7 +70,7 @@ func (t readOnlyTx) QueryRowContext(ctx context.Context, s string, args ...any) 
 // ErrLocked means another Karvan (or another job) holds the destination.
 var ErrLocked = errors.New("another job is writing to this database")
 
-// Lock takes Karvan's exclusive lock on the destination itself (D30), so
+// Lock takes Karvan's exclusive lock on the destination itself, so
 // two Karvan installs, or two ENV files naming one database, cannot write
 // at once. It never waits. SQLite uses flock on the database file, which
 // is separate from SQLite's own POSIX locks on Linux; MySQL and MariaDB use

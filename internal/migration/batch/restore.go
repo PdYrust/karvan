@@ -8,8 +8,8 @@ import (
 	"time"
 )
 
-// Restore is a backup restore's hold on the batches it puts back (D17 to
-// D19): every batch on its destination made after the backup, the
+// Restore is a backup restore's hold on the batches it puts back:
+// every batch on its destination made after the backup, the
 // restored job's own included, that is not deleted or rolled back
 // already. The restore wipes all their writes, so they stay inactive with
 // reason restoring until it ends; the bridge then serves none of them.
@@ -86,12 +86,12 @@ func (r *Restore) Fail(ctx context.Context) error {
 	})
 }
 
-// Done ends a restore that put the backup back (D18): its batches are
+// Done ends a restore that put the backup back: its batches are
 // rolled back. The restored job's ledger rows in done, pending or
 // unknown become compensated, and so do their rows written after the
 // backup, since the backup holds none of them. Their other users were in
 // the backup and are still on the destination: adopted ones, and ones an
-// earlier failed run wrote that a batch claimed (D4). Those leave the
+// earlier failed run wrote that a batch claimed. Those leave the
 // batch as they are, so manual rules serve them and a later batch can
 // claim them.
 func (r *Restore) Done(ctx context.Context) error {
@@ -114,7 +114,7 @@ func (r *Restore) Done(ctx context.Context) error {
 }
 
 // FailRestoring runs at start: a batch still restoring has no restore
-// running (Karvan stopped during it), so its restore failed (D19).
+// running (Karvan stopped during it), so its restore failed.
 func (s *Store) FailRestoring(ctx context.Context) error {
 	_, err := s.db.ExecContext(ctx, `UPDATE batches SET inactive_reason = 'restore_failed', updated_at = ?
 		WHERE state = 'inactive' AND inactive_reason = 'restoring'`, s.now().UnixMilli())

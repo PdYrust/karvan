@@ -24,7 +24,7 @@ func answerOn(b *Bridge, port int, method, url string) string {
 	return strconv.Itoa(w.Code) + " " + w.Header().Get("Content-Type") + " " + w.Body.String()
 }
 
-// D12: the panel domain under the hidden path reaches the panel; every
+// The panel domain under the hidden path reaches the panel; every
 // other host, path, scheme and port gets the bridge's own answer, the
 // plain 404 bytes for a wrong hidden path included.
 func TestSharedPortHandsThePanelItsPaths(t *testing.T) {
@@ -63,7 +63,7 @@ func TestSharedPortHandsThePanelItsPaths(t *testing.T) {
 }
 
 // The panel on a shared port changes no handshake of any rule's port and
-// name (D12, as P41-32).
+// name.
 func TestSharedPortKeepsHandshakes(t *testing.T) {
 	m := newMoveCase(t)
 	b := m.e.restart(slog.New(slog.DiscardHandler))

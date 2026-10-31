@@ -31,11 +31,11 @@ var ErrDataDirInUse = errors.New("another Karvan process is using the data direc
 // credentialSweep is how often idle migration logins are dropped.
 const credentialSweep = 10 * time.Minute
 
-// dailyTrim is how often the events of long ended jobs (B17) and old
+// dailyTrim is how often the events of long ended jobs and old
 // audit events are trimmed.
 const dailyTrim = 24 * time.Hour
 
-// lockDataDir takes the data directory for this process (D30).
+// lockDataDir takes the data directory for this process.
 func (a *App) lockDataDir() (func(), error) {
 	unlock, err := paneldb.LockFile(filepath.Join(a.Config.DataDir, "karvan.lock"))
 	if errors.Is(err, paneldb.ErrLocked) {
@@ -111,7 +111,7 @@ func (a *App) startServices(ctx context.Context, panelPorts func() []int) *servi
 }
 
 // newOrders is the Let's Encrypt service, on the test CA, root and
-// resolver of the config when they are set (D74).
+// resolver of the config when they are set.
 func (a *App) newOrders(br *bridge.Bridge) *certorder.Service {
 	d := certorder.Deps{DB: a.DB, Key: a.Key, Bridge: br, Settings: a.Settings, Audit: a.Audit, Log: a.Logger,
 		TestDirectory: a.Config.ACMETestDirectory}

@@ -15,7 +15,7 @@ import (
 // maxACMEBody caps the small Let's Encrypt request bodies.
 const maxACMEBody = 4 << 10
 
-// writeACMEError answers a Let's Encrypt failure (section 4), else as a
+// writeACMEError answers a Let's Encrypt failure, else as a
 // domain or certificate save.
 func writeACMEError(w http.ResponseWriter, r *http.Request, err error) {
 	var notFound *certorder.DNSNotFoundError
@@ -53,7 +53,7 @@ func domainID(w http.ResponseWriter, r *http.Request) (int64, bool) {
 }
 
 // ACME is a domain's latest Let's Encrypt order and its renewal; the page
-// polls it every 2 seconds while an order runs (D69).
+// polls it every 2 seconds while an order runs.
 func (a *API) ACME(w http.ResponseWriter, r *http.Request) {
 	id, ok := domainID(w, r)
 	if !ok {
@@ -91,7 +91,7 @@ func (a *API) StartACME(w http.ResponseWriter, r *http.Request) {
 }
 
 // CheckACME finishes a DNS-01 order once its TXT record is there; force
-// asks Let's Encrypt without looking the record up first (D68).
+// asks Let's Encrypt without looking the record up first.
 func (a *API) CheckACME(w http.ResponseWriter, r *http.Request) {
 	id, ok := domainID(w, r)
 	if !ok {
@@ -128,7 +128,7 @@ func (a *API) CancelACME(w http.ResponseWriter, r *http.Request) {
 	respond.NoContent(w)
 }
 
-// ACMESettings reads the Let's Encrypt settings (D73).
+// ACMESettings reads the Let's Encrypt settings.
 func (a *API) ACMESettings(w http.ResponseWriter, r *http.Request) {
 	v, err := a.Orders.GetSettings(r.Context())
 	if err != nil {

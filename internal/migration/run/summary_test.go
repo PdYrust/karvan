@@ -59,7 +59,7 @@ func TestSummaryWithAnAPIKeyKeepsNoPassword(t *testing.T) {
 	}
 }
 
-// Summary and roles answer per source admin, the login's first (D34).
+// Summary and roles answer per source admin, the login's first.
 func TestSummaryAndRolesPerAdmin(t *testing.T) {
 	tg := pasarGuardDB(t)
 	h := newHarness(t, panel.Marzban, panel.PasarGuard, tg, 6)

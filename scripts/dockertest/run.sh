@@ -3,7 +3,7 @@
 # built) and checks it in throwaway containers and volumes: only the binary
 # on the base, root, init prints the sign-in details once, the panel binds
 # port 80 and turns healthy, and a test panel stops and starts through the
-# Docker socket (D26 to D29). Needs Docker; nothing touches the host's
+# Docker socket. Needs Docker; nothing touches the host's
 # Karvan paths or ports.
 set -eu
 ROOT=$(cd "$(dirname "$0")/../.." && pwd)

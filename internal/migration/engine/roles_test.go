@@ -30,7 +30,7 @@ func vlessOnly(name string, n int) panel.User {
 	return u
 }
 
-// D65: the source role's name picks the destination role; the owner role
+// The source role's name picks the destination role; the owner role
 // never comes by default.
 func TestDefaultRole(t *testing.T) {
 	for source, want := range map[string]int64{"cheap": 7, "owner": operatorRole, "": operatorRole, "gold": operatorRole} {
@@ -53,7 +53,7 @@ func TestDefaultRole(t *testing.T) {
 	}
 }
 
-// D66, D67: with no targets chosen, users get every enabled group the
+// With no targets chosen, users get every enabled group the
 // role allows, and credentials for every protocol those groups serve. The
 // old credentials stay as they were.
 func TestAccessFollowsTheRole(t *testing.T) {
@@ -89,8 +89,8 @@ func TestMarzbanGetsEveryInbound(t *testing.T) {
 	}
 }
 
-// D31: groups come only from the role. Targets in a plan (kept from a
-// draft made before Phase 4.1) never pick groups, and nothing warns.
+// Groups come only from the role. Targets in a plan (kept from a
+// draft made by an older version) never pick groups, and nothing warns.
 func TestPlanTargetsNeverPickGroups(t *testing.T) {
 	in := inputs(panel.PasarGuard, roleDest(), vlessOnly("alice", 1))
 	in.Source.Admin.RoleName = "cheap"
@@ -105,7 +105,7 @@ func TestPlanTargetsNeverPickGroups(t *testing.T) {
 	}
 }
 
-// D32: a plan's targets never narrow Marzban's inbounds either.
+// A plan's targets never narrow Marzban's inbounds either.
 func TestPlanTargetsNeverNarrowMarzban(t *testing.T) {
 	d := dest(panel.Marzban)
 	d.Targets = []panel.Target{{ID: "vless/A", Protocol: "vless"}, {ID: "vmess/B", Protocol: "vmess"}}
@@ -118,7 +118,7 @@ func TestPlanTargetsNeverNarrowMarzban(t *testing.T) {
 	}
 }
 
-// D68: a user beyond the role's limits moves as it is unless the operator
+// A user beyond the role's limits moves as it is unless the operator
 // chooses to fit it; the admin's own overrides win over the role.
 func TestRoleLimits(t *testing.T) {
 	d := roleDest()

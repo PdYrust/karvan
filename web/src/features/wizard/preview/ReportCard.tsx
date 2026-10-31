@@ -9,7 +9,7 @@ import { useT } from '../../../i18n/locale';
 import { checkReportFiles } from '../../../lib/api/preflight';
 import { useErrorText } from '../../../lib/errors/errors';
 import { previewMessages } from './messages';
-/** The pre-flight report: a printable page in a new tab, and the same as JSON or CSV (D12). */
+/** The pre-flight report: a printable page in a new tab, and the same as JSON or CSV. */
 export function ReportCard({ jobId }: { jobId: string }) {
   const t = useT(previewMessages);
   const errorText = useErrorText();

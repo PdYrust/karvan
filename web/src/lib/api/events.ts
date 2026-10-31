@@ -1,7 +1,7 @@
 import { useEffect, useReducer } from 'react';
 import { apiURL } from './client';
 
-/** One event of a migration's stream (api-migration.md section 3). */
+/** One event of a migration's stream. */
 export interface MigrationEvent {
   seq: number;
   at: string;
@@ -155,7 +155,7 @@ export function reduceStream(s: JobStream, e: MigrationEvent): JobStream {
  * Whether nothing can follow this event on the job's stream. A run that
  * failed can still be rolled back on request, so its stream stays open.
  * An end at or before `after` came before a backup restore that began
- * then (B12), so the restore's own end is still to come.
+ * then, so the restore's own end is still to come.
  */
 export function endsStream(e: MigrationEvent, after = 0): boolean {
   return e.type === 'done' && e.data.state !== 'failed' && e.seq > after;
@@ -196,7 +196,7 @@ export function follow(s: Followed, a: FollowAction): Followed {
 const eventTypes = ['stage', 'progress', 'log', 'done'] as const;
 
 /**
- * Follows a job's event stream (D3). EventSource resumes with Last-Event-ID
+ * Follows a job's event stream. EventSource resumes with Last-Event-ID
  * by itself after a dropped connection; the stream is closed once nothing
  * more can come (endsStream, past `after`). `lost` is true when the browser
  * gave up on it.

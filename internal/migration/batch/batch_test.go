@@ -96,7 +96,7 @@ func ensure(t *testing.T, s *Store, jobID, to string, f Facts) int64 {
 	return id
 }
 
-// D4: a batch claims the job's written and adopted users, and users of
+// A batch claims the job's written and adopted users, and users of
 // the same old panel and destination an earlier run left without a batch.
 // Compensated, void, unknown, pending and claimed rows stay out, and so do
 // admins, other old panels and other destinations.
@@ -131,7 +131,7 @@ func TestEnsureClaims(t *testing.T) {
 	}
 }
 
-// A batch made at start for a job that ended long ago (D5) does not
+// A batch made at start for a job that ended long ago does not
 // claim what later runs left behind.
 func TestEnsureClaimsOnlyEarlierRows(t *testing.T) {
 	s, db := open(t)
@@ -172,7 +172,7 @@ func TestEnsureOnceAndOnlyWithUsers(t *testing.T) {
 	}
 }
 
-// The batch row: names per D6, the old link facts of D7, the job's
+// The batch row: its default name, the old link facts, the job's
 // source, panel and end time.
 func TestEnsureStoresTheBatch(t *testing.T) {
 	s, db := open(t)
@@ -215,7 +215,7 @@ func TestEnsureStoresTheBatch(t *testing.T) {
 	}
 }
 
-// D26: a new batch joins every batch rule that serves an older batch of
+// A new batch joins every batch rule that serves an older batch of
 // the same old panel and destination, in the same transaction.
 func TestEnsureJoinsBatchRules(t *testing.T) {
 	s, db := open(t)
@@ -238,7 +238,7 @@ func TestEnsureJoinsBatchRules(t *testing.T) {
 }
 
 // Missing lists done jobs without a batch; Foreign lists a job's rows in
-// another job's batch (D14).
+// another job's batch.
 func TestMissingAndForeign(t *testing.T) {
 	s, db := open(t)
 	ctx := context.Background()

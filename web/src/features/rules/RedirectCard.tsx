@@ -15,7 +15,7 @@ function targetHost(url: string): string {
   }
 }
 
-/** One redirect rule: what it matches and where it sends the old links (section 11). */
+/** One redirect rule: what it matches and where it sends the old links. */
 export function RedirectCard({
   redirect: r,
   domains,

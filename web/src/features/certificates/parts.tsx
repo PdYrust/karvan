@@ -19,7 +19,7 @@ export function RuleName({ rule }: { rule: RuleRef }) {
   );
 }
 
-/** A Let's Encrypt error in words, a rate limit with the time to try again (D71). */
+/** A Let's Encrypt error in words, a rate limit with the time to try again. */
 export function useAcmeErrorWords(): (e: AcmeError) => string {
   const t = useT(acmeErrorMessages);
   const fmt = useFormat();

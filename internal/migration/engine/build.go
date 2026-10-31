@@ -10,13 +10,13 @@ import (
 	"github.com/PdYrust/karvan/internal/panel"
 )
 
-// maxPasses bounds the check-and-fix loop (D23).
+// maxPasses bounds the check-and-fix loop.
 const maxPasses = 5
 
 // Result is the outcome of one build.
 type Result struct {
 	Items     []*Item
-	Admins    []AdminOutcome // the login's first (D34)
+	Admins    []AdminOutcome // the login's first
 	Conflicts []Conflict     // job-level ones (admins, clock, targets, settling)
 	Groups    []Group        // problem groups for the operator
 	Stable    bool
@@ -43,7 +43,7 @@ func Build(p plan.Plan, in Inputs) (*Result, error) {
 	ctx := opContext{now: p.Now, generate: gen}
 	res := &Result{}
 	in.now = p.Now
-	res.Admins, res.Conflicts = landAdmins(p, in) // targets never from p.Targets (D31, D32)
+	res.Admins, res.Conflicts = landAdmins(p, in) // targets never from p.Targets
 	in.admins = map[string]*AdminOutcome{}
 	for i := range res.Admins {
 		in.admins[res.Admins[i].Source.Username] = &res.Admins[i]
@@ -144,7 +144,7 @@ func rank(items []*Item) rankContext {
 }
 
 // generator returns credentials for a fix, reusing what an earlier build
-// generated for the same user and protocol (D20, D29).
+// generated for the same user and protocol.
 func generator(in Inputs) func(key, protocol string) panel.Credentials {
 	return func(key, protocol string) panel.Credentials {
 		id := key + "/" + protocol
@@ -189,7 +189,7 @@ func freeAdminName(name string, d Dest, used map[string]bool) string {
 }
 
 // clockSkewLimit is when a source clock ahead of ours makes copied times
-// lie in the destination's future (D12).
+// lie in the destination's future.
 const clockSkewLimit = time.Minute
 
 func jobConflicts(in Inputs, stable bool) []Conflict {

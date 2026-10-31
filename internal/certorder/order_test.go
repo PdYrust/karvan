@@ -11,7 +11,7 @@ import (
 	"github.com/PdYrust/karvan/internal/bridge"
 )
 
-// D67, D69: a domain added by HTTP-01 gets its certificate through the
+// A domain added by HTTP-01 gets its certificate through the
 // bridge's challenge port, which closes after the order; the certificate
 // is a row with origin acme, set as the domain's, with its renewal.
 func TestHTTP01GetsACertificate(t *testing.T) {
@@ -64,7 +64,7 @@ func waitClosed(t *testing.T, e *orderEnv) {
 	}
 }
 
-// D68: a DNS-01 order shows its record and waits; Check looks the record
+// A DNS-01 order shows its record and waits; Check looks the record
 // up first and asks the CA only once the value is there; force skips the
 // lookup.
 func TestDNS01WaitsForTheRecordAndCheck(t *testing.T) {
@@ -110,7 +110,7 @@ func TestDNS01ForceAsksTheCAWithoutTheLookup(t *testing.T) {
 	}
 }
 
-// D66: methods, wildcards, IP addresses and the subscriber agreement.
+// Methods, wildcards, IP addresses and the subscriber agreement.
 func TestOrderRequestsAreChecked(t *testing.T) {
 	e := newOrderEnv(t)
 	for _, c := range []struct {
@@ -138,7 +138,7 @@ func TestOrderRequestsAreChecked(t *testing.T) {
 	}
 }
 
-// D69: one running order per domain; Cancel ends it and lets the port go.
+// One running order per domain; Cancel ends it and lets the port go.
 func TestBusyAndCancel(t *testing.T) {
 	e := newOrderEnv(t)
 	d := e.addACME("b.example.com", DNS01)
@@ -162,7 +162,7 @@ func TestBusyAndCancel(t *testing.T) {
 	}
 }
 
-// A port failure of HTTP-01 creates nothing (section 4).
+// A port failure of HTTP-01 creates nothing.
 func TestHTTP01PortFailureCreatesNothing(t *testing.T) {
 	e := newOrderEnv(t)
 	ln := listenOn(t, e.br.ChallengePort)
@@ -175,7 +175,7 @@ func TestHTTP01PortFailureCreatesNothing(t *testing.T) {
 	}
 }
 
-// D69: at most three orders talk to the CA at once.
+// At most three orders talk to the CA at once.
 func TestAtMostThreeOrdersTalkToTheCA(t *testing.T) {
 	e := newOrderEnv(t)
 	e.dnsDone(e.addACME("setup.example.com", DNS01))
@@ -202,7 +202,7 @@ func TestAtMostThreeOrdersTalkToTheCA(t *testing.T) {
 	}
 }
 
-// D71 and the security baseline: no answer, view or log line holds a
+// The security baseline: no answer, view or log line holds a
 // private key, a key authorization or an account URL.
 func TestNoKeyInAnswersOrLogs(t *testing.T) {
 	e := newOrderEnv(t)

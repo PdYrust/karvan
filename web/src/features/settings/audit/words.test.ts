@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { actionMessages, auditActions, isAuditAction, isAuditReason } from './words';
 
-// The actions api-resources.md 8.3 lists from internal/audit/audit.go.
+// The actions internal/audit/audit.go defines.
 const serverActions = [
   'login',
   'logout',

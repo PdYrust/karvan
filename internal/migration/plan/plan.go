@@ -14,10 +14,10 @@ type Plan struct {
 	Version int       `json:"version"`
 	Now     time.Time `json:"now"` // "now" for every time operation, fixed so a rebuild gives the same result
 
-	// Admins is how each source admin lands, by its source username
-	// (D35). An admin with no entry keeps its name and gets the default.
+	// Admins is how each source admin lands, by its source username.
+	// An admin with no entry keeps its name and gets the default.
 	Admins map[string]AdminPlan `json:"admins,omitempty"`
-	// Admin is a plan from before Phase 4.1, for the login's admin. It is
+	// Admin is a plan from an older version, for the login's admin. It is
 	// read, never written: ForLogin moves it into Admins.
 	Admin   AdminPlan `json:"admin,omitzero"`
 	Targets []string  `json:"targets"` // destination group ids or "<protocol>/<tag>" inbounds
@@ -39,7 +39,7 @@ type Plan struct {
 }
 
 // ForLogin returns p with an Admin entry moved to Admins under login, the
-// source admin whose login reads the old panel (D35). Only a client that
+// source admin whose login reads the old panel. Only a client that
 // knows no Admins sends Admin, so it wins over the login's entry. p and
 // its map are left as they were.
 func (p Plan) ForLogin(login string) Plan {

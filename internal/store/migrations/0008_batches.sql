@@ -1,4 +1,4 @@
--- Batches (phase 4.1 D1 to D8): a migration that ended done becomes a
+-- Batches: a migration that ended done becomes a
 -- named batch holding the users it moved. Membership lives on the ledger
 -- row. Additive only: no existing row is deleted and no token is
 -- re-pointed. Times are unix milliseconds, like jobs.
@@ -26,7 +26,7 @@ CREATE INDEX batches_dest ON batches (dest, created_at);
 
 -- One batch per done job with users, and one inactive batch per
 -- rolled-back job whose done or compensated users still have tokens, so
--- the operator decides about those tokens. Names follow D6: the source
+-- the operator decides about those tokens. The name is the source
 -- admin, or "batch", with " 2", " 3" on later batches of the same name and
 -- old panel. Old link facts stay empty; the rule form asks for them.
 INSERT INTO batches (job_id, panel_id, dest, source_kind, source_origin, name, state, inactive_reason, inactive_at, created_at, updated_at)

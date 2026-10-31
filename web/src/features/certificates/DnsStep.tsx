@@ -42,7 +42,7 @@ function seenOf(err: unknown): string[] {
   return Array.isArray(seen) ? seen.filter((s): s is string => typeof s === 'string') : [];
 }
 
-/** The DNS-01 step (D68): the TXT record to add, Check, and Ask anyway for split DNS. */
+/** The DNS-01 step: the TXT record to add, Check, and Ask anyway for split DNS. */
 export function DnsStep({
   domainId,
   dns,

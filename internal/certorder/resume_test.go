@@ -68,7 +68,7 @@ func (e *orderEnv) sealOrderKey(id int64, ca *fakeOrder) {
 	e.ca.issue(ca, []string{ca.name}, &k.(*ecdsa.PrivateKey).PublicKey)
 }
 
-// D69: at start, each running order goes on from where the CA has it.
+// At start, each running order goes on from where the CA has it.
 func TestResumeInEachState(t *testing.T) {
 	e := newOrderEnv(t)
 	e.dnsDone(e.addACME("setup.example.com", DNS01)) // account 1, registered

@@ -18,9 +18,9 @@ import (
 var ErrNoFullAdmin = errors.New("the panel has no full admin: no Marzban sudo admin, PasarGuard owner or SUDO_USERNAME")
 
 // API is how Karvan calls the destination panel's own API on this server,
-// for the reload step only (D46). The panel signs its tokens with the DB
+// for the reload step only. The panel signs its tokens with the DB
 // jwt secret, so Karvan mints a short token for a full admin instead of
-// asking for a password (owner decision Q6).
+// asking for a password.
 type API struct {
 	Local
 	Kind    panel.Kind
@@ -32,7 +32,7 @@ type API struct {
 	binding secret.Value
 }
 
-// tokenTTL is short (D47): one call never takes this long, and Token
+// tokenTTL is short: one call never takes this long, and Token
 // mints a fresh one per call.
 const tokenTTL = 5 * time.Minute
 

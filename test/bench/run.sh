@@ -1,5 +1,5 @@
 #!/bin/sh
-# The bridge benchmark of D37, safe to run next to other services:
+# The bridge benchmark, safe to run next to other services:
 #   karvan-bench-server  the bridge and a fake panel   --cpus=1 --memory=1g
 #   karvan-bench-load    the load generator            --cpus=1 --memory=1g
 # Both run on a private internal Docker network: no host port is

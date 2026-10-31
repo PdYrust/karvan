@@ -9,7 +9,7 @@ import {
 } from './plan';
 
 /**
- * The Changes step's edits (api-migration.md sections 5 and 6): an
+ * The Changes step's edits: an
  * operation lands on a category's ops. All users, a filter and picked users
  * get a category of their own, with an id that starts with "change-", so
  * removing its last operation removes it too.
@@ -40,7 +40,7 @@ function amount(text: string): string | null {
 
 export const statuses = ['active', 'disabled', 'limited', 'expired', 'on_hold'] as const;
 
-/** The filters the Changes step offers, as conditions (api-migration.md 6.3). */
+/** The filters the Changes step offers, as conditions. */
 export const filters = {
   name_contains: { field: 'username', op: 'contains', value: 'text' },
   name_prefix: { field: 'username', op: 'prefix', value: 'text' },

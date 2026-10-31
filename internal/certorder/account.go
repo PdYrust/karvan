@@ -27,7 +27,7 @@ type account struct {
 }
 
 // errAccount wraps a sealing or key failure of an account, which the
-// order shows as acme_account (D71).
+// order shows as acme_account.
 type errAccount struct{ err error }
 
 func (e errAccount) Error() string { return "account key: " + e.err.Error() }
@@ -35,7 +35,7 @@ func (e errAccount) Unwrap() error { return e.err }
 
 // prepareAccount returns the account of dir, making its row and key the
 // first time: inserted with a NULL key, then sealed under its new id in
-// the same transaction (D66). Until the CA has registered it, an order
+// the same transaction. Until the CA has registered it, an order
 // must agree to the subscriber agreement.
 func (s *Service) prepareAccount(ctx context.Context, dir string, agree bool) (int64, error) {
 	var id int64
@@ -146,7 +146,7 @@ func (s *Service) client(a account) *acme.Client {
 }
 
 // register makes the CA know account a, agreeing to its subscriber
-// agreement, which the first order of a directory asked for (D66).
+// agreement, which the first order of a directory asked for.
 func (s *Service) register(ctx context.Context, c *acme.Client, a *account) error {
 	if a.url != "" {
 		return nil

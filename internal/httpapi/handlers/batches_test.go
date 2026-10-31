@@ -118,7 +118,7 @@ func TestMigrationsNameTheirBatch(t *testing.T) {
 }
 
 // The user list says who is in the batch and never carries a token or
-// MAC (D57).
+// MAC.
 func TestBatchUsers(t *testing.T) {
 	m := newMigrationEnv(t, 3)
 	_, b := doneBatch(t, m)
@@ -152,7 +152,7 @@ func TestBatchUsers(t *testing.T) {
 }
 
 // Show new link: built on request, never cached, only for a user of the
-// batch, audited without the link (D57, Q7 B).
+// batch, audited without the link.
 func TestBatchShowLink(t *testing.T) {
 	m := newMigrationEnv(t, 2)
 	_, b := doneBatch(t, m)

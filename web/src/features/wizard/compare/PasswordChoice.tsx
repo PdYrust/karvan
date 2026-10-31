@@ -13,8 +13,8 @@ import { compareMessages } from './messages';
 
 /**
  * The moved admin's password: the reseller's own (or one Karvan makes at
- * the run), or a new one typed or generated here (D11). A new one lives
- * only in the wizard's state and shows once, with copy (D10).
+ * the run), or a new one typed or generated here. A new one lives
+ * only in the wizard's state and shows once, with copy.
  */
 export function PasswordChoice({
   canKeep,

@@ -15,7 +15,7 @@ const (
 	ClosedRevoked = "revoked" // the new panel revoked the user's link
 )
 
-// verdict is the destination check's answer (D58).
+// verdict is the destination check's answer.
 type verdict struct {
 	ok    bool
 	close string // set when the user's old links must close for good
@@ -35,7 +35,7 @@ func (b *Bridge) check(ctx context.Context, d Destination, e ledger.Entry, issue
 	return judge(e, r, found, issued), nil
 }
 
-// judge applies the destination's own token rules, plus the owner rule:
+// judge applies the destination's own token rules, plus the revoke rule:
 // a revoke or delete on the new panel closes the old links too.
 func judge(e ledger.Entry, r Row, found bool, issued time.Time) verdict {
 	switch {
@@ -70,7 +70,7 @@ func (b *Bridge) apply(ctx context.Context, e ledger.Entry, v verdict) bool {
 
 // sameUser reports whether the old panel's answer is the user the ledger
 // recorded: same name (and id), same creation time, same credentials. A
-// new user reusing a name or id on the old panel fails here (D60).
+// new user reusing a name or id on the old panel fails here.
 func sameUser(kind panel.Kind, u panel.User, e ledger.Entry) bool {
 	if kind == panel.PasarGuard && strconv.FormatInt(u.SourceID, 10) != e.SourceKey {
 		return false

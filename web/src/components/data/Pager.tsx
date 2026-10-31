@@ -59,7 +59,7 @@ export function PageButtons({
 }
 
 /**
- * The footer of a server-paged list (D5): how much shows, and the way to
+ * The footer of a server-paged list: how much shows, and the way to
  * the pages before and after. Kumo's own pagination has physical classes
  * and carets that do not turn in Persian, so this one is Karvan's.
  */

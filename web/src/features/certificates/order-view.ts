@@ -27,7 +27,7 @@ export function orderSteps(o: AcmeOrder): OrderStep[] {
   });
 }
 
-/** The page reads a running order every 2 seconds (D69). */
+/** The page reads a running order every 2 seconds. */
 export function orderPoll(o: AcmeOrder | null | undefined): number | false {
   return isRunning(o) ? 2000 : false;
 }

@@ -2,7 +2,7 @@ import { ApiError } from '../api/client';
 import type { PlanSaved, PlanState } from '../api/migrations';
 import type { Plan, PlanEdit } from './plan';
 
-/** The plan changed again while an edit was replayed: the operator decides (D7). */
+/** The plan changed again while an edit was replayed: the operator decides. */
 export class PlanConflict extends Error {
   constructor() {
     super('plan_conflict');
@@ -13,10 +13,10 @@ export class PlanConflict extends Error {
 const isStale = (err: unknown) => err instanceof ApiError && err.status === 412;
 
 /**
- * Saves one edit: the whole plan with the version it was made on (D6). When
+ * Saves one edit: the whole plan with the version it was made on. When
  * another tab or a new read changed the plan first (412), it reads the plan
  * again and replays the edit on it once; a second conflict is a
- * PlanConflict (D7).
+ * PlanConflict.
  */
 export async function saveEdit(
   edit: PlanEdit,

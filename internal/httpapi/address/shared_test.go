@@ -46,7 +46,7 @@ func holdPort(t *testing.T) int {
 	return ln.Addr().(*net.TCPAddr).Port
 }
 
-// D12: a shared address opens no listener of its own; the bridge gets it
+// A shared address opens no listener of its own; the bridge gets it
 // next to the old address until it is confirmed, and a later change of
 // port goes back to a listener of the panel's own.
 func TestSharedChangeGoesToTheBridge(t *testing.T) {

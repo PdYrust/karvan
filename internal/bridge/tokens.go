@@ -16,7 +16,7 @@ type verified struct {
 	Checked  time.Time
 }
 
-// mac names a token without keeping it (D57).
+// mac names a token without keeping it.
 func mac(key []byte, token string) []byte {
 	h := hmac.New(sha256.New, key)
 	h.Write([]byte(token))
@@ -50,7 +50,7 @@ func (st *store) dropToken(ctx context.Context, m []byte) error {
 
 // close shuts a user's old links for good: their tokens go and no lazy
 // check runs for them again. A user whose batch a restore took meanwhile
-// stays as it is (D22); each statement reads the batch state as it writes.
+// stays as it is; each statement reads the batch state as it writes.
 // It reports whether the user was closed now.
 func (st *store) close(ctx context.Context, ledgerID int64, reason string) (bool, error) {
 	tx, err := st.db.BeginTx(ctx, nil)

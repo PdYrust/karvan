@@ -11,7 +11,7 @@ import (
 	"github.com/PdYrust/karvan/internal/panel"
 )
 
-// Ops lists every operation and its parameters (D26).
+// Ops lists every operation and its parameters.
 var Ops = map[string][]string{
 	"traffic.add": {"gb"}, "traffic.set": {"gb"}, "traffic.unlimited": nil, "traffic.reset_used": nil,
 	"traffic.carry_remaining": nil, "traffic.strategy": {"strategy"},
@@ -30,7 +30,7 @@ type opContext struct {
 }
 
 // checkOp validates an operation before any user sees it. place.targets
-// is gone (D32): groups come from the role, Marzban gets every inbound.
+// is gone: groups come from the role, Marzban gets every inbound.
 func checkOp(o plan.Op) error {
 	if o.Kind == "place.targets" {
 		return &PlanError{Where: "ops", Problem: "place.targets"}

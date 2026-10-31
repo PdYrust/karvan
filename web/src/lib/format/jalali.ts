@@ -1,5 +1,5 @@
 /**
- * Jalali (Solar Hijri) and Gregorian dates as plain numbers (D8). The
+ * Jalali (Solar Hijri) and Gregorian dates as plain numbers. The
  * arithmetic is the 33-year rule ICU uses, so the browser's own Intl
  * formatting of a date and this module always agree; the tests check every
  * day of 1300 to 1500 SH against Intl.

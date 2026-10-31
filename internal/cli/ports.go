@@ -9,7 +9,7 @@ import (
 )
 
 // runPorts prints the TCP ports this host listens on, or with --free one
-// random port nothing listens on, for the installer to propose (D20).
+// random port nothing listens on, for the installer to propose.
 func runPorts(_ context.Context, streams IO, args []string) error {
 	fs := newFlagSet("ports", streams)
 	free := fs.Bool("free", false, fmt.Sprintf("print one free port from %d to %d", netports.FreeLow, netports.FreeHigh))

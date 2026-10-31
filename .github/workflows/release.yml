@@ -1,4 +1,4 @@
-# Builds, tests, attests and publishes a release for a pushed v* tag (D31).
+# Builds, tests, attests and publishes a release for a pushed v* tag.
 # Run by hand with dry_run (the default) it builds, tests and attests the
 # same files but pushes no image and makes no release.
 #

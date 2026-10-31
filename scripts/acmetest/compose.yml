@@ -1,4 +1,4 @@
-# Pebble and its challenge server for `make test-acme` (phase-4.1 D72).
+# Pebble and its challenge server for `make test-acme`.
 # Host network: Pebble checks HTTP-01 on 127.0.0.1:5002, where the test's
 # bridge listens, and resolves names through the challenge server's DNS on
 # 127.0.0.1:8053, whose TXT records the test sets on 127.0.0.1:8055.

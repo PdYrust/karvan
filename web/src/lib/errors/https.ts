@@ -3,7 +3,7 @@ import type { Messages } from '../../i18n/locale';
 import { errorOf } from './errors';
 
 /**
- * Sentences for the codes only the HTTPS settings tab meets (D10). They
+ * Sentences for the codes only the HTTPS settings tab meets. They
  * load with that tab; errors.ts keeps the codes every page can meet.
  */
 const en = {

@@ -105,7 +105,7 @@ var held = []struct{ state, reason string }{
 	{"inactive", "restoring"}, {"inactive", "rolled_back"}, {"inactive", "restore_failed"}, {"deleted", ""},
 }
 
-// D22: a verified token whose row is in an inactive or deleted batch gets
+// A verified token whose row is in an inactive or deleted batch gets
 // the 404 at once: the panel is not asked, nothing is dropped or closed,
 // even with the user gone from the destination (a restore under way).
 func TestHeldBatchStopsAVerifiedToken(t *testing.T) {
@@ -131,7 +131,7 @@ func TestHeldBatchStopsAVerifiedToken(t *testing.T) {
 	}
 }
 
-// D22: a first old link of a user in a held batch gets no pass-through
+// A first old link of a user in a held batch gets no pass-through
 // and no lazy check, on a manual rule and on a rule of batches.
 func TestHeldBatchStopsALazyCheck(t *testing.T) {
 	for _, h := range held {
@@ -158,7 +158,7 @@ func TestHeldBatchStopsALazyCheck(t *testing.T) {
 	}
 }
 
-// D22: a rule whose batches are all held answers 404 to every request,
+// A rule whose batches are all held answers 404 to every request,
 // tokens of the new panel itself included, and never asks the panel.
 func TestRuleOfHeldBatchesHasNoPassThrough(t *testing.T) {
 	e := newEnv(t, "ali")
@@ -241,7 +241,7 @@ func TestRecheckSkipsHeldBatches(t *testing.T) {
 	}
 }
 
-// D23: a token proven on one rule counts on another only for a row in
+// A token proven on one rule counts on another only for a row in
 // that rule's scope; out of scope, no lazy check finds the user either.
 func TestProofOutsideTheRuleScopeDoesNotCount(t *testing.T) {
 	e := newEnv(t, "ali", "bob")
@@ -262,7 +262,7 @@ func TestProofOutsideTheRuleScopeDoesNotCount(t *testing.T) {
 	}
 }
 
-// D24: of two rows with the same source key, the one the old panel's
+// Of two rows with the same source key, the one the old panel's
 // answer matches is served, even when it is not the newest.
 func TestLazyCheckPicksTheMatchingRow(t *testing.T) {
 	e := newEnv(t, "ali")
@@ -279,7 +279,7 @@ func TestLazyCheckPicksTheMatchingRow(t *testing.T) {
 	}
 }
 
-// D24: two rows that both match the old panel's answer are a data error:
+// Two rows that both match the old panel's answer are a data error:
 // 404, nothing stored, and a warning names the rows.
 func TestLazyCheckRefusesTwoMatchingRows(t *testing.T) {
 	e := newEnv(t, "ali")

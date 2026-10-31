@@ -8,7 +8,7 @@ import (
 	"github.com/PdYrust/karvan/internal/httpapi/middleware"
 )
 
-// PanelSite is Karvan's web panel on a shared HTTPS port (D12, ADR 0011):
+// PanelSite is Karvan's web panel on a shared HTTPS port (ADR 0011):
 // requests on Port whose host is the domain and whose path is under
 // /BasePath go to Handler, before the rules.
 type PanelSite struct {

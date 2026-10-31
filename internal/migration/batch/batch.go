@@ -1,4 +1,4 @@
-// Package batch makes the named batches of phase 4.1 (D1 to D7): a
+// Package batch makes the named batches: a
 // migration that ends done becomes a batch holding the users it moved.
 // Membership lives on the ledger row (ledger.batch_id) and is set only
 // here, when the batch is made; a claimed row never moves to another
@@ -36,13 +36,13 @@ type ended struct {
 }
 
 // Ensure makes the batch of a done job and returns its id, or the id it
-// has already (D5). dest is the job's destination; empty reads it from
-// the job's ledger rows. In one transaction it claims (D4) the job's user
+// has already. dest is the job's destination; empty reads it from
+// the job's ledger rows. In one transaction it claims the job's user
 // rows in done or adopted, and user rows of the same old panel and
 // destination in done or adopted that no batch holds and that were
 // written before the job ended (left by an earlier failed or interrupted
 // run), then joins every batch rule serving an older batch of the same old
-// panel and destination (D26). With nothing to claim, or a job that is
+// panel and destination. With nothing to claim, or a job that is
 // not done, there is no batch and it returns 0. f is stored only when the
 // batch is made.
 func (s *Store) Ensure(ctx context.Context, jobID, dest string, f Facts) (int64, error) {
@@ -101,7 +101,7 @@ func doneJob(ctx context.Context, tx *sql.Tx, jobID string) (ended, bool, error)
 	return j, state == "done", nil
 }
 
-// insert adds the batch row with its default name (D6) and returns its id.
+// insert adds the batch row with its default name and returns its id.
 func insert(ctx context.Context, tx *sql.Tx, jobID, dest string, j ended, f Facts, now time.Time) (int64, error) {
 	taken, err := names(ctx, tx, j.origin)
 	if err != nil {
@@ -130,8 +130,8 @@ func names(ctx context.Context, tx *sql.Tx, origin string) ([]string, error) {
 	return texts(ctx, tx, "SELECT name FROM batches WHERE source_origin = ?", origin)
 }
 
-// Missing lists done jobs that have no batch, oldest first, for Recover
-// (D5): the batch of a run that stopped between saving the job and making
+// Missing lists done jobs that have no batch, oldest first, for Recover:
+// the batch of a run that stopped between saving the job and making
 // it.
 func (s *Store) Missing(ctx context.Context) ([]string, error) {
 	return texts(ctx, s.db, `SELECT id FROM jobs j WHERE state = 'done'
@@ -139,8 +139,7 @@ func (s *Store) Missing(ctx context.Context) ([]string, error) {
 }
 
 // Foreign is the set of a job's ledger rows that another job's batch
-// holds (claimed by D4): an undo or roll back of the job leaves them
-// (D14).
+// holds (claimed when that batch was made): an undo or roll back of the job leaves them.
 func (s *Store) Foreign(ctx context.Context, jobID string) (map[int64]bool, error) {
 	rows, err := s.db.QueryContext(ctx, `SELECT l.id FROM ledger l JOIN batches b ON b.id = l.batch_id
 		WHERE l.job_id = ? AND b.job_id <> ?`, jobID, jobID)

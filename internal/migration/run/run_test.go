@@ -238,7 +238,7 @@ func TestCredentialsAreDroppedAtTheEnd(t *testing.T) {
 }
 
 // The moved reseller keeps the password it signed in to the old panel
-// with (owner, 2026-10-16); nothing is generated or handed out.
+// with; nothing is generated or handed out.
 func TestAdminKeepsTheResellersPassword(t *testing.T) {
 	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/marzbandb/testdata/" + marzbandb.Revision + ".sqlite.sql"})
 	h := newHarness(t, panel.PasarGuard, panel.Marzban, tg, 2)

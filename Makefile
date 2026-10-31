@@ -80,7 +80,7 @@ test-acme:
 	./scripts/acmetest/up.sh
 	go test -tags acmetest -count=1 -run TestPebble ./internal/certorder/; s=$$?; ./scripts/acmetest/down.sh; exit $$s
 # The engine at 100k users, then check, resolve and execute at 2000 admins
-# (D37; the 2000 admin run takes about 20 minutes on a 2-core host).
+# (the 2000 admin run takes about 20 minutes on a 2-core host).
 bench:
 	go test -run x -bench . -benchtime 3x ./internal/migration/...
 	go test -tags benchtest -count=1 -timeout 60m -v -run TestBenchEngine ./internal/migration/run/

@@ -3,7 +3,7 @@
 // migration engine never depends on a specific panel.
 //
 // Version 1 reads a source panel through its API and writes the destination
-// panel through its database (see .tmp/specs/panel-diff.md section 0).
+// panel through its database.
 package panel
 
 import (
@@ -160,7 +160,7 @@ type User struct {
 }
 
 // SourceGroup is a group of an old PasarGuard panel with the protocols of
-// its inbounds, so a user's current protocols can be told (D36).
+// its inbounds, so a user's current protocols can be told.
 type SourceGroup struct {
 	ID        int64
 	Disabled  bool

@@ -56,8 +56,8 @@ const (
 	specials = "!#$%&*+-=?@_"
 )
 
-// GeneratePassword returns a password that meets the policy for username
-// (owner decision 1). Look-alike characters are left out.
+// GeneratePassword returns a password that meets the policy for username.
+// Look-alike characters are left out.
 func GeneratePassword(username string) (string, error) {
 	for {
 		b := make([]byte, 0, generatedPasswords)

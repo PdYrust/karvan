@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-// Lazy check limits (D61).
+// Lazy check limits.
 const (
 	siteRate     = 10 // checks per second per site
 	siteInFlight = 4

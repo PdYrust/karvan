@@ -45,7 +45,7 @@ function partsOf(calendar: Calendar, value: Day | null): Parts {
 
 /**
  * A date as day, month and year in the operator's calendar: Jalali in
- * Persian by default (D8; Kumo's date picker has no Persian calendar),
+ * Persian by default (Kumo's date picker has no Persian calendar),
  * Gregorian otherwise. It reports the Gregorian day, or null while a part
  * is missing.
  */

@@ -34,7 +34,7 @@ CREATE TABLE job_events (
     PRIMARY KEY (job_id, seq)
 ) STRICT;
 
--- One row per admin or user Karvan moved, adopted or merged into (D31).
+-- One row per admin or user Karvan moved, adopted or merged into.
 -- Times are unix microseconds.
 CREATE TABLE ledger (
     id               INTEGER PRIMARY KEY,

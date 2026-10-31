@@ -19,7 +19,7 @@ import (
 var ErrNotFound = errors.New("no such site")
 
 // ErrOverlap means another rule has the same port, host key and path key,
-// so no request could tell the two apart (D52).
+// so no request could tell the two apart.
 var ErrOverlap = errors.New("another rule answers the same port, domain and path")
 
 // ErrNameTaken means another site has this name.
@@ -36,14 +36,14 @@ type store struct {
 	now        func() time.Time
 	panelPorts func() []int // Karvan's own web panel ports; nil: none known
 	// challengeOpen reports whether the Let's Encrypt challenge port is
-	// port and held open (D63, D67); nil: never.
+	// port and held open; nil: never.
 	challengeOpen func(port int) bool
 	// saveMu runs one save of rules, domains, their certificates and pins
 	// at a time, so no two can both pass their checks before either is
 	// written.
 	saveMu sync.Mutex
 	// stmts are the queries every old-link request runs, prepared once:
-	// parsing the token query took most of a request's time (D37).
+	// parsing the token query took most of a request's time.
 	stmtMu sync.Mutex
 	stmtDB *sql.DB // the pool stmts were prepared on
 	stmts  map[string]*sql.Stmt
@@ -72,7 +72,7 @@ func (st *store) queryRow(ctx context.Context, q string, args ...any) *sql.Row {
 }
 
 // siteColumns read a site with the certificate it is served with: its
-// certificates row once adopted (D54), else its own columns.
+// certificates row once adopted, else its own columns.
 const siteColumns = "s.id, s.name, s.panel_id, s.source_kind, s.source_url, s.source_ip, s.source_pin, s.old_path, s.domains, " +
 	"s.listen_port, COALESCE(c.cert_file, s.cert_file), COALESCE(c.key_file, s.key_file), COALESCE(c.cert_pem, s.cert_pem), " +
 	"COALESCE(c.key_sealed, s.key_sealed) IS NOT NULL, s.lazy, s.plain_http_ok, s.mode, COALESCE(s.certificate_id, 0), " +
@@ -154,10 +154,10 @@ func (st *store) siteKey(ctx context.Context, id int64) ([]byte, error) {
 
 // Save creates (ID 0) or updates a site: a rule of batches takes its
 // derived fields from them, every domain must be registered, and the
-// certificate is derived from the domains and https (D48, D63). The
+// certificate is derived from the domains and https. The
 // site's own certificate columns are cleared in the same transaction; a
 // site still served from them is saved only once its domains have
-// certificates (ErrNotAdopted, D54).
+// certificates (ErrNotAdopted).
 func (st *store) Save(ctx context.Context, s Site) (Site, error) {
 	st.saveMu.Lock()
 	defer st.saveMu.Unlock()
@@ -236,7 +236,7 @@ func (st *store) write(ctx context.Context, s *Site) error {
 }
 
 // checkSave checks s against its panel, Karvan's own port and every other
-// panel and redirect rule (D52). The bridge store writes both rule
+// panel and redirect rule. The bridge store writes both rule
 // tables, so a request reaches at most one rule.
 func (st *store) checkSave(ctx context.Context, s Site) error {
 	var n int
@@ -269,7 +269,7 @@ func (st *store) checkSave(ctx context.Context, s Site) error {
 }
 
 // checkChallenge refuses an HTTPS rule on the challenge port while it is
-// held open: the open listener is a plain user of the port (D63, D67).
+// held open: the open listener is a plain user of the port.
 func (st *store) checkChallenge(port int, tls bool) error {
 	if tls && st.challengeOpen != nil && st.challengeOpen(port) {
 		return fmt.Errorf("%w: the Let's Encrypt challenge port is open", ErrPortMixed)

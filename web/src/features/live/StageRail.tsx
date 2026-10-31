@@ -63,7 +63,7 @@ function lineOf(t: Translate<LiveKey>, fmt: Format, s: RailStep): string {
   }
 }
 
-/** Check, Backup, Write, Verify, Reload, then Undo and Restore when they ran (4.6). */
+/** Check, Backup, Write, Verify, Reload, then Undo and Restore when they ran. */
 export function StageRail({
   steps,
   className,

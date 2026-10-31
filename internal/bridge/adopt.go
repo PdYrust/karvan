@@ -16,7 +16,7 @@ import (
 const maxCertName = 64
 
 // adoptCertificates moves the certificate of every site that still has
-// its own into a certificates row (D54), one transaction per site. A site
+// its own into a certificates row, one transaction per site. A site
 // that fails keeps its own columns, is served from them as before and is
 // tried again at the next start.
 func (b *Bridge) adoptCertificates(ctx context.Context) {
@@ -56,7 +56,8 @@ func (b *Bridge) adoptSite(ctx context.Context, id int64, name string) {
 	}
 }
 
-// ownCert is a site's own certificate, as Phase 4 stored it.
+// ownCert is a site's own certificate, as stored before the certificates
+// table.
 type ownCert struct {
 	name, certFile, keyFile, certPEM string
 	sealed                           []byte

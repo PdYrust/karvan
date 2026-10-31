@@ -10,7 +10,7 @@ import (
 	"github.com/PdYrust/karvan/internal/bridge"
 )
 
-// lookupTimeout bounds the TXT lookup of a Check (D68).
+// lookupTimeout bounds the TXT lookup of a Check.
 const lookupTimeout = 5 * time.Second
 
 // maxSeen is how many found TXT values a refused Check shows.
@@ -23,7 +23,7 @@ type DNSNotFoundError struct{ Seen []string }
 func (e *DNSNotFoundError) Error() string { return "the TXT record does not hold the value yet" }
 
 // Check finishes a DNS-01 order once its TXT record is there (POST
-// /domains/{id}/acme/check, D68). It looks the record up first, so a
+// /domains/{id}/acme/check). It looks the record up first, so a
 // value not there yet costs no failed validation at the CA; force skips
 // the lookup for split DNS.
 func (s *Service) Check(ctx context.Context, id int64, force bool) (bridge.ACMEOrder, error) {

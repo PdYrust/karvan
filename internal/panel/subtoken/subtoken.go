@@ -1,7 +1,7 @@
 // Package subtoken reads and mints subscription tokens the way Marzban
 // 0.8.4 and PasarGuard 5.4.1 do (app/utils/jwt.py in both). Reading a
 // payload never trusts it: only the panel that holds the secret, or a
-// verification against it, can say a token is real (D56).
+// verification against it, can say a token is real.
 package subtoken
 
 import (

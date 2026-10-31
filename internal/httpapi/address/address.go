@@ -56,7 +56,7 @@ type Change struct {
 	TLS     *settings.TLS
 }
 
-// hsts is sent in domain mode only (D8): a self-signed certificate under
+// hsts is sent in domain mode only: a self-signed certificate under
 // HSTS cannot be clicked through, and a day is short enough that going
 // back to plain HTTP does not lock a browser out.
 const hsts = "max-age=86400"
@@ -93,7 +93,7 @@ type Server struct {
 	// Certificate is the certificate of an HTTPS address.
 	Certificate func(ctx context.Context, t settings.TLS) (*tls.Certificate, error)
 	// Share hands the addresses served on a bridge HTTPS port to the
-	// bridge (D12, ADR 0011), each time they change; nil means none.
+	// bridge (ADR 0011), each time they change; nil means none.
 	Share func(sites []Shared)
 	// OnShutdown runs once when the final shutdown starts.
 	OnShutdown func()

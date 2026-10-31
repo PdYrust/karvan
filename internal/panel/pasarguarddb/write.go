@@ -19,7 +19,7 @@ import (
 // (app/db/crud/wireguard.py) works across cores, namespaces and reserved
 // offsets under row locks; copying it would race the panel. Users keep
 // their keys with no peer IP, and the panel assigns one on its own update
-// path, which the reload step goes through (phase-3 D21, ADR 0005).
+// path, which the reload step goes through (ADR 0005).
 type Writer struct {
 	Dialect paneldb.Dialect
 }
@@ -32,7 +32,7 @@ type UserRow struct {
 	UsageLog *UsageLog
 }
 
-// UsageLog keeps lifetime traffic and the reset schedule (D19).
+// UsageLog keeps lifetime traffic and the reset schedule.
 type UsageLog struct {
 	Traffic int64
 	ResetAt time.Time

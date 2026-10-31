@@ -8,7 +8,7 @@ import (
 	"github.com/PdYrust/karvan/internal/settings"
 )
 
-// SettingsView is GET /settings/acme (D73): the settings, whether a test
+// SettingsView is GET /settings/acme: the settings, whether a test
 // CA from the config replaces Let's Encrypt, and whether the directory
 // in use has a registered account.
 type SettingsView struct {
@@ -34,8 +34,8 @@ func (s *Service) GetSettings(ctx context.Context) (SettingsView, error) {
 }
 
 // SetSettings stores the Let's Encrypt settings. Turning keepPort80 on
-// opens the challenge port first and stores nothing when it cannot
-// (D73); staging changes new orders only.
+// opens the challenge port first and stores nothing when it cannot;
+// staging changes new orders only.
 func (s *Service) SetSettings(ctx context.Context, a settings.ACME) error {
 	if err := a.Validate(); errors.Is(err, settings.ErrACMEEmail) {
 		return &bridge.ACMEInvalidError{Field: "email"}

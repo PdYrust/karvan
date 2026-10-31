@@ -3,7 +3,7 @@ import { useT } from '../../i18n/locale';
 import { domainFormMessages } from './domain-messages';
 import { linkClass } from './parts';
 
-/** The subscriber agreement the first order of a directory accepts (D66). */
+/** The subscriber agreement the first order of a directory accepts. */
 const agreementUrl = 'https://letsencrypt.org/repository/';
 
 /** The agreement Let's Encrypt asks for before the first order. */

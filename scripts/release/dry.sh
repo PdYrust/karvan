@@ -1,5 +1,5 @@
 #!/bin/sh
-# The local release dry run (D35): builds VERSION (default 0.5.0-beta-dry)
+# The local release dry run: builds VERSION (default 0.5.0-beta-dry)
 # into dist/, checks SHA256SUMS and that a changed byte fails the check,
 # builds the image for both architectures with --load (nothing is pushed),
 # checks the attestation subject list, looks for tool names in the unpacked

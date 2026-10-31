@@ -107,7 +107,7 @@ func (a *API) DeleteBackup(w http.ResponseWriter, r *http.Request) {
 	respond.NoContent(w)
 }
 
-// RestoreBackup puts a Safe Mode backup back in the background (B12):
+// RestoreBackup puts a Safe Mode backup back in the background:
 // Karvan stops the panel, restores and starts it again, and the job's
 // event stream follows it. The operator types the backup id to confirm,
 // because this also takes back everything written since. 202 once the

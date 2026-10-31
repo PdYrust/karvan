@@ -18,7 +18,7 @@ import (
 )
 
 // giveToNorth makes the users from the fourth on belong to the old
-// panel's admin "north" (D34).
+// panel's admin "north".
 func giveToNorth(src migrationtest.Source) {
 	src.Mutate(func(users *[]map[string]any) {
 		for i := 3; i < len(*users); i++ {
@@ -71,7 +71,7 @@ func (h *harness) query(q string) map[string]string {
 	return out
 }
 
-// D34: each admin moves with its own users. The login's admin keeps its
+// Each admin moves with its own users. The login's admin keeps its
 // password, the other one gets a generated one for passwords.csv. A
 // re-run moves only the user left out before, into the admin its own
 // admin moved to; the login's admin, with nothing new, merges as ever.

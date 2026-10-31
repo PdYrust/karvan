@@ -117,7 +117,7 @@ func TestSiteErrorsAreCodes(t *testing.T) {
 }
 
 // Domains that are not registered, HTTPS without a certificate and
-// Karvan's own panel port are codes (D48, D63, section 4).
+// Karvan's own panel port are codes.
 func TestRuleConflictsAreCodes(t *testing.T) {
 	m := newMigrationEnv(t, 0)
 	sites := api + "/legacy-sites"
@@ -259,7 +259,7 @@ func TestBatchRuleAnswers(t *testing.T) {
 
 // A site whose certificate was not adopted answers 409 until its domains
 // have certificates; the refused save changes nothing and is audited as
-// a failure (D54).
+// a failure.
 func TestSiteNotAdoptedAnswers409(t *testing.T) {
 	m := newMigrationEnv(t, 0)
 	cert, _ := testCert(t, "old.example.com")

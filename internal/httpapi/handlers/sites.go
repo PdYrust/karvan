@@ -12,7 +12,7 @@ import (
 	"github.com/PdYrust/karvan/internal/httpapi/respond"
 )
 
-// maxTokenUpload caps a token list upload (D64).
+// maxTokenUpload caps a token list upload.
 const maxTokenUpload = 16 << 20
 
 func writeSiteError(w http.ResponseWriter, r *http.Request, err error) {
@@ -77,7 +77,7 @@ func withReason(extra map[string]any, reason string, names []string) {
 
 // SaveSite adds (POST) or changes (PATCH /{id}) a panel rule. A change
 // sends the whole rule. The certificate comes from the rule's domains and
-// https (D63): certificateId, certificate files and PEM are not part of
+// https: certificateId, certificate files and PEM are not part of
 // the body.
 func (a *API) SaveSite(w http.ResponseWriter, r *http.Request) {
 	var in struct {

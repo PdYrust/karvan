@@ -9,7 +9,7 @@ import (
 	"unicode/utf8"
 )
 
-// Facts are what a run learns about the old links (D7): the old path,
+// Facts are what a run learns about the old links: the old path,
 // hosts and port of the source users' subscription links, and how Karvan
 // reached the old panel (the address it dialed and the certificate pin).
 // None of them is secret.
@@ -103,7 +103,7 @@ func portOf(u *url.URL) int {
 // nameBase is the longest base name, so " 99999" still fits in 64.
 const nameBase = 58
 
-// Name is a batch's default name (D6): the source admin's username,
+// Name is a batch's default name: the source admin's username,
 // trimmed and cut to 58 characters, or "batch" when that is empty. It
 // trims what the 0008 backfill trims.
 func Name(admin string) string {

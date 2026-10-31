@@ -35,7 +35,7 @@ func wantSiteInvalid(t *testing.T, err error, field, reason string, names ...str
 	}
 }
 
-// D63: on POST https is on only when every domain has a certificate;
+// On POST https is on only when every domain has a certificate;
 // asking for it with a domain without one is refused with the names; on
 // PATCH an absent https keeps the stored value.
 func TestRuleHTTPSComesFromItsDomains(t *testing.T) {
@@ -69,7 +69,7 @@ func TestRuleHTTPSComesFromItsDomains(t *testing.T) {
 }
 
 // A domain whose Let's Encrypt order runs is pending: refused only when
-// the save asks for HTTPS (D48).
+// the save asks for HTTPS.
 func TestRulePendingDomain(t *testing.T) {
 	e, _, _ := newRuleCertEnv(t)
 	ctx := context.Background()

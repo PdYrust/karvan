@@ -18,7 +18,7 @@ export interface Counts {
   verified: number;
 }
 
-/** The batch a job became when it ended done (phase 4.1 D1). */
+/** The batch a job became when it ended done. */
 export interface BatchRef {
   id: number;
   name: string;
@@ -81,7 +81,7 @@ export async function getJobRow(id: string): Promise<JobRow | null> {
   return (await listJobs({ id })).jobs[0] ?? null;
 }
 
-/** Query keys of everything about migrations, so one invalidation reaches them all (D2). */
+/** Query keys of everything about migrations, so one invalidation reaches them all. */
 export const migrationKeys = {
   all: ['migrations'] as const,
   /** The job and, under it, everything read from its last build. */
@@ -147,7 +147,7 @@ export interface AdminSummary {
   roleId: number;
 }
 
-/** One admin of the old panel and how it lands (D34); the login's admin comes first. */
+/** One admin of the old panel and how it lands; the login's admin comes first. */
 export interface AdminInfo {
   /** Its name on the old panel, the key of plan.admins. */
   username: string;
@@ -157,13 +157,13 @@ export interface AdminInfo {
   /** False for an admin other than the login's with no user to move: the run leaves it out. */
   moves: boolean;
   roleId: number;
-  /** A merge keeps the existing admin's own role (D33). */
+  /** A merge keeps the existing admin's own role. */
   roleFixed: boolean;
   newAdmin: AdminSummary;
   userTargets: string[] | null;
 }
 
-/** The old panel as read and the destination, after a compare (api-migration.md 2.3). */
+/** The old panel as read and the destination, after a compare. */
 export interface JobSummary {
   state: JobState;
   planVersion: number;
@@ -290,10 +290,10 @@ export interface UserQuery {
   limit?: number;
 }
 
-/** Users per page in the wizard's lists (D5). */
+/** Users per page in the wizard's lists. */
 export const usersPerPage = 50;
 
-/** Users a page at a time (D5), searched by name on the server. */
+/** Users a page at a time, searched by name on the server. */
 export function getUsers(id: string, query: UserQuery = {}): Promise<UserPage> {
   const q = new URLSearchParams();
   if (query.group) q.set('group', query.group);
@@ -337,7 +337,7 @@ export interface PlanSaved {
   impact: Impact;
 }
 
-/** Saves the whole plan if version is still the current one; a 412 says it is not (D7). */
+/** Saves the whole plan if version is still the current one; a 412 says it is not. */
 export function putPlan(id: string, version: number, plan: Plan): Promise<PlanSaved> {
   return api('PUT', jobPath(id, '/plan'), plan, { ifMatch: version });
 }

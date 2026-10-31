@@ -33,7 +33,7 @@ type overviewJSON struct {
 	Security struct {
 		TOTPEnabled    bool        `json:"totpEnabled"`
 		PreviousSignIn *signInJSON `json:"previousSignIn"`
-		// TLS is how the panel is served: off, self or domain (D9).
+		// TLS is how the panel is served: off, self or domain.
 		TLS string `json:"tls"`
 	} `json:"security"`
 	// Migrations sums up every job: how many are in each state, and the

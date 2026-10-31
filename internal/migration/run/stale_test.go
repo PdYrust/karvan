@@ -21,7 +21,7 @@ func marzbanDB(t *testing.T) paneldb.Target {
 }
 
 // A run whose own re-check finds the panels changed writes nothing and
-// goes back to checked with the changes and the login (B4): the operator
+// goes back to checked with the changes and the login: the operator
 // reviews them and runs the new version.
 func TestStaleRunGoesBackToChecked(t *testing.T) {
 	h := newHarness(t, panel.Marzban, panel.Marzban, marzbanDB(t), 6)

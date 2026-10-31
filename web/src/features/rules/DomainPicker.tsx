@@ -31,7 +31,7 @@ export function AddFirst({ host }: { host: string }) {
 }
 
 /**
- * Answer over HTTPS: locked off while a picked domain has no certificate (D63),
+ * Answer over HTTPS: locked off while a picked domain has no certificate,
  * with the plain HTTP warning whenever it is off. No domain: the port decides.
  */
 export function HttpsField({

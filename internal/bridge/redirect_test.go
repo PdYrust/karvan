@@ -39,7 +39,7 @@ func (e *env) send(method, path string) *httptest.ResponseRecorder {
 	return w
 }
 
-// Every field is checked as section 4 says, and the stored form is clean.
+// Every field is checked against the redirect limits, and the stored form is clean.
 func TestRedirectFieldsAreChecked(t *testing.T) {
 	e := newEnv(t)
 	long := strings.Repeat("x", 1000)
@@ -237,7 +237,7 @@ func TestRedirectNeverLeavesItsHost(t *testing.T) {
 }
 
 // A single link redirect (a prefix on one old link's path) wins over the
-// batch rule on the same host for that one link only (D55).
+// batch rule on the same host for that one link only.
 func TestSingleLinkRedirectWinsForOneLink(t *testing.T) {
 	e := newEnv(t, "ali", "reza")
 	ali, reza := e.oldToken("ali", e.clock.now()), e.oldToken("reza", e.clock.now())

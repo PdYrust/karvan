@@ -113,7 +113,7 @@ function Eyebrow() {
   );
 }
 
-/** One batch: its admins, users and old links, with rename, delete and make active again (D8, D57). */
+/** One batch: its admins, users and old links, with rename, delete and make active again. */
 export function BatchPage() {
   const { id = '' } = useParams();
   const t = useT(batchesMessages);

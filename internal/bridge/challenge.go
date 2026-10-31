@@ -12,7 +12,7 @@ import (
 	"syscall"
 )
 
-// Why the challenge port could not be opened (D67).
+// Why the challenge port could not be opened.
 var (
 	ErrPortDenied = errors.New("karvan may not listen on the challenge port")
 	ErrPortBusy   = errors.New("another program listens on the challenge port")
@@ -20,7 +20,7 @@ var (
 )
 
 // ReasonReserved means a redirect's fromPath is under the HTTP-01
-// challenge path, which Let's Encrypt validation needs (D67).
+// challenge path, which Let's Encrypt validation needs.
 const ReasonReserved = "reserved"
 
 // challengePrefix is where HTTP-01 tokens are asked for.
@@ -41,7 +41,7 @@ type challenges struct {
 // WantChallengePort opens (on) or lets go of (off) the challenge port for
 // holder: an order's key, or "keep" for acme.keepPort80. The port is
 // served as plain HTTP while any holder wants it. It takes the save lock,
-// so no rule save can put an HTTPS rule on the port meanwhile (D63).
+// so no rule save can put an HTTPS rule on the port meanwhile.
 func (b *Bridge) WantChallengePort(ctx context.Context, holder string, on bool) error {
 	b.st.saveMu.Lock()
 	defer b.st.saveMu.Unlock()
@@ -87,7 +87,7 @@ func (b *Bridge) WantChallengePort(ctx context.Context, holder string, on bool) 
 	return portError(port, lerr)
 }
 
-// portError is the D67 reason a listen on the challenge port failed.
+// portError is the reason a listen on the challenge port failed.
 func portError(port int, err error) error {
 	switch {
 	case errors.Is(err, syscall.EACCES):

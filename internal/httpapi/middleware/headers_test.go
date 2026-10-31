@@ -37,7 +37,7 @@ func TestSecurityHeaders(t *testing.T) {
 	rec = httptest.NewRecorder()
 	h.ServeHTTP(rec, req)
 	if rec.Header().Get("Strict-Transport-Security") != "" {
-		t.Error("HSTS sent by the middleware; only domain mode sends it (D8)")
+		t.Error("HSTS sent by the middleware; only domain mode sends it")
 	}
 }
 

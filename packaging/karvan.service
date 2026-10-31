@@ -5,7 +5,7 @@ After=network-online.target
 Wants=network-online.target
 
 [Service]
-# Runs as root (owner decision, Phase 5 Q3). /usr, /boot and /etc are read
+# Runs as root. /usr, /boot and /etc are read
 # only to the service, so a flaw cannot replace the binary or system files.
 Type=notify
 ExecStart=/usr/local/bin/karvan serve

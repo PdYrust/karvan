@@ -10,7 +10,7 @@ import (
 )
 
 // User is one user of a batch as the API shows it. Old tokens never
-// leave the server: Karvan keeps only an HMAC of each (D57).
+// leave the server: Karvan keeps only an HMAC of each.
 type User struct {
 	ID             int64  `json:"id"` // the ledger row, for the new link
 	SourceUsername string `json:"sourceUsername"`
@@ -19,7 +19,7 @@ type User struct {
 	DestID         int64  `json:"destId"`
 	// Joined is how the user came into the batch: moved by its run,
 	// adopted (already on the destination), or carried from an earlier
-	// run of the same old panel that made no batch (D4).
+	// run of the same old panel that made no batch.
 	Joined   string `json:"joined"`
 	OldLinks struct {
 		Verified    int        `json:"verified"`

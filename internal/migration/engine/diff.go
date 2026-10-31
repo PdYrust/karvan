@@ -6,8 +6,8 @@ import (
 	"strings"
 )
 
-// Changes is how the outcome of a build differs from an earlier build's
-// (D29): who moves, under which name, with which credentials and targets,
+// Changes is how the outcome of a build differs from an earlier build's:
+// who moves, under which name, with which credentials and targets,
 // which conflicts were fixed how, and where each admin lands. Traffic,
 // online times and derived status are left out: they change all the time
 // and are read fresh when the run writes.

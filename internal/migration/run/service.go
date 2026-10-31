@@ -1,6 +1,6 @@
 // Package run is the migration job runner: it creates jobs, checks them
 // (read only), and runs them through backup, write, verify and reload,
-// with the ledger protocol, settlement and Safe Mode rollback (D30-D50).
+// with the ledger protocol, settlement and Safe Mode rollback.
 package run
 
 import (
@@ -19,7 +19,7 @@ import (
 	"github.com/PdYrust/karvan/internal/secret"
 )
 
-// IdleTimeout drops a job's credentials when nobody used it (D11).
+// IdleTimeout drops a job's credentials when nobody used it.
 const IdleTimeout = 2 * time.Hour
 
 // Errors the HTTP layer maps to codes.
@@ -49,7 +49,7 @@ func (e *WeakPasswordError) Error() string { return ErrBadPassword.Error() + ": 
 func (e *WeakPasswordError) Unwrap() error { return ErrBadPassword }
 
 // PanelControl stops and starts a destination panel, for a full backup
-// restore (D36).
+// restore.
 type PanelControl interface {
 	Stop(ctx context.Context) error
 	Start(ctx context.Context) error
@@ -65,9 +65,9 @@ type Deps struct {
 	// Control returns the control for the panel whose ENV is at envPath,
 	// or why Karvan cannot stop and start it. Nil: never.
 	Control func(ctx context.Context, envPath string) (PanelControl, error)
-	// Reloaders are the ways to make a panel pick up written users (D46).
+	// Reloaders are the ways to make a panel pick up written users.
 	Reloaders map[string]Reloader
-	// ChunkSize is users per destination transaction (D15).
+	// ChunkSize is users per destination transaction.
 	ChunkSize func(d paneldb.Dialect) int
 	// Fault, in tests, fails a step on purpose.
 	Fault func(step string, chunk int) error

@@ -34,10 +34,10 @@ func (b *Bridge) Handler(port int) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { b.serve(w, r, port) })
 }
 
-// serve hands the web panel's requests on a shared port to it (D12), then
-// runs the order of D59: verified set, then the panel itself, then
+// serve hands the web panel's requests on a shared port to it, then
+// runs this order: verified set, then the panel itself, then
 // one lazy check against the old panel. Users in an inactive or deleted
-// batch get the plain 404 before the panel is asked (D22).
+// batch get the plain 404 before the panel is asked.
 func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 	if h := b.panelFor(port, r); h != nil {
 		h.ServeHTTP(w, r)
@@ -57,7 +57,7 @@ func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 		answer(w, http.StatusNotFound)
 		return
 	case q.redirect != nil:
-		sendRedirect(w, q.redirect, q.rest) // nothing is fetched (D30)
+		sendRedirect(w, q.redirect, q.rest) // nothing is fetched
 		return
 	}
 	held, err := b.st.ruleHeld(r.Context(), q.site)
@@ -83,7 +83,7 @@ func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 	b.lazy(w, r, q)
 }
 
-// route finds the one rule for a request (D52). For a panel rule it
+// route finds the one rule for a request. For a panel rule it
 // splits /{old_path}/{token}{rest}; for a redirect rule rest is the tail
 // after its path. A malformed token, rest or tail on the winner is a 404;
 // no other rule is tried.
@@ -111,7 +111,7 @@ func (b *Bridge) route(port int, r *http.Request) (request, bool) {
 
 // fromVerified serves a token proven earlier, if the user still passes.
 // A token proven on one rule counts on every rule whose scope holds its
-// row (D23): an old panel often serves its links on 80 and 443.
+// row: an old panel often serves its links on 80 and 443.
 func (b *Bridge) fromVerified(w http.ResponseWriter, r *http.Request, q request) bool {
 	ctx := r.Context()
 	v, row, ok, err := b.st.token(ctx, q.mac, q.site, q.dest.Key())
@@ -124,7 +124,7 @@ func (b *Bridge) fromVerified(w http.ResponseWriter, r *http.Request, q request)
 	case !ok:
 		return false
 	case row.held:
-		answer(w, http.StatusNotFound) // nothing asked, dropped or closed (D22)
+		answer(w, http.StatusNotFound) // nothing asked, dropped or closed
 		return true
 	case row.State != ledger.Done && row.State != ledger.Adopted:
 		_ = b.st.dropToken(ctx, q.mac) // the user was moved again or rolled back
@@ -149,7 +149,7 @@ func (b *Bridge) fromVerified(w http.ResponseWriter, r *http.Request, q request)
 }
 
 // namesHeld answers 404 when the token's payload names a user of this
-// rule in an inactive or deleted batch, before the panel is asked (D22).
+// rule in an inactive or deleted batch, before the panel is asked.
 func (b *Bridge) namesHeld(w http.ResponseWriter, r *http.Request, q request) bool {
 	p, ok := subtoken.Parse(q.token)
 	if !ok {
@@ -196,7 +196,7 @@ func (b *Bridge) serveAs(w http.ResponseWriter, r *http.Request, q request, e le
 	relay(w, resp)
 }
 
-// lazy verifies an unknown token once against the old panel (D59 step 3).
+// lazy verifies an unknown token once against the old panel.
 // The limits come before any work on the destination, so tokens forged to
 // name a real user cannot make the bridge query it without bound.
 func (b *Bridge) lazy(w http.ResponseWriter, r *http.Request, q request) {
@@ -238,9 +238,9 @@ type candidate struct {
 }
 
 // candidates reads, fresh, every row in the rule's scope the payload
-// names (D24) and runs the destination check on each. status is 0 when
+// names and runs the destination check on each. status is 0 when
 // one passes, so the old panel may be asked; a payload naming a user in
-// a held batch answers 404 with no candidate (D22).
+// a held batch answers 404 with no candidate.
 func (b *Bridge) candidates(ctx context.Context, q request, p subtoken.Payload) ([]candidate, int) {
 	rows, err := b.st.named(ctx, q.site, q.dest.Key(), p)
 	switch {
@@ -269,7 +269,7 @@ func (b *Bridge) candidates(ctx context.Context, q request, p subtoken.Payload) 
 }
 
 // verify asks the old panel whose token this is and stores it when the
-// answer matches exactly one candidate that passed its check (D24). Zero
+// answer matches exactly one candidate that passed its check. Zero
 // or two matches answer 404. status is 0 on success.
 func (b *Bridge) verify(ctx context.Context, q request, cands []candidate) (ledger.Entry, int) {
 	o, err := b.old(q.site)

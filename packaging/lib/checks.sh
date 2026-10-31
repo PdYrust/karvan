@@ -1,4 +1,4 @@
-# Checks that run before install.sh changes anything (D17).
+# Checks that run before install.sh changes anything.
 # shellcheck shell=sh
 
 # arch_name prints the release name of this machine's architecture, or

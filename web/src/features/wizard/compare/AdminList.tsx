@@ -18,7 +18,7 @@ import { roleChoosers, sharedRole } from './admins';
 import { compareMessages } from './messages';
 import { roleItems } from './RoleFields';
 
-/** "Same role for all": one pick sets the role of every admin whose role can change (D34). */
+/** "Same role for all": one pick sets the role of every admin whose role can change. */
 function SameRole({ admins }: { admins: readonly AdminInfo[] }) {
   const t = useT(compareMessages);
   const id = useId();

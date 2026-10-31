@@ -16,7 +16,7 @@ import (
 	"github.com/PdYrust/karvan/internal/settings"
 )
 
-// Error codes of the HTTPS change (D10).
+// Error codes of the HTTPS change.
 const (
 	codeHTTPSInvalid = "https_invalid"
 	codePortBusy     = "port_busy"
@@ -35,7 +35,7 @@ type pendingHTTPSJSON struct {
 }
 
 // sharedPortJSON is a port where an HTTPS rule holds domain, which a
-// shared panel address for that domain can use (D10).
+// shared panel address for that domain can use.
 type sharedPortJSON struct {
 	Domain string `json:"domain"`
 	Port   int    `json:"port"`
@@ -186,7 +186,7 @@ func httpsInvalid(field, reason string) *respond.APIError {
 
 var portMixed = &respond.APIError{Status: http.StatusConflict, Code: codePortMixed}
 
-// checkHTTPS applies D10 to body: the mode, the domain and its
+// checkHTTPS checks body: the mode, the domain and its
 // certificate, and a shared port. It returns the new mode and the port it
 // is served on.
 func (a *API) checkHTTPS(r *http.Request, body putHTTPSBody) (settings.TLS, int, *respond.APIError, error) {

@@ -16,7 +16,7 @@ import (
 	"github.com/PdYrust/karvan/internal/panel/paneldb/paneldbtest"
 )
 
-// The engine benchmark of D37: a Marzban reseller panel with benchAdmins
+// The engine benchmark: a Marzban reseller panel with benchAdmins
 // admins owning benchPerAdmin users each, moved to a Marzban on SQLite.
 const (
 	benchAdmins   = 2000

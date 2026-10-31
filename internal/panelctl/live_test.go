@@ -60,7 +60,7 @@ func up(base string, wait time.Duration) bool {
 	return false
 }
 
-// The owner's choice in Safe Mode: on failure Karvan stops the running
+// Safe Mode on failure: Karvan stops the running
 // Marzban, puts the whole backup back and starts it again, with nobody
 // typing a command.
 func TestLiveBackupRollback(t *testing.T) {

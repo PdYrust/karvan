@@ -10,7 +10,7 @@ describe('impactCounts', () => {
       ['configChanged', 0],
     ]);
   });
-  it('splits added and already moved users in the preview, so no user counts twice (D9)', () => {
+  it('splits added and already moved users in the preview, so no user counts twice', () => {
     const impact = { users: 30, moving: 10, skipped: 20, alreadyMoved: 12, protocolsAdded: 3 };
     expect(impactCounts(impact, 'preview')).toEqual([
       ['added', 10],

@@ -11,7 +11,7 @@ export function sharedRole(admins: readonly AdminInfo[]): number | null {
   return first && rest.every((a) => a.roleId === first.roleId) ? first.roleId : null;
 }
 
-/** The job conflicts about one admin (api-migration.md section 4); the rest are the whole job's. */
+/** The job conflicts about one admin; the rest are the whole job's. */
 const adminTypes = new Set(['C01', 'C09', 'C30', 'C33', 'C34', 'C35', 'C37']);
 
 /** One admin's conflicts: those naming it, and for the login's admin those naming none. */

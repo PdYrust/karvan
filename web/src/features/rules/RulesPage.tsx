@@ -60,7 +60,7 @@ const terms = (r: Rule) =>
     ? [r.rule.name, r.rule.sourceUrl, ...(r.rule.domains ?? [])]
     : [r.rule.name, r.rule.toUrl, ...(r.rule.domains ?? [])];
 
-/** One card per rule, panel rules and redirects, with ports that could not open first (4.9). */
+/** One card per rule, panel rules and redirects, with ports that could not open first. */
 export function RulesPage() {
   const navigate = useNavigate();
   const t = useT(rulesMessages);

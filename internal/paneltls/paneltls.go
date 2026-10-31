@@ -1,4 +1,4 @@
-// Package paneltls gives the web panel its certificate (D4 to D11, ADR
+// Package paneltls gives the web panel its certificate (ADR
 // 0010): Karvan's own self-signed one, or a registered domain's from the
 // certificate store, with a fallback so a moved file never locks the
 // operator out.
@@ -31,7 +31,7 @@ type Manager struct {
 	Settings *settings.Store
 	Key      *secret.Key
 	// Domain is the certificate of a registered domain, read on each
-	// handshake through the certificate store's cache (D6).
+	// handshake through the certificate store's cache.
 	Domain func(ctx context.Context, id int64) (*tls.Certificate, error)
 	Log    *slog.Logger
 	// Now and IPs override the clock and this server's addresses, for tests.
@@ -57,7 +57,7 @@ func (m *Manager) Certificate(ctx context.Context, t settings.TLS) (*tls.Certifi
 }
 
 // domain is the domain's certificate; when it cannot be loaded, the last
-// one it loaded, else the self-signed one (D11). A failure is logged once,
+// one it loaded, else the self-signed one. A failure is logged once,
 // not on every handshake.
 func (m *Manager) domain(ctx context.Context, id int64) (*tls.Certificate, error) {
 	var c *tls.Certificate
@@ -93,7 +93,7 @@ func (m *Manager) domain(ctx context.Context, id int64) (*tls.Certificate, error
 }
 
 // Self is the self-signed certificate. It is made on first use and again
-// 30 days before its end; the key is stored sealed (D5). When a new one
+// 30 days before its end; the key is stored sealed. When a new one
 // cannot be made or stored, the old one stays in use while it is valid
 // and the next try comes RenewEvery later.
 func (m *Manager) Self(ctx context.Context) (*tls.Certificate, error) {

@@ -27,7 +27,7 @@ function Loading() {
 
 /**
  * Step 4: bulk changes on all users, a category, a filter or picked users,
- * each with how many users it reaches (4.5).
+ * each with how many users it reaches.
  */
 export function ChangesStep() {
   const t = useT(changesMessages);

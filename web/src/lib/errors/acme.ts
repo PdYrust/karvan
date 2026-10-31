@@ -4,7 +4,7 @@ import { errorOf } from './errors';
 import { useSubscriptionErrorText } from './subscriptions';
 
 /**
- * Sentences for the Let's Encrypt codes (D58, D71): the answers' codes and
+ * Sentences for the Let's Encrypt codes: the answers' codes and
  * the codes of an order's error. Only the Domains and certificates page
  * meets them, so they load with it alone.
  */

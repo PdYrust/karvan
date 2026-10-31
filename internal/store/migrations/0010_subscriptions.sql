@@ -1,4 +1,4 @@
--- Subscriptions (phase 4.1 D47 to D54): domains and certificates become
+-- Subscriptions: domains and certificates become
 -- rows of their own, and redirect rules get a table. Additive only: no
 -- existing row is deleted or changed. Times are unix seconds, like
 -- legacy_sites.
@@ -27,7 +27,7 @@ CREATE TABLE certificates (
     CHECK ((cert_file <> '' AND key_file <> '' AND cert_pem = '') OR (cert_file = '' AND key_file = '' AND cert_pem <> ''))
 ) STRICT;
 -- NULL with empty own certificate columns is plain HTTP; NULL with own
--- columns set is a site the bridge has not adopted yet (D54).
+-- columns set is a site the bridge has not adopted yet.
 ALTER TABLE legacy_sites ADD COLUMN certificate_id INTEGER REFERENCES certificates (id);
 -- Redirect rules: a request on a port, domain and path is sent to a URL.
 CREATE TABLE link_redirects (

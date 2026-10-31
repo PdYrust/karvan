@@ -17,7 +17,7 @@ import (
 	"github.com/PdYrust/karvan/internal/secret"
 )
 
-// moveCase is section 3's P41-32 database: one domain on two TLS ports
+// moveCase is the domain move test database: one domain on two TLS ports
 // with the same certificate, one with different certificates, a wildcard
 // rule before an exact rule with another certificate, a plain rule and a
 // TLS rule sharing a domain, a rule with no domains, an IP domain, a site
@@ -136,7 +136,7 @@ func (m *moveCase) moved() []string {
 			"FROM domain_pins p JOIN domains d ON d.id = p.domain_id JOIN certificates c ON c.id = p.certificate_id ORDER BY d.name", m.b))...)
 }
 
-// D64: the move fills every domain from its rules and pins the port that
+// The move fills every domain from its rules and pins the port that
 // served another certificate, with the same handshake bytes on every
 // port and name, the same answers and tokens, and a plain rule plain.
 func TestDomainFillKeepsHandshakes(t *testing.T) {
@@ -225,7 +225,7 @@ func TestDomainFillWaitsForTheAdoption(t *testing.T) {
 	}
 }
 
-// D63: a save that changes nothing, or only the name, of every migrated
+// A save that changes nothing, or only the name, of every migrated
 // rule keeps every handshake, the pinned port's included.
 func TestNoOpSavesKeepHandshakes(t *testing.T) {
 	m := newMoveCase(t)
@@ -268,7 +268,7 @@ func certHash(certPEM string) string {
 	return hex.EncodeToString(sum[:])
 }
 
-// D65 on the moved database: a new certificate for the conflicting domain
+// A certificate change on the moved database: a new certificate for the conflicting domain
 // drops its pin and every port serves it; the plain rule stays plain; a
 // rule with no domains on a new port is plain unless it asks for HTTPS,
 // which is refused; a file pair a row has is that row.

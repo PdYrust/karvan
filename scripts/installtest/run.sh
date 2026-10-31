@@ -1,7 +1,7 @@
 #!/bin/sh
 # Installs, updates, rolls back and removes Karvan in a clean Debian 12
 # system with systemd the way an operator would, from a local copy of the
-# release files, and checks the result (D36). Needs Docker. ARCHIVE=<release
+# release files, and checks the result. Needs Docker. ARCHIVE=<release
 # archive> tests that archive; otherwise one is packed from a fresh build of
 # this tree. The update builds are made from the same archive.
 set -eu
@@ -33,7 +33,7 @@ fail() {
 step() { echo "== $*"; }
 # sys runs a command inside the test system as root.
 sys() { docker exec "$NAME" sh -c "$1"; }
-# pack builds the binary and lays out the release archive of D16.
+# pack builds the binary and lays out the release archive.
 pack() {
 	VERSION=${VERSION:-0.0.0-test}
 	dir=$work/karvan_${VERSION}_linux_$ARCH
@@ -218,7 +218,7 @@ expect_mode /etc/karvan/secret.key 600
 [ "$(sys 'readlink /usr/local/lib/karvan/current')" = "$VERSION" ] || fail "current does not point at $VERSION"
 sys 'karvan health' || { show_journal && fail "karvan health"; }
 signed_in
-echo "ok   installed, running as root, modes as D18, sign-in answers"
+echo "ok   installed, running as root, modes as expected, sign-in answers"
 
 # on_version fails unless current points at $1, previous at $2 (- for
 # none), the service is healthy and the first install's sign-in works.

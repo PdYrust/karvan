@@ -70,7 +70,7 @@ func TestDeleteKeepsARulesOnlyBatch(t *testing.T) {
 	}
 }
 
-// D20: a deleted batch keeps its row and its members, loses its tokens
+// A deleted batch keeps its row and its members, loses its tokens
 // and rule links, leaves the list, and a later batch does not claim its
 // users.
 func TestDeleteKeepsMembersOutOfService(t *testing.T) {

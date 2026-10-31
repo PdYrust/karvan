@@ -4,7 +4,7 @@ import { useT } from '../../i18n/locale';
 import { overviewMessages } from './messages';
 import { useOverview } from './use-overview';
 
-/** One line while the panel is served over plain HTTP, with the way to the HTTPS tab (D9). */
+/** One line while the panel is served over plain HTTP, with the way to the HTTPS tab. */
 export function PlainHttpWarning() {
   const t = useT(overviewMessages);
   const overview = useOverview();

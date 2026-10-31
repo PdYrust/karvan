@@ -16,7 +16,7 @@ import (
 
 var passwordLine = regexp.MustCompile(`Password  (\S+)`)
 
-// fingerprintLine is the self-signed certificate's fingerprint (D5).
+// fingerprintLine is the self-signed certificate's fingerprint.
 var fingerprintLine = regexp.MustCompile(`(?m)^  ([0-9A-F]{2}:){31}[0-9A-F]{2}$`)
 
 func TestInitPrintsCredentialsOnlyToStdout(t *testing.T) {
@@ -38,7 +38,7 @@ func TestInitPrintsCredentialsOnlyToStdout(t *testing.T) {
 	}
 }
 
-// The installer passes the port the operator confirmed (D20).
+// The installer passes the port the operator confirmed.
 func TestInitTakesThePort(t *testing.T) {
 	for _, bad := range []string{"x", "65536", "-1"} {
 		if code, _, errOut := doInit(t, t.TempDir(), "-port", bad); code != 2 || !strings.Contains(errOut, "-port") {

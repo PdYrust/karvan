@@ -101,7 +101,7 @@ func (a *API) Batch(w http.ResponseWriter, r *http.Request) {
 }
 
 // BatchUsers lists a batch's users, a page at a time: ?q=&cursor=&limit=.
-// No old token or MAC is in it (D57).
+// No old token or MAC is in it.
 func (a *API) BatchUsers(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(r, "id")
 	limit, okLimit := batchLimit(r)
@@ -123,7 +123,7 @@ func (a *API) BatchUsers(w http.ResponseWriter, r *http.Request) {
 }
 
 // BatchUserLink builds a batch user's new subscription link on the
-// destination panel (D57, Q7 B). The link is never stored, never cached
+// destination panel. The link is never stored, never cached
 // and never written to the audit log.
 func (a *API) BatchUserLink(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(r, "id")
@@ -165,7 +165,7 @@ func (a *API) RenameBatch(w http.ResponseWriter, r *http.Request) {
 	respond.Lists(w, http.StatusOK, b)
 }
 
-// DeleteBatch marks an inactive batch deleted (D20) once {confirm} is its
+// DeleteBatch marks an inactive batch deleted once {confirm} is its
 // name.
 func (a *API) DeleteBatch(w http.ResponseWriter, r *http.Request) {
 	id, ok := pathID(r, "id")

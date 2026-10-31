@@ -20,7 +20,7 @@ func siteAt(id int64, port int, path string, domains ...string) Site {
 	return Site{ID: id, Name: fmt.Sprint("s", id), Port: port, OldPath: path, Domains: domains}
 }
 
-// Every precedence pair of D52: host before path, an exact name before a
+// Every precedence pair: host before path, an exact name before a
 // wildcard before no domains, an exact path before a prefix, the longer
 // prefix first. A panel rule's path is "/<old path>/".
 func TestRouterPrecedence(t *testing.T) {
@@ -81,7 +81,7 @@ func TestMalformedTokenNeverFallsThrough(t *testing.T) {
 	all.ID, all.Name, all.Domains = 0, "all", nil
 	saved, err := e.b.st.Save(t.Context(), all)
 	if err != nil {
-		t.Fatalf("no domains next to a domain on one path (D52): %v", err)
+		t.Fatalf("no domains next to a domain on one path: %v", err)
 	}
 	e.b.mu.Lock()
 	e.b.load([]Site{e.site, saved}, nil)
@@ -125,7 +125,7 @@ func candidateRule(rnd *rand.Rand, id int64) rule {
 }
 
 // After the save check no request meets two rules of equal rank, so it
-// reaches at most one rule (D52).
+// reaches at most one rule.
 func TestNoRequestMeetsTwoRulesOfEqualRank(t *testing.T) {
 	rnd := rand.New(rand.NewPCG(18, 52))
 	hosts := []string{"a.example.com", "b.example.com", "x.a.example.com", "example.com", "c.example.com", "10.0.0.1", "other.org"}
@@ -174,7 +174,7 @@ func topRanked(routes []route, host, path string) int {
 	return n
 }
 
-// todayOverlaps is the overlap rule saves had before D52: one port, one
+// todayOverlaps is the overlap rule saves had before the precedence rules: one port, one
 // old path and any shared host, or either site with no domains.
 func todayOverlaps(s, o Site) bool {
 	if s.Port != o.Port || s.OldPath != o.OldPath {
@@ -193,7 +193,7 @@ func todayOverlaps(s, o Site) bool {
 	return false
 }
 
-// todayRoute is how a request picked its site before D52: the first site
+// todayRoute is how a request picked its site before the precedence rules: the first site
 // in id order on the port whose old path and domains fit.
 func todayRoute(sites []Site, port int, host, path string) (int64, bool) {
 	for _, s := range sites {

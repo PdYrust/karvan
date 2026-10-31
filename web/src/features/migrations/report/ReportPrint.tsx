@@ -105,7 +105,7 @@ function Printed({ report, state }: { report: Report; state: Report['state'] }) 
   );
 }
 
-/** A report as a page to print (4.7): outside the shell, one column, a bar that does not print. */
+/** A report as a page to print: outside the shell, one column, a bar that does not print. */
 export function ReportPrint() {
   const { id = '' } = useParams();
   const t = useT(reportsMessages);

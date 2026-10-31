@@ -2,7 +2,7 @@ import type { Domain } from '../../lib/api/domains';
 import type { Https, HttpsStart, PendingHttps, TlsMode } from '../../lib/api/https';
 import { latinDigits } from '../../lib/format/number';
 
-/** Where the new address answers: this port, a typed one, or a bridge HTTPS port (D12). */
+/** Where the new address answers: this port, a typed one, or a bridge HTTPS port. */
 export type Where = 'keep' | 'typed' | 'shared';
 
 export interface HttpsForm {
@@ -26,7 +26,7 @@ export function formOf(h: Https): HttpsForm {
 /** A typed port: at most five digits, Persian ones read as the same digits. */
 export const typedDigits = (typed: string) => latinDigits(typed).replace(/\D/g, '').slice(0, 5);
 
-/** Domains the panel can be served for: those with a certificate that covers their name (D10). */
+/** Domains the panel can be served for: those with a certificate that covers their name. */
 export function certifiedDomains(domains: readonly Domain[]): Domain[] {
   return domains.filter((d) => d.certificate && !d.warnings.includes('domain_mismatch'));
 }

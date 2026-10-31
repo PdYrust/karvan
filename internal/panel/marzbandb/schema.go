@@ -52,8 +52,8 @@ func mustSpecs(b []byte) map[string]paneldb.Spec {
 	return s
 }
 
-// children are the rows that hang off a user or an admin, in delete order
-// (D35, D37). Anything else that references them stops Safe Mode.
+// children are the rows that hang off a user or an admin, in delete order.
+// Anything else that references them stops Safe Mode.
 var children = []paneldb.ForeignKey{
 	{Table: "exclude_inbounds_association", Column: "proxy_id", RefTable: "proxies"},
 	{Table: "proxies", Column: "user_id", RefTable: "users"},

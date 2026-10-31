@@ -1,7 +1,7 @@
 import type { Ports } from '../../lib/api/ports';
 
 /**
- * The old panel's own port when the rule takes over its domain (D14): the
+ * The old panel's own port when the rule takes over its domain: the
  * port of the old address when its host is one of the rule's domains.
  */
 export function oldPort(sourceUrl: string, domains: readonly string[]): number {
@@ -21,7 +21,7 @@ export type PortHint =
   { kind: 'free'; free: number } | { kind: 'taken'; port: number; free: number };
 
 /**
- * The proposal shown under the port (D14): only when the field is empty
+ * The proposal shown under the port: only when the field is empty
  * or its port is held by something other than a rule, since rules share
  * a port by name.
  */

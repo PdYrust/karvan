@@ -4,7 +4,7 @@ import type { ScanResult } from '../../lib/api/certificates';
 import type { Domain, DomainWarning } from '../../lib/api/domains';
 import type { CertWarning } from '../../lib/api/rules';
 
-/** What stops a handshake first, then what needs a look (D50). */
+/** What stops a handshake first, then what needs a look. */
 const order: readonly DomainWarning[] = [
   'unreadable',
   'no_key',
@@ -45,7 +45,7 @@ export function daysLeft(notAfter: string | undefined, now: Date): number | unde
   return Math.max(0, Math.ceil((new Date(notAfter).getTime() - now.getTime()) / day));
 }
 
-/** Every place the scan did not read, once, whatever the reason (D51, D59). */
+/** Every place the scan did not read, once, whatever the reason. */
 export function notScanned(r: ScanResult): string[] {
   return [...new Set(r.skipped.map((s) => s.place))];
 }

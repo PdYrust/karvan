@@ -65,8 +65,8 @@ func mustSpecs(b []byte) map[string]paneldb.Spec {
 	return s
 }
 
-// children are the rows that hang off a user or an admin, in delete order
-// (D35, D37). Some cascade in the database; Karvan deletes them anyway, so
+// children are the rows that hang off a user or an admin, in delete order.
+// Some cascade in the database; Karvan deletes them anyway, so
 // the order is the same on every backend.
 var children = []paneldb.ForeignKey{
 	{Table: "users_groups_association", Column: "user_id", RefTable: "users"},

@@ -70,7 +70,7 @@ function Empty() {
   );
 }
 
-/** Put back and Delete, each behind the backup id typed (4.10). */
+/** Put back and Delete, each behind the backup id typed. */
 function useBackupActions() {
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -97,7 +97,7 @@ function useBackupActions() {
   return { restoring, setRestoring, restore, removing, setRemoving, remove };
 }
 
-/** Safe Mode backups (4.10): which job took each, Put back and Delete. */
+/** Safe Mode backups: which job took each, Put back and Delete. */
 export function BackupsPage() {
   const t = useT(backupsMessages);
   usePageTitle(t('title'));

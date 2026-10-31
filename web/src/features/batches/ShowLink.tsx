@@ -15,7 +15,7 @@ import { BatchDialog } from './BatchDialog';
 import { batchesMessages } from './messages';
 
 /**
- * Show new link (D57, Q7 B): each press reads the link from the new panel
+ * Show new link: each press reads the link from the new panel
  * once and shows it with Copy. Closing the dialog drops it from the page.
  * Render `dialog` once next to the list and call `show` from a row.
  */

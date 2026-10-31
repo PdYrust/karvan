@@ -38,7 +38,7 @@ function Effects({ o }: { o: ReloadOption }) {
     </span>
   );
 }
-/** The reload methods as radio cards, every one shown (Q5); one Karvan cannot run is disabled. */
+/** The reload methods as radio cards, every one shown; one Karvan cannot run is disabled. */
 export function ReloadChoice({
   options,
   value,

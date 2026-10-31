@@ -13,9 +13,9 @@ import (
 
 // Recover runs once at start: jobs that were running are interrupted.
 // Their pending ledger rows are settled (read only on the destination);
-// nothing is written or removed by itself (D39). A batch a restore still
-// holds has no restore running, so that restore failed (D19). A done job
-// without its batch gets it (D5).
+// nothing is written or removed by itself. A batch a restore still
+// holds has no restore running, so that restore failed. A done job
+// without its batch gets it.
 func (s *Service) Recover(ctx context.Context) error {
 	jobs, err := s.stuckJobs(ctx)
 	if err != nil {
@@ -92,7 +92,7 @@ func (s *Service) openPrepared(ctx context.Context, panelID int64, lock bool) (*
 }
 
 // Rollback removes what a failed or interrupted job wrote, when the
-// operator asks (D39), in the background (B5). It works from Karvan's
+// operator asks, in the background. It works from Karvan's
 // records alone; the source login is not needed. It returns once the
 // destination is locked; the undo and restore stages, the undo's
 // progress and a done event follow on the job's stream. The job's report

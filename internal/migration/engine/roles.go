@@ -9,7 +9,7 @@ import (
 	"github.com/PdYrust/karvan/internal/panel"
 )
 
-// Role conflicts (owner, 2026-10-16; spec D65-D69). PasarGuard checks a
+// Role conflicts. PasarGuard checks a
 // role's limits only when the reseller creates or edits a user, never on
 // rows already there, so a moved user beyond them works; the reseller's
 // next edit of that value fails. The operator sees each case and decides.
@@ -25,7 +25,7 @@ const (
 // operatorRole is PasarGuard's built-in reseller role.
 const operatorRole = 3
 
-// chooseRole picks an admin's role on a PasarGuard destination (D65): an
+// chooseRole picks an admin's role on a PasarGuard destination: an
 // admin merged into keeps its own; else the operator's choice; else the
 // role with the source role's name; else operator. The owner role is
 // never picked by default.
@@ -75,7 +75,7 @@ func defaultRole(roles []panel.Role, sourceName string) int64 {
 	return operatorRole
 }
 
-// defaultTargets is where an admin's users go (D31, D32): every enabled
+// defaultTargets is where an admin's users go: every enabled
 // group its role allows on PasarGuard, every inbound on Marzban. There is
 // no other choice.
 func defaultTargets(d Dest, role *panel.Role) []string {
@@ -240,7 +240,7 @@ func removeForbidden(u *panel.User, f panel.RoleFeatures) bool {
 }
 
 // fillProtocols gives the user credentials for every protocol its targets
-// serve that it lacks (D20, D67), so it reaches every inbound it is given.
+// serve that it lacks, so it reaches every inbound it is given.
 // Old configs are untouched: these protocols were in none of them.
 func fillProtocols(it *Item, dest Dest, gen func(key, protocol string) panel.Credentials) {
 	for _, t := range it.Targets {

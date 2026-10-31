@@ -1,6 +1,6 @@
 // Package ledger records, in Karvan's own database, every admin and user
 // Karvan moved, so a re-run never creates anything twice and a rollback
-// removes exactly what one job wrote (D30-D35).
+// removes exactly what one job wrote.
 package ledger
 
 import (
@@ -51,7 +51,7 @@ type Entry struct {
 	SourceCreated  time.Time
 	SourceUsername string
 	CredPrint      string // Fingerprint of the source credentials
-	SourceAdmin    string // a user's source admin (D34); '' on admin rows and rows from before
+	SourceAdmin    string // a user's source admin; '' on admin rows and rows from before
 	Dest           string
 	panel.Row                // destination id, username, created_at
 	Written        time.Time // when the row was added
@@ -113,7 +113,7 @@ func (l *Ledger) Live(ctx context.Context, origin, dest string) ([]Entry, error)
 }
 
 // Origin is the ledger's name for a source panel: scheme, host, port and
-// base path, lowercased, without a default port (D31).
+// base path, lowercased, without a default port.
 func Origin(u *url.URL) string {
 	host := strings.ToLower(u.Hostname())
 	port := u.Port()

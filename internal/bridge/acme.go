@@ -11,7 +11,7 @@ import (
 	"time"
 )
 
-// Let's Encrypt warnings on a domain (D50, D70).
+// Let's Encrypt warnings on a domain.
 const (
 	WarnRenewalFailed     = "renewal_failed"      // the last renewal failed; the old certificate is served
 	WarnRenewalWaitingDNS = "renewal_waiting_dns" // a DNS-01 renewal waits for its new TXT record and Check
@@ -21,7 +21,7 @@ const (
 // what it got is not stored.
 var ErrOrderGone = errors.New("the Let's Encrypt order was cancelled")
 
-// ACMEError is a Let's Encrypt failure in words: a D71 code and the CA's
+// ACMEError is a Let's Encrypt failure in words: an order error code and the CA's
 // cleaned detail.
 type ACMEError struct {
 	Code    string     `json:"code"`
@@ -29,13 +29,13 @@ type ACMEError struct {
 	RetryAt *time.Time `json:"retryAt,omitempty"`
 }
 
-// DNSRecord is the TXT record a DNS-01 order waits for (D68).
+// DNSRecord is the TXT record a DNS-01 order waits for.
 type DNSRecord struct {
 	Name  string `json:"name"`
 	Value string `json:"value"`
 }
 
-// ACMEOrder is an acme_orders row as the API shows it (D69).
+// ACMEOrder is an acme_orders row as the API shows it.
 type ACMEOrder struct {
 	ID        int64      `json:"id"`
 	Method    string     `json:"method"`
@@ -54,7 +54,7 @@ func (o ACMEOrder) Running() bool {
 	return slices.Contains([]string{"starting", "waiting_dns", "validating", "issuing"}, o.State)
 }
 
-// Renewal is how a domain's Let's Encrypt certificate renews (D70).
+// Renewal is how a domain's Let's Encrypt certificate renews.
 type Renewal struct {
 	Method    string     `json:"method"`
 	NextAt    *time.Time `json:"nextAt"`
@@ -175,7 +175,7 @@ func addACME(d *Domain, a acmeRow) {
 	slices.Sort(d.Warnings)
 }
 
-// ACME is a domain's latest order and its renewal (D69, D70).
+// ACME is a domain's latest order and its renewal.
 func (b *Bridge) ACME(ctx context.Context, id int64) (ACMEState, error) {
 	rows, err := b.st.acmeRows(ctx, id)
 	if err != nil {
@@ -211,10 +211,11 @@ type ACMEIssued struct {
 	RenewAt           time.Time
 }
 
-// StoreACMECert stores what order in.OrderID got, in its done transaction
-// (D69): a renewal rewrites the domain's Let's Encrypt row (cert_pem,
+// StoreACMECert stores what order in.OrderID got, in its done transaction:
+// a renewal rewrites the domain's Let's Encrypt row (cert_pem,
 // key_sealed, updated_at); a first certificate is a new row with origin
-// acme set as the domain's certificate as D65 does. The caller reloads.
+// acme set as the domain's certificate, as SetDomainCertificate does.
+// The caller reloads.
 func (b *Bridge) StoreACMECert(ctx context.Context, in ACMEIssued) error {
 	if _, err := tls.X509KeyPair([]byte(in.ChainPEM), in.Key); err != nil {
 		return fmt.Errorf("issued certificate: %w", err)
@@ -271,7 +272,7 @@ func (st *store) rewriteACMECert(ctx context.Context, tx *sql.Tx, id int64, in A
 	return st.sealCertKey(ctx, tx, id, in.Key)
 }
 
-// newACMECert adds the row and sets it as the domain's certificate (D65):
+// newACMECert adds the row and sets it as the domain's certificate:
 // its pins go and the HTTPS rules that hold it take it.
 func (st *store) newACMECert(ctx context.Context, tx *sql.Tx, in ACMEIssued, domain string) error {
 	id, err := st.insertChosen(ctx, tx, domain, "", certParts{certPEM: in.ChainPEM, key: in.Key})
@@ -301,7 +302,7 @@ func (st *store) newACMECert(ctx context.Context, tx *sql.Tx, in ACMEIssued, dom
 	return nil
 }
 
-// RenewFailed records a failed renewal of domain id (D70): one more try,
+// RenewFailed records a failed renewal of domain id: one more try,
 // the error, and the next try after backoff(tries).
 func (b *Bridge) RenewFailed(ctx context.Context, id int64, e ACMEError, backoff func(tries int) time.Duration) error {
 	raw, err := json.Marshal(ACMEError{Code: e.Code, Detail: e.Detail})

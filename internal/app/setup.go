@@ -140,7 +140,7 @@ func InitializeWith(ctx context.Context, cfg config.Config, o InitOptions, logge
 }
 
 // initHTTP stores the panel's address and how it is served. A new
-// installation starts on HTTPS with its own certificate (D5), unless the
+// installation starts on HTTPS with its own certificate, unless the
 // operator chose otherwise.
 func (a *App) initHTTP(ctx context.Context, o InitOptions, creds *Credentials) error {
 	h := settings.HTTP{Port: creds.Port, BasePath: creds.BasePath, TLS: settings.TLS{Mode: settings.TLSSelf}}

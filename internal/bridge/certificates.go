@@ -17,7 +17,7 @@ import (
 	"github.com/PdYrust/karvan/internal/secret"
 )
 
-// Limits of a certificate as sent (section 4).
+// Limits of a certificate as sent.
 const (
 	maxCertPaste = 64 << 10 // a pasted certificate or key
 	maxCertPath  = 4096
@@ -66,7 +66,7 @@ func scanCertRow(row interface{ Scan(...any) error }) (certRow, error) {
 const certRowColumns = "SELECT id, name, cert_file, key_file, cert_pem, key_sealed, origin FROM certificates"
 
 // ErrManaged means a Let's Encrypt certificate was to be changed by hand;
-// Karvan renews it in place (D49).
+// Karvan renews it in place.
 var ErrManaged = errors.New("the certificate is renewed by Karvan")
 
 // material reads a certificate and its key: the files, or the pasted
@@ -121,7 +121,7 @@ func (b *Bridge) certificates(ctx context.Context) ([]Certificate, error) {
 
 // Certificates lists every certificate by name, with its facts, the
 // domains whose certificate it is and the rules that use it; each domain
-// and rule carries its domain_mismatch (D50).
+// and rule carries its domain_mismatch.
 func (b *Bridge) Certificates(ctx context.Context) ([]Certificate, error) {
 	certs, err := b.certificates(ctx)
 	if err != nil {
@@ -238,7 +238,7 @@ type certParts struct {
 }
 
 // saveCertificate checks in and writes it; a pasted key is sealed under
-// the row's own id in the same transaction (D49).
+// the row's own id in the same transaction.
 func (st *store) saveCertificate(ctx context.Context, id int64, in CertificateInput) (int64, error) {
 	name, err := certName(in.Name)
 	if err != nil {

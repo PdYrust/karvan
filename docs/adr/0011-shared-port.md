@@ -1,10 +1,9 @@
 # ADR 0011: The bridge serves the web panel on a shared HTTPS port
-## Status
-Accepted, 2026-10-29
+Status: accepted
 ## Context
-Many servers have one HTTPS port open to the world, usually 443, and the subscription bridge already listens there for the old panel links. An operator who wants the panel at `https://panel.example.com/<path>/` on that port needs something to split the requests between the panel and the bridge. Panel and bridge are one process; the bridge owns the rule listeners, their SNI picks and certificates (Phase 4.1). Some operators already run nginx or haproxy in front of their panels.
+Many servers have one HTTPS port open to the world, usually 443, and the subscription bridge already listens there for the old panel links. An operator who wants the panel at `https://panel.example.com/<path>/` on that port needs something to split the requests between the panel and the bridge. Panel and bridge are one process; the bridge owns the rule listeners, their SNI picks and certificates. Some operators already run nginx or haproxy in front of their panels.
 ## Decision
-- Karvan's own bridge listener hosts the panel (spec D12, option b). A domain-mode address with `shared` set has no listener of its own: the address server hands it to the bridge (`Bridge.SharePanel`) when the change starts, keeps it there while the change waits and after the confirm, and takes it back when the change lapses or the server stops.
+- Karvan's own bridge listener hosts the panel. A domain-mode address with `shared` set has no listener of its own: the address server hands it to the bridge (`Bridge.SharePanel`) when the change starts, keeps it there while the change waits and after the confirm, and takes it back when the change lapses or the server stops.
 - On that port, before the rule router, a request goes to the panel when it came over TLS, its `Host` (lower case, no port) is the panel domain and its path is under `/<path>` (`middleware.UnderBase`, constant time, as on the panel's own port). Everything else goes to the rules as before, the plain 404 included, so a wrong hidden path is answered exactly like any unknown link and reveals nothing.
 - The confirm, cookies, HSTS (`domain` mode) and audit work as for any address change (ADR 0009, ADR 0010).
 - Handshakes: a name a rule on the port serves keeps the rule's certificate, byte for byte. Only a name no rule serves gets the panel domain's certificate.

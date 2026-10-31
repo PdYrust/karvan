@@ -9,7 +9,7 @@ export interface RuleRef {
   name: string;
 }
 
-/** A stored certificate (phase 4.1 D49). Its private key never leaves the server. */
+/** A stored certificate. Its private key never leaves the server. */
 export interface Certificate {
   id: number;
   name: string;
@@ -86,7 +86,7 @@ export interface ScanResult {
   skipped: { place: string; reason: SkipReason }[];
 }
 
-/** Looks in the server's known places, read only; 409 busy while a scan runs (D51). */
+/** Looks in the server's known places, read only; 409 busy while a scan runs. */
 export async function scanCertificates(): Promise<ScanResult> {
   const r = await api<ScanResult>('POST', 'certificates/scan');
   return {

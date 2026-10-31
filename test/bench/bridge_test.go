@@ -18,13 +18,13 @@ import (
 	"time"
 )
 
-// The targets of D37. The bridge and the fake panel run in one container
+// The bridge benchmark targets. The bridge and the fake panel run in one container
 // limited to 1 CPU and 1 GB (TestBridgeServer); the load generator runs
 // in a second container with its own 1 CPU limit on a private internal
 // Docker network (TestBridgeLoad), so the generator's own work is not
-// counted against the bridge (owner reading of D37, 2026-10-29).
+// counted against the bridge.
 const (
-	maxTokens   = 1_000_000 // the D37 store; KARVAN_BENCH_TOKENS may set fewer
+	maxTokens   = 1_000_000 // the stored tokens; KARVAN_BENCH_TOKENS may set fewer
 	steadyRate  = 500.0     // requests per second
 	steadyFor   = 60 * time.Second
 	burstUsers  = 50_000

@@ -36,7 +36,7 @@ func (h *harness) batchOf(jobID string) (batchRow, bool) {
 
 // A run that ends done becomes a batch of its users, with the old link
 // facts read from the old panel's subscription links and the address
-// Karvan reached it at (D5, D7).
+// Karvan reached it at.
 func TestDoneRunMakesItsBatch(t *testing.T) {
 	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/pasarguarddb/testdata/" + pasarguarddb.Revision + ".sqlite.sql"})
 	h := newHarness(t, panel.Marzban, panel.PasarGuard, tg, 12)
@@ -54,7 +54,7 @@ func TestDoneRunMakesItsBatch(t *testing.T) {
 }
 
 // A done job whose batch was not stored (Karvan stopped between the job's
-// save and the batch) gets it at the next start (D5).
+// save and the batch) gets it at the next start.
 func TestRecoverMakesAMissingBatch(t *testing.T) {
 	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/marzbandb/testdata/" + marzbandb.Revision + ".sqlite.sql"})
 	h := newHarness(t, panel.PasarGuard, panel.Marzban, tg, 6)
@@ -74,7 +74,7 @@ func TestRecoverMakesAMissingBatch(t *testing.T) {
 }
 
 // A batch user's new link is built on request from the destination panel,
-// the same link the report hands out (D57), and only while the panel
+// the same link the report hands out, and only while the panel
 // still points at the database the batch moved it to.
 func TestUserLinkOfABatchUser(t *testing.T) {
 	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../../panel/pasarguarddb/testdata/" + pasarguarddb.Revision + ".sqlite.sql"})

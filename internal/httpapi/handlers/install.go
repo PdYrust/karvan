@@ -8,7 +8,7 @@ import (
 )
 
 // InstallSettings says how Karvan runs on this server. It always runs as
-// root when installed (D19); a development run reads false.
+// root when installed; a development run reads false.
 func (a *API) InstallSettings(w http.ResponseWriter, _ *http.Request) {
 	respond.JSON(w, http.StatusOK, struct {
 		RunsAsRoot bool `json:"runsAsRoot"`

@@ -33,7 +33,7 @@ func sources(r *Result) string {
 	return strings.Join(out, ",")
 }
 
-// D34: each admin moves with its own users; users with no admin, and the
+// Each admin moves with its own users; users with no admin, and the
 // login's own, go to the login's admin. The login comes first, the rest
 // by name.
 func TestAdminsFromTheUsersOwners(t *testing.T) {
@@ -150,7 +150,7 @@ func TestTwoAdminsUnderOneName(t *testing.T) {
 	}
 }
 
-// D35: an old plan's admin is the login's; the other admins keep theirs.
+// An old plan's admin is the login's; the other admins keep theirs.
 func TestOldPlanAdminIsTheLogins(t *testing.T) {
 	in := inputs(panel.Marzban, dest(panel.Marzban), mUser("a", 1), owned(mUser("b", 2), "north"))
 	p := basePlan()
@@ -190,7 +190,7 @@ func rolePerAdmin() (plan.Plan, Inputs) {
 	return p, in
 }
 
-// D31 per admin: each admin's users get the groups of that admin's role,
+// Roles per admin: each admin's users get the groups of that admin's role,
 // whose limits judge only its own users.
 func TestRolePerAdmin(t *testing.T) {
 	p, in := rolePerAdmin()

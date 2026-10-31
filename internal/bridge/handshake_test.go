@@ -32,8 +32,8 @@ func tlsSite(id int64, port int, cert int64, domains ...string) Site {
 	return Site{ID: id, Port: port, Domains: domains, CertificateID: cert, CertPEM: "pem"}
 }
 
-// D62: the exact domain, then the wildcard that covers the name, the
-// port's pin first; no SNI and unknown names take the D53 order.
+// The exact domain, then the wildcard that covers the name, the
+// port's pin first; no SNI and unknown names take the table order.
 func TestPickByDomainRows(t *testing.T) {
 	sites := []Site{tlsSite(1, 443, 1, "*.example.net"), tlsSite(2, 443, 2, "a.example.net", "b.example.com"), tlsSite(3, 443, 3)}
 	f := shakeFacts{domains: map[string]shakeDomain{"*.example.net": {4, true}, "a.example.net": {5, true}, "b.example.com": {5, true}},
@@ -47,7 +47,7 @@ func TestPickByDomainRows(t *testing.T) {
 }
 
 // A port with a domain not filled, or with a rule served from its own
-// certificate, keeps the D53 pick for every name (D64).
+// certificate, keeps the table-order pick for every name.
 func TestPickOnAPortNotMoved(t *testing.T) {
 	sites := []Site{tlsSite(1, 443, 1, "*.example.net"), tlsSite(2, 443, 2, "a.example.net")}
 	f := shakeFacts{domains: map[string]shakeDomain{"*.example.net": {4, true}, "a.example.net": {5, false}}}

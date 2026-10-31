@@ -11,7 +11,7 @@ import (
 // so a panel that does not answer cannot hold the list.
 const statsTimeout = 5 * time.Second
 
-// SiteStats counts the users in a site's scope (D23), those whose old
+// SiteStats counts the users in a site's scope, those whose old
 // link was proven, and those closed for good. The rest are pending: their
 // first old link request checks them.
 type SiteStats struct {
@@ -21,15 +21,14 @@ type SiteStats struct {
 }
 
 // WarnNotAdopted flags a site whose certificate is still in its own
-// columns, since its adoption failed, and the domains it keeps unfilled
-// (D54, D50, D64).
+// columns, since its adoption failed, and the domains it keeps unfilled.
 const WarnNotAdopted = "certificate_not_adopted"
 
 // SiteView is a site with its batches, certificate, warnings and numbers.
 // Cert is nil for a plain HTTP site and holds the facts of the
 // certificate it is served with; Certificate is its derived fallback
-// certificates row (D63), nil for plain HTTP and for a site not adopted
-// (D54). Warnings are its domains' (D50). Stats is nil when the
+// certificates row, nil for plain HTTP and for a site not adopted.
+// Warnings are its domains'. Stats is nil when the
 // destination cannot be read.
 type SiteView struct {
 	Site
@@ -73,7 +72,7 @@ func (b *Bridge) View(ctx context.Context, s Site) SiteView {
 	return b.view(ctx, s, warns)
 }
 
-// domainWarnings is the warnings of every domain, by name (D50).
+// domainWarnings is the warnings of every domain, by name.
 func (b *Bridge) domainWarnings(ctx context.Context) (map[string][]string, error) {
 	list, err := b.Domains(ctx)
 	out := make(map[string][]string, len(list))
@@ -84,8 +83,8 @@ func (b *Bridge) domainWarnings(ctx context.Context) (map[string][]string, error
 }
 
 // ruleWarnings is the warnings of a rule's domains, and
-// certificate_not_adopted for a rule served from its own certificate
-// (D50, D54), sorted.
+// certificate_not_adopted for a rule served from its own certificate,
+// sorted.
 func ruleWarnings(domains []string, warns map[string][]string, notAdopted bool) []string {
 	out := []string{}
 	if notAdopted {

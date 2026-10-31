@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-// D32: a plan save with targets or with the place.targets operation is
+// A plan save with targets or with the place.targets operation is
 // refused, and the operations list no longer offers it.
 func TestPlanRefusesTargets(t *testing.T) {
 	m := newMigrationEnv(t, 1)
@@ -51,7 +51,7 @@ func TestPlanRefusesTargets(t *testing.T) {
 }
 
 // The preview names the protocols a user gets that it lacked, and its
-// totals count those users (D67): group 1 serves shadowsocks, which
+// totals count those users: group 1 serves shadowsocks, which
 // user000 no longer has.
 func TestPreviewShowsAddedProtocols(t *testing.T) {
 	m := newMigrationEnv(t, 2)

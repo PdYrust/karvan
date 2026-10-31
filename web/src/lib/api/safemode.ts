@@ -42,7 +42,7 @@ export async function getBackups(): Promise<Backup[]> {
   return (await api<{ backups: Backup[] }>('GET', 'safe-mode/backups')).backups;
 }
 
-/** A restore the server started (B12): the job whose stream follows it, and its last event before it. */
+/** A restore the server started: the job whose stream follows it, and its last event before it. */
 export interface Restoring {
   jobId: string;
   after: number;

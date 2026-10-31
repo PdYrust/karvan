@@ -3,7 +3,7 @@ import type { Panel, PanelKind } from '../../../lib/api/panels';
 
 export type SignIn = 'password' | 'apiKey';
 
-/** What the Connect form holds. Lives in component state only, never in storage (D10). */
+/** What the Connect form holds. Lives in component state only, never in storage. */
 export interface ConnectValues {
   panelId: number;
   url: string;
@@ -64,7 +64,7 @@ export function defaultDestination(panels: readonly Panel[], current: Panel | nu
   return panels.find((p) => p.id > 0 && p.ready)?.id ?? 0;
 }
 
-/** The facts of a certificate Karvan does not trust, as the server sends them (B10). */
+/** The facts of a certificate Karvan does not trust, as the server sends them. */
 export interface CertFacts {
   sha256: string;
   subject: string;

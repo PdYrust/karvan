@@ -11,7 +11,7 @@ import (
 // ErrPortTaken means the port is Karvan's own web panel.
 var ErrPortTaken = errors.New("the port is Karvan's web panel")
 
-// How well a rule's domains fit a request's host (D52).
+// How well a rule's domains fit a request's host.
 const (
 	hostNone     = iota // the rule does not answer the host
 	hostAny             // a rule with no domains answers every host on its port
@@ -47,7 +47,8 @@ func newTable(sites []Site, redirects []rule) table {
 
 // match picks the route for host (lower case, no port) and the escaped
 // path: the most specific host, then the most specific path. tail is the
-// path after the rule's own path. Only rows stored before D52 can tie;
+// path after the rule's own path. Only rows stored before the precedence
+// rules can tie;
 // the first of them wins, as before.
 func (t table) match(port int, host, path string) (route, string, bool) {
 	var best route
@@ -100,7 +101,7 @@ func (r rule) segments() int { return strings.Count(r.path, "/") + 1 }
 
 // sameRequests reports whether r and o share a host key (an identical
 // name or wildcard, or both no domains) and a path key on one port. Any
-// other pair of rules has a winner for every request (D52).
+// other pair of rules has a winner for every request.
 func (r rule) sameRequests(o rule) bool {
 	if r.port != o.port || r.exact != o.exact || r.path != o.path {
 		return false
@@ -126,7 +127,7 @@ func (r rule) conflict(o rule) error {
 	return nil
 }
 
-// logConflicts warns about stored rules that break D52. They are served
+// logConflicts warns about stored rules that break the precedence rules. They are served
 // in today's order: the first rule wins a tie.
 func (t table) logConflicts(log *slog.Logger) {
 	for port, routes := range t {

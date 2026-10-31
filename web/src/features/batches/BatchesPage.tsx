@@ -49,7 +49,7 @@ function Empty() {
   );
 }
 
-/** Every batch, newest first, with the panel and state filters (phase 4.1 scope 4). */
+/** Every batch, newest first, with the panel and state filters. */
 export function BatchesPage() {
   const t = useT(batchesMessages);
   usePageTitle(t('title'));

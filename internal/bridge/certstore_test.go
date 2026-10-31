@@ -331,7 +331,7 @@ func TestCertificateInUseIsNotDeleted(t *testing.T) {
 }
 
 // A domain shows its certificate, the stored certificates that cover it,
-// its pins, the rules that hold it and the warnings of D50.
+// its pins, the rules that hold it and its warnings.
 func TestDomainsShowCertificatesRulesAndWarnings(t *testing.T) {
 	e := newCertEnv(t)
 	wild, wildKey := longCert(t, "*.example.com")

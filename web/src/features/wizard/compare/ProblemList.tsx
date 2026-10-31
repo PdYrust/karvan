@@ -78,7 +78,7 @@ function ProblemCard({ group, kind }: { group: ProblemGroup; kind: PanelKind }) 
   );
 }
 
-/** Step 3's problem groups, most relevant first (api-migration.md 2.5). */
+/** Step 3's problem groups, most relevant first. */
 export function ProblemList({
   groups,
   kind,

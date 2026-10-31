@@ -1,6 +1,5 @@
 # ADR 0008: Migration progress goes out as server-sent events
-## Status
-Accepted, 2026-10-16. Changed 2026-10-21: the compare runs in the background and reports on the same stream, and a run whose re-check finds changes ends in checked. Changed 2026-10-24: a rollback on request runs in the background on the same stream, with undo progress and a done event.
+Status: accepted
 ## Context
 A migration of many users takes minutes. The web panel must show each stage live ("backing up", "applying", "undoing"...), survive a dropped connection or a reload of the page, and never show an event twice. Reading a large old panel before the plan (the compare) can take minutes too, longer than one request may last, and the operator needs a counter while it runs.
 ## Decision

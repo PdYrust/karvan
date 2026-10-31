@@ -20,7 +20,7 @@ func acmeErr(typ, detail string) *acme.Error {
 	return &acme.Error{StatusCode: 403, ProblemType: "urn:ietf:params:acme:error:" + typ, Detail: detail}
 }
 
-// D71: every CA problem, network failure and port failure in words.
+// Every CA problem, network failure and port failure in words.
 func TestClassify(t *testing.T) {
 	now := time.Date(2026, 10, 28, 12, 0, 0, 0, time.UTC)
 	limited := acmeErr("rateLimited", "too many certificates")

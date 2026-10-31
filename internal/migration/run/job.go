@@ -27,7 +27,7 @@ const (
 )
 
 // Login is how Karvan reads the old panel. It lives only in the job's
-// memory and is dropped when the job ends or sits idle (D11).
+// memory and is dropped when the job ends or sits idle.
 type Login struct {
 	URL       string
 	Kind      panel.Kind // empty: detect
@@ -129,8 +129,8 @@ func (j *Job) rollbackOrUndo() string {
 }
 
 // ownPassword reports whether the reseller signed in to the old panel with
-// their own username and password, so the moved admin can keep it (owner,
-// 2026-10-16). bcrypt reads 72 bytes. The caller holds mu.
+// their own username and password, so the moved admin can keep it.
+// bcrypt reads 72 bytes. The caller holds mu.
 func (j *Job) ownPassword() bool {
 	l := j.login
 	return j.snapshot != nil && l.APIKey.IsZero() && !l.Password.IsZero() && len(l.Password.Reveal()) <= 72 &&
@@ -165,7 +165,7 @@ func (j *Job) State() string {
 	return j.state
 }
 
-// wipe drops everything secret the job holds (D11).
+// wipe drops everything secret the job holds.
 func (j *Job) wipe() {
 	if j.source != nil {
 		j.source.Close()

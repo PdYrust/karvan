@@ -31,7 +31,7 @@ function Loading() {
 /**
  * Step 3: the admins first, each with its role, then the problem groups with
  * their fixes, and the categories. Every choice saves the whole plan and
- * shows what it does (D6).
+ * shows what it does.
  */
 export function CompareStep() {
   const t = useT(compareMessages);

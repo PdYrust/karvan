@@ -27,7 +27,7 @@ func flock(path string) (func(), error) {
 }
 
 // LockFile takes an exclusive flock on path, creating it 0600. Karvan uses
-// it so only one process works on one data directory (D30).
+// it so only one process works on one data directory.
 func LockFile(path string) (func(), error) {
 	f, err := os.OpenFile(path, os.O_RDWR|os.O_CREATE, 0o600) //nolint:gosec // path is in Karvan's data dir
 	if err != nil {

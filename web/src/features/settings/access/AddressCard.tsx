@@ -39,7 +39,7 @@ export function AddressCard() {
   const address = useQuery({ queryKey: accountKeys.address, queryFn: getAddress });
   const [asking, setAsking] = useState<Asking>(null);
   const [port, setPort] = useState<PortChoice>({ kind: 'random' });
-  // The new path is shown once (D10): this page's start answer, in state only.
+  // The new path is shown once: this page's start answer, in state only.
   const [started, setStarted] = useState<NewAddress | null>(null);
   const refresh = () => queryClient.invalidateQueries({ queryKey: accountKeys.address });
   const start = useMutation({

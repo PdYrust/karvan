@@ -1,6 +1,6 @@
 #!/bin/sh
 # Builds the release files for VERSION into OUT (default dist/): the web
-# panel, karvan_<version>_linux_<arch>.tar.gz for amd64 and arm64 (D16),
+# panel, karvan_<version>_linux_<arch>.tar.gz for amd64 and arm64,
 # each with get.sh stamped with the version, SHA256SUMS over both, and
 # image/linux_<arch>/karvan, the build context of packaging/docker/Dockerfile.
 # ARCHES=<arch> builds only that architecture, and SKIP_WEB=1 uses the web

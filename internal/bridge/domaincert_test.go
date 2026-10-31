@@ -28,7 +28,7 @@ func (e *env) certify(name, certPEM, keyPEM string) Domain {
 	return got
 }
 
-// Every way of D61 stores what it says: a stored row, a file pair (the row
+// Every way a domain gets its certificate stores what it says: a stored row, a file pair (the row
 // of the same pair when there is one), a paste sealed in a new row named
 // after the domain, or none.
 func TestAddDomainWithItsCertificate(t *testing.T) {
@@ -123,7 +123,7 @@ func TestAddDomainRefusals(t *testing.T) {
 	}
 }
 
-// D65: a new certificate drops the domain's pins, the HTTPS rules that
+// A new certificate drops the domain's pins, the HTTPS rules that
 // hold it take it, and every port serves it; none is refused while an
 // HTTPS rule holds the domain, and plain rules stay plain.
 func TestSetDomainCertificate(t *testing.T) {

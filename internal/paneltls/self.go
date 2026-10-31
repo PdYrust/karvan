@@ -16,7 +16,7 @@ import (
 	"time"
 )
 
-// Self-signed certificate lifetimes (D5): 397 days is the longest a browser
+// Self-signed certificate lifetimes: 397 days is the longest a browser
 // accepts, and the certificate is made again 30 days before its end.
 const (
 	selfLife    = 397 * 24 * time.Hour

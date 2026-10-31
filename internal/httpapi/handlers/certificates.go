@@ -10,7 +10,7 @@ import (
 	"github.com/PdYrust/karvan/internal/httpapi/respond"
 )
 
-// maxCertBody caps a certificate or inspect body (section 4).
+// maxCertBody caps a certificate or inspect body.
 const maxCertBody = 256 << 10
 
 // writeCertError answers a domain or certificate failure; the rest are
@@ -101,7 +101,7 @@ func (a *API) DeleteCertificate(w http.ResponseWriter, r *http.Request) {
 }
 
 // ScanCertificates looks for certificates in the known places on this
-// server, read only. The body is empty; the places are fixed (D51).
+// server, read only. The body is empty; the places are fixed.
 func (a *API) ScanCertificates(w http.ResponseWriter, r *http.Request) {
 	res, err := a.Bridge.ScanCertificates(r.Context())
 	switch {

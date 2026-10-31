@@ -11,18 +11,18 @@ import (
 	"github.com/PdYrust/karvan/internal/panel"
 )
 
-// Why a rule's batchIds were refused (section 4).
+// Why a rule's batchIds were refused.
 const (
 	ReasonUnknown  = "unknown"  // no such batch, or a deleted one
 	ReasonInactive = "inactive" // the batch is not active
-	ReasonMixed    = "mixed"    // the batches do not share one old panel, destination and old path (D25)
+	ReasonMixed    = "mixed"    // the batches do not share one old panel, destination and old path
 )
 
 // maxRuleBatches caps the batches of one rule.
 const maxRuleBatches = 50
 
 // ErrNotAdopted means the site still serves its own certificate, since its
-// adoption failed, and the save picked none: a save must pick one (D54).
+// adoption failed, and the save picked none: a save must pick one.
 var ErrNotAdopted = errors.New("the site's certificate was not adopted; pick a certificate")
 
 // batchesRefused is a batchIds refusal with its reason.
@@ -52,7 +52,7 @@ func checkMode(s *Site, stored *Site) error {
 	return nil
 }
 
-// fromBatches fills a rule of batches from them (D25, D56): every batch
+// fromBatches fills a rule of batches from them: every batch
 // known and active, all of one old panel, destination and old path.
 func (st *store) fromBatches(ctx context.Context, s *Site) error {
 	ids := slices.Clone(s.BatchIDs)
@@ -86,7 +86,7 @@ func (st *store) fromBatches(ctx context.Context, s *Site) error {
 }
 
 // keepRegistered keeps the domains of s that are registered: the batches'
-// old hosts a rule of batches takes by default (D56).
+// old hosts a rule of batches takes by default.
 func (st *store) keepRegistered(ctx context.Context, s *Site) error {
 	raw, err := json.Marshal(s.Domains)
 	if err != nil {
@@ -230,24 +230,24 @@ func linkBatches(ctx context.Context, tx *sql.Tx, s Site) error {
 	return nil
 }
 
-// Why a rule's domains or https were refused (D48, D63).
+// Why a rule's domains or https were refused.
 const (
 	ReasonNotRegistered = "not_registered" // a domain that is not a domains row
 	ReasonPending       = "pending"        // a domain whose Let's Encrypt order runs and that has no certificate yet
 	ReasonNoCert        = "no_certificate" // HTTPS asked for while a domain, or the port, has no certificate
 )
 
-// ruleCert is what a rule save derives its certificate from (D63).
+// ruleCert is what a rule save derives its certificate from.
 type ruleCert struct {
 	self       RuleRef  // the rule; ID 0 on POST
 	port       int      // as saved
 	domains    []string // normalized, sorted
 	https      *bool    // as sent; nil when absent
 	stored     *bool    // the stored https on PATCH; nil on POST
-	notAdopted bool     // the stored rule is served from its own certificate (D54)
+	notAdopted bool     // the stored rule is served from its own certificate
 }
 
-// derive is the rule's certificate (D63): none for plain HTTP; with
+// derive is the rule's certificate: none for plain HTTP; with
 // domains, for the first one, the port's pin of it, else its
 // certificate; with no domains, the port's fallback. Every domain must be
 // registered, and HTTPS needs a certificate for every domain, or the
@@ -304,8 +304,8 @@ type domainState struct {
 	pending bool
 }
 
-// ruleDomains reads the domains of a rule; every one must be registered
-// (D48). lacking are those without a certificate, sorted.
+// ruleDomains reads the domains of a rule; every one must be registered.
+// lacking are those without a certificate, sorted.
 func (st *store) ruleDomains(ctx context.Context, names []string) (map[string]domainState, []string, error) {
 	out := map[string]domainState{}
 	raw, err := json.Marshal(names)
@@ -347,7 +347,7 @@ func (st *store) ruleDomains(ctx context.Context, names []string) (map[string]do
 }
 
 // portFallback is the certificate a handshake without SNI on port gets
-// now (the D53 order with each rule's certificate). The rule being saved
+// now (the table-order pick with each rule's certificate). The rule being saved
 // takes part as stored, and only while it has a certificate, so a save
 // that changes nothing keeps it and a plain rule never hides the others.
 func (st *store) portFallback(ctx context.Context, port int, self RuleRef) (int64, error) {
@@ -366,7 +366,7 @@ func (st *store) portFallback(ctx context.Context, port int, self RuleRef) (int6
 }
 
 // prunePins deletes the pins of (port, domain) pairs no rule holds any
-// more (D62).
+// more.
 func prunePins(ctx context.Context, tx *sql.Tx) error {
 	_, err := tx.ExecContext(ctx, "DELETE FROM domain_pins WHERE NOT EXISTS (SELECT 1 FROM domains d, legacy_sites s, "+
 		"json_each(s.domains) j WHERE d.id = domain_pins.domain_id AND s.listen_port = domain_pins.port AND j.value = d.name) "+

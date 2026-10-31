@@ -175,7 +175,7 @@ func (s *Service) validate(ctx context.Context, c *acme.Client, o *orderRow) err
 }
 
 // issue finalizes the order with its sealed key, downloads the chain and
-// stores it through the bridge (D69), then reloads so it is served.
+// stores it through the bridge, then reloads so it is served.
 func (s *Service) issue(ctx context.Context, c *acme.Client, o *orderRow) error {
 	key, keyPEM, err := s.orderKey(ctx, o)
 	if err != nil {
@@ -239,7 +239,7 @@ func (s *Service) finalize(ctx context.Context, c *acme.Client, ord *acme.Order,
 }
 
 // orderKey is the certificate key of order o, made and sealed in the
-// order before finalize so a restart can finish it (D66).
+// order before finalize so a restart can finish it.
 func (s *Service) orderKey(ctx context.Context, o *orderRow) (*ecdsa.PrivateKey, []byte, error) {
 	if o.keySealed == nil {
 		sealed, err := s.sealNewKey("acme_orders", o.id)

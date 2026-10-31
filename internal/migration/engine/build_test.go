@@ -262,7 +262,7 @@ func TestJobConflicts(t *testing.T) {
 	}
 }
 
-// D32: the place.targets operation is gone; a plan that still has it is
+// The place.targets operation is gone; a plan that still has it is
 // refused wherever it sits.
 func TestPlaceTargetsRefused(t *testing.T) {
 	op := []plan.Op{{Kind: "place.targets", Params: map[string]string{"ids": "3"}}}

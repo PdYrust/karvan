@@ -36,7 +36,7 @@ type Config struct {
 	// else sudo -n), "docker", "sudo" or "off".
 	PanelControl string `json:"panelControl"`
 	// ACMEHTTPPort is where Karvan answers Let's Encrypt HTTP-01
-	// challenges (D74).
+	// challenges.
 	ACMEHTTPPort int `json:"acmeHttpPort"`
 	// For development and tests only: an ACME directory used instead of
 	// Let's Encrypt, the root that signs its HTTPS, and the DNS server
