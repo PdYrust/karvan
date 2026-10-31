@@ -55,7 +55,7 @@ function Body({
 }) {
   const t = useT(reportsMessages);
   return (
-    <div className="grid max-w-[1400px] lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr]">
+    <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem] lg:grid-rows-[auto_1fr]">
       <div className="p-4 sm:p-8 lg:pb-0">
         <ReportResult id={id} state={state} report={report} />
       </div>
@@ -184,7 +184,7 @@ export function ReportPage() {
           <Body id={id} state={state} report={r} batch={row.data?.batch} />
         </Reveal>
       ) : (
-        <div className="flex max-w-[1400px] flex-col gap-6 p-4 sm:p-8">
+        <div className="flex flex-col gap-6 p-4 sm:p-8">
           {missing ? (
             <EmptyState icon={<PrinterIcon size={32} aria-hidden="true" />} title={t('noReport')} />
           ) : report.isError ? (

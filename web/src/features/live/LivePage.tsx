@@ -179,11 +179,7 @@ export function LivePage() {
         description={r ? <JobLine row={r} /> : undefined}
         actions={state ? <JobStateLabel state={state} /> : undefined}
       />
-      <div
-        className={
-          withLog ? 'grid max-w-[1400px] lg:grid-cols-[minmax(0,1fr)_22rem]' : 'max-w-[1400px]'
-        }
-      >
+      <div className={withLog ? 'grid lg:grid-cols-[minmax(0,1fr)_22rem]' : undefined}>
         <div className="flex min-w-0 flex-col gap-6 p-4 sm:p-8">
           <LiveBody id={id} live={live} />
         </div>

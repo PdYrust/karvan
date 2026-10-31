@@ -60,7 +60,7 @@ export function ServerCharts({
   const fmt = useFormat();
   const within = t(`in_${range}`);
   return (
-    <div className="grid gap-4 lg:grid-cols-2">
+    <div className="grid gap-4 lg:grid-cols-2 2xl:grid-charts">
       {serverCharts(view, now, t, fmt).map((c) => (
         <ServerChart key={c.key} spec={c} view={view} within={within} />
       ))}

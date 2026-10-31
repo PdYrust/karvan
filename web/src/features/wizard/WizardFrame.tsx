@@ -29,9 +29,9 @@ export function WizardFrame({
     to: jobId && i > 0 && i < current ? stepPath(s, jobId) : undefined,
   }));
   return (
-    <div className="flex flex-col">
+    <div className="mx-auto flex w-full max-w-read flex-col">
       <PageHeader eyebrow={t('eyebrow')} title={t('title')} description={description} />
-      <div className="flex max-w-[1400px] flex-col gap-8 p-4 sm:p-8">
+      <div className="flex flex-col gap-8 p-4 sm:p-8">
         <Steps
           steps={steps}
           current={current}

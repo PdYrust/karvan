@@ -101,7 +101,12 @@ export function AppShell() {
               onShortcuts={openHelp}
               hold={menuOpen || searchOpen || helpOpen}
             />
-            <main id="content" tabIndex={-1} className="flex-1 outline-none">
+            {/* Centered in the space next to the sidebar, so a wide screen leaves even margins. */}
+            <main
+              id="content"
+              tabIndex={-1}
+              className="mx-auto w-full max-w-page flex-1 outline-none"
+            >
               <PageBoundary page={pathname}>
                 <Suspense fallback={<PageSkeleton label={t('loadingPage')} />}>
                   <Outlet context={outlet} />

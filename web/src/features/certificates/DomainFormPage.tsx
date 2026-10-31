@@ -119,7 +119,7 @@ export function DomainFormPage() {
     );
   }
   return (
-    <div className="flex flex-col">
+    <div className="mx-auto flex w-full max-w-form flex-col">
       <PageHeader
         eyebrow={
           <Link

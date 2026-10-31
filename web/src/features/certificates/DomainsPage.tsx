@@ -122,7 +122,7 @@ export function DomainsPage() {
   return (
     <div className="flex flex-col">
       <PageHeader title={t('title')} description={t('description')} />
-      <div className="flex max-w-[1200px] flex-col gap-4 p-4 sm:p-8">
+      <div className="flex flex-col gap-4 p-4 sm:p-8">
         <Reveal on={load.reveal}>{body}</Reveal>
       </div>
       <AcmeSettingsSheet open={settings} onOpenChange={setSettings} />

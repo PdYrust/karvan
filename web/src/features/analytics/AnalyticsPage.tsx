@@ -50,7 +50,7 @@ export function AnalyticsPage() {
         />
         <RangeControl range={range} onRange={setRange} />
       </div>
-      <div className="flex max-w-[1400px] flex-col gap-4 p-4 sm:p-8">
+      <div className="flex flex-col gap-4 p-4 sm:p-8">
         {/* A tab's code loads under the header, so the header stays put. */}
         <Suspense fallback={<TabSkeleton label={t('title')} />}>
           {/* Keyed by tab, so a new tab's content fades in. */}

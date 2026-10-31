@@ -12,9 +12,13 @@ import (
 	"errors"
 	"io"
 	"math/big"
+	mrand "math/rand/v2"
 	"net"
 	"net/http"
+	"os"
 	"strconv"
+	"strings"
+	"sync"
 	"testing"
 	"time"
 
@@ -111,14 +115,48 @@ func TestServesOverTLS(t *testing.T) {
 	}
 }
 
+// handedOut is every port freePort gave out in this run. A test seeds
+// several rules from freePort, and a port the kernel handed out for :0 and
+// got back could come again, so a plain HTTP rule would share a port with
+// a TLS rule and the bridge would refuse the port as mixed.
+var handedOut = struct {
+	sync.Mutex
+	ports map[int]bool
+}{ports: map[int]bool{}}
+
+// freePort is a port no other freePort call in the run gave out, free on
+// every address that the bridge opens later. It comes from below the
+// kernel's ephemeral range, so an outgoing connection cannot take it as
+// its source port before the bridge binds it.
 func freePort(t *testing.T) int {
 	t.Helper()
-	ln, err := net.Listen("tcp", "127.0.0.1:0")
-	if err != nil {
-		t.Fatal(err)
+	handedOut.Lock()
+	defer handedOut.Unlock()
+	low, high := 10000, ephemeralStart()
+	for range 200 {
+		p := low + mrand.IntN(high-low)
+		if handedOut.ports[p] {
+			continue
+		}
+		if ln, err := net.Listen("tcp", ":"+strconv.Itoa(p)); err == nil {
+			_ = ln.Close()
+			handedOut.ports[p] = true
+			return p
+		}
 	}
-	defer ln.Close()
-	return ln.Addr().(*net.TCPAddr).Port
+	t.Fatal("no free port below the ephemeral range")
+	return 0
+}
+
+// ephemeralStart is the first port of the kernel's ephemeral range.
+func ephemeralStart() int {
+	b, err := os.ReadFile("/proc/sys/net/ipv4/ip_local_port_range")
+	if f := strings.Fields(string(b)); err == nil && len(f) == 2 {
+		if n, err := strconv.Atoi(f[0]); err == nil && n > 10100 {
+			return n
+		}
+	}
+	return 32768
 }
 
 func selfSigned(t *testing.T, name string) (string, string) {

@@ -40,6 +40,9 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - the owner has read every Persian string.
 
+## Release notes 0.5.4-beta
+Karvan 0.5.4-beta fits wide screens. Every page now sits centered next to the sidebar and grows up to 1760 px, so a Full HD or QHD screen no longer leaves a large empty area on one side.
+- On wide screens the analytics charts and the Overview cards fill more columns. Forms, Settings and the wizard keep a readable width and are centered too.
 ## Release notes 0.5.3-beta
 Karvan 0.5.3-beta opens every page on a fresh install and is tested on PasarGuard 5.5.1.
 ### Fixes

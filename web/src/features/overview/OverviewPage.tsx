@@ -48,7 +48,7 @@ export function OverviewPage() {
       {/* Like the dashboard home: a question, then the search; the title is for screen readers. */}
       <h1 className="sr-only">{t('title')}</h1>
       {/* Spaced like the dashboard home: 48 px (56 on desktop) under the top bar, 32 to the search, 32 to the lists. */}
-      <div className="flex max-w-[1400px] flex-col gap-8 p-4 sm:p-8">
+      <div className="flex flex-col gap-8 p-4 sm:p-8">
         <div className="flex flex-col gap-8 pt-8 sm:pt-6">
           <p className="text-center text-display font-semibold text-kumo-strong">{t('heading')}</p>
           <HomeSearch />

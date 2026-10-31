@@ -85,7 +85,7 @@ function Detail({ panel }: { panel: Panel }) {
         description={<PanelVersion panel={panel} />}
         actions={<Actions panel={panel} />}
       />
-      <div className="grid max-w-[1400px] lg:grid-cols-[minmax(0,1fr)_22rem]">
+      <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex min-w-0 flex-col gap-6 p-4 sm:p-8">
           {problems > 0 ? (
             <Section title={t('problemsTitle')}>

@@ -7,6 +7,20 @@
 @import './type.css';
 @import './motion.css';
 
+/*
+ * Page widths, as in the dashboard: the shell centers every page in the space
+ * next to the sidebar, up to max-w-page. Settings and the wizard stay at
+ * max-w-read and single forms at max-w-form (a 720 px form and its padding).
+ */
+@theme {
+  --container-page: 110rem;
+  --container-read: 72rem;
+  --container-form: 49rem;
+}
+/* Wide screens get more chart columns instead of wider charts. Used from 2xl, so narrower screens keep their columns. */
+@utility grid-charts {
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 32rem), 1fr));
+}
 @custom-variant rtl (&:where([dir='rtl'], [dir='rtl'] *));
 @custom-variant ltr (&:where([dir='ltr'], [dir='ltr'] *));
 @custom-variant dark (&:where([data-mode='dark'], [data-mode='dark'] *));

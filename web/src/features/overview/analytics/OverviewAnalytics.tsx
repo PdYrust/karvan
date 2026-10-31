@@ -15,7 +15,7 @@ import { CardDetail } from './CardDetail';
 import { OverviewCard } from './OverviewCard';
 import { useServerCards } from './server-cards';
 
-const grid = 'grid gap-4 lg:grid-cols-2';
+const grid = 'grid gap-4 lg:grid-cols-2 2xl:grid-charts';
 
 /** What the server is: facts that show everything, so the card takes no press. */
 function FactsCard({ stats, now }: { stats: ServerStats; now: Sample }) {
