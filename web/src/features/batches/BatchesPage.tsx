@@ -7,11 +7,11 @@ import { ListToolbar, type ToolbarChoice } from '../../components/data/ListToolb
 import { ToolbarRefresh } from '../../components/data/ToolbarRefresh';
 import { EmptyState } from '../../components/feedback/EmptyState';
 import { ErrorState } from '../../components/feedback/ErrorState';
-import { Bone } from '../../components/feedback/PageSkeleton';
 import { Reveal } from '../../components/feedback/Reveal';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { usePageTitle } from '../../components/layout/use-page-title';
 import { useT } from '../../i18n/locale';
+import { listView } from '../../lib/lists/list-view';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
 import { usePanelChoice } from '../migrations/JobsToolbar';
 import { ListSkeleton } from '../../components/feedback/PageSkeleton';
@@ -63,13 +63,11 @@ export function BatchesPage() {
   const { query } = list;
   const load = useFirstLoad(query.data);
   const panelChoice = usePanelChoice();
-  // No batch at all: only the empty card shows, without the toolbar.
-  const bare =
-    query.data?.batches.length === 0 &&
-    !query.isPlaceholderData &&
-    !list.filtered &&
-    list.offset === 0 &&
-    !searching;
+  // The skeleton until the first page, then the empty card alone or the toolbar with the list.
+  const view = listView(
+    load.data?.batches,
+    list.filtered || list.offset > 0 || query.isPlaceholderData || searching,
+  );
   const choices: ToolbarChoice[] = [
     {
       label: t('stateLabel'),
@@ -92,12 +90,25 @@ export function BatchesPage() {
         onRetry={() => void query.refetch()}
       />
     ) : (
-      <Bone className="h-56 w-full rounded-lg" />
+      <ListSkeleton label={t('title')} />
     );
   } else {
     const shown = load.data.batches.filter((b) => matchesBatch(b, search));
     body = (
       <Reveal on={load.reveal}>
+        {view === 'list' ? (
+          <ListToolbar
+            search={{ label: t('search'), value: search, onChange: setSearch }}
+            choices={choices}
+            refresh={
+              <ToolbarRefresh
+                label={t('refresh')}
+                loading={query.isFetching}
+                onClick={() => void query.refetch()}
+              />
+            }
+          />
+        ) : null}
         {shown.length > 0 ? (
           <BatchesTable batches={shown} now={now} />
         ) : list.filtered || searching ? (
@@ -126,28 +137,7 @@ export function BatchesPage() {
   return (
     <div className="flex flex-col">
       <PageHeader title={t('title')} description={t('description')} />
-      <div className="flex flex-col gap-4 p-4 sm:p-8">
-        {!settled ? (
-          <ListSkeleton label={t('title')} />
-        ) : (
-          <>
-            {bare ? null : (
-              <ListToolbar
-                search={{ label: t('search'), value: search, onChange: setSearch }}
-                choices={choices}
-                refresh={
-                  <ToolbarRefresh
-                    label={t('refresh')}
-                    loading={query.isFetching}
-                    onClick={() => void query.refetch()}
-                  />
-                }
-              />
-            )}
-            {body}
-          </>
-        )}
-      </div>
+      <div className="flex flex-col gap-4 p-4 sm:p-8">{body}</div>
     </div>
   );
 }

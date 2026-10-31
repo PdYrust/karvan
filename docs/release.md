@@ -40,6 +40,9 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - a native Persian speaker has read every Persian string.
 
+## Release notes 0.5.6-beta
+- Migrations and Batches no longer show the search and filters for a moment before the empty card. They show the loading skeleton until the list arrives, as Domains and Rules do.
+- A panel's page no longer has a "..." menu. Its actions are in the "..." menu on the panel's card on the Panels list.
 ## Release notes 0.5.5-beta
 Karvan 0.5.5-beta names PasarGuard 5.5.1 correctly and tidies a few pages.
 - A panel on PasarGuard 5.5.1 showed "unsupported version" while it was ready. It now shows PasarGuard 5.5.1. A version that passes the schema check but has no known name shows "version not known by name"; "unsupported" is only for a database the check refuses.

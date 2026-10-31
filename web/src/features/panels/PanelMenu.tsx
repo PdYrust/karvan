@@ -14,8 +14,8 @@ import { useCurrentPanel } from './current-panel';
 import { panelsMessages } from './messages';
 import { useRefreshPanels } from './use-panels';
 
-/** The "..." menu of one panel, on its row and on its own page (which leaves out Open). */
-export function PanelMenu({ panel, onPage = false }: { panel: Panel; onPage?: boolean }) {
+/** The "..." menu of one panel row. */
+export function PanelMenu({ panel }: { panel: Panel }) {
   const t = useT(panelsMessages);
   const navigate = useNavigate();
   const { panel: current, select } = useCurrentPanel();
@@ -36,12 +36,10 @@ export function PanelMenu({ panel, onPage = false }: { panel: Panel; onPage?: bo
         }
       />
       <DropdownMenu.Content align="end" className="min-w-52">
-        {onPage ? null : (
-          <DropdownMenu.Item className="gap-2" onClick={() => void navigate(`/panels/${id}`)}>
-            <ArrowSquareOutIcon size={16} aria-hidden="true" className="rtl:-scale-x-100" />
-            {t('open')}
-          </DropdownMenu.Item>
-        )}
+        <DropdownMenu.Item className="gap-2" onClick={() => void navigate(`/panels/${id}`)}>
+          <ArrowSquareOutIcon size={16} aria-hidden="true" className="rtl:-scale-x-100" />
+          {t('open')}
+        </DropdownMenu.Item>
         <DropdownMenu.Item className="gap-2" disabled={refreshing} onClick={refresh}>
           <ArrowsClockwiseIcon size={16} aria-hidden="true" />
           {t('check')}

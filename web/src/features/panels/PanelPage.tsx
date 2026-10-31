@@ -15,7 +15,6 @@ import { panelsMessages } from './messages';
 import { PanelAside } from './PanelAside';
 import { CurrentTag, PanelVersion } from './PanelCells';
 import { PanelEnv } from './PanelEnv';
-import { PanelMenu } from './PanelMenu';
 import { usePanels } from './use-panels';
 import { Reveal } from '../../components/feedback/Reveal';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
@@ -50,7 +49,6 @@ function Detail({ panel }: { panel: Panel }) {
           </span>
         }
         description={<PanelVersion panel={panel} />}
-        actions={<PanelMenu panel={panel} onPage />}
       />
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex min-w-0 flex-col gap-6 p-4 sm:p-8">
