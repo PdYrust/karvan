@@ -1,5 +1,4 @@
 # ADR 0011: The bridge serves the web panel on a shared HTTPS port
-Status: accepted
 ## Context
 Many servers have one HTTPS port open to the world, usually 443, and the subscription bridge already listens there for the old panel links. An operator who wants the panel at `https://panel.example.com/<path>/` on that port needs something to split the requests between the panel and the bridge. Panel and bridge are one process; the bridge owns the rule listeners, their SNI picks and certificates. Some operators already run nginx or haproxy in front of their panels.
 ## Decision

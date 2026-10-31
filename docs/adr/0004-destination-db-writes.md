@@ -1,5 +1,4 @@
 # ADR 0004: Karvan writes moved users straight into the destination's database
-Status: accepted
 ## Context
 The rule for a migration: read the old panel through its API with the reseller's login, write admins and users into the new panel through its database, and use the new panel's API only to make it notice (ADR 0005). Neither panel's API can create a user with a given `created_at`, UUIDs, used traffic and reset history at once, and per-user API calls fire notifications and take minutes for large moves.
 ## Decision

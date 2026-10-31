@@ -1,5 +1,4 @@
 # ADR 0007: Old subscription links keep working through a bridge
-Status: accepted
 ## Context
 Every moved user has an old link that points at the old panel's domain and carries a token signed with the old panel's secret. Resellers cannot send thousands of new links at once. The old domain can be pointed at the new server, but the new panel does not accept the old tokens. Karvan never had the old panel's secret: the source is read with the reseller's login only.
 ## Decision

@@ -1,7 +1,5 @@
 # ADR 0002: What a visitor can see before signing in
 
-Status: accepted
-
 ## Context
 The panel is reachable from the internet. Scanners probe every address; a leaked URL can reach the sign-in page. The sign-in page should be branded, with the logo and the name; it shows a wall of hexagonal columns.
 

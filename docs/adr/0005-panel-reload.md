@@ -1,5 +1,4 @@
 # ADR 0005: How a running panel picks up the users Karvan writes
-Status: accepted
 ## Context
 Karvan writes users straight into the destination panel's database. A running panel does not see those rows: Marzban's Xray holds its users in memory and PasarGuard pushes users to its nodes only when they change through its own code. PasarGuard also gives a WireGuard user its peer IP only on its own create and edit path. The operator should see every way to fix this on the final step and pick one there.
 ## Decision

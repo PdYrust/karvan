@@ -1,7 +1,5 @@
 # ADR 0009: The panel's address changes only once it is confirmed from the new one
 
-Status: accepted
-
 ## Context
 The panel lives at a random port and a hidden path. Changing either used to need `karvan reset` and a restart. The web panel must offer both with one click, but a new port the firewall blocks, a proxy that only forwards the old port, or a new path the operator did not write down would lock the operator out of their own panel.
 

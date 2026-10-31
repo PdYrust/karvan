@@ -1,5 +1,4 @@
 # ADR 0006: How Safe Mode takes a failed migration back
-Status: accepted
 ## Context
 Safe Mode must show "backing up, applying, failed, restoring" and leave the panel as it was, all from the web panel: nobody should type `marzban down` or any other command. Some operators trust only a full restore of the backup. The destination keeps running during a migration: other admins edit users and the panel writes usage rows. A full restore takes those writes back too, and it must run with the panel stopped, or the panel's next writes mix into the old data.
 ## Decision

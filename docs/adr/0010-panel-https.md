@@ -1,7 +1,5 @@
 # ADR 0010: The web panel serves HTTPS with its own certificate or a domain's
 
-Status: accepted
-
 ## Context
 The panel served plain HTTP only. Its sign-in, session cookie and every secret it shows crossed the network in the clear unless the operator put a proxy in front. Many installs have no domain, only an IP address. Others already have a domain with a certificate in Karvan's store (uploaded, from Let's Encrypt, or found in a panel's ENV). A wrong certificate or a closed port must never lock the operator out.
 

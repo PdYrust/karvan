@@ -1,5 +1,4 @@
 # ADR 0012: Release integrity with checksums and GitHub artifact attestations
-Status: accepted
 ## Context
 Karvan runs as root and is installed with a one-liner (`get.sh`) or pulled as an image from `ghcr.io`. A user needs a way to tell that an archive or an image is the one this repository built, and the one-liner must refuse a broken or changed download. There must be nothing to store, rotate or leak: no signing key and no repository secret. The repository is public.
 ## Decision

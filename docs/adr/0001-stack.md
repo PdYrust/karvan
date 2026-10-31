@@ -1,7 +1,5 @@
 # ADR 0001: One Go binary with an embedded React panel
 
-Status: accepted
-
 ## Context
 Karvan runs on the destination panel's server, often a small VPS with 1 to 2 GB of memory, amd64 or arm64. Operators install it with one command and expect updates without a toolchain. It holds secrets for whole panels, so every dependency is attack surface.
 

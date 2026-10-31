@@ -1,7 +1,5 @@
 # ADR 0003: How Karvan stores secrets
 
-Status: accepted
-
 ## Context
 Karvan will hold panel tokens, database passwords and SSH keys. A stolen database copy (a backup, a careless `scp`) must not be enough to read them.
 
