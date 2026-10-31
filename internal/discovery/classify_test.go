@@ -23,3 +23,10 @@ func TestNoteSchemaOfARevisionThatDiffers(t *testing.T) {
 		t.Fatalf("panel = %+v", p)
 	}
 }
+func TestNoteSchemaOfAKnownRevision(t *testing.T) {
+	p := &Panel{Kind: panel.PasarGuard, Findings: []Finding{}}
+	noteSchema(p, false, nil)
+	if p.RevisionNote != "" || len(p.Findings) > 0 || !p.Ready() {
+		t.Fatalf("panel = %+v", p)
+	}
+}

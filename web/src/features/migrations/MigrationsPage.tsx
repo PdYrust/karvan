@@ -30,6 +30,13 @@ export function MigrationsPage() {
   const { panel, settled } = useCurrentPanel();
   const list = useJobList(statesOf(state), panel?.id, search.trim() !== '', settled);
   const deleteDraft = useDeleteDraft();
+  // No job at all: only the empty card shows, without the toolbar.
+  const bare =
+    list.query.data?.jobs.length === 0 &&
+    !list.query.isPlaceholderData &&
+    !list.filtered &&
+    list.offset === 0 &&
+    search.trim() === '';
   return (
     <div className="flex flex-col">
       <PageHeader title={t('title')} description={t('description')} />
@@ -38,21 +45,23 @@ export function MigrationsPage() {
           <ListSkeleton label={t('title')} />
         ) : (
           <>
-            <JobsToolbar
-              search={search}
-              onSearch={setSearch}
-              searchLabel={t('search')}
-              states={stateFilters}
-              state={state}
-              onState={setState}
-              refreshing={list.query.isFetching}
-              onRefresh={() => void list.query.refetch()}
-            >
-              <ToolbarAdd
-                label={t('newMigration')}
-                onClick={() => void navigate(newMigrationPath)}
-              />
-            </JobsToolbar>
+            {bare ? null : (
+              <JobsToolbar
+                search={search}
+                onSearch={setSearch}
+                searchLabel={t('search')}
+                states={stateFilters}
+                state={state}
+                onState={setState}
+                refreshing={list.query.isFetching}
+                onRefresh={() => void list.query.refetch()}
+              >
+                <ToolbarAdd
+                  label={t('newMigration')}
+                  onClick={() => void navigate(newMigrationPath)}
+                />
+              </JobsToolbar>
+            )}
             <ListBody
               list={list}
               search={search}

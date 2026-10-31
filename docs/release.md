@@ -40,6 +40,13 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - a native Persian speaker has read every Persian string.
 
+## Release notes 0.5.5-beta
+Karvan 0.5.5-beta names PasarGuard 5.5.1 correctly and tidies a few pages.
+- A panel on PasarGuard 5.5.1 showed "unsupported version" while it was ready. It now shows PasarGuard 5.5.1. A version that passes the schema check but has no known name shows "version not known by name"; "unsupported" is only for a database the check refuses.
+- The footer shows the Karvan version and a Telegram link.
+- Migrations and Batches with nothing in them show only the empty card, without the search and filters.
+- A panel's page has the same "..." menu as its card on the Panels list, which now also has Check again.
+- In the sidebar, the Analytics sub-pages show the server icon and each panel's logo.
 ## Release notes 0.5.4-beta
 Karvan 0.5.4-beta fits wide screens. Every page now sits centered next to the sidebar and grows up to 1760 px, so a Full HD or QHD screen no longer leaves a large empty area on one side.
 - On wide screens the analytics charts and the Overview cards fill more columns. Forms, Settings and the wizard keep a readable width and are centered too.

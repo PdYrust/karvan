@@ -92,3 +92,14 @@ func TestInspectReportsMissingPieces(t *testing.T) {
 		t.Errorf("unreadable env: %v", got)
 	}
 }
+
+// PasarGuard 5.5.1 is a known revision: ready, with no note and no finding.
+func TestInspectPasarGuard551(t *testing.T) {
+	db := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "sqlite", Path: "../panel/pasarguarddb/testdata/" + pasarguarddb.Revision551 + ".sqlite.sql"})
+	env := filepath.Join(t.TempDir(), "pasarguard", ".env")
+	write(t, env, "SQLALCHEMY_DATABASE_URL=sqlite+aiosqlite:///"+db.Path+"\n")
+	p := Inspect(context.Background(), env)
+	if p.Kind != panel.PasarGuard || p.Revision != pasarguarddb.Revision551 || p.RevisionNote != "" || len(p.Findings) > 0 || !p.Ready() {
+		t.Fatalf("panel = %+v", p)
+	}
+}

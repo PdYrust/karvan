@@ -31,6 +31,7 @@ describe('panels', () => {
 
   it('names known releases only', () => {
     expect(panelRelease('48a6bcb8bba1')).toBe('5.4.1');
+    expect(panelRelease('c8d2e4f6a1b3')).toBe('5.5.1');
     expect(panelRelease('2b231de97dc3')).toBe('0.8.4');
     expect(panelRelease('ffffffffffff')).toBeUndefined();
     expect(panelRelease(undefined)).toBeUndefined();

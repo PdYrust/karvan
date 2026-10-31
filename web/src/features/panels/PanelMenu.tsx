@@ -2,6 +2,7 @@ import { Button } from '@cloudflare/kumo/components/button';
 import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
 import {
   ArrowSquareOutIcon,
+  ArrowsClockwiseIcon,
   ChartLineIcon,
   CrosshairIcon,
   DotsThreeIcon,
@@ -11,12 +12,14 @@ import { useT } from '../../i18n/locale';
 import type { Panel } from '../../lib/api/panels';
 import { useCurrentPanel } from './current-panel';
 import { panelsMessages } from './messages';
+import { useRefreshPanels } from './use-panels';
 
-/** The "..." menu of one panel row. */
-export function PanelMenu({ panel }: { panel: Panel }) {
+/** The "..." menu of one panel, on its row and on its own page (which leaves out Open). */
+export function PanelMenu({ panel, onPage = false }: { panel: Panel; onPage?: boolean }) {
   const t = useT(panelsMessages);
   const navigate = useNavigate();
   const { panel: current, select } = useCurrentPanel();
+  const { refresh, refreshing } = useRefreshPanels();
   const id = String(panel.id);
   return (
     <DropdownMenu>
@@ -33,9 +36,15 @@ export function PanelMenu({ panel }: { panel: Panel }) {
         }
       />
       <DropdownMenu.Content align="end" className="min-w-52">
-        <DropdownMenu.Item className="gap-2" onClick={() => void navigate(`/panels/${id}`)}>
-          <ArrowSquareOutIcon size={16} aria-hidden="true" className="rtl:-scale-x-100" />
-          {t('open')}
+        {onPage ? null : (
+          <DropdownMenu.Item className="gap-2" onClick={() => void navigate(`/panels/${id}`)}>
+            <ArrowSquareOutIcon size={16} aria-hidden="true" className="rtl:-scale-x-100" />
+            {t('open')}
+          </DropdownMenu.Item>
+        )}
+        <DropdownMenu.Item className="gap-2" disabled={refreshing} onClick={refresh}>
+          <ArrowsClockwiseIcon size={16} aria-hidden="true" />
+          {t('check')}
         </DropdownMenu.Item>
         {current?.id === panel.id ? null : (
           <DropdownMenu.Item className="gap-2" onClick={() => select(panel.id)}>

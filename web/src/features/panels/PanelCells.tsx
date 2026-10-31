@@ -46,12 +46,20 @@ export function PanelName({ panel, current }: { panel: Panel; current: boolean }
   );
 }
 
-/** "PasarGuard 5.4.1"; a revision Karvan does not know says so. */
+/** Findings that mean the schema check refused the panel's database. */
+const refusedCodes = new Set(['unknown_revision', 'schema_mismatch']);
+/**
+ * "PasarGuard 5.4.1". A revision the schema check accepted but that has no
+ * name says so; "unsupported" is only for a database the check refused.
+ */
 export function PanelVersion({ panel }: { panel: Panel }) {
   const t = useT(panelsMessages);
   const kind = panelKind(panel);
   if (!kind) return <span className="text-kumo-subtle">{t('unknownKind')}</span>;
   const release = panelRelease(panel.revision);
+  if (!release && panel.revision && !panel.findings.some((f) => refusedCodes.has(f.code))) {
+    return <span>{t(`unnamedVersion_${kind}`)}</span>;
+  }
   // The name and its version are one Latin unit, so Persian keeps "PasarGuard 5.4.1" in that order.
   return (
     <span>
@@ -64,7 +72,6 @@ export function PanelVersion({ panel }: { panel: Panel }) {
     </span>
   );
 }
-
 /** The engine, with the file, socket or host it lives at. Never a password: the address has none. */
 export function PanelDatabase({ panel }: { panel: Panel }) {
   const t = useT(panelsMessages);

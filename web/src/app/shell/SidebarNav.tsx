@@ -1,11 +1,13 @@
 import { Tooltip } from '@cloudflare/kumo/components/tooltip';
 import { cn } from '@cloudflare/kumo/utils';
-import { CaretDownIcon, CaretRightIcon } from '@phosphor-icons/react';
+import { CaretDownIcon, CaretRightIcon, CpuIcon } from '@phosphor-icons/react';
 import { useId, useState } from 'react';
 import { NavLink, useLocation } from 'react-router';
 import { Collapse } from '../../components/layout/Collapse';
+import { PanelMark } from '../../components/panels/PanelLabel';
 import { usePanels } from '../../features/panels/use-panels';
 import { useLocale, useT } from '../../i18n/locale';
+import { panelKind } from '../../lib/api/panels';
 import { shellMessages } from './messages';
 import { nav, type NavItem } from './nav';
 // As dense as the dashboard's rows: 30 high, 32 apart. On touch screens a row draws 36 high,
@@ -16,7 +18,7 @@ const row =
 const rows = 'flex flex-col gap-0.5 pointer-coarse:gap-1';
 const iconRow =
   'grid size-10 place-items-center rounded-md text-kumo-default hover:bg-kumo-tint aria-[current=page]:bg-kumo-tint pointer-coarse:size-9';
-/** Analytics' sub-pages, as its tabs: this server, then each panel. */
+/** Analytics' sub-pages, as its tabs and with their icons: this server, then each panel. */
 function SubRows({ onNavigate }: { onNavigate?: () => void }) {
   const t = useT(shellMessages);
   const panels = (usePanels().data ?? []).filter((p) => p.id > 0);
@@ -25,18 +27,29 @@ function SubRows({ onNavigate }: { onNavigate?: () => void }) {
     <ul className={cn('ms-5 mt-0.5 border-s border-kumo-hairline ps-2', rows)}>
       <li>
         <NavLink to="/analytics/server" onClick={onNavigate} className={row}>
-          {t('navServer')}
+          <CpuIcon size={16} aria-hidden="true" className="shrink-0 text-kumo-subtle" />
+          <span title={t('navServer')} className="min-w-0 truncate">
+            {t('navServer')}
+          </span>
         </NavLink>
       </li>
-      {panels.map((p) => (
-        <li key={p.id}>
-          <NavLink to={`/analytics/panels/${String(p.id)}`} onClick={onNavigate} className={row}>
-            <bdi dir="ltr" title={p.name} className="min-w-0 truncate">
-              {p.name}
-            </bdi>
-          </NavLink>
-        </li>
-      ))}
+      {panels.map((p) => {
+        const kind = panelKind(p);
+        return (
+          <li key={p.id}>
+            <NavLink to={`/analytics/panels/${String(p.id)}`} onClick={onNavigate} className={row}>
+              {kind ? (
+                <span aria-hidden="true" className="flex shrink-0">
+                  <PanelMark kind={kind} size={16} />
+                </span>
+              ) : null}
+              <bdi dir="ltr" title={p.name} className="min-w-0 truncate">
+                {p.name}
+              </bdi>
+            </NavLink>
+          </li>
+        );
+      })}
     </ul>
   );
 }

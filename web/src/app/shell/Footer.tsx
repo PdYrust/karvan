@@ -1,15 +1,12 @@
 import { useOverview } from '../../features/overview/use-overview';
 import { useT } from '../../i18n/locale';
 import { sharedMessages } from '../../i18n/shared';
-import { shellMessages } from './messages';
-import { repoUrl } from './repo';
 
 const link =
   'hover:text-kumo-default hover:underline pointer-coarse:inline-flex pointer-coarse:min-h-9 pointer-coarse:min-w-11 pointer-coarse:items-center pointer-coarse:justify-center';
 
 /** One quiet row under every page, like the dashboard's footer. */
 export function Footer() {
-  const t = useT(shellMessages);
   const ts = useT(sharedMessages);
   const version = useOverview().data?.version;
   return (
@@ -22,11 +19,8 @@ export function Footer() {
           </bdi>
         </span>
       ) : null}
-      <a className={link} href={repoUrl} target="_blank" rel="noreferrer">
-        {t('footerSource')}
-      </a>
-      <a className={link} href={`${repoUrl}/security`} target="_blank" rel="noreferrer">
-        {t('footerSecurity')}
+      <a className={link} href="https://t.me/PdYrust" target="_blank" rel="noopener noreferrer">
+        <bdi dir="ltr">Yrust</bdi>
       </a>
     </footer>
   );

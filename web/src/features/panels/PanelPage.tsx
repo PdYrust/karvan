@@ -1,6 +1,4 @@
 import { Button } from '@cloudflare/kumo/components/button';
-import { refreshTurn, useMinDuration } from '../../lib/motion/use-min-duration';
-import { ArrowsClockwiseIcon, ChartLineIcon } from '@phosphor-icons/react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { PageSkeleton } from '../../components/feedback/PageSkeleton';
@@ -17,7 +15,8 @@ import { panelsMessages } from './messages';
 import { PanelAside } from './PanelAside';
 import { CurrentTag, PanelVersion } from './PanelCells';
 import { PanelEnv } from './PanelEnv';
-import { usePanels, useRefreshPanels } from './use-panels';
+import { PanelMenu } from './PanelMenu';
+import { usePanels } from './use-panels';
 import { Reveal } from '../../components/feedback/Reveal';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
 
@@ -28,38 +27,6 @@ function Crumb() {
     <Link to="/panels" className="hover:text-kumo-default hover:underline">
       {t('title')}
     </Link>
-  );
-}
-
-function Actions({ panel }: { panel: Panel }) {
-  const t = useT(panelsMessages);
-  const navigate = useNavigate();
-  const { panel: current, select } = useCurrentPanel();
-  const { refresh, refreshing } = useRefreshPanels();
-  const checking = useMinDuration(refreshing, refreshTurn);
-  return (
-    <>
-      <Button
-        icon={<ArrowsClockwiseIcon size={16} />}
-        loading={checking}
-        onClick={refresh}
-        className="pointer-coarse:h-9"
-      >
-        {t('check')}
-      </Button>
-      {current?.id === panel.id ? null : (
-        <Button onClick={() => select(panel.id)} className="pointer-coarse:h-9">
-          {t('workOn')}
-        </Button>
-      )}
-      <Button
-        icon={<ChartLineIcon size={16} />}
-        onClick={() => void navigate(`/analytics/panels/${String(panel.id)}`)}
-        className="pointer-coarse:h-9"
-      >
-        {t('analytics')}
-      </Button>
-    </>
   );
 }
 
@@ -83,7 +50,7 @@ function Detail({ panel }: { panel: Panel }) {
           </span>
         }
         description={<PanelVersion panel={panel} />}
-        actions={<Actions panel={panel} />}
+        actions={<PanelMenu panel={panel} onPage />}
       />
       <div className="grid lg:grid-cols-[minmax(0,1fr)_22rem]">
         <div className="flex min-w-0 flex-col gap-6 p-4 sm:p-8">

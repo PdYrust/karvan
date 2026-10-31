@@ -62,6 +62,7 @@ export async function scanPanels(): Promise<Panel[]> {
 const releases: Record<string, string> = {
   '2b231de97dc3': '0.8.4',
   '48a6bcb8bba1': '5.4.1',
+  c8d2e4f6a1b3: '5.5.1',
 };
 
 /** "5.4.1" for a known revision, undefined otherwise. */

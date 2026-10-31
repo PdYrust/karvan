@@ -1,5 +1,5 @@
 import { Button } from '@cloudflare/kumo/components/button';
-import { ArrowsLeftRightIcon, StackIcon } from '@phosphor-icons/react';
+import { PlusIcon, StackIcon } from '@phosphor-icons/react';
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import { CursorPager } from '../../components/data/CursorPager';
@@ -17,6 +17,7 @@ import { usePanelChoice } from '../migrations/JobsToolbar';
 import { ListSkeleton } from '../../components/feedback/PageSkeleton';
 import { useNow } from '../overview/use-now';
 import { useCurrentPanel } from '../panels/current-panel';
+import { newMigrationPath } from '../wizard/steps';
 import { BatchesTable } from './BatchesTable';
 import { matchesBatch } from './batch-view';
 import { batchesMessages } from './messages';
@@ -36,11 +37,11 @@ function Empty() {
       title={t('emptyTitle')}
       action={
         <Button
-          icon={<ArrowsLeftRightIcon size={16} />}
+          icon={<PlusIcon size={16} />}
           className="pointer-coarse:h-9"
-          onClick={() => void navigate('/migrations')}
+          onClick={() => void navigate(newMigrationPath)}
         >
-          {t('toMigrations')}
+          {t('newMigration')}
         </Button>
       }
     >
@@ -62,6 +63,13 @@ export function BatchesPage() {
   const { query } = list;
   const load = useFirstLoad(query.data);
   const panelChoice = usePanelChoice();
+  // No batch at all: only the empty card shows, without the toolbar.
+  const bare =
+    query.data?.batches.length === 0 &&
+    !query.isPlaceholderData &&
+    !list.filtered &&
+    list.offset === 0 &&
+    !searching;
   const choices: ToolbarChoice[] = [
     {
       label: t('stateLabel'),
@@ -123,17 +131,19 @@ export function BatchesPage() {
           <ListSkeleton label={t('title')} />
         ) : (
           <>
-            <ListToolbar
-              search={{ label: t('search'), value: search, onChange: setSearch }}
-              choices={choices}
-              refresh={
-                <ToolbarRefresh
-                  label={t('refresh')}
-                  loading={query.isFetching}
-                  onClick={() => void query.refetch()}
-                />
-              }
-            />
+            {bare ? null : (
+              <ListToolbar
+                search={{ label: t('search'), value: search, onChange: setSearch }}
+                choices={choices}
+                refresh={
+                  <ToolbarRefresh
+                    label={t('refresh')}
+                    loading={query.isFetching}
+                    onClick={() => void query.refetch()}
+                  />
+                }
+              />
+            )}
             {body}
           </>
         )}

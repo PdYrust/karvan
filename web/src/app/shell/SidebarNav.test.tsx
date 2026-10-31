@@ -107,7 +107,12 @@ describe('SidebarNav', () => {
     expect(name?.textContent).toBe(longName);
     expect(name?.className).toMatch(/\btruncate\b/);
     expect(name?.className).toMatch(/\bmin-w-0\b/);
-    for (const label of host.querySelectorAll('a > span, button > span')) {
+    // Each sub-row has its icon: the server's, then each panel's logo.
+    expect(subLink()?.querySelector('svg')).not.toBeNull();
+    expect(name?.parentElement?.querySelector('img')).not.toBeNull();
+    for (const label of host.querySelectorAll(
+      'a > span:not([aria-hidden]), button > span:not([aria-hidden])',
+    )) {
       expect(label.className).toMatch(/\btruncate\b/);
       expect(label.getAttribute('title')).toBe(label.textContent);
     }
