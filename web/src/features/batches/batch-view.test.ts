@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Batch } from '../../lib/api/batches';
-import { batchActions, batchLook, matchesBatch } from './batch-view';
+import type { Batch, BatchGroup } from '../../lib/api/batches';
+import { batchActions, batchLook, matchesBatch, matchesGroup } from './batch-view';
 
 function batch(edit: Partial<Batch> = {}): Batch {
   return {
@@ -67,5 +67,33 @@ describe('the batch search', () => {
   });
   it('leaves out a batch that does not match', () => {
     expect(matchesBatch(batch(), 'reseller')).toBe(false);
+  });
+});
+
+function group(edit: Partial<BatchGroup> = {}): BatchGroup {
+  const b = batch();
+  return {
+    id: 1,
+    latestId: 3,
+    panel: b.panel,
+    source: b.source,
+    counts: { runs: 3, active: 3, inactive: 0, users: 30, verified: 4, closed: 0 },
+    oldLinks: b.oldLinks,
+    rules: [{ id: 7, name: 'old links 443' }],
+    firstAt: '2026-10-20T00:00:00Z',
+    lastAt: b.createdAt,
+    runs: [b],
+    ...edit,
+  };
+}
+
+describe('the old panel list', () => {
+  it('finds an old panel by its address, its panels, its rules and its runs', () => {
+    expect(matchesGroup(group(), 'old.example.com')).toBe(true);
+    expect(matchesGroup(group(), 'pasarguard')).toBe(true);
+    expect(matchesGroup(group(), '443')).toBe(true);
+    expect(matchesGroup(group(), 'root_2')).toBe(true);
+    expect(matchesGroup(group({ runs: [] }), 'root_2')).toBe(false);
+    expect(matchesGroup(group(), 'elsewhere')).toBe(false);
   });
 });

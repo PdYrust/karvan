@@ -21,6 +21,7 @@ export function TextField({
   rows,
   inputMode,
   placeholder,
+  onBlur,
 }: {
   id: string;
   label: string;
@@ -34,6 +35,7 @@ export function TextField({
   rows?: number;
   inputMode?: 'url' | 'numeric' | 'text';
   placeholder?: string;
+  onBlur?: () => void;
 }) {
   const described = [hint ? `${id}-hint` : '', error ? `${id}-error` : ''].join(' ').trim();
   const common = {
@@ -44,6 +46,7 @@ export function TextField({
     'aria-labelledby': `${id}-label`,
     'aria-describedby': described || undefined,
     'aria-invalid': error ? true : undefined,
+    onBlur,
     ...(machine
       ? { dir: 'ltr', autoComplete: 'off', autoCapitalize: 'off', spellCheck: false }
       : { autoComplete: 'off' }),

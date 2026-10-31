@@ -201,8 +201,8 @@ func (st *store) Save(ctx context.Context, s Site) (Site, error) {
 	return st.Site(ctx, s.ID)
 }
 
-// write stores a checked site and its batches, and drops the pins no
-// rule holds any more, in one transaction.
+// write stores a checked site, and drops the pins no rule holds any
+// more, in one transaction.
 func (st *store) write(ctx context.Context, s *Site) error {
 	domains, _ := json.Marshal(s.Domains)
 	now := st.now().Unix()
@@ -224,9 +224,6 @@ func (st *store) write(ctx context.Context, s *Site) error {
 			return err
 		}
 	} else if err := update(ctx, tx, s.ID, args); err != nil {
-		return err
-	}
-	if err := linkBatches(ctx, tx, *s); err != nil {
 		return err
 	}
 	if err := prunePins(ctx, tx); err != nil {

@@ -110,6 +110,7 @@ type env struct {
 	users map[string]ledger.Entry // by source username
 	port  int
 	setup int // old panel calls made by the setup
+	asked int // requests want made
 }
 
 // oldCalls is how many /info calls the bridge made.

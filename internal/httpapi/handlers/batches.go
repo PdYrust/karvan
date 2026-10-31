@@ -58,18 +58,27 @@ func batchLimit(r *http.Request) (int, bool) {
 	return n, err == nil && n >= 1 && n <= batch.MaxPage
 }
 
+// queryID reads an optional positive integer query value; 0 when absent.
+func queryID(r *http.Request, name string) (int64, bool) {
+	v := r.URL.Query().Get(name)
+	if v == "" {
+		return 0, true
+	}
+	id, err := strconv.ParseInt(v, 10, 64)
+	return id, err == nil && id > 0
+}
+
 // Batches lists batches newest first, a page at a time, never deleted
-// ones: ?panel=<id>&state=active|inactive&cursor=&limit=.
+// ones: ?panel=<id>&state=active|inactive&group=<batch id>&cursor=&limit=.
+// group keeps the batches of that batch's old panel.
 func (a *API) Batches(w http.ResponseWriter, r *http.Request) {
 	q := r.URL.Query()
 	f := batch.Filter{State: q.Get("state")}
 	limit, ok := batchLimit(r)
-	if p := q.Get("panel"); p != "" {
-		id, err := strconv.ParseInt(p, 10, 64)
-		ok = ok && err == nil && id > 0
-		f.PanelID = id
-	}
-	if !ok {
+	panel, okPanel := queryID(r, "panel")
+	group, okGroup := queryID(r, "group")
+	f.PanelID, f.Group = panel, group
+	if !ok || !okPanel || !okGroup {
 		respond.BadRequest(w)
 		return
 	}

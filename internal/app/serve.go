@@ -41,9 +41,9 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 	svc := a.startServices(ctx, panelPorts(srv))
 	defer func() { cancel(); svc.stop() }()
 	tlsm := a.panelTLS()
-	tlsm.Domain, tlsm.Answers = svc.bridge.PanelCertificate, svc.bridge.PanelAnswers
+	tlsm.Domain, tlsm.Answers, tlsm.Audit = svc.bridge.PanelCertificate, svc.bridge.PanelAnswers, a.Audit
 	tlsm.Set(h.TLS)
-	srv.Certificate, srv.Plain = tlsm.Certificate, tlsm.Plain
+	srv.Certificate, srv.Plain, srv.Allow = tlsm.Certificate, tlsm.Plain, tlsm.Allows
 	srv.Share = shareWith(ctx, svc.bridge, tlsm)
 	go tlsm.Run(ctx)
 	go a.monitor(h.Bind, srv).Run(ctx)
@@ -87,7 +87,7 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 
 // loopback is this server: plain HTTP from it is answered as is, as from a
 // trusted proxy, so a proxy here that ends TLS in front of the panel keeps
-// working.
+// working, and it always gets the panel, as through an SSH tunnel.
 var loopback = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8"), netip.MustParsePrefix("::1/128")}
 
 // shareWith hands the panel addresses on shared ports, for the Karvan
@@ -108,6 +108,7 @@ func (a *App) addressServer(bind string, onShutdown func()) *address.Server {
 	return &address.Server{
 		Bind:      bind,
 		PlainFrom: append(slices.Clone(a.Config.Proxies()), loopback...),
+		Local:     loopback,
 		Save: func(ctx context.Context, s address.Site) error {
 			return a.Settings.SetAddress(ctx, s.Port, s.BasePath, s.Shared)
 		},

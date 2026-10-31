@@ -10,6 +10,7 @@ const domTests = [
   'src/lib/preferences/**/*.test.ts',
   'src/i18n/change-locale.test.ts',
   'src/features/live/use-dots.test.ts',
+  'src/features/login/first-check.test.ts',
 ];
 
 // The icon package is about 4,500 modules behind one index, and Kumo imports

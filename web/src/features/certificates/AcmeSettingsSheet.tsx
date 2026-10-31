@@ -1,11 +1,10 @@
-import { Button } from '@cloudflare/kumo/components/button';
-import { useKumoToastManager } from '@cloudflare/kumo/components/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { SheetDialog } from '../../components/dialogs/SheetDialog';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { SwitchRow } from '../../components/form/SwitchRow';
+import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
 import {
   acmeKeys,
@@ -22,44 +21,73 @@ import {
 } from '../../lib/api/karvan';
 import { errorOf } from '../../lib/errors/errors';
 import { useAcmeErrorText } from '../../lib/errors/acme';
+import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
 import { TextField } from '../rules/TextField';
 import { domainFormMessages } from './domain-messages';
-import { KarvanPlainChoice } from './KarvanPlainChoice';
+import { karvanMessages } from './karvan-messages';
+
+/** The two switches of the Karvan domain; each saves when it turns. */
+function KarvanSwitches({ karvan }: { karvan: KarvanDomain }) {
+  const t = useT(domainFormMessages);
+  const tk = useT(karvanMessages);
+  const errorText = useSubscriptionErrorText();
+  const qc = useQueryClient();
+  const save = useMutation({
+    mutationFn: putKarvanDomain,
+    onSuccess: (next) => qc.setQueryData(karvanKeys.all, next),
+  });
+  // The switch moves on the press; a failed save puts it back.
+  const shown = save.isPending ? { ...karvan, ...save.variables } : karvan;
+  return (
+    <>
+      <SwitchRow
+        id="karvan-plain"
+        label={tk('plainTitle')}
+        hint={tk('plainHint')}
+        checked={shown.plain}
+        disabled={save.isPending}
+        onChange={(plain) => save.mutate({ plain })}
+      />
+      <SwitchRow
+        id="karvan-only"
+        label={tk('onlyTitle')}
+        hint={<CodeText text={tk('onlyHint')} />}
+        checked={shown.only}
+        disabled={save.isPending}
+        onChange={(only) => save.mutate({ only })}
+      />
+      {save.isError ? (
+        <InlineAlert>{`${t('settingsFailed')} ${errorText(save.error)}`}</InlineAlert>
+      ) : null}
+    </>
+  );
+}
 
 function SettingsForm({
   view,
   karvan,
-  onDone,
 }: {
   view: AcmeSettingsView;
   /** Left out when the server cannot change the Karvan domain. */
   karvan: KarvanDomain | undefined;
-  onDone: () => void;
 }) {
   const t = useT(domainFormMessages);
   const errorText = useAcmeErrorText();
-  const toasts = useKumoToastManager();
   const qc = useQueryClient();
-  const [v, setV] = useState<AcmeSettings>({
-    staging: view.staging,
-    email: view.email,
-    keepPort80: view.keepPort80,
-  });
-  const [plain, setPlain] = useState(karvan?.plain ?? false);
+  const [email, setEmail] = useState(view.email);
   const save = useMutation({
-    // The Karvan choice applies at once, so it goes first; the Let's Encrypt settings may be refused.
-    mutationFn: async (acme: AcmeSettings) => {
-      if (karvan && plain !== karvan.plain) {
-        qc.setQueryData(karvanKeys.all, await putKarvanDomain({ plain }));
-      }
-      return putAcmeSettings(acme);
-    },
-    onSuccess: (next) => {
-      qc.setQueryData(acmeKeys.settings, next);
-      toasts.add({ title: t('settingsSaved') });
-      onDone();
-    },
+    mutationFn: putAcmeSettings,
+    onSuccess: (next) => qc.setQueryData(acmeKeys.settings, next),
   });
+  const shown: AcmeSettings = save.isPending ? save.variables : view;
+  // Every save sends the email as typed, so a switch never puts back an older one.
+  const saveWith = (change: Partial<AcmeSettings>) =>
+    save.mutate({
+      staging: shown.staging,
+      keepPort80: shown.keepPort80,
+      email: email.trim(),
+      ...change,
+    });
   const emailRefused = save.isError && errorOf(save.error).detail.field === 'email';
   return (
     <form
@@ -67,7 +95,7 @@ function SettingsForm({
       className="flex flex-col gap-6"
       onSubmit={(e) => {
         e.preventDefault();
-        save.mutate({ ...v, email: v.email.trim() });
+        saveWith({});
       }}
     >
       {view.testDirectory ? (
@@ -77,8 +105,9 @@ function SettingsForm({
           id="acme-staging"
           label={t('staging')}
           hint={t('stagingHint')}
-          checked={v.staging}
-          onChange={(staging) => setV({ ...v, staging })}
+          checked={shown.staging}
+          disabled={save.isPending}
+          onChange={(staging) => saveWith({ staging })}
         />
       )}
       <TextField
@@ -86,8 +115,11 @@ function SettingsForm({
         label={t('email')}
         hint={t('emailHint')}
         error={emailRefused ? errorText(save.error) : undefined}
-        value={v.email}
-        onChange={(email) => setV({ ...v, email })}
+        value={email}
+        onChange={setEmail}
+        onBlur={() => {
+          if (email.trim() !== view.email) saveWith({});
+        }}
         inputMode="text"
         machine
       />
@@ -95,33 +127,22 @@ function SettingsForm({
         id="acme-keep-port"
         label={t('keepPort')}
         hint={t('keepPortHint')}
-        checked={v.keepPort80}
-        onChange={(keepPort80) => setV({ ...v, keepPort80 })}
+        checked={shown.keepPort80}
+        disabled={save.isPending}
+        onChange={(keepPort80) => saveWith({ keepPort80 })}
       />
-      {karvan ? (
-        <KarvanPlainChoice plain={plain} disabled={save.isPending} onChange={setPlain} />
-      ) : null}
       {save.isError && !emailRefused ? (
         <InlineAlert>{`${t('settingsFailed')} ${errorText(save.error)}`}</InlineAlert>
       ) : null}
-      <div className="flex flex-wrap justify-end gap-2">
-        <Button type="button" className="pointer-coarse:h-9" onClick={onDone}>
-          {t('cancel')}
-        </Button>
-        <Button
-          type="submit"
-          variant="primary"
-          loading={save.isPending}
-          className="pointer-coarse:h-9"
-        >
-          {t('save')}
-        </Button>
-      </div>
+      {karvan ? <KarvanSwitches karvan={karvan} /> : null}
     </form>
   );
 }
 
-/** The settings of Domains and certificates in a sheet: Let's Encrypt, and the Karvan domain. */
+/**
+ * The settings of Domains and certificates in a sheet: Let's Encrypt, and the Karvan domain.
+ * Each control saves as it changes; the email when the field is left.
+ */
 export function AcmeSettingsSheet({
   open,
   onOpenChange,
@@ -132,7 +153,7 @@ export function AcmeSettingsSheet({
   const t = useT(domainFormMessages);
   const errorText = useAcmeErrorText();
   const view = useQuery({ queryKey: acmeKeys.settings, queryFn: getAcmeSettings, enabled: open });
-  // A server that cannot change the Karvan domain answers 404: the sheet leaves its choice out.
+  // A server that cannot change the Karvan domain answers 404: the sheet leaves its switches out.
   const karvan = useQuery({ queryKey: karvanKeys.all, queryFn: getKarvanDomain, enabled: open });
   let body;
   if (view.isError) {
@@ -146,14 +167,7 @@ export function AcmeSettingsSheet({
     );
   } else {
     // A fresh form from the saved settings each time the sheet opens.
-    body = (
-      <SettingsForm
-        key={open ? 'open' : 'closed'}
-        view={view.data}
-        karvan={karvan.data}
-        onDone={() => onOpenChange(false)}
-      />
-    );
+    body = <SettingsForm key={open ? 'open' : 'closed'} view={view.data} karvan={karvan.data} />;
   }
   return (
     <SheetDialog

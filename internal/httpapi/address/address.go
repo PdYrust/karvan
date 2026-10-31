@@ -99,6 +99,14 @@ type Server struct {
 	// is: this server and the trusted proxies, where TLS ends in front of
 	// the panel.
 	PlainFrom []netip.Prefix
+	// Allow reports whether the panel opens for name, a TLS server name
+	// or a request's host (lower case, no port, "" for none); a handshake
+	// for any other name is refused and a request gets the plain 404. Nil
+	// opens it for every name.
+	Allow func(ctx context.Context, name string) bool
+	// Local are this server's own addresses, which always get the panel,
+	// as through an SSH tunnel.
+	Local []netip.Prefix
 	// Share hands the addresses served on a bridge HTTPS port to the
 	// bridge (ADR 0011), each time they change; nil means none.
 	Share func(sites []Shared)
@@ -137,6 +145,7 @@ type listener struct {
 	srv       *http.Server
 	sites     atomic.Pointer[[]site]
 	plain     func(r *http.Request) bool
+	open      func(r *http.Request) bool
 	tlsConfig *tls.Config
 }
 
@@ -148,10 +157,15 @@ func From(ctx context.Context) Site {
 	return s
 }
 
-// ServeHTTP serves a request under a hidden path of the port. A plain HTTP
-// one is served only when l.plain allows it; otherwise a GET or HEAD is
-// sent on to HTTPS and anything else gets the plain 404.
+// ServeHTTP serves a request under a hidden path of the port, for a host
+// the panel opens for. A plain HTTP one is served only when l.plain allows
+// it; otherwise a GET or HEAD is sent on to HTTPS and anything else gets
+// the plain 404.
 func (l *listener) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if !l.open(r) {
+		middleware.NotFound(w, r)
+		return
+	}
 	for _, s := range *l.sites.Load() {
 		if !middleware.UnderBase(r.URL.Path, s.BasePath) {
 			continue
@@ -179,12 +193,33 @@ func (s *Server) plainOK(r *http.Request) bool {
 			}
 		}
 	}
-	return s.Plain != nil && s.Plain(r.Context(), requestHost(r))
+	return s.Plain != nil && s.Plain(r.Context(), RequestHost(r))
 }
 
-// requestHost is the host a request names, in lower case, without the
+// opens reports whether the panel opens for name from peer: a local peer
+// always, any other one when Allow says so.
+func (s *Server) opens(ctx context.Context, peer, name string) bool {
+	if s.Allow == nil {
+		return true
+	}
+	if ip, err := netip.ParseAddrPort(peer); err == nil {
+		for _, p := range s.Local {
+			if p.Contains(ip.Addr().Unmap()) {
+				return true
+			}
+		}
+	}
+	return s.Allow(ctx, name)
+}
+
+// openFor reports whether the panel opens for request r.
+func (s *Server) openFor(r *http.Request) bool {
+	return s.opens(r.Context(), r.RemoteAddr, RequestHost(r))
+}
+
+// RequestHost is the host a request names, in lower case, without the
 // port.
-func requestHost(r *http.Request) string {
+func RequestHost(r *http.Request) string {
 	host := r.Host
 	if h, _, err := net.SplitHostPort(host); err == nil {
 		host = h
@@ -267,7 +302,7 @@ func (s *Server) Serve(ctx context.Context, current Site, ln net.Listener) error
 
 // start serves sites on ln. Callers hold mu.
 func (s *Server) start(port int, ln net.Listener, sites ...site) {
-	l := &listener{plain: s.plainOK}
+	l := &listener{plain: s.plainOK, open: s.openFor}
 	l.ln = newConnListener(ln, l)
 	l.tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12, NextProtos: []string{"http/1.1"}, GetCertificate: s.certificate}
 	l.serve(sites...)

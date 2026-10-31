@@ -4,10 +4,11 @@ import { FactList, type Fact } from '../../components/layout/FactList';
 import { useT } from '../../i18n/locale';
 import type { Certificate } from '../../lib/api/certificates';
 import type { Domain } from '../../lib/api/domains';
-import type { KarvanUse } from '../../lib/api/karvan';
+import type { KarvanDomain, KarvanUse } from '../../lib/api/karvan';
 import { useFormat } from '../../lib/preferences/region';
 import { certOrigin } from './cert-view';
 import { domainPageMessages } from './domain-page-messages';
+import { KarvanAccess } from './KarvanAccess';
 import { certificatesMessages } from './messages';
 import { Mono, useAcmeErrorWords } from './parts';
 
@@ -63,11 +64,14 @@ export function DomainAside({
   domain,
   cert,
   karvan,
+  access,
 }: {
   domain: Domain;
   cert: Certificate | undefined;
   /** How Karvan uses the domain; undefined while it is not known. */
   karvan: KarvanUse | undefined;
+  /** The Karvan domain's settings and who the panel opens for. */
+  access: KarvanDomain | undefined;
 }) {
   const t = useT(domainPageMessages);
   return (
@@ -87,6 +91,7 @@ export function DomainAside({
               </StatusLabel>
             )}
           </p>
+          {karvan !== 'none' && access ? <KarvanAccess karvan={access} /> : null}
         </AsideBlock>
       )}
     </div>

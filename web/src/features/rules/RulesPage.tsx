@@ -17,6 +17,7 @@ import { ToolbarAdd } from '../../components/data/ToolbarAdd';
 import { dataMessages } from '../../components/data/messages';
 import { sortChoice } from '../../components/data/sort-choice';
 import { matchesTerm, sortRows, type ListSort } from '../../lib/lists/choices';
+import { batchKeys } from '../../lib/api/batches';
 import { domainKeys, getDomains } from '../../lib/api/domains';
 import {
   deleteRedirect,
@@ -87,8 +88,11 @@ export function RulesPage() {
     onSuccess: (_, r) => {
       setAsking(null);
       toasts.add({ title: t('deleted') });
-      // A deleted site has no upload to read any more.
-      if (r.kind === 'panel') qc.removeQueries({ queryKey: linkKeys.upload(r.rule.id) });
+      // A deleted site has no upload to read any more, and its old panel lists it no more.
+      if (r.kind === 'panel') {
+        qc.removeQueries({ queryKey: linkKeys.upload(r.rule.id) });
+        void qc.invalidateQueries({ queryKey: batchKeys.all });
+      }
       void qc.invalidateQueries({
         queryKey: r.kind === 'panel' ? linkKeys.all : redirectKeys.all,
         exact: true,

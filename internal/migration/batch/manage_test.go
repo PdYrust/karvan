@@ -49,35 +49,32 @@ func TestDeleteRefusesWhatItMustKeep(t *testing.T) {
 	}
 }
 
-// The only batch of a rule stays; one of two can go, and the rule keeps
-// the other.
-func TestDeleteKeepsARulesOnlyBatch(t *testing.T) {
+// The last batch of an old panel that a rule of batches serves stays, so
+// the rule keeps a batch to take its facts from; a manual rule does not
+// keep it, and one of two batches can go.
+func TestDeleteKeepsTheLastBatchOfARule(t *testing.T) {
 	s, ids := twoBatches(t)
 	ctx := context.Background()
 	exec(t, s.db, `INSERT INTO legacy_sites (id, name, panel_id, source_kind, source_url, old_path, listen_port, mode, created_at, updated_at)
-		VALUES (2, 'only bob', 1, 'marzban', ?, 'sub', 8443, 'batches', 1, 1)`, origin)
-	exec(t, s.db, "INSERT INTO legacy_site_batches (site_id, batch_id) VALUES (1, ?), (2, ?)", ids["b"], ids["b"])
+		VALUES (2, 'typed', 1, 'marzban', 'https://OLD.example/', 'sub', 8443, 'manual', 1, 1)`)
+	exec(t, s.db, "UPDATE batches SET state = 'deleted' WHERE id = ?", ids["a"])
 	var inUse *InUseError
-	if err := s.Delete(ctx, ids["b"], "bob"); !errors.As(err, &inUse) || !slices.Equal(inUse.Rules, []Rule{{ID: 2, Name: "only bob"}}) {
+	if err := s.Delete(ctx, ids["b"], "bob"); !errors.As(err, &inUse) || !slices.Equal(inUse.Rules, []Rule{{ID: 1, Name: "rule"}}) {
 		t.Fatalf("in use: %v", err)
 	}
-	exec(t, s.db, "DELETE FROM legacy_site_batches WHERE site_id = 2")
+	exec(t, s.db, "UPDATE legacy_sites SET source_url = 'https://other.example' WHERE id = 1")
 	if err := s.Delete(ctx, ids["b"], "bob"); err != nil {
 		t.Fatal(err)
 	}
-	if got := ids2(t, s, "SELECT batch_id FROM legacy_site_batches WHERE site_id = 1"); !slices.Equal(got, []int64{ids["a"]}) {
-		t.Fatalf("rule 1 batches %v", got)
-	}
 }
 
-// A deleted batch keeps its row and its members, loses its tokens
-// and rule links, leaves the list, and a later batch does not claim its
+// A deleted batch keeps its row and its members, loses its tokens,
+// leaves the list, and a later batch does not claim its
 // users.
 func TestDeleteKeepsMembersOutOfService(t *testing.T) {
 	s, ids := twoBatches(t)
 	ctx := context.Background()
 	exec(t, s.db, `INSERT INTO legacy_tokens (mac, site_id, ledger_id, issued_at, verified_at, checked_at) VALUES (x'03', 1, ?, 1, 1, 1)`, ids["bobUser"])
-	exec(t, s.db, "INSERT INTO legacy_site_batches (site_id, batch_id) VALUES (1, ?)", ids["b"])
 	if err := s.Delete(ctx, ids["b"], "bob"); err != nil {
 		t.Fatal(err)
 	}
@@ -92,9 +89,6 @@ func TestDeleteKeepsMembersOutOfService(t *testing.T) {
 	}
 	if got := ids2(t, s, "SELECT ledger_id FROM legacy_tokens WHERE ledger_id = ?", ids["bobUser"]); len(got) != 0 {
 		t.Fatalf("tokens left %v", got)
-	}
-	if got := ids2(t, s, "SELECT site_id FROM legacy_site_batches WHERE batch_id = ?", ids["b"]); len(got) != 0 {
-		t.Fatalf("rule links left %v", got)
 	}
 	if got := ids2(t, s, "SELECT ledger_id FROM legacy_tokens WHERE ledger_id = ?", ids["moved"]); len(got) != 2 {
 		t.Fatalf("other batch's tokens %v", got)

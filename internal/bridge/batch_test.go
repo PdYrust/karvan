@@ -51,8 +51,8 @@ func (e *env) setBatch(id int64, state, reason string) {
 	}
 }
 
-// batchRule adds a rule made from batches on port, for the env's old panel.
-func (e *env) batchRule(port int, ids ...int64) Site {
+// batchRule adds a rule of batches on port, for the env's old panel.
+func (e *env) batchRule(port int) Site {
 	e.t.Helper()
 	ctx := context.Background()
 	s := e.site
@@ -63,11 +63,6 @@ func (e *env) batchRule(port int, ids ...int64) Site {
 	}
 	if _, err := e.b.DB.ExecContext(ctx, "UPDATE legacy_sites SET mode = 'batches' WHERE id = ?", saved.ID); err != nil {
 		e.t.Fatal(err)
-	}
-	for _, id := range ids {
-		if _, err := e.b.DB.ExecContext(ctx, "INSERT INTO legacy_site_batches (site_id, batch_id) VALUES (?, ?)", saved.ID, id); err != nil {
-			e.t.Fatal(err)
-		}
 	}
 	sites, err := e.b.st.Sites(ctx)
 	if err != nil {
@@ -137,9 +132,9 @@ func TestHeldBatchStopsALazyCheck(t *testing.T) {
 	for _, h := range held {
 		t.Run(h.state+" "+h.reason, func(t *testing.T) {
 			e := newEnv(t, "ali", "bob")
-			gone := e.batch(h.state, h.reason, "ali")
-			live := e.batch("active", "", "bob")
-			e.batchRule(2, gone, live)
+			e.batch(h.state, h.reason, "ali")
+			e.batch("active", "", "bob")
+			e.batchRule(2)
 			e.dropRow(100)
 			for _, port := range []int{1, 2} {
 				e.port = port
@@ -158,12 +153,12 @@ func TestHeldBatchStopsALazyCheck(t *testing.T) {
 	}
 }
 
-// A rule whose batches are all held answers 404 to every request,
+// A rule whose old panel has no active batch answers 404 to every request,
 // tokens of the new panel itself included, and never asks the panel.
 func TestRuleOfHeldBatchesHasNoPassThrough(t *testing.T) {
 	e := newEnv(t, "ali")
 	id := e.batch("active", "", "ali")
-	e.batchRule(2, id)
+	e.batchRule(2)
 	e.port = 2
 	if code, _ := e.get("/sub/native-token-0123456789", "198.51.100.7"); code != http.StatusOK {
 		t.Fatalf("active: %d", code)
@@ -241,24 +236,26 @@ func TestRecheckSkipsHeldBatches(t *testing.T) {
 	}
 }
 
-// A token proven on one rule counts on another only for a row in
-// that rule's scope; out of scope, no lazy check finds the user either.
+// A token proven on one rule counts on another only for a row in that
+// rule's scope: a rule of batches serves users in a batch of its old
+// panel, not one in no batch, and no lazy check finds that user either.
 func TestProofOutsideTheRuleScopeDoesNotCount(t *testing.T) {
 	e := newEnv(t, "ali", "bob")
-	e.batch("active", "", "ali")
-	other := e.batch("active", "", "bob")
-	e.batchRule(2, other)
-	tok := e.oldToken("ali", e.clock.now())
-	if code, _ := e.get("/sub/"+tok, "198.51.100.7"); code != http.StatusOK {
-		t.Fatal(code)
+	e.batch("active", "", "bob")
+	e.batchRule(2)
+	ali, bob := e.oldToken("ali", e.clock.now()), e.oldToken("bob", e.clock.now())
+	for _, tok := range []string{ali, bob} {
+		if code, _ := e.get("/sub/"+tok, "198.51.100.7"); code != http.StatusOK {
+			t.Fatal(code)
+		}
 	}
 	calls := e.oldCalls()
 	e.port = 2
-	if code, _ := e.get("/sub/"+tok, "198.51.100.7"); code != http.StatusNotFound || e.oldCalls() != calls || e.tokens() != 1 {
+	if code, _ := e.get("/sub/"+ali, "198.51.100.7"); code != http.StatusNotFound || e.oldCalls() != calls || e.tokens() != 2 {
 		t.Fatalf("outside the scope: %d, old calls %d -> %d, tokens %d", code, calls, e.oldCalls(), e.tokens())
 	}
-	if code, _ := e.get("/sub/"+e.oldToken("bob", e.clock.now()), "198.51.100.8"); code != http.StatusOK {
-		t.Fatalf("in the scope: %d", code)
+	if code, _ := e.get("/sub/"+bob, "198.51.100.8"); code != http.StatusOK || e.oldCalls() != calls {
+		t.Fatalf("in the scope, proven on the other rule: %d, old calls %d -> %d", code, calls, e.oldCalls())
 	}
 }
 
@@ -324,13 +321,14 @@ func TestHeld404LooksLikeAnyOther404(t *testing.T) {
 	}
 }
 
-// A rule's numbers count its scope: a rule of batches its batches, a
-// manual rule every user of its old panel not in a held batch.
+// A rule's numbers count its scope: a rule of batches the users in an
+// active batch of its old panel, a manual rule every user of its old
+// panel not in a held batch.
 func TestStatsCountTheScope(t *testing.T) {
 	e := newEnv(t, "ali", "bob", "cyrus")
-	gone := e.batch("inactive", "restoring", "ali")
-	live := e.batch("active", "", "bob")
-	rule := e.batchRule(2, gone, live)
+	e.batch("inactive", "restoring", "ali")
+	e.batch("active", "", "bob")
+	rule := e.batchRule(2)
 	ctx := context.Background()
 	if v := e.b.View(ctx, e.site); v.Stats == nil || v.Stats.Moved != 2 {
 		t.Fatalf("manual rule: %+v", v.Stats)

@@ -42,11 +42,6 @@ func TestLiveCurrentProtocols(t *testing.T) {
 // wantTypes checks the C10 and C38 conflicts of the user named name.
 func wantTypes(t *testing.T, r *engine.Result, name string, want ...string) {
 	t.Helper()
-	for _, c := range r.Conflicts {
-		if c.Type == engine.GroupsUnknown {
-			t.Errorf("%s: the full admin could not read the groups", name)
-		}
-	}
 	for _, it := range r.Items {
 		if it.Source.Username != name {
 			continue

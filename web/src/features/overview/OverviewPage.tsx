@@ -7,6 +7,7 @@ import { usePanels, useScanPanels } from '../panels/use-panels';
 import { MigrationsColumn } from './columns/MigrationsColumn';
 import { PanelsColumn } from './columns/PanelsColumn';
 import { RecentsColumn } from './columns/RecentsColumn';
+import { KarvanDomainWarning } from './KarvanDomainWarning';
 import { HomeSearch } from './search/HomeSearch';
 import { overviewMessages } from './messages';
 import { PlainHttpWarning } from './PlainHttpWarning';
@@ -54,6 +55,7 @@ export function OverviewPage() {
           <HomeSearch />
         </div>
         <PlainHttpWarning />
+        <KarvanDomainWarning />
         {noPanels ? (
           <NoPanels onScan={scan} scanning={scanning} />
         ) : (

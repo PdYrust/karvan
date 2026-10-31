@@ -103,7 +103,7 @@ describe('area word lists', () => {
       'site_invalid_mixed',
     );
     expect(subscriptionErrorKey('site_invalid', { field: 'batchIds', reason: 'inactive' })).toBe(
-      'site_invalid_inactive',
+      'site_invalid',
     );
     expect(subscriptionErrorKey('site_invalid', { field: 'batchIds', reason: 'unknown' })).toBe(
       'site_invalid_unknown',

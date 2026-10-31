@@ -160,6 +160,8 @@ const en = {
   next: "What's next",
   oldLinks: 'Set up old links',
   oldLinksHint: 'Keeps the old subscription links of the moved users working.',
+  openRule: 'Open the old links rule',
+  oldLinksServed: 'Their old links already work through this rule, with no change: ',
   rollBack: 'Roll back',
   rollBackTitle: 'Roll back this migration?',
   rollBackUndo:
@@ -333,6 +335,8 @@ const fa: Messages<LiveKey>['fa'] = {
   next: 'قدم بعدی',
   oldLinks: 'راه اندازی لینک های قدیمی',
   oldLinksHint: 'لینک های اشتراک قدیمی کاربرهای منتقل شده را فعال نگه میدارد.',
+  openRule: 'باز کردن قانون لینک های قدیمی',
+  oldLinksServed: 'لینک های قدیمی شان از همین حالا، بی هیچ تغییری، با این قانون کار میکند: ',
   rollBack: 'برگرداندن',
   rollBackTitle: 'این انتقال برگردانده شود؟',
   rollBackUndo:

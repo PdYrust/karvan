@@ -24,11 +24,33 @@ type ConfirmError struct{ Name string }
 
 func (e *ConfirmError) Error() string { return "type the batch's name to delete it" }
 
-// InUseError means the batch is the only batch of these rules, so
-// deleting it would leave them serving nothing.
+// InUseError means the batch is the last batch of its old panel that
+// these rules of batches serve, so deleting it would leave them serving
+// nothing and with no batch to take their facts from.
 type InUseError struct{ Rules []Rule }
 
-func (e *InUseError) Error() string { return "the batch is the only batch of a rule" }
+func (e *InUseError) Error() string { return "the batch is the last batch of a rule" }
+
+// lastOfRules lists the rules of batches of batch id's group when id is
+// the group's last batch that is not deleted.
+func (s *Store) lastOfRules(ctx context.Context, tx *sql.Tx, id int64) ([]Rule, error) {
+	var k groupKey
+	var others int
+	err := tx.QueryRowContext(ctx, `SELECT b.panel_id, b.source_kind, b.source_origin, (SELECT count(*) FROM batches o
+		WHERE o.panel_id = b.panel_id AND o.source_kind = b.source_kind AND o.source_origin = b.source_origin
+		AND o.state <> 'deleted' AND o.id <> b.id) FROM batches b WHERE b.id = ?`, id).Scan(&k.panel, &k.kind, &k.origin, &others)
+	if err != nil {
+		return nil, fmt.Errorf("read batch %d: %w", id, err)
+	}
+	if others > 0 {
+		return nil, nil
+	}
+	rules, err := readRuleIndex(ctx, tx)
+	if err != nil {
+		return nil, err
+	}
+	return rules.of(k, true), nil
+}
 
 // CleanName trims a batch name and checks it: 1 to 64 characters, no
 // control characters.
@@ -62,8 +84,9 @@ func (s *Store) Rename(ctx context.Context, id int64, name string) (Batch, error
 // Delete marks an inactive batch deleted once confirm equals its
 // name. Its row, name and job stay for history and its ledger rows keep
 // batch_id, so its users stay out of every rule and out of later batches;
-// its verified tokens and its links to rules go. The only batch of a rule
-// stays (InUseError), and so does a batch a restore is putting back.
+// its verified tokens go. The last batch of an old panel that a rule of
+// batches serves stays (InUseError), and so does a batch a restore is
+// putting back.
 func (s *Store) Delete(ctx context.Context, id int64, confirm string) error {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -83,9 +106,7 @@ func (s *Store) Delete(ctx context.Context, id int64, confirm string) error {
 	case reason == "restoring":
 		return ErrBusy
 	}
-	only, err := readRules(ctx, tx, `SELECT s.id, s.name FROM legacy_sites s JOIN legacy_site_batches sb ON sb.site_id = s.id
-		WHERE sb.batch_id = ? AND NOT EXISTS (SELECT 1 FROM legacy_site_batches o WHERE o.site_id = s.id AND o.batch_id <> ?)
-		ORDER BY s.name, s.id`, id, id)
+	only, err := s.lastOfRules(ctx, tx, id)
 	if err != nil {
 		return err
 	}
@@ -96,13 +117,8 @@ func (s *Store) Delete(ctx context.Context, id int64, confirm string) error {
 		return &ConfirmError{Name: name}
 	}
 	now := s.now().UnixMilli()
-	for _, q := range []string{
-		"DELETE FROM legacy_tokens WHERE ledger_id IN (SELECT id FROM ledger WHERE batch_id = ?)",
-		"DELETE FROM legacy_site_batches WHERE batch_id = ?",
-	} {
-		if _, err := tx.ExecContext(ctx, q, id); err != nil {
-			return fmt.Errorf("delete batch %d: %w", id, err)
-		}
+	if _, err := tx.ExecContext(ctx, "DELETE FROM legacy_tokens WHERE ledger_id IN (SELECT id FROM ledger WHERE batch_id = ?)", id); err != nil {
+		return fmt.Errorf("delete batch %d: %w", id, err)
 	}
 	if _, err := tx.ExecContext(ctx, "UPDATE batches SET state = 'deleted', deleted_at = ?, updated_at = ? WHERE id = ?", now, now, id); err != nil {
 		return fmt.Errorf("delete batch %d: %w", id, err)

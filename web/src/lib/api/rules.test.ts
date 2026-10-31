@@ -159,6 +159,10 @@ describe('an old panel address', () => {
   it('reads like the ledger keeps it', () => {
     expect(originOf('https://Old.Example.com:443/Panel/')).toBe('https://old.example.com/panel');
     expect(originOf('http://old.example.com:8000')).toBe('http://old.example.com:8000');
+    expect(originOf('https://old.example.com.:0443//Panel//')).toBe(
+      'https://old.example.com/panel',
+    );
+    expect(originOf('http://old.example.com:08000/a//b')).toBe('http://old.example.com:8000/a/b');
     expect(originOf(' Not an address ')).toBe('not an address');
   });
 });

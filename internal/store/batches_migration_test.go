@@ -184,10 +184,7 @@ func TestBatchesMembership(t *testing.T) {
 	if got := strs(t, db, "SELECT DISTINCT mode FROM legacy_sites"); !slices.Equal(got, []string{"manual"}) {
 		t.Errorf("site modes = %q, want manual", got)
 	}
-	if got := strs(t, db, "SELECT site_id FROM legacy_site_batches"); len(got) != 0 {
-		t.Errorf("legacy_site_batches = %q, want empty", got)
-	}
-	if got := strs(t, db, "SELECT name FROM sqlite_master WHERE type = 'index' AND name IN ('batches_dest', 'ledger_batch', 'legacy_site_batches_batch') ORDER BY name"); len(got) != 3 {
+	if got := strs(t, db, "SELECT name FROM sqlite_master WHERE type = 'index' AND name IN ('batches_dest', 'ledger_batch') ORDER BY name"); len(got) != 2 {
 		t.Errorf("indexes = %q", got)
 	}
 }

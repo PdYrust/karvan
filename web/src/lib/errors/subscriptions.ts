@@ -42,10 +42,8 @@ const en = {
     "Karvan renews this Let's Encrypt certificate itself, so it can't be changed by hand.",
   certificate_not_adopted:
     "Give this rule's domains their certificates in Domains and certificates, then save it again.",
-  site_invalid_unknown: 'A batch of this rule is gone. Pick the batches again.',
-  site_invalid_inactive: 'A batch of this rule is not active. Pick only active batches.',
-  site_invalid_mixed:
-    'These batches come from different old panels or destinations. Pick batches of one old panel and one destination.',
+  site_invalid_unknown: "This rule's old panel has no batch left. Pick an old panel again.",
+  site_invalid_mixed: 'These batches come from different old panels. Pick one old panel.',
   site_invalid_not_registered:
     'A domain of this rule is not in Domains and certificates. Add it there first.',
   site_invalid_pending:
@@ -98,10 +96,8 @@ const fa: Messages<SubscriptionErrorKey>['fa'] = {
     "کاروان این گواهی Let's Encrypt را خودش تمدید میکند و نمیشود آن را دستی تغییر داد.",
   certificate_not_adopted:
     'در دامنه ها و گواهی ها به دامنه های این قانون گواهی بدهید و بعد قانون را دوباره ذخیره کنید.',
-  site_invalid_unknown: 'یکی از دسته های این قانون دیگر نیست. دسته ها را دوباره انتخاب کنید.',
-  site_invalid_inactive: 'یکی از دسته های این قانون فعال نیست. فقط دسته های فعال را انتخاب کنید.',
-  site_invalid_mixed:
-    'این دسته ها از پنل های قدیمی یا مقصدهای مختلف هستند. دسته های یک پنل قدیمی و یک مقصد را انتخاب کنید.',
+  site_invalid_unknown: 'پنل قدیمی این قانون دیگر دسته ای ندارد. دوباره یک پنل قدیمی انتخاب کنید.',
+  site_invalid_mixed: 'این دسته ها از پنل های قدیمی مختلف هستند. یک پنل قدیمی انتخاب کنید.',
   site_invalid_not_registered:
     'یکی از دامنه های این قانون در دامنه ها و گواهی ها نیست. اول آن را آنجا اضافه کنید.',
   site_invalid_pending:
@@ -135,7 +131,6 @@ const reasonKeys: Readonly<Record<string, Readonly<Record<string, SubscriptionEr
   },
   site_invalid: {
     unknown: 'site_invalid_unknown',
-    inactive: 'site_invalid_inactive',
     mixed: 'site_invalid_mixed',
     ...domainReasons,
   },

@@ -12,7 +12,13 @@ import { usePageTitle } from '../../components/layout/use-page-title';
 import { useT } from '../../i18n/locale';
 import { certificateKeys, getCertificates, type Certificate } from '../../lib/api/certificates';
 import { domainKeys, getDomains, type Domain } from '../../lib/api/domains';
-import { getKarvanDomain, karvanKeys, karvanUseOf, type KarvanUse } from '../../lib/api/karvan';
+import {
+  getKarvanDomain,
+  karvanKeys,
+  karvanUseOf,
+  type KarvanDomain,
+  type KarvanUse,
+} from '../../lib/api/karvan';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
 import { useNow } from '../overview/use-now';
 import { CertFactsView } from './CertFactsView';
@@ -78,11 +84,13 @@ function Loaded({
   domain,
   cert,
   karvan,
+  access,
   reveal,
 }: {
   domain: Domain;
   cert: Certificate | undefined;
   karvan: KarvanUse | undefined;
+  access: KarvanDomain | undefined;
   reveal: boolean;
 }) {
   const tc = useT(certificatesMessages);
@@ -106,7 +114,7 @@ function Loaded({
             aria-label={tc('colCert')}
             className="border-t border-kumo-hairline p-4 sm:p-8 lg:col-start-2 lg:row-start-1 lg:border-s lg:border-t-0"
           >
-            <DomainAside domain={domain} cert={cert} karvan={karvan} />
+            <DomainAside domain={domain} cert={cert} karvan={karvan} access={access} />
           </aside>
         </div>
       </Reveal>
@@ -154,6 +162,7 @@ export function DomainPage() {
           domain={domain}
           cert={load.data?.certs.find((c) => c.id === domain.certificate?.id)}
           karvan={karvan.data ? karvanUseOf(domain, karvan.data) : undefined}
+          access={karvan.data}
           reveal={load.reveal}
         />
       </div>

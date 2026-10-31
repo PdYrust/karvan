@@ -32,6 +32,7 @@ func (a *API) GetSession(w http.ResponseWriter, r *http.Request) {
 			respond.Internal(w, r, err)
 			return
 		}
+		a.armKarvan(r)
 		respond.JSON(w, http.StatusOK, sessionJSON{
 			Authenticated: true,
 			Operator:      &operatorJSON{Username: op.Username, TOTPEnabled: op.TOTPEnabled},

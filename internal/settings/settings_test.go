@@ -167,7 +167,7 @@ func TestTLSIsStoredWithTheAddress(t *testing.T) {
 	if got, err := s.HTTP(ctx); err != nil || got.TLS != (TLS{}) {
 		t.Fatalf("before a domain: %+v, %v", got, err)
 	}
-	for _, tl := range []TLS{{DomainID: 7}, {DomainID: 7, Plain: true, Shared: true}, {Plain: true}, {}} {
+	for _, tl := range []TLS{{DomainID: 7}, {DomainID: 7, Plain: true, Shared: true}, {Plain: true}, {DomainID: 7, OpenIP: true}, {DomainID: 7, Armed: true}, {}} {
 		h.TLS = tl
 		if err := s.SetHTTP(ctx, h); err != nil {
 			t.Fatal(err)
@@ -192,17 +192,17 @@ func TestKarvanDomainAndAddressAreStoredApart(t *testing.T) {
 	if err := s.SetHTTP(ctx, HTTP{Port: 34567, BasePath: "abcDEF2345ghijkm"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.SetKarvan(ctx, 4, true); err != nil {
+	if err := s.SetKarvan(ctx, TLS{DomainID: 4, Plain: true, Armed: true, Shared: true}); err != nil {
 		t.Fatal(err)
 	}
 	if err := s.SetAddress(ctx, 41000, "otherPath234567", false); err != nil {
 		t.Fatal(err)
 	}
-	want := HTTP{Port: 41000, BasePath: "otherPath234567", TLS: TLS{DomainID: 4, Plain: true}}
+	want := HTTP{Port: 41000, BasePath: "otherPath234567", TLS: TLS{DomainID: 4, Plain: true, Armed: true}}
 	if got, err := s.HTTP(ctx); err != nil || got != want {
 		t.Fatalf("HTTP = %+v, %v; want %+v", got, err, want)
 	}
-	if err := s.SetKarvan(ctx, -2, false); err == nil {
+	if err := s.SetKarvan(ctx, TLS{DomainID: -2}); err == nil {
 		t.Error("SetKarvan took -2")
 	}
 	if err := s.SetAddress(ctx, 0, "otherPath234567", false); err == nil {

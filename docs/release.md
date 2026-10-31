@@ -40,6 +40,22 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - a native Persian speaker has read every Persian string.
 
+## Release notes 0.5.9-beta
+Karvan 0.5.9-beta can make the Karvan domain the only way into the panel, serves every run from one old panel with one rule, opens without a flash of the sign-in page, and tidies the domain page and the panel cards on phones.
+- Domain settings have a new switch, Only open Karvan on its domain, on by default. While a domain is used for Karvan, only that name opens the panel, with whatever certificate the domain has: a handshake for another name or for the server's IP is refused, and a request for another host gets the plain 404. The subscription bridge is not affected.
+- The switch holds only after your first sign-in through the domain since the domain or the switch last changed. Until then the server's IP keeps opening the panel, and the domain's row says it waits for that sign-in.
+- If the domain's certificate ends or its files go missing, the server's IP opens the panel again with Karvan's own certificate. Karvan logs and audits why, and the overview and the domain say so. The overview also warns when the Karvan domain's certificate ends within 14 days and nothing renews it.
+- On the server itself, 127.0.0.1 and ::1 always open the panel, so an SSH tunnel works. `karvan access open-ip` turns the switch off from the server, and a running Karvan takes it within a few seconds. The install result names it.
+- Domain settings save each change at once, with no Save button. The choice for a Karvan domain without a certificate is one switch, Plain HTTP for a Karvan domain without a certificate, off by default (Karvan's own certificate).
+- A domain's page, and the certificate of a rule, no longer say "No problems found" next to a state that already says it. Problems still show when there are some.
+- On phones, a panel's card on Panels reads like the other list cards: the logo, the name and the "..." menu, then the version and the database on one quiet line, then its status. The database's address is on the panel's page.
+- Opening Karvan as an installed app, or reloading a page, no longer shows the sign-in page for a moment before the panel. The page stays in the panel's background colour until the session answers, and only a signed-out answer shows the sign-in form. Signing in still returns to the page you asked for.
+- Batches shows each old panel once, with its runs inside: the old address, the new panel, the number of runs and users, the latest run, and the rules that serve it, or Set up old links. Show all opens every run of that old panel. Each run stays its own batch, with its own page, so a backup restore still stops only the runs after its backup.
+- A rule made from an old panel serves every run from it, the runs after the rule was saved too, with no change to the rule. Rules made from batches before this version now serve every active run of their old panel. Users in an inactive or deleted run still get the plain 404, and another old panel's users are never served.
+- The rule form picks one old panel instead of batches, and a rule's card links to its old panel's runs. When a finished migration's old panel already has a rule, the result offers to open that rule instead of a new one. The last run of an old panel that a rule serves cannot be deleted until the rule is.
+- Connect offers the old panel addresses used before, so the next run of the same panel is typed the same way. An address with a trailing dot, leading zeros in the port or repeated slashes now names the same old panel, and names stored before are renamed at start.
+- The Summary step no longer shows the old panel's protocols, which could be wrong for custom inbound settings.
+- When the old panel's groups cannot be read, Compare skips the protocol checks without a notice. The server logs it.
 ## Release notes 0.5.8-beta
 Karvan 0.5.8-beta picks the panel's certificate by the name the browser asks for, so the server's IP always opens.
 - Settings no longer has an HTTPS tab. A domain's "..." menu on the Domains list has Use for Karvan, or Stop using for Karvan while Karvan uses that domain, and the list marks it with Karvan. One domain is used at a time; using another switches to it. The change applies at once, without a restart or a confirm, and is audited.

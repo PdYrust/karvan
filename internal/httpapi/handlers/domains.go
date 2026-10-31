@@ -103,7 +103,7 @@ func (a *API) DeleteDomain(w http.ResponseWriter, r *http.Request) {
 	if a.PanelTLS == nil {
 		err = del()
 	} else {
-		err = a.PanelTLS.Change(func(cur settings.TLS) (settings.TLS, error) {
+		err = a.PanelTLS.Change(r.Context(), func(cur settings.TLS) (settings.TLS, error) {
 			if cur.DomainID == id {
 				return cur, errDomainKarvan
 			}

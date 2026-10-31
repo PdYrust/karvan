@@ -8,6 +8,7 @@ import {
   missingField,
   sourceUrl,
   toNewJob,
+  usedOrigins,
   type ConnectValues,
 } from './form';
 
@@ -115,5 +116,38 @@ describe('certOf', () => {
 
   it('groups the fingerprint in pairs', () => {
     expect(fingerprintPairs('ab12cd')).toBe('AB:12:CD');
+  });
+});
+
+describe('the old panel addresses used before', () => {
+  const g = (origin: string, lastAt: string, kind: 'marzban' | 'pasarguard' = 'marzban') => ({
+    source: { kind, origin },
+    lastAt,
+  });
+
+  it('offers each address once, the latest first', () => {
+    const used = usedOrigins([
+      g('https://a.example.com', '2026-10-01T00:00:00Z'),
+      g('https://b.example.com', '2026-10-03T00:00:00Z', 'pasarguard'),
+      g('https://a.example.com', '2026-10-05T00:00:00Z'),
+    ]);
+    expect(used).toEqual([
+      { kind: 'marzban', origin: 'https://a.example.com' },
+      { kind: 'pasarguard', origin: 'https://b.example.com' },
+    ]);
+  });
+
+  it('offers at most six', () => {
+    const many = Array.from({ length: 9 }, (_, i) =>
+      g(`https://p${String(i)}.example.com`, `2026-10-0${String(i + 1)}T00:00:00Z`),
+    );
+    expect(usedOrigins(many).map((o) => o.origin)).toEqual([
+      'https://p8.example.com',
+      'https://p7.example.com',
+      'https://p6.example.com',
+      'https://p5.example.com',
+      'https://p4.example.com',
+      'https://p3.example.com',
+    ]);
   });
 });

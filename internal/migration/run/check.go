@@ -205,8 +205,8 @@ type groupReader interface {
 }
 
 // readGroups reads an old PasarGuard panel's groups for the users'
-// current protocols. A login that cannot read them leaves
-// GroupsRead false, and the build says so instead of raising C10 or C38.
+// current protocols. A login that cannot read them leaves GroupsRead
+// false: the build skips C10 and C38 and the server logs it.
 func readGroups(ctx context.Context, from panel.Source, src *engine.Source) error {
 	g, ok := from.(groupReader)
 	if !ok {

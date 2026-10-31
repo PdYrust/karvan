@@ -73,8 +73,8 @@ func New(db *sql.DB) *Store { return &Store{db: db} }
 // HTTP returns the current HTTP settings, or ErrNotInitialized.
 func (s *Store) HTTP(ctx context.Context) (HTTP, error) {
 	vals := map[string]string{}
-	rows, err := s.db.QueryContext(ctx, `SELECT key, value FROM settings WHERE key IN (?, ?, ?, ?, ?, ?)`,
-		keyBind, keyPort, keyBasePath, keyTLSDomain, keyTLSPlain, keyTLSShared)
+	rows, err := s.db.QueryContext(ctx, `SELECT key, value FROM settings WHERE key IN (?, ?, ?, ?, ?, ?, ?, ?)`,
+		keyBind, keyPort, keyBasePath, keyTLSDomain, keyTLSPlain, keyTLSShared, keyTLSOpenIP, keyTLSArmed)
 	if err != nil {
 		return HTTP{}, fmt.Errorf("read settings: %w", err)
 	}

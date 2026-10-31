@@ -149,25 +149,17 @@ func TestLostProtocolCountsAsConfigChange(t *testing.T) {
 	}
 }
 
-func TestGroupsUnknownRaisesNoBlocker(t *testing.T) {
+// Old panel groups that cannot be read skip the protocol checks quietly:
+// no C10, no C38, no config change and no job line.
+func TestGroupsUnknownSkipsTheProtocolChecks(t *testing.T) {
 	in := pgSource(inputs(panel.PasarGuard, marzbanDest(), pgUser(1, 1)))
 	in.Source.GroupsRead = false
 	r := build(t, basePlan(), in)
 	if it := item(t, r, "1"); hasConflict(it, WireGuardOnly) != nil || hasConflict(it, NoProtocol) != nil || it.ChangesConfig {
 		t.Errorf("groups unknown: %+v, changesConfig %v; want no C10, C38 or change", it.Conflicts, it.ChangesConfig)
 	}
-	found := false
-	for _, c := range r.Conflicts {
-		found = found || c.Type == GroupsUnknown && c.Severity == Info && c.User == ""
-	}
-	if !found || r.Blockers != 0 {
-		t.Errorf("job conflicts %+v, blockers %d; want the info line only", r.Conflicts, r.Blockers)
-	}
-	m := build(t, basePlan(), inputs(panel.Marzban, marzbanDest(), mUser("a", 1)))
-	for _, c := range m.Conflicts {
-		if c.Type == GroupsUnknown {
-			t.Error("a Marzban source has no groups to read")
-		}
+	if len(r.Conflicts) != 0 || r.Blockers != 0 {
+		t.Errorf("job conflicts %+v, blockers %d; want none", r.Conflicts, r.Blockers)
 	}
 }
 

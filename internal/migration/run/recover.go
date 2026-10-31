@@ -6,22 +6,29 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/PdYrust/karvan/internal/migration/dest"
+	"github.com/PdYrust/karvan/internal/migration/ledger"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 )
 
-// Recover runs once at start: jobs that were running are interrupted.
+// Recover runs once at start: old panel names stored before today's
+// folds take today's spelling. Jobs that were running are interrupted.
 // Their pending ledger rows are settled (read only on the destination);
 // nothing is written or removed by itself. A batch a restore still
 // holds has no restore running, so that restore failed. A done job
 // without its batch gets it.
 func (s *Service) Recover(ctx context.Context) error {
+	kept, err := ledger.FoldOrigins(ctx, s.db)
+	errs := []error{err}
+	for _, o := range kept {
+		slog.Warn("old panel name kept: its users clash with the same panel under its new name", "origin", o)
+	}
 	jobs, err := s.stuckJobs(ctx)
 	if err != nil {
-		return err
+		return errors.Join(append(errs, err)...)
 	}
-	var errs []error
 	for _, sj := range jobs {
 		if _, err := s.db.ExecContext(ctx, "UPDATE jobs SET state = ?, updated_at = ? WHERE id = ?", StateInterrupted, s.now().UnixMilli(), sj.id); err != nil {
 			errs = append(errs, err)

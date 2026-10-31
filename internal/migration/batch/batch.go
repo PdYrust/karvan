@@ -41,10 +41,10 @@ type ended struct {
 // rows in done or adopted, and user rows of the same old panel and
 // destination in done or adopted that no batch holds and that were
 // written before the job ended (left by an earlier failed or interrupted
-// run), then joins every batch rule serving an older batch of the same old
-// panel and destination. With nothing to claim, or a job that is
-// not done, there is no batch and it returns 0. f is stored only when the
-// batch is made.
+// run). Every rule of batches of the same old panel serves the new batch
+// from then on, with no change to the rule. With nothing to claim, or a
+// job that is not done, there is no batch and it returns 0. f is stored
+// only when the batch is made.
 func (s *Store) Ensure(ctx context.Context, jobID, dest string, f Facts) (int64, error) {
 	tx, err := s.db.BeginTx(ctx, nil)
 	if err != nil {
@@ -76,11 +76,6 @@ func (s *Store) Ensure(ctx context.Context, jobID, dest string, f Facts) (int64,
 	}
 	if n, err := res.RowsAffected(); err != nil || n == 0 {
 		return 0, err // nothing to serve: no batch
-	}
-	if _, err := tx.ExecContext(ctx, `INSERT OR IGNORE INTO legacy_site_batches (site_id, batch_id)
-		SELECT DISTINCT sb.site_id, ? FROM legacy_site_batches sb JOIN batches b ON b.id = sb.batch_id
-		WHERE b.source_origin = ? AND b.dest = ? AND b.id <> ?`, id, j.origin, dest, id); err != nil {
-		return 0, fmt.Errorf("join the batch rules: %w", err)
 	}
 	return id, tx.Commit()
 }

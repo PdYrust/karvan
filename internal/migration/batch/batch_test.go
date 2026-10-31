@@ -215,25 +215,22 @@ func TestEnsureStoresTheBatch(t *testing.T) {
 	}
 }
 
-// A new batch joins every batch rule that serves an older batch of
-// the same old panel and destination, in the same transaction.
-func TestEnsureJoinsBatchRules(t *testing.T) {
+// A new batch is served by the rules of its old panel with no change to
+// them: a rule of batches and a manual rule typed another way, never a
+// rule of another old panel.
+func TestEnsureServesTheNewBatchByItsOldPanelsRules(t *testing.T) {
 	s, db := open(t)
 	job(t, db, "old", "done", origin, "alice", 1000)
-	job(t, db, "other", "done", "https://other.example", "alice", 1000)
 	job(t, db, "new", "done", origin, "alice", 5000)
 	row(t, db, "user", "old", "done", origin, dest, 900)
-	row(t, db, "user", "other", "done", "https://other.example", dest, 900)
 	row(t, db, "user", "new", "done", origin, dest, 4000)
-	older, otherB := ensure(t, s, "old", dest, Facts{}), ensure(t, s, "other", dest, Facts{})
+	ensure(t, s, "old", dest, Facts{})
 	exec(t, db, `INSERT INTO legacy_sites (id, name, panel_id, source_kind, source_url, old_path, listen_port, mode, created_at, updated_at) VALUES
-		(1, 'rule', 1, 'marzban', ?, 'sub', 443, 'batches', 1, 1), (2, 'rule2', 1, 'marzban', ?, 'sub', 443, 'batches', 1, 1),
-		(3, 'manual', 1, 'marzban', ?, 'sub', 8443, 'manual', 1, 1)`, origin, origin, origin)
-	exec(t, db, "INSERT INTO legacy_site_batches (site_id, batch_id) VALUES (1, ?), (2, ?)", older, otherB)
-	b := ensure(t, s, "new", dest, Facts{})
-	sites := ids(t, db, "SELECT site_id FROM legacy_site_batches WHERE batch_id = ? ORDER BY site_id", b)
-	if !slices.Equal(sites, []int64{1}) {
-		t.Fatalf("the new batch joined rules %v", sites)
+		(1, 'rule', 1, 'marzban', ?, 'sub', 443, 'batches', 1, 1), (2, 'rule2', 1, 'marzban', 'https://other.example', 'sub', 443, 'batches', 1, 1),
+		(3, 'manual', 1, 'marzban', 'https://OLD.example./', 'sub', 8443, 'manual', 1, 1)`, origin)
+	b, err := s.Get(context.Background(), ensure(t, s, "new", dest, Facts{}))
+	if err != nil || !slices.Equal(b.Rules, []Rule{{ID: 3, Name: "manual"}, {ID: 1, Name: "rule"}}) {
+		t.Fatalf("rules of the new batch %+v %v", b.Rules, err)
 	}
 }
 

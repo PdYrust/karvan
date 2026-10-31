@@ -6,8 +6,10 @@ import { CardFacts, RowCard } from '../../components/data/RowCard';
 import { StatusLabel } from '../../components/feedback/StatusBadge';
 import { useT } from '../../i18n/locale';
 import type { Domain } from '../../lib/api/domains';
+import type { KarvanDomain } from '../../lib/api/karvan';
 import { useFormat } from '../../lib/preferences/region';
 import { daysLeft, domainStateOf, listLines, renewalOf } from './cert-view';
+import { KarvanAccess } from './KarvanAccess';
 import { karvanMessages } from './karvan-messages';
 import { certificatesMessages } from './messages';
 import { linkClass, Mono, RuleName, useAcmeErrorWords } from './parts';
@@ -102,18 +104,26 @@ function DomainLink({ domain, karvan }: { domain: Domain; karvan: boolean }) {
   );
 }
 
-/** The table's columns; karvanId is the domain Karvan uses, 0 for none. */
+/** The table's columns; karvanOf is how Karvan uses a domain, undefined when it does not. */
 export function useDomainColumns(
   now: Date,
   menu: (d: Domain) => ReactNode,
-  karvanId: number,
+  karvanOf: (d: Domain) => KarvanDomain | undefined,
 ): Column<Domain>[] {
   const t = useT(certificatesMessages);
   return [
     {
       key: 'domain',
       header: t('colDomain'),
-      cell: (d) => <DomainLink domain={d} karvan={d.id === karvanId} />,
+      cell: (d) => {
+        const karvan = karvanOf(d);
+        return (
+          <span className="flex min-w-0 flex-col items-start gap-0.5">
+            <DomainLink domain={d} karvan={!!karvan} />
+            {karvan ? <KarvanAccess karvan={karvan} /> : null}
+          </span>
+        );
+      },
       className: 'max-w-64',
     },
     { key: 'state', header: t('colState'), cell: (d) => <DomainState domain={d} now={now} /> },
@@ -149,16 +159,17 @@ export function DomainRowCard({
   domain: Domain;
   now: Date;
   menu: ReactNode;
-  /** Karvan uses this domain. */
-  karvan: boolean;
+  /** How Karvan uses this domain, undefined when it does not. */
+  karvan: KarvanDomain | undefined;
 }) {
   const t = useT(certificatesMessages);
   return (
     <RowCard
-      lead={<DomainLink domain={domain} karvan={karvan} />}
+      lead={<DomainLink domain={domain} karvan={!!karvan} />}
       badge={<DomainState domain={domain} now={now} badge />}
       menu={menu}
     >
+      {karvan ? <KarvanAccess karvan={karvan} /> : null}
       <CardFacts
         className="grid-cols-2"
         facts={[

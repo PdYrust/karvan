@@ -7,8 +7,10 @@ import { useMedia } from '../../lib/media/use-media';
 import { LoginShowcase } from './LoginShowcase';
 import { loginMessages } from './messages';
 import { SignInForm } from './SignInForm';
+import type { SignInError } from './use-sign-in';
 
-export function LoginPage() {
+/** The sign-in page, shown only once the session said no one is signed in; `error` is why that check failed. */
+export function LoginPage({ error = null }: { error?: SignInError | null }) {
   const t = useT(loginMessages);
   // Under lg only the form shows, and the wall's code is never fetched.
   const wide = useMedia('(min-width: 64rem)');
@@ -30,7 +32,7 @@ export function LoginPage() {
         </header>
 
         <div className="mx-auto flex w-full max-w-[22rem] flex-1 flex-col justify-center py-12">
-          <SignInForm />
+          <SignInForm error={error} />
           <p className="mt-6 text-center text-sm text-kumo-subtle">
             {t('lostAccess')}{' '}
             <code

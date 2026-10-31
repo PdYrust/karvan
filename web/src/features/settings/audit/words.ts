@@ -45,6 +45,9 @@ const en = {
   'settings.address_start': 'Started an address change',
   'settings.address': 'Changed the panel address',
   'settings.https': "Changed the panel's HTTPS",
+  'settings.karvan_only': 'Only the Karvan domain opens the panel',
+  'settings.karvan_fallback': "The server's IP opened the panel again",
+  'cli.access_open_ip': "Opened the server's IP on the server",
 };
 
 export type AuditAction = keyof typeof en;
@@ -93,6 +96,9 @@ const fa: Messages<AuditAction>['fa'] = {
   'settings.address_start': 'شروع تغییر آدرس',
   'settings.address': 'تغییر آدرس پنل',
   'settings.https': 'تغییر HTTPS پنل',
+  'settings.karvan_only': 'فقط دامنه کاروان پنل را باز میکند',
+  'settings.karvan_fallback': 'IP سرور دوباره پنل را باز کرد',
+  'cli.access_open_ip': 'باز کردن IP سرور روی سرور',
 };
 
 export const actionMessages: Messages<AuditAction> = { en, fa };
@@ -108,6 +114,8 @@ const reasonsEn = {
   bad_totp: 'Wrong code',
   port_unavailable: "The port couldn't be opened",
   not_new_address: 'Not confirmed from the new address',
+  expired: 'The certificate has ended',
+  missing: "Karvan couldn't read the certificate",
 };
 
 export type AuditReason = keyof typeof reasonsEn;
@@ -120,6 +128,8 @@ export const reasonMessages: Messages<AuditReason> = {
     bad_totp: 'کد اشتباه',
     port_unavailable: 'پورت باز نشد',
     not_new_address: 'تایید از آدرس جدید نبود',
+    expired: 'اعتبار گواهی تمام شده بود',
+    missing: 'کاروان گواهی را نخواند',
   },
 };
 

@@ -10,7 +10,7 @@ import { Reveal } from '../../components/feedback/Reveal';
 import { PageHeader } from '../../components/layout/PageHeader';
 import { usePageTitle } from '../../components/layout/use-page-title';
 import { useT } from '../../i18n/locale';
-import { batchKeys, listBatches, type Batch } from '../../lib/api/batches';
+import { batchKeys, getBatchGroup, listBatchGroups, type BatchGroup } from '../../lib/api/batches';
 import { domainKeys, getDomains } from '../../lib/api/domains';
 import {
   getLinkSites,
@@ -35,14 +35,22 @@ import {
 } from './rule-form';
 import { RuleForm } from './RuleForm';
 
-const activeBatches = { state: 'active', limit: 100 } as const;
+const oldPanels = { runs: 0, limit: 100 } as const;
 
-/** Reads what the form needs at once: the domains, the batches and, on a change, the rule. */
-function useRuleData(id: number | undefined, redirect: boolean) {
+/**
+ * Reads what the form needs at once: the domains, the old panels, on a change the rule, and for
+ * a new rule from a finished migration (`?batch=12`) the old panel of that batch.
+ */
+function useRuleData(id: number | undefined, redirect: boolean, fromBatch: number | undefined) {
   const domains = useQuery({ queryKey: domainKeys.all, queryFn: getDomains });
-  const batches = useQuery({
-    queryKey: batchKeys.list(activeBatches),
-    queryFn: () => listBatches(activeBatches),
+  const groups = useQuery({
+    queryKey: batchKeys.groups(oldPanels),
+    queryFn: () => listBatchGroups(oldPanels),
+  });
+  const from = useQuery({
+    queryKey: batchKeys.group(fromBatch ?? 0),
+    queryFn: () => getBatchGroup(fromBatch ?? 0),
+    enabled: !!fromBatch,
   });
   const sites = useQuery({
     queryKey: linkKeys.all,
@@ -55,7 +63,7 @@ function useRuleData(id: number | undefined, redirect: boolean) {
     enabled: !!id && redirect,
   });
   const rule = redirect ? redirects : sites;
-  const failed = [domains, batches, ...(id ? [rule] : [])].find((q) => q.isError);
+  const failed = [domains, groups, ...(id ? [rule] : [])].find((q) => q.isError);
   let initial: RuleValues | null | undefined;
   if (id && redirect && redirects.data) {
     const r = redirects.data.redirects.find((x) => x.id === id);
@@ -64,15 +72,21 @@ function useRuleData(id: number | undefined, redirect: boolean) {
     const s = sites.data.sites.find((x) => x.id === id);
     initial = s ? valuesOfSite(s) : null;
   }
-  const ready = domains.data && batches.data && (!id || initial !== undefined);
+  // A batch that cannot be read (deleted since) leaves the old panel to pick.
+  const ready =
+    domains.data &&
+    groups.data &&
+    (!id || initial !== undefined) &&
+    (!fromBatch || !from.isPending);
   return {
     failed,
-    ready: ready ? { domains: domains.data.domains, batches: batches.data.batches, initial } : null,
+    fromGroup: from.data?.id,
+    ready: ready ? { domains: domains.data.domains, groups: groups.data.groups, initial } : null,
   };
 }
 
 /**
- * Add a rule (`/rules/new`, maybe from a batch: `?batch=12`) or change one
+ * Add a rule (`/rules/new`, maybe from a batch's old panel: `?batch=12`) or change one
  * (`/rules/:id`, `/rules/redirects/:id`).
  */
 export function RuleFormPage({ redirect = false }: { redirect?: boolean }) {
@@ -85,21 +99,24 @@ export function RuleFormPage({ redirect = false }: { redirect?: boolean }) {
   const qc = useQueryClient();
   const toasts = useKumoToastManager();
   const { panel } = useCurrentPanel();
-  const data = useRuleData(ruleId, redirect);
+  const prefill = rulePrefill(query);
+  const data = useRuleData(ruleId, redirect, ruleId ? undefined : prefill.batchId);
   const load = useFirstLoad(data.ready);
   const name = load.data?.initial?.name;
   usePageTitle(name ? t('editTitle', { name }) : t('newTitle'));
   const save = useMutation({
-    mutationFn: ({ v, picked }: { v: RuleValues; picked: Batch[] }): Promise<unknown> =>
+    mutationFn: ({ v, group }: { v: RuleValues; group?: BatchGroup }): Promise<unknown> =>
       v.kind === 'redirect' || v.kind === 'link'
         ? saveRedirect(redirectInputOf(v), ruleId)
-        : saveSite(siteInputOf(v, picked), ruleId),
+        : saveSite(siteInputOf(v, group), ruleId),
     onSuccess: () => {
       toasts.add({ title: ruleId ? t('saved') : t('added') });
       void qc.invalidateQueries({ queryKey: linkKeys.all });
       void qc.invalidateQueries({ queryKey: redirectKeys.all });
       // A domain lists the rules that hold it.
       void qc.invalidateQueries({ queryKey: domainKeys.all });
+      // An old panel lists the rules that serve it.
+      void qc.invalidateQueries({ queryKey: batchKeys.all });
       void navigate('/rules');
     },
   });
@@ -132,13 +149,16 @@ export function RuleFormPage({ redirect = false }: { redirect?: boolean }) {
     body = (
       <RuleForm
         key={ruleId ?? 'new'}
-        initial={load.data.initial ?? newRuleValues(rulePrefill(query), panel?.id ?? 0)}
+        initial={
+          load.data.initial ??
+          newRuleValues({ ...prefill, groupId: data.fromGroup }, panel?.id ?? 0)
+        }
         isNew={!ruleId}
         domains={load.data.domains}
-        batches={load.data.batches}
+        groups={load.data.groups}
         saving={save.isPending}
         error={save.error}
-        onSave={(v, picked) => save.mutate({ v, picked })}
+        onSave={(v, group) => save.mutate({ v, group })}
         onCancel={back}
       />
     );

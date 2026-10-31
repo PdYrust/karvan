@@ -46,6 +46,9 @@ const serverActions = [
   'settings.address_start',
   'settings.address',
   'settings.https',
+  'settings.karvan_only',
+  'settings.karvan_fallback',
+  'cli.access_open_ip',
 ];
 
 describe('audit words', () => {

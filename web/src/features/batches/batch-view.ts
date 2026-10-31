@@ -1,6 +1,6 @@
 import type { StatusTone } from '../../components/feedback/StatusBadge';
 import { panelSearchNames } from '../../components/panels/PanelLogo';
-import type { Batch, InactiveReason } from '../../lib/api/batches';
+import type { Batch, BatchGroup, InactiveReason } from '../../lib/api/batches';
 import { matchesTerm } from '../../lib/lists/choices';
 import type { BatchesKey } from './messages';
 
@@ -46,6 +46,19 @@ export function matchesBatch(b: Batch, term: string): boolean {
     panelSearchNames[b.source.kind],
     b.panel.kind ? panelSearchNames[b.panel.kind] : undefined,
   ]);
+}
+
+/** The search over a page of old panels: the address, both panels, the rules and the runs shown. */
+export function matchesGroup(g: BatchGroup, term: string): boolean {
+  return (
+    matchesTerm(term, [
+      g.source.origin,
+      g.panel.name,
+      panelSearchNames[g.source.kind],
+      g.panel.kind ? panelSearchNames[g.panel.kind] : undefined,
+      ...g.rules.map((r) => r.name),
+    ]) || g.runs.some((b) => matchesBatch(b, term))
+  );
 }
 
 export const batchPath = (id: number) => `/batches/${String(id)}`;

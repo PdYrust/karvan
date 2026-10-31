@@ -5,6 +5,7 @@ import (
 	"crypto/tls"
 	"errors"
 	"net"
+	"strings"
 	"sync"
 	"time"
 )
@@ -108,11 +109,18 @@ type peekedConn struct {
 
 func (p *peekedConn) Read(b []byte) (int, error) { return p.r.Read(b) }
 
+// errNotOpen refuses a handshake for a name the panel does not open for.
+var errNotOpen = errors.New("the panel does not answer this name")
+
 // certificate is the certificate for a handshake: the one the server
-// name picks (ADR 0010).
+// name picks (ADR 0010), none for a name the panel does not open for.
 func (s *Server) certificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	if s.Certificate == nil {
 		return nil, errors.New("no certificate for the panel")
+	}
+	name := strings.ToLower(strings.TrimSuffix(hello.ServerName, "."))
+	if !s.opens(hello.Context(), hello.Conn.RemoteAddr().String(), name) {
+		return nil, errNotOpen
 	}
 	return s.Certificate(hello.Context(), hello.ServerName)
 }

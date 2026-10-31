@@ -1,3 +1,4 @@
+import type { BatchGroup } from '../../../lib/api/batches';
 import type { NewJob } from '../../../lib/api/migrations';
 import type { Panel, PanelKind } from '../../../lib/api/panels';
 
@@ -85,4 +86,22 @@ export function certOf(code: string, detail: Readonly<Record<string, unknown>>):
 /** "AB:12:..." as browsers show a fingerprint, so the two can be compared. */
 export function fingerprintPairs(sha256: string): string {
   return (sha256.toUpperCase().match(/.{1,2}/g) ?? []).join(':');
+}
+
+/** How many old panel addresses Connect offers. */
+export const maxUsed = 6;
+
+/**
+ * The old panel addresses finished migrations used, the latest first, each once with its kind,
+ * so the next run of the same old panel is typed the same way and joins its old panel.
+ */
+export function usedOrigins(
+  groups: readonly Pick<BatchGroup, 'source' | 'lastAt'>[],
+): BatchGroup['source'][] {
+  const out: BatchGroup['source'][] = [];
+  const sorted = [...groups].sort((a, b) => b.lastAt.localeCompare(a.lastAt));
+  for (const g of sorted) {
+    if (out.length < maxUsed && !out.some((o) => o.origin === g.source.origin)) out.push(g.source);
+  }
+  return out;
 }

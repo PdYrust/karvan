@@ -1,5 +1,5 @@
 import { isRunning } from '../../lib/api/acme';
-import type { Batch } from '../../lib/api/batches';
+import type { BatchGroup } from '../../lib/api/batches';
 import { ApiError } from '../../lib/api/client';
 import type { Domain } from '../../lib/api/domains';
 import type { PanelKind } from '../../lib/api/panels';
@@ -12,7 +12,7 @@ import {
   type SitePrefill,
 } from '../../lib/api/rules';
 
-/** What a rule is made from: batches, an old panel typed by hand, a redirect, or one old link. */
+/** What a rule is made from: an old panel's batches, an old panel typed by hand, a redirect, or one old link. */
 export type RuleKind = 'batches' | 'manual' | 'redirect' | 'link';
 export const ruleKinds: readonly RuleKind[] = ['batches', 'manual', 'redirect', 'link'];
 
@@ -20,7 +20,8 @@ export const ruleKinds: readonly RuleKind[] = ['batches', 'manual', 'redirect', 
 export interface RuleValues {
   kind: RuleKind;
   name: string;
-  batchIds: number[];
+  /** The old panel a rule of batches serves, by its group of batches; 0 for none yet. */
+  groupId: number;
   panelId: number;
   sourceKind: PanelKind;
   sourceUrl: string;
@@ -61,7 +62,10 @@ export type RuleField = (typeof ruleFields)[number];
 /** What the address of a new rule can fill in: a migration's old panel, a batch, a kind. */
 export interface RulePrefill extends SitePrefill {
   kind?: RuleKind;
+  /** A batch a finished migration names (`?batch=12`); the form serves its old panel. */
   batchId?: number;
+  /** That batch's old panel, once read. */
+  groupId?: number;
 }
 
 export function rulePrefill(q: URLSearchParams): RulePrefill {
@@ -78,7 +82,7 @@ export function newRuleValues(p: RulePrefill, panelId: number): RuleValues {
   return {
     kind: p.kind ?? (p.sourceUrl ? 'manual' : 'batches'),
     name: '',
-    batchIds: p.batchId ? [p.batchId] : [],
+    groupId: p.groupId ?? 0,
     panelId: p.panelId ?? panelId,
     sourceKind: p.sourceKind ?? 'marzban',
     sourceUrl: p.sourceUrl ?? '',
@@ -97,14 +101,14 @@ export function newRuleValues(p: RulePrefill, panelId: number): RuleValues {
   };
 }
 
-/** A saved panel rule. A rule of batches got its old panel's IP from them, so it starts empty. */
+/** A saved panel rule. A rule of batches got its old panel's IP from its batches, so it starts empty. */
 export function valuesOfSite(s: LinkSite): RuleValues {
   const batches = s.mode === 'batches';
   return {
     ...newRuleValues({}, s.panelId),
     kind: batches ? 'batches' : 'manual',
     name: s.name,
-    batchIds: s.batches.map((b) => b.id),
+    groupId: s.batchGroup ?? 0,
     sourceKind: s.sourceKind,
     sourceUrl: s.sourceUrl,
     sourceIp: batches ? '' : (s.sourceIp ?? ''),
@@ -160,64 +164,30 @@ export function unregistered(hosts: readonly string[], domains: readonly Domain[
   return hosts.filter((h) => !domains.some((d) => d.name === h));
 }
 
-/** Batches of one old panel and destination, which one rule can serve together. */
-function fits(a: Batch, b: Batch): boolean {
-  return (
-    a.source.kind === b.source.kind &&
-    a.source.origin === b.source.origin &&
-    a.panel.id === b.panel.id &&
-    (!a.oldLinks.path || !b.oldLinks.path || a.oldLinks.path === b.oldLinks.path)
-  );
-}
-
-export function canPickBatch(b: Batch, picked: readonly Batch[]): boolean {
-  return picked.every((p) => p.id === b.id || fits(p, b));
-}
-
-export interface BatchGroup {
-  key: string;
-  source: Batch['source'];
-  panel: Batch['panel'];
-  batches: Batch[];
-}
-
-/** The batches by old panel and destination, in the order they came. */
-export function batchGroups(batches: readonly Batch[]): BatchGroup[] {
-  const groups = new Map<string, BatchGroup>();
-  for (const b of batches) {
-    const key = `${b.source.kind} ${b.source.origin} ${String(b.panel.id)}`;
-    const g = groups.get(key) ?? { key, source: b.source, panel: b.panel, batches: [] };
-    g.batches.push(b);
-    groups.set(key, g);
-  }
-  return [...groups.values()];
-}
-
-/** What picked batches fill in: the newest batch that knows a fact gives it. */
-export function batchDefaults(picked: readonly Batch[], domains: readonly Domain[]) {
-  const newest = [...picked].sort((a, b) => b.id - a.id);
-  const hosts = [...new Set(picked.flatMap((b) => b.oldLinks.hosts))].sort();
-  const port = newest.find((b) => b.oldLinks.port > 0)?.oldLinks.port;
+/** What an old panel fills in: its old hosts that are registered, its old port and old path. */
+export function groupDefaults(g: BatchGroup | undefined, domains: readonly Domain[]) {
+  const hosts = [...(g?.oldLinks.hosts ?? [])].sort();
+  const port = g?.oldLinks.port;
   return {
     hosts,
     domains: hosts.filter((h) => domains.some((d) => d.name === h)),
     port: port ? String(port) : '',
-    oldPath: newest.find((b) => b.oldLinks.path)?.oldLinks.path ?? '',
+    oldPath: g?.oldLinks.path ?? '',
   };
 }
 
-/** Picked batches: a new rule takes their registered old hosts and their old port. */
-export function withBatches(
+/** A picked old panel: a new rule takes its registered old hosts and its old port. */
+export function withGroup(
   v: RuleValues,
-  ids: number[],
-  all: readonly Batch[],
+  id: number,
+  all: readonly BatchGroup[],
   domains: readonly Domain[],
 ): RuleValues {
-  const d = batchDefaults(
-    all.filter((b) => ids.includes(b.id)),
+  const d = groupDefaults(
+    all.find((g) => g.id === id),
     domains,
   );
-  return withDomains({ ...v, batchIds: ids, port: d.port || v.port }, d.domains, domains);
+  return withDomains({ ...v, groupId: id, port: d.port || v.port }, d.domains, domains);
 }
 
 /** A typed single link: its host is the domain once it is registered. */
@@ -235,8 +205,11 @@ export function isPlainHttp(url: string): boolean {
 /** HTTPS goes only with domains; with none the port's certificate decides. */
 const httpsOf = (v: RuleValues) => (v.domains.length > 0 ? { https: v.https } : {});
 
-/** A panel rule as sent. A rule of batches sends only what its batches do not know. */
-export function siteInputOf(v: RuleValues, picked: readonly Batch[]): SiteInput {
+/**
+ * A panel rule as sent. A rule of batches names its old panel by the newest batch of it, and
+ * sends only what that old panel's batches do not know.
+ */
+export function siteInputOf(v: RuleValues, group: BatchGroup | undefined): SiteInput {
   const common = {
     name: v.name.trim(),
     domains: v.domains,
@@ -249,9 +222,9 @@ export function siteInputOf(v: RuleValues, picked: readonly Batch[]): SiteInput 
     return {
       ...common,
       mode: 'batches',
-      batchIds: v.batchIds,
-      plainHttpOk: picked.some((b) => isPlainHttp(b.source.origin)) && v.plainHttpOk,
-      ...(picked.some((b) => b.oldLinks.path) ? {} : { oldPath: v.oldPath.trim() }),
+      batchIds: group ? [group.latestId] : [],
+      plainHttpOk: !!group && isPlainHttp(group.source.origin) && v.plainHttpOk,
+      ...(group?.oldLinks.path ? {} : { oldPath: v.oldPath.trim() }),
       ...(ip ? { sourceIp: ip } : {}),
     };
   }
@@ -314,7 +287,7 @@ export function canSubmit(v: RuleValues, domains: readonly Domain[]): boolean {
   if (!v.name.trim()) return false;
   switch (v.kind) {
     case 'batches':
-      return v.batchIds.length > 0;
+      return v.groupId > 0;
     case 'manual':
       return v.sourceUrl.trim() !== '';
     case 'redirect':

@@ -46,7 +46,10 @@ export interface LinkSite {
   name: string;
   /** Made from batches, or typed by hand; fixed once saved. */
   mode: 'manual' | 'batches';
+  /** A rule of batches serves every run of its old panel: these, and later ones. */
   batches: RuleBatch[];
+  /** A rule of batches: its old panel's group of batches. */
+  batchGroup?: number;
   /** The destination panel. */
   panelId: number;
   sourceKind: PanelKind;
@@ -113,7 +116,10 @@ export async function getLinkSites(): Promise<LinkSites> {
 export interface SiteInput {
   name: string;
   mode: LinkSite['mode'];
-  /** A rule of batches takes the panel, the old panel and its pin from them. */
+  /**
+   * A rule of batches: batches of one old panel, which pick it. The rule takes the panel, the old
+   * panel and its pin from that old panel's batches.
+   */
   batchIds?: number[];
   panelId?: number;
   sourceKind?: PanelKind;
@@ -227,14 +233,19 @@ export function pendingOf(s: SiteStats): number {
 
 /**
  * An old panel address as the ledger keeps it (scheme, host and port lower
- * case, default port dropped, no trailing slash), so a site finds the jobs
- * that moved users from the same panel.
+ * case, default port, leading port zeros, a trailing dot on the host,
+ * repeated and trailing slashes dropped), so a site finds the jobs that
+ * moved users from the same panel.
  */
 export function originOf(address: string): string {
   try {
     const u = new URL(address);
-    const path = u.pathname.replace(/\/+$/, '').toLowerCase();
-    return `${u.protocol}//${u.host.toLowerCase()}${path}`;
+    const path = u.pathname
+      .replace(/\/{2,}/g, '/')
+      .replace(/\/+$/, '')
+      .toLowerCase();
+    const host = u.hostname.replace(/(.)\.$/, '$1');
+    return `${u.protocol}//${host}${u.port ? `:${u.port}` : ''}${path}`;
   } catch {
     return address.trim().toLowerCase();
   }

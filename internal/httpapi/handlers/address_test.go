@@ -46,7 +46,7 @@ func newAddressEnvWith(t *testing.T, ttl time.Duration, plainFrom []netip.Prefix
 	}
 	d.Address = srv
 	d.PanelTLS = panelTLS(t, e)
-	srv.Certificate, srv.Plain = d.PanelTLS.Certificate, d.PanelTLS.Plain
+	srv.Certificate, srv.Plain, srv.Allow = d.PanelTLS.Certificate, d.PanelTLS.Plain, d.PanelTLS.Allows
 	srv.Handler = func(b string) (http.Handler, error) {
 		dd := d
 		dd.BasePath = b

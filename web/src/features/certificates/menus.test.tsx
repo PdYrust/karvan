@@ -150,7 +150,7 @@ function serveKarvan(): unknown[] {
   return sent;
 }
 
-const none = { domainId: 0, plain: false, shared: false };
+const none = { domainId: 0, plain: false, shared: false, only: true, access: 'all' as const };
 
 describe('the domain menu', () => {
   afterEach(() => vi.unstubAllGlobals());

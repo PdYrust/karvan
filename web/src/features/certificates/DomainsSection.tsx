@@ -60,11 +60,11 @@ export function DomainsSection({
   };
   // Without the Karvan domain (a server that cannot change it) the menu leaves Karvan out.
   const karvan = useQuery({ queryKey: karvanKeys.all, queryFn: getKarvanDomain });
-  const karvanId = karvan.data?.domainId ?? 0;
+  const karvanOf = (d: Domain) => (karvan.data?.domainId === d.id ? karvan.data : undefined);
   const menu = (d: Domain) => (
     <DomainMenu domain={d} onDelete={() => ask(d)} karvan={karvan.data} />
   );
-  const columns = useDomainColumns(now, menu, karvanId);
+  const columns = useDomainColumns(now, menu, karvanOf);
   const stateOf = (d: Domain): DomainState => domainStateOf(d, now).state;
   const is = (d: Domain, f: StateFilter) => f === 'all' || stateOf(d) === f;
   const terms = (d: Domain) => [d.name, d.certificate?.name, ...d.rules.map((r) => r.name)];
@@ -110,9 +110,7 @@ export function DomainsSection({
           rows={shown}
           rowKey={(d) => d.id}
           columns={columns}
-          card={(d) => (
-            <DomainRowCard domain={d} now={now} menu={menu(d)} karvan={d.id === karvanId} />
-          )}
+          card={(d) => <DomainRowCard domain={d} now={now} menu={menu(d)} karvan={karvanOf(d)} />}
         />
       </ListFrame>
       <TypeToConfirm

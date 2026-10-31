@@ -1,4 +1,5 @@
 import { Switch } from '@cloudflare/kumo/components/switch';
+import type { ReactNode } from 'react';
 
 /** A labelled switch with one line under its label, as the forms use them. */
 export function SwitchRow({
@@ -11,7 +12,7 @@ export function SwitchRow({
 }: {
   id: string;
   label: string;
-  hint: string;
+  hint: ReactNode;
   checked: boolean;
   /** Locked, as when what the switch needs is missing. */
   disabled?: boolean;

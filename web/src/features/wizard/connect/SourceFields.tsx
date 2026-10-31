@@ -9,6 +9,7 @@ import { CodeText } from '../../../components/text/CodeText';
 import { useT } from '../../../i18n/locale';
 import type { ConnectValues, SignIn } from './form';
 import { connectMessages } from './messages';
+import { UsedAddresses } from './UsedAddresses';
 
 const inputClass = 'h-10 pointer-coarse:h-9';
 
@@ -55,6 +56,7 @@ export function SourceFields({
           className={inputClass}
         />
       </FormField>
+      <UsedAddresses url={values.url} set={set} />
       {byKey ? null : (
         <FormField id="source-kind" label={t('kindLabel')}>
           <Select

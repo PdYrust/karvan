@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import type { Batch } from '../../lib/api/batches';
+import type { BatchGroup } from '../../lib/api/batches';
 import { ApiError } from '../../lib/api/client';
 import type { Domain } from '../../lib/api/domains';
 import type { LinkSite, Redirect } from '../../lib/api/rules';
 import {
-  batchDefaults,
-  batchGroups,
-  canPickBatch,
+  groupDefaults,
   canSubmit,
   domainState,
   httpsAllowed,
@@ -20,7 +18,7 @@ import {
   unregistered,
   valuesOfRedirect,
   valuesOfSite,
-  withBatches,
+  withGroup,
   withDomains,
   withLink,
   type RuleValues,
@@ -65,22 +63,18 @@ const domains = [
   }),
 ];
 
-function batch(id: number, extra: Partial<Batch> = {}): Batch {
+function group(id: number, extra: Partial<BatchGroup> = {}): BatchGroup {
   return {
     id,
-    name: `batch ${String(id)}`,
-    state: 'active',
-    inactiveReason: '',
-    inactiveAt: null,
-    jobId: `job-${String(id)}`,
+    latestId: id + 20,
     panel: { id: 2, name: 'new', kind: 'pasarguard' },
     source: { kind: 'marzban', origin: 'https://old.example.com:8443' },
-    admins: [],
-    oldLinks: { path: 'sub', hosts: ['a.example.com', 'old.example.com'], port: 8443 },
-    counts: { users: 10, verified: 0, closed: 0 },
+    counts: { runs: 3, active: 3, inactive: 0, users: 30, verified: 0, closed: 0 },
+    oldLinks: { path: 'sub', hosts: ['old.example.com', 'a.example.com'], port: 8443 },
     rules: [],
-    createdAt: '',
-    updatedAt: '',
+    firstAt: '',
+    lastAt: '',
+    runs: [],
     ...extra,
   };
 }
@@ -112,9 +106,11 @@ describe('a new rule', () => {
     expect(v.domains).toEqual([]);
   });
 
-  it('starts from the batch a finished migration names', () => {
+  it('starts from the old panel of the batch a finished migration names', () => {
     const p = rulePrefill(new URLSearchParams('batch=12'));
-    expect(newRuleValues(p, 1)).toMatchObject({ kind: 'batches', batchIds: [12] });
+    expect(p.batchId).toBe(12);
+    expect(newRuleValues(p, 1)).toMatchObject({ kind: 'batches', groupId: 0 });
+    expect(newRuleValues({ ...p, groupId: 4 }, 1)).toMatchObject({ kind: 'batches', groupId: 4 });
   });
 
   it('starts manual when a migration fills in the old panel', () => {
@@ -141,13 +137,14 @@ describe('a saved rule', () => {
     expect(valuesOfSite({ ...site, domains: null }).domains).toEqual([]);
   });
 
-  it('opens a rule of batches with its batches picked', () => {
+  it('opens a rule of batches with its old panel picked', () => {
     const v = valuesOfSite({
       ...site,
       mode: 'batches',
       batches: [{ id: 7, name: 'b', state: 'active' }],
+      batchGroup: 4,
     });
-    expect(v).toMatchObject({ kind: 'batches', batchIds: [7] });
+    expect(v).toMatchObject({ kind: 'batches', groupId: 4 });
     // The batches gave the IP; sending it back would be refused.
     expect(valuesOfSite({ ...site, mode: 'batches', sourceIp: '203.0.113.9' }).sourceIp).toBe('');
     expect(valuesOfSite({ ...site, sourceIp: '203.0.113.9' }).sourceIp).toBe('203.0.113.9');
@@ -203,79 +200,56 @@ describe('registered domains', () => {
   });
 });
 
-describe('the batch picker', () => {
-  const other = batch(9, { source: { kind: 'marzban', origin: 'https://other.example.com' } });
-  const noPath = batch(10, { oldLinks: { path: '', hosts: [], port: 0 } });
-  const otherPath = batch(11, { oldLinks: { path: 'link', hosts: [], port: 0 } });
+describe('the old panel picker', () => {
+  const noFacts = group(10, { oldLinks: { path: '', hosts: [], port: 0 } });
 
-  it('groups batches by old panel and destination', () => {
-    const groups = batchGroups([batch(8), other, batch(7)]);
-    expect(groups.map((g) => g.batches.map((b) => b.id))).toEqual([[8, 7], [9]]);
-  });
-
-  it('limits the rest to batches that can share a rule', () => {
-    expect(canPickBatch(batch(7), [])).toBe(true);
-    expect(canPickBatch(batch(7), [batch(8)])).toBe(true);
-    expect(canPickBatch(other, [batch(8)])).toBe(false);
-    expect(canPickBatch(batch(7, { panel: { id: 3, name: 'x', kind: '' } }), [batch(8)])).toBe(
-      false,
-    );
-    expect(canPickBatch(otherPath, [batch(8)])).toBe(false);
-    expect(canPickBatch(noPath, [batch(8)])).toBe(true);
-  });
-
-  it('fills in the registered old hosts and the newest old port', () => {
-    const picked = [batch(7), batch(8, { oldLinks: { path: 'sub', hosts: [], port: 2096 } })];
-    expect(batchDefaults(picked, domains)).toEqual({
+  it('fills in the registered old hosts, the old port and the old path', () => {
+    expect(groupDefaults(group(4), domains)).toEqual({
       domains: ['a.example.com'],
-      port: '2096',
+      port: '8443',
       hosts: ['a.example.com', 'old.example.com'],
       oldPath: 'sub',
     });
-    expect(batchDefaults([noPath], domains)).toMatchObject({ port: '', oldPath: '' });
+    expect(groupDefaults(noFacts, domains)).toMatchObject({ port: '', oldPath: '', hosts: [] });
+    expect(groupDefaults(undefined, domains)).toMatchObject({ port: '', domains: [] });
   });
 
   it('picks the registered old hosts with HTTPS when they all have certificates', () => {
-    const v = withBatches(values({}), [7], [batch(7), batch(8)], domains);
-    expect(v).toMatchObject({
-      batchIds: [7],
-      domains: ['a.example.com'],
-      port: '8443',
-      https: true,
-    });
-    expect(withBatches(values({ port: '2053' }), [10], [noPath], domains).port).toBe('2053');
+    const v = withGroup(values({}), 4, [group(4), group(5)], domains);
+    expect(v).toMatchObject({ groupId: 4, domains: ['a.example.com'], port: '8443', https: true });
+    expect(withGroup(values({ port: '2053' }), 10, [noFacts], domains).port).toBe('2053');
   });
 
-  it('sends only what the batches do not know', () => {
-    const v = values({ batchIds: [7], domains: ['a.example.com'], oldPath: 'typed', https: true });
-    const input = siteInputOf(v, [batch(7)]);
-    expect(input).toEqual({
+  it('names the old panel by its newest batch and sends only what it does not know', () => {
+    const v = values({ groupId: 4, domains: ['a.example.com'], oldPath: 'typed', https: true });
+    expect(siteInputOf(v, group(4))).toEqual({
       name: '',
       mode: 'batches',
-      batchIds: [7],
+      batchIds: [24],
       domains: ['a.example.com'],
       port: 443,
       lazy: true,
       plainHttpOk: false,
       https: true,
     });
-    expect(siteInputOf({ ...v, sourceIp: ' 203.0.113.9 ' }, [noPath])).toMatchObject({
+    expect(siteInputOf({ ...v, sourceIp: ' 203.0.113.9 ' }, noFacts)).toMatchObject({
+      batchIds: [30],
       oldPath: 'typed',
       sourceIp: '203.0.113.9',
     });
   });
 
-  it('accepts a plain http old panel of the batches only when turned on', () => {
-    const plain = batch(7, { source: { kind: 'marzban', origin: 'http://old' } });
-    const v = values({ batchIds: [7], plainHttpOk: true });
-    expect(siteInputOf(v, [plain]).plainHttpOk).toBe(true);
-    expect(siteInputOf(v, [batch(7)]).plainHttpOk).toBe(false);
+  it('accepts a plain http old panel only when turned on', () => {
+    const plain = group(4, { source: { kind: 'marzban', origin: 'http://old' } });
+    const v = values({ groupId: 4, plainHttpOk: true });
+    expect(siteInputOf(v, plain).plainHttpOk).toBe(true);
+    expect(siteInputOf(v, group(4)).plainHttpOk).toBe(false);
   });
 });
 
 describe('a manual rule', () => {
   it('sends the old panel, the domains and HTTPS', () => {
-    const input = siteInputOf(valuesOfSite({ ...site, port: 8443 }), []);
+    const input = siteInputOf(valuesOfSite({ ...site, port: 8443 }), undefined);
     expect(input).toMatchObject({
       mode: 'manual',
       panelId: 2,
@@ -288,15 +262,17 @@ describe('a manual rule', () => {
   });
 
   it('leaves HTTPS to the port when no domain is picked', () => {
-    expect(siteInputOf(values({ kind: 'manual', domains: [] }), [])).not.toHaveProperty('https');
+    expect(siteInputOf(values({ kind: 'manual', domains: [] }), undefined)).not.toHaveProperty(
+      'https',
+    );
   });
 
   it('accepts a plain http old panel only for an http address', () => {
     expect(isPlainHttp(' HTTP://old')).toBe(true);
     expect(isPlainHttp('https://old')).toBe(false);
     const v = values({ kind: 'manual', plainHttpOk: true, sourceUrl: 'https://old' });
-    expect(siteInputOf(v, []).plainHttpOk).toBe(false);
-    expect(siteInputOf({ ...v, sourceUrl: 'http://old' }, []).plainHttpOk).toBe(true);
+    expect(siteInputOf(v, undefined).plainHttpOk).toBe(false);
+    expect(siteInputOf({ ...v, sourceUrl: 'http://old' }, undefined).plainHttpOk).toBe(true);
   });
 });
 
@@ -381,7 +357,7 @@ describe('a redirect', () => {
 describe('the save button', () => {
   it('waits for what each kind needs', () => {
     expect(canSubmit(values({ name: 'x' }), domains)).toBe(false);
-    expect(canSubmit(values({ name: 'x', batchIds: [7] }), domains)).toBe(true);
+    expect(canSubmit(values({ name: 'x', groupId: 7 }), domains)).toBe(true);
     expect(canSubmit(values({ kind: 'manual', name: 'x', sourceUrl: 'https://o' }), domains)).toBe(
       true,
     );

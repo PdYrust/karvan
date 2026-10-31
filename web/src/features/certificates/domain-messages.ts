@@ -98,7 +98,6 @@ const en = {
   emailHint: "Optional. Let's Encrypt writes here about your certificates.",
   keepPort: 'Keep port 80 open for renewals',
   keepPortHint: 'Off: Karvan opens it only while an order or a renewal needs it.',
-  settingsSaved: 'Settings saved',
   settingsFailed: "Couldn't save the settings.",
 };
 
@@ -203,7 +202,6 @@ const fa: Messages<DomainFormKey>['fa'] = {
   emailHint: "اختیاری است. Let's Encrypt درباره گواهی هایتان به این ایمیل مینویسد.",
   keepPort: 'پورت 80 برای تمدید همیشه باز بماند',
   keepPortHint: 'خاموش: کاروان فقط وقتی سفارش یا تمدیدی لازم دارد آن را باز میکند.',
-  settingsSaved: 'تنظیمات ذخیره شد',
   settingsFailed: 'تنظیمات ذخیره نشد.',
 };
 

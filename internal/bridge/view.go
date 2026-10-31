@@ -25,6 +25,8 @@ type SiteStats struct {
 const WarnNotAdopted = "certificate_not_adopted"
 
 // SiteView is a site with its batches, certificate, warnings and numbers.
+// A rule of batches lists every batch of its old panel that is not
+// deleted, and BatchGroup names that old panel's group of batches.
 // Cert is nil for a plain HTTP site and holds the facts of the
 // certificate it is served with; Certificate is its derived fallback
 // certificates row, nil for plain HTTP and for a site not adopted.
@@ -33,6 +35,7 @@ const WarnNotAdopted = "certificate_not_adopted"
 type SiteView struct {
 	Site
 	Batches     []BatchRef       `json:"batches"`
+	BatchGroup  int64            `json:"batchGroup,omitempty"`
 	Certificate *SiteCertificate `json:"certificate"`
 	Cert        *CertFacts       `json:"cert,omitempty"`
 	Warnings    []string         `json:"warnings"`
@@ -99,10 +102,13 @@ func ruleWarnings(domains []string, warns map[string][]string, notAdopted bool) 
 
 func (b *Bridge) view(ctx context.Context, s Site, warns map[string][]string) SiteView {
 	v := SiteView{Site: s, Batches: []BatchRef{}, Cert: b.siteCert(ctx, s), Warnings: []string{}}
-	if bs, err := b.st.siteBatches(ctx, s.ID); err != nil {
+	if s.origin == "" {
+		_ = s.setOrigin() // an address that does not parse serves no batch
+	}
+	if bs, group, err := b.st.siteBatches(ctx, s); err != nil {
 		b.Log.Warn("bridge: read rule batches", "site", s.Name, "err", err)
 	} else {
-		v.Batches = bs
+		v.Batches, v.BatchGroup = bs, group
 	}
 	v.BatchIDs = nil
 	for _, r := range v.Batches {

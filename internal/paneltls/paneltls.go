@@ -1,7 +1,8 @@
 // Package paneltls gives the web panel its certificate for each handshake
 // (ADR 0010): the domain enabled for Karvan gets its own certificate for
 // its name, and every other handshake, the server's IP included, gets
-// Karvan's self-signed one, so the operator is never locked out.
+// Karvan's self-signed one. It also says who the panel opens for when only
+// the domain is to open it (access.go).
 package paneltls
 
 import (
@@ -16,6 +17,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/secret"
 	"github.com/PdYrust/karvan/internal/settings"
 )
@@ -34,7 +36,10 @@ type Manager struct {
 	// Domain is the certificate of a registered domain, read on each
 	// handshake through the certificate store's cache.
 	Domain func(ctx context.Context, id int64) (*tls.Certificate, error)
-	Log    *slog.Logger
+	// Audit records when the IP opens again for a broken domain
+	// certificate; nil records nothing.
+	Audit *audit.Log
+	Log   *slog.Logger
 	// Now and IPs override the clock and this server's addresses, for tests.
 	Now func() time.Time
 	IPs func() []net.IP
@@ -47,6 +52,8 @@ type Manager struct {
 	retry   time.Time                  // no new self-signed certificate is tried before this
 	good    map[int64]*tls.Certificate // the last certificate each domain loaded
 	failing map[int64]bool             // domains whose last load failed, logged once
+	access  accessState                // the last answer of Access
+	gen     uint64                     // counts Set, so an answer from before one is not kept
 }
 
 // Set is the domain enabled for Karvan and the plain HTTP choice from now
@@ -55,6 +62,8 @@ func (m *Manager) Set(t settings.TLS) {
 	m.mu.Lock()
 	defer m.mu.Unlock()
 	m.panel = t
+	m.access.until = time.Time{}
+	m.gen++
 }
 
 // Panel is the domain enabled for Karvan and the plain HTTP choice.
@@ -64,17 +73,26 @@ func (m *Manager) Panel() settings.TLS {
 	return m.panel
 }
 
-// Change makes fn's answer current unless it fails. fn gets the current
-// value and stores the new one; changes run one at a time, so two of them
-// never undo each other. Handshakes go on meanwhile.
-func (m *Manager) Change(fn func(cur settings.TLS) (settings.TLS, error)) error {
+// Change makes fn's answer current unless it fails. fn gets the stored
+// value (the one in memory when none can be read) and stores the new one;
+// changes run one at a time, so two of them never undo each other, nor a
+// change made from the command line. Handshakes go on meanwhile.
+func (m *Manager) Change(ctx context.Context, fn func(cur settings.TLS) (settings.TLS, error)) error {
 	m.changeMu.Lock()
 	defer m.changeMu.Unlock()
-	next, err := fn(m.Panel())
+	cur := m.Panel()
+	if m.Settings != nil {
+		if h, err := m.Settings.HTTP(ctx); err == nil {
+			cur = h.TLS
+		}
+	}
+	next, err := fn(cur)
 	if err != nil {
 		return err
 	}
-	m.Set(next)
+	if next != m.Panel() {
+		m.Set(next)
+	}
 	return nil
 }
 
@@ -198,10 +216,14 @@ func (m *Manager) Fingerprint(ctx context.Context) (string, error) {
 	return Fingerprint(c.Leaf.Raw), nil
 }
 
-// Run checks the self-signed certificate every RenewEvery until ctx ends.
+// Run checks the self-signed certificate every RenewEvery, and the stored
+// settings and the domain's certificate every few seconds, until ctx
+// ends.
 func (m *Manager) Run(ctx context.Context) {
 	t := time.NewTicker(RenewEvery)
 	defer t.Stop()
+	check := time.NewTicker(accessFor)
+	defer check.Stop()
 	for {
 		select {
 		case <-ctx.Done():
@@ -210,6 +232,11 @@ func (m *Manager) Run(ctx context.Context) {
 			if _, err := m.Self(ctx); err != nil && ctx.Err() == nil {
 				m.log().Error("check the self-signed certificate", "err", err)
 			}
+		case <-check.C:
+			if err := m.Reload(ctx); err != nil && ctx.Err() == nil {
+				m.log().Warn("read the panel settings", "err", err)
+			}
+			m.Access(ctx)
 		}
 	}
 }

@@ -11,6 +11,7 @@ import (
 	"errors"
 	"fmt"
 	"net/url"
+	"regexp"
 	"slices"
 	"strings"
 	"time"
@@ -113,15 +114,23 @@ func (l *Ledger) Live(ctx context.Context, origin, dest string) ([]Entry, error)
 }
 
 // Origin is the ledger's name for a source panel: scheme, host, port and
-// base path, lowercased, without a default port.
+// base path, lowercased, without a default port, a trailing dot on the
+// host, leading zeros in the port, repeated slashes or a trailing slash
+// in the path. Every way of typing one address gives one name.
 func Origin(u *url.URL) string {
 	host := strings.ToLower(u.Hostname())
-	port := u.Port()
-	if port == "" || u.Scheme == "https" && port == "443" || u.Scheme == "http" && port == "80" {
-		return u.Scheme + "://" + host + strings.ToLower(u.Path)
+	if h := strings.TrimSuffix(host, "."); h != "" {
+		host = h
 	}
-	return u.Scheme + "://" + host + ":" + port + strings.ToLower(u.Path)
+	port := strings.TrimLeft(u.Port(), "0")
+	path := strings.TrimRight(slashes.ReplaceAllString(strings.ToLower(u.Path), "/"), "/")
+	if port == "" || u.Scheme == "https" && port == "443" || u.Scheme == "http" && port == "80" {
+		return u.Scheme + "://" + host + path
+	}
+	return u.Scheme + "://" + host + ":" + port + path
 }
+
+var slashes = regexp.MustCompile(`/{2,}`)
 
 // ErrNotFound means no row matched.
 var ErrNotFound = errors.New("not in the ledger")

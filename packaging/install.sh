@@ -212,6 +212,7 @@ show_result() {
 	else
 		detail "If the server has a cloud firewall, open TCP port $port in it."
 	fi
+	detail "Once you sign in through the domain used for Karvan, only that domain opens the panel. If it stops working, run on the server: karvan access open-ip"
 }
 
 # wait_healthy gives the service up to 60 seconds to report in.

@@ -38,6 +38,9 @@ func migrateSeededV12(t *testing.T) *sql.DB {
 	}
 	_, after := schemaAndCounts(t, db)
 	maps.DeleteFunc(after, func(table string, _ int) bool { _, old := before[table]; return !old })
+	if before["legacy_site_batches"] == 0 {
+		delete(before, "legacy_site_batches") // 0015 drops it; v9Seed has no row there
+	}
 	if !maps.Equal(before, after) {
 		t.Fatalf("row counts after 0013 = %v, want %v", after, before)
 	}

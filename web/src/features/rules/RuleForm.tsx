@@ -5,25 +5,25 @@ import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { SwitchRow } from '../../components/form/SwitchRow';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
-import type { Batch } from '../../lib/api/batches';
+import type { BatchGroup } from '../../lib/api/batches';
 import { ApiError } from '../../lib/api/client';
 import type { Domain } from '../../lib/api/domains';
 import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
 import { DestinationField } from '../wizard/connect/DestinationField';
-import { BatchPicker } from './BatchPicker';
 import { AddFirst, DomainPicker, HttpsField } from './DomainPicker';
 import { siteFormMessages } from './form-messages';
+import { OldPanelPicker } from './OldPanelPicker';
 import { LinkFields, RedirectFields, ToUrlField } from './RedirectFields';
 import {
-  batchDefaults,
   canSubmit,
+  groupDefaults,
   isPlainHttp,
   parseOldLink,
   refusedField,
   ruleKinds,
   unregistered,
-  withBatches,
   withDomains,
+  withGroup,
   withLink,
   type RuleField,
   type RuleKind,
@@ -67,7 +67,7 @@ export function RuleForm({
   initial,
   isNew,
   domains,
-  batches,
+  groups,
   saving,
   error,
   onSave,
@@ -76,23 +76,21 @@ export function RuleForm({
   initial: RuleValues;
   isNew: boolean;
   domains: readonly Domain[];
-  batches: readonly Batch[];
+  groups: readonly BatchGroup[];
   saving: boolean;
   error: unknown;
-  onSave: (v: RuleValues, picked: Batch[]) => void;
+  onSave: (v: RuleValues, group: BatchGroup | undefined) => void;
   onCancel: () => void;
 }) {
   const t = useT(siteFormMessages);
   const errorText = useSubscriptionErrorText();
-  // A new rule from a batch starts with what that batch knows.
+  // A new rule from a finished migration starts with what its old panel knows.
   const [v, setV] = useState(() =>
-    isNew && initial.batchIds.length > 0
-      ? withBatches(initial, initial.batchIds, batches, domains)
-      : initial,
+    isNew && initial.groupId > 0 ? withGroup(initial, initial.groupId, groups, domains) : initial,
   );
   const set = (patch: Partial<RuleValues>) => setV((old) => ({ ...old, ...patch }));
-  const picked = batches.filter((b) => v.batchIds.includes(b.id));
-  const facts = batchDefaults(picked, domains);
+  const group = groups.find((g) => g.id === v.groupId);
+  const facts = groupDefaults(group, domains);
   const refused = refusedField(error);
   const reasoned = error instanceof ApiError && typeof error.detail.reason === 'string';
   const errorOf = (f: RuleField) =>
@@ -101,9 +99,7 @@ export function RuleForm({
   const panelRule = v.kind === 'batches' || v.kind === 'manual';
   const link = v.kind === 'link' ? parseOldLink(v.link) : undefined;
   const plainSource =
-    v.kind === 'manual'
-      ? isPlainHttp(v.sourceUrl)
-      : picked.some((b) => isPlainHttp(b.source.origin));
+    v.kind === 'manual' ? isPlainHttp(v.sourceUrl) : !!group && isPlainHttp(group.source.origin);
   const domainField = (
     <DomainPicker
       domains={domains}
@@ -121,7 +117,7 @@ export function RuleForm({
       className="flex max-w-[720px] flex-col gap-8"
       onSubmit={(e) => {
         e.preventDefault();
-        onSave(v, picked);
+        onSave(v, group);
       }}
     >
       {isNew ? <KindChooser kind={v.kind} onKind={(kind) => set({ kind })} /> : null}
@@ -135,14 +131,12 @@ export function RuleForm({
       />
       {v.kind === 'batches' ? (
         <>
-          <BatchPicker
-            batches={batches}
-            picked={v.batchIds}
+          <OldPanelPicker
+            groups={groups}
+            picked={v.groupId}
             error={errorOf('batchIds')}
-            onPick={(ids) =>
-              isNew
-                ? setV((old) => withBatches(old, ids, batches, domains))
-                : set({ batchIds: ids })
+            onPick={(id) =>
+              isNew ? setV((old) => withGroup(old, id, groups, domains)) : set({ groupId: id })
             }
           />
           <AnswerFields {...fields} path={!facts.oldPath} />

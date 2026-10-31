@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { ApiError, offline } from '../../lib/api/client';
 import { getSession, signIn } from '../../lib/api/session';
 import { returnTarget } from '../../lib/return-target';
@@ -15,11 +15,11 @@ interface Fields {
 }
 
 /** Goes back to the page the operator asked for; the server serves the app there once signed in. */
-function enterApp() {
+export function enterApp() {
   window.location.replace(returnTarget(window.location, document.baseURI));
 }
 
-function classify(err: unknown): SignInError {
+export function classify(err: unknown): SignInError {
   if (!(err instanceof ApiError)) return 'server';
   switch (err.code) {
     case 'invalid_credentials':
@@ -38,21 +38,13 @@ function classify(err: unknown): SignInError {
   }
 }
 
-export function useSignIn() {
+/** The form's state; `initial` is what the first session check could not do, if anything. */
+export function useSignIn(initial: SignInError | null = null) {
   const [step, setStep] = useState<Step>('credentials');
   const [fields, setFields] = useState<Fields>({ username: '', password: '', code: '' });
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState<SignInError | null>(null);
+  const [error, setError] = useState<SignInError | null>(initial);
   const [lockedUntil, setLockedUntil] = useState<number | null>(null);
-
-  // Fetches the token that guards this form; a live session goes straight in.
-  useEffect(() => {
-    getSession()
-      .then((s) => {
-        if (s.authenticated) enterApp();
-      })
-      .catch((e: unknown) => setError(classify(e)));
-  }, []);
 
   const set = (name: keyof Fields, value: string) => setFields((f) => ({ ...f, [name]: value }));
 

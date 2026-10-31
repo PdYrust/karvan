@@ -33,7 +33,6 @@ func twoBatches(t *testing.T) (*Store, map[string]int64) {
 	exec(t, db, "UPDATE batches SET state = 'inactive', inactive_reason = 'rolled_back', inactive_at = 3500 WHERE id = ?", ids["b"])
 	exec(t, db, `INSERT INTO legacy_sites (id, name, panel_id, source_kind, source_url, old_path, listen_port, mode, created_at, updated_at)
 		VALUES (1, 'rule', 1, 'marzban', ?, 'sub', 443, 'batches', 1, 1)`, origin)
-	exec(t, db, "INSERT INTO legacy_site_batches (site_id, batch_id) VALUES (1, ?)", ids["a"])
 	exec(t, db, `INSERT INTO legacy_tokens (mac, site_id, ledger_id, issued_at, verified_at, checked_at) VALUES
 		(x'01', 1, ?, 1, 10, 20), (x'02', 1, ?, 1, 10, 40)`, ids["moved"], ids["moved"])
 	exec(t, db, "INSERT INTO legacy_closed (ledger_id, reason, closed_at) VALUES (?, 'revoked', 50)", ids["adopted"])

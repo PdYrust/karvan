@@ -37,8 +37,6 @@ const en = {
   job_C34: 'This role only allows users made from a template.',
   job_C35: "This role isn't on the destination. Choose another one.",
   job_C37: 'An owner role skips every limit check.',
-  job_source_groups_unknown:
-    "Karvan couldn't read the old panel's groups, so it can't tell which users' configs stop working.",
   fix_suffix: 'Add a suffix',
   fix_prefix: 'Add a prefix',
   fix_rename: 'Rename',
@@ -94,8 +92,6 @@ const fa: Messages<ConflictKey>['fa'] = {
   job_C34: 'این نقش فقط کاربرهای ساخته شده از قالب را اجازه میدهد.',
   job_C35: 'این نقش در پنل مقصد نیست. نقش دیگری انتخاب کنید.',
   job_C37: 'نقش مالک از همه محدودیت ها رد میشود.',
-  job_source_groups_unknown:
-    'کاروان گروه های پنل قدیمی را نتوانست بخواند، پس نمیداند کانفیگ کدام کاربرها از کار میافتد.',
   fix_suffix: 'افزودن پسوند',
   fix_prefix: 'افزودن پیشوند',
   fix_rename: 'تغییر نام',

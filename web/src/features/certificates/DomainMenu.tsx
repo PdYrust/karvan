@@ -96,7 +96,7 @@ function useKarvanToggle(domain: Domain, on: boolean) {
           ? { title: t('karvanOff', { name }), description: t('karvanOffHint') }
           : {
               title: t('karvanOn', { name }),
-              description: t(`karvanOn_${karvanUse(domain, next)}`),
+              description: `${t(`karvanOn_${karvanUse(domain, next)}`)} ${t(next.only ? 'karvanOnOnly' : 'karvanOnIp')}`,
             },
       );
     },

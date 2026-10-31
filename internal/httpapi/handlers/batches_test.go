@@ -80,7 +80,7 @@ func TestBatchListAndGet(t *testing.T) {
 	if got.ID != b.ID || got.JobID != jobID {
 		t.Fatalf("get %+v", got)
 	}
-	for _, q := range []string{"?state=deleted", "?state=x", "?limit=0", "?limit=101", "?panel=x", "?panel=0", "?cursor=!"} {
+	for _, q := range []string{"?state=deleted", "?state=x", "?limit=0", "?limit=101", "?panel=x", "?panel=0", "?cursor=!", "?group=0", "?group=x"} {
 		wantError(t, m.do(http.MethodGet, api+"/batches"+q, nil), http.StatusBadRequest, "bad_request")
 	}
 	var page struct {
@@ -228,14 +228,13 @@ func TestBatchDelete(t *testing.T) {
 	wantError(t, m.do(http.MethodDelete, path, map[string]any{"confirm": b.Name}), http.StatusConflict, "busy")
 	m.exec("UPDATE batches SET inactive_reason = 'rolled_back' WHERE id = ?", b.ID)
 	m.exec(`INSERT INTO legacy_sites (id, name, panel_id, source_kind, source_url, old_path, listen_port, mode, created_at, updated_at)
-		VALUES (4, 'rule', ?, 'marzban', 'https://old.example', 'sub', 443, 'batches', 1, 1)`, m.panelID)
-	m.exec("INSERT INTO legacy_site_batches (site_id, batch_id) VALUES (4, ?)", b.ID)
+		VALUES (4, 'rule', ?, ?, ?, 'sub', 443, 'batches', 1, 1)`, m.panelID, b.Source.Kind, b.Source.Origin)
 	res := m.do(http.MethodDelete, path, map[string]any{"confirm": b.Name})
 	wantError(t, res, http.StatusConflict, "batch_in_use")
 	if !strings.Contains(string(res.body), `"rules":[{"id":4,"name":"rule"}]`) {
 		t.Fatalf("rules: %s", res.body)
 	}
-	m.exec("DELETE FROM legacy_site_batches")
+	m.exec("UPDATE legacy_sites SET source_url = 'https://elsewhere.example' WHERE id = 4")
 	res = m.do(http.MethodDelete, path, map[string]any{"confirm": "nope"})
 	wantError(t, res, http.StatusBadRequest, "confirm_required")
 	if !strings.Contains(string(res.body), `"confirm":"`+b.Name+`"`) {

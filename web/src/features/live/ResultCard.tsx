@@ -1,11 +1,9 @@
 import { Button } from '@cloudflare/kumo/components/button';
-import { LinkIcon } from '@phosphor-icons/react';
 import { useNavigate } from 'react-router';
 import { StatusLabel } from '../../components/feedback/StatusBadge';
 import { Bone } from '../../components/feedback/PageSkeleton';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
-import { newBatchRulePath, newSitePath } from '../../lib/api/rules';
 import type { JobRow } from '../../lib/api/migrations';
 import type { Report } from '../../lib/api/report';
 import { useFormat } from '../../lib/preferences/region';
@@ -15,6 +13,7 @@ import { Files } from './Files';
 import { mayRollBack, shownCounts, type EndState } from './live';
 import { resultHeads, useMeaning, useReload } from './meaning';
 import { liveMessages } from './messages';
+import { OldLinksAction } from './OldLinksAction';
 import { RollBackButton } from './RollBackButton';
 
 function ReloadLine({ report }: { report: Report }) {
@@ -106,28 +105,7 @@ export function ResultCard({
         {mayRollBack(state, counts, report) ? (
           <RollBackButton jobId={jobId} backup={backup} />
         ) : null}
-        {state === 'done' && moved > 0 && row.source.kind ? (
-          <Button
-            variant="primary"
-            icon={<LinkIcon size={16} />}
-            className="pointer-coarse:h-9"
-            title={t('oldLinksHint')}
-            onClick={() =>
-              void navigate(
-                // A done job's batch fills the rule in; a job from before batches fills a manual one.
-                row.batch
-                  ? newBatchRulePath(row.batch.id)
-                  : newSitePath({
-                      panelId: row.panel.id,
-                      sourceKind: row.source.kind,
-                      sourceUrl: row.source.origin,
-                    }),
-              )
-            }
-          >
-            {t('oldLinks')}
-          </Button>
-        ) : null}
+        {state === 'done' && moved > 0 && row.source.kind ? <OldLinksAction row={row} /> : null}
       </div>
     </section>
   );

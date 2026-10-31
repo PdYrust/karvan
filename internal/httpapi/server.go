@@ -192,6 +192,8 @@ func migrationRoutes(rt *middleware.Router, api *handlers.API, signedIn func(htt
 		"POST " + b + "/reactivate":            api.ReactivateBatch,
 		"GET " + b + "/users":                  api.BatchUsers,
 		"POST " + b + "/users/{ledgerId}/link": api.BatchUserLink,
+		"GET /api/v1/batch-groups":             api.BatchGroups,
+		"GET /api/v1/batch-groups/{id}":        api.BatchGroup,
 	} {
 		rt.Handle(pattern, signedIn(h))
 	}

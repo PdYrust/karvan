@@ -4,7 +4,7 @@ import { FactList, type Fact } from '../../components/layout/FactList';
 import { PanelLabel } from '../../components/panels/PanelLabel';
 import { Machine } from '../../components/text/Machine';
 import { useT } from '../../i18n/locale';
-import type { Batch } from '../../lib/api/batches';
+import { groupPath, type Batch } from '../../lib/api/batches';
 import { useFormat } from '../../lib/preferences/region';
 import { batchesMessages } from './messages';
 
@@ -75,7 +75,14 @@ function DetailsBlock({ batch }: { batch: Batch }) {
         </Link>
       ),
     },
-    { label: t('oldPanel'), value: <Machine>{batch.source.origin}</Machine> },
+    {
+      label: t('oldPanel'),
+      value: (
+        <Link to={groupPath(batch.id)} className={link}>
+          <Machine>{batch.source.origin}</Machine>
+        </Link>
+      ),
+    },
     {
       label: t('newPanel'),
       value: <PanelLabel kind={batch.panel.kind || undefined} name={batch.panel.name} />,

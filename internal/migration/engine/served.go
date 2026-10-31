@@ -6,13 +6,10 @@ import (
 	"github.com/PdYrust/karvan/internal/panel"
 )
 
-// Conflict types about the protocols a user's old config uses.
-const (
-	WireGuardOnly = "C38" // PasarGuard to Marzban, only WireGuard or Hysteria
-	// GroupsUnknown is the job-level info line when the old PasarGuard
-	// panel's groups could not be read, so C10 and C38 are not raised.
-	GroupsUnknown = "source_groups_unknown"
-)
+// WireGuardOnly is the conflict of a user moved from PasarGuard to
+// Marzban whose old config uses only WireGuard or Hysteria. When the old
+// PasarGuard panel's groups cannot be read, neither it nor C10 is raised.
+const WireGuardOnly = "C38"
 
 // currentProtocols are the protocols the user's old config uses.
 // Marzban: the protocols with at least one inbound for the user.

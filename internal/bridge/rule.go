@@ -13,12 +13,11 @@ import (
 
 // Why a rule's batchIds were refused.
 const (
-	ReasonUnknown  = "unknown"  // no such batch, or a deleted one
-	ReasonInactive = "inactive" // the batch is not active
-	ReasonMixed    = "mixed"    // the batches do not share one old panel, destination and old path
+	ReasonUnknown = "unknown" // no such batch, or a deleted one
+	ReasonMixed   = "mixed"   // the batches do not share one old panel and destination panel
 )
 
-// maxRuleBatches caps the batches of one rule.
+// maxRuleBatches caps the batches one rule body names.
 const maxRuleBatches = 50
 
 // ErrNotAdopted means the site still serves its own certificate, since its
@@ -52,8 +51,10 @@ func checkMode(s *Site, stored *Site) error {
 	return nil
 }
 
-// fromBatches fills a rule of batches from them: every batch
-// known and active, all of one old panel, destination and old path.
+// fromBatches fills a rule of batches from its old panel. The batches the
+// body names, every one known and not deleted, pick one old panel on one
+// destination panel; the rule serves every run of it, now and later, and
+// takes its facts from every batch of it that is not deleted.
 func (st *store) fromBatches(ctx context.Context, s *Site) error {
 	ids := slices.Clone(s.BatchIDs)
 	slices.Sort(ids)
@@ -70,20 +71,32 @@ func (st *store) fromBatches(ctx context.Context, s *Site) error {
 	case s.SourcePin != "":
 		return invalid("sourcePin")
 	}
-	bs, err := st.ruleBatches(ctx, ids)
+	raw, err := json.Marshal(ids)
 	if err != nil {
 		return err
 	}
-	if err := checkBatches(bs, len(ids)); err != nil {
+	picked, err := st.ruleBatches(ctx, batchesByID, string(raw))
+	if err != nil {
+		return err
+	}
+	if err := checkBatches(picked, len(ids)); err != nil {
+		return err
+	}
+	f := picked[0]
+	all, err := st.ruleBatches(ctx, batchesOfGroup, f.panelID, f.kind, f.origin)
+	if err != nil {
 		return err
 	}
 	s.BatchIDs = ids
 	defaulted := s.Domains == nil
-	if err := s.takeFacts(bs); err != nil || !defaulted {
+	if err := s.takeFacts(all); err != nil || !defaulted {
 		return err
 	}
 	return st.keepRegistered(ctx, s)
 }
+
+// groupSQL matches the batches of one old panel on one destination panel.
+const groupSQL = "panel_id = ? AND source_kind = ? AND source_origin = ?"
 
 // keepRegistered keeps the domains of s that are registered: the batches'
 // old hosts a rule of batches takes by default.
@@ -105,33 +118,25 @@ func (st *store) keepRegistered(ctx context.Context, s *Site) error {
 	return nil
 }
 
-// checkBatches checks the batches read for n ids.
+// checkBatches checks the batches read for n ids: all of them known, of
+// one old panel on one destination panel.
 func checkBatches(bs []ruleBatch, n int) error {
 	if len(bs) != n {
 		return batchesRefused(ReasonUnknown)
 	}
-	paths := map[string]bool{}
-	for _, b := range bs {
-		if b.state != "active" {
-			return batchesRefused(ReasonInactive)
-		}
-		if b.path != "" {
-			paths[b.path] = true
-		}
-	}
 	for _, b := range bs {
 		f := bs[0]
-		if b.origin != f.origin || b.panelID != f.panelID || b.dest != f.dest || b.kind != f.kind || len(paths) > 1 {
+		if b.origin != f.origin || b.panelID != f.panelID || b.kind != f.kind {
 			return batchesRefused(ReasonMixed)
 		}
 	}
 	return nil
 }
 
-// takeFacts sets the derived fields from bs (sorted by id): the newest
-// batch that knows a fact gives it, and the domains default to every old
-// host. The old path and address come from the body only when no batch
-// knows them.
+// takeFacts sets the derived fields from bs, the old panel's batches
+// sorted by id: the newest batch that knows a fact gives it, and the
+// domains default to every old host. The old path and address come from
+// the body only when no batch knows them.
 func (s *Site) takeFacts(bs []ruleBatch) error {
 	f := bs[0]
 	s.PanelID, s.SourceKind, s.SourceURL = f.panelID, panel.Kind(f.kind), f.origin
@@ -177,15 +182,18 @@ func orPrev(v, prev string) string {
 	return prev
 }
 
-// ruleBatches reads the batches of ids that are not deleted, by id.
-func (st *store) ruleBatches(ctx context.Context, ids []int64) ([]ruleBatch, error) {
-	raw, err := json.Marshal(ids)
-	if err != nil {
-		return nil, err
-	}
-	rows, err := st.db.QueryContext(ctx, "SELECT id, panel_id, state, dest, source_kind, source_origin, source_ip, source_pin, "+
-		"old_path, old_hosts, old_port FROM batches WHERE id IN (SELECT value FROM json_each(?)) AND state <> 'deleted' "+
-		"ORDER BY id", string(raw))
+// The batches a rule of batches reads, never deleted ones, by id: those a
+// body names, and every batch of one old panel.
+const (
+	ruleBatchSQL = "SELECT id, panel_id, state, dest, source_kind, source_origin, source_ip, source_pin, " +
+		"old_path, old_hosts, old_port FROM batches WHERE state <> 'deleted' AND "
+	batchesByID    = ruleBatchSQL + "id IN (SELECT value FROM json_each(?)) ORDER BY id"
+	batchesOfGroup = ruleBatchSQL + groupSQL + " ORDER BY id"
+)
+
+// ruleBatches reads the batches of q, batchesByID or batchesOfGroup.
+func (st *store) ruleBatches(ctx context.Context, q string, args ...any) ([]ruleBatch, error) {
+	rows, err := st.db.QueryContext(ctx, q, args...)
 	if err != nil {
 		return nil, fmt.Errorf("read batches: %w", err)
 	}
@@ -204,30 +212,6 @@ func (st *store) ruleBatches(ctx context.Context, ids []int64) ([]ruleBatch, err
 		out = append(out, b)
 	}
 	return out, rows.Err()
-}
-
-// linkBatches writes the batches of a rule of batches, inside the save. A
-// batch that went inactive or was deleted since the check is refused.
-func linkBatches(ctx context.Context, tx *sql.Tx, s Site) error {
-	if _, err := tx.ExecContext(ctx, "DELETE FROM legacy_site_batches WHERE site_id = ?", s.ID); err != nil {
-		return fmt.Errorf("unlink batches: %w", err)
-	}
-	if s.Mode != ModeBatches {
-		return nil
-	}
-	raw, err := json.Marshal(s.BatchIDs)
-	if err != nil {
-		return err
-	}
-	res, err := tx.ExecContext(ctx, "INSERT INTO legacy_site_batches (site_id, batch_id) SELECT ?, id FROM batches "+
-		"WHERE id IN (SELECT value FROM json_each(?)) AND state = 'active'", s.ID, string(raw))
-	if err != nil {
-		return fmt.Errorf("link batches: %w", err)
-	}
-	if n, err := res.RowsAffected(); err != nil || n != int64(len(s.BatchIDs)) {
-		return errors.Join(err, batchesRefused(ReasonInactive))
-	}
-	return nil
 }
 
 // Why a rule's domains or https were refused.
@@ -400,21 +384,24 @@ type BatchRef struct {
 	State string `json:"state"`
 }
 
-// siteBatches lists the batches of rule id, by id.
-func (st *store) siteBatches(ctx context.Context, id int64) ([]BatchRef, error) {
-	rows, err := st.db.QueryContext(ctx, "SELECT b.id, b.name, b.state FROM legacy_site_batches sb "+
-		"JOIN batches b ON b.id = sb.batch_id WHERE sb.site_id = ? ORDER BY b.id", id)
-	if err != nil {
-		return nil, fmt.Errorf("read rule batches: %w", err)
-	}
-	defer rows.Close()
+// siteBatches lists the batches of rule s's old panel that are not
+// deleted, by id, and the old panel's group id: its first batch, deleted
+// ones included. A manual rule has none.
+func (st *store) siteBatches(ctx context.Context, s Site) ([]BatchRef, int64, error) {
 	out := []BatchRef{}
-	for rows.Next() {
-		var b BatchRef
-		if err := rows.Scan(&b.ID, &b.Name, &b.State); err != nil {
-			return nil, err
-		}
-		out = append(out, b)
+	if s.Mode != ModeBatches {
+		return out, 0, nil
 	}
-	return out, rows.Err()
+	var group int64
+	err := st.each(ctx, "SELECT id, name, state, (SELECT min(id) FROM batches WHERE "+groupSQL+") FROM batches WHERE "+groupSQL+
+		" AND state <> 'deleted' ORDER BY id", func(r *sql.Rows) error {
+		var b BatchRef
+		err := r.Scan(&b.ID, &b.Name, &b.State, &group)
+		out = append(out, b)
+		return err
+	}, s.PanelID, s.SourceKind, s.origin, s.PanelID, s.SourceKind, s.origin)
+	if err != nil {
+		return nil, 0, fmt.Errorf("read rule batches: %w", err)
+	}
+	return out, group, nil
 }

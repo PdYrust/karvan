@@ -27,6 +27,7 @@ const en = {
   connect: 'Connect and read',
   missing_panel: 'Choose a destination panel.',
   missing_url: "Enter the old panel's address.",
+  usedBefore: 'Used before. Pick one to move more users of the same old panel.',
   missing_username: 'Enter the username.',
   missing_password: 'Enter the password.',
   missing_apiKey: 'Enter the API key.',
@@ -81,6 +82,8 @@ const fa: Messages<ConnectKey>['fa'] = {
   connect: 'اتصال و خواندن',
   missing_panel: 'پنل مقصد را انتخاب کنید.',
   missing_url: 'آدرس پنل قدیمی را وارد کنید.',
+  usedBefore:
+    'قبلا استفاده شده. برای منتقل کردن کاربرهای بیشتر از همان پنل قدیمی یکی را انتخاب کنید.',
   missing_username: 'نام کاربری را وارد کنید.',
   missing_password: 'رمز را وارد کنید.',
   missing_apiKey: 'کلید API را وارد کنید.',

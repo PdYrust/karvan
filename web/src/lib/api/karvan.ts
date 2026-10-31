@@ -10,6 +10,17 @@ export interface KarvanDomain {
   plain: boolean;
   /** The panel is on a shared HTTPS port, where its domain cannot change. */
   shared: boolean;
+  /** "Only open Karvan on its domain". */
+  only: boolean;
+  /**
+   * Who the panel opens for: everyone; everyone until a first sign-in through the domain; the
+   * domain alone; or everyone again because the domain's certificate ended or cannot be read.
+   */
+  access: 'all' | 'waiting' | 'domain' | 'fallback';
+  /** Why the IP opened again, with `fallback`. */
+  reason?: 'expired' | 'missing';
+  /** The end of the domain's certificate, within 14 days, when nothing renews it by itself. */
+  endsSoon?: string;
 }
 
 export const karvanKeys = { all: ['settings', 'karvan-domain'] as const };
@@ -18,10 +29,11 @@ export function getKarvanDomain(): Promise<KarvanDomain> {
   return api('GET', 'settings/karvan-domain');
 }
 
-/** Enables a domain (0 stops), or sets the plain HTTP choice; it applies at once. */
+/** Enables a domain (0 stops), or sets plain HTTP or the domain-only switch; it applies at once. */
 export function putKarvanDomain(change: {
   domainId?: number;
   plain?: boolean;
+  only?: boolean;
 }): Promise<KarvanDomain> {
   return api('PUT', 'settings/karvan-domain', change);
 }

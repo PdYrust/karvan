@@ -12,6 +12,8 @@ const (
 	keyTLSDomain = "http.tls_domain"
 	keyTLSPlain  = "http.tls_plain"
 	keyTLSShared = "http.tls_shared"
+	keyTLSOpenIP = "http.tls_open_ip"
+	keyTLSArmed  = "http.tls_armed"
 	keySelfCert  = "http.tls_self_cert"
 	keySelfKey   = "http.tls_self_key"
 )
@@ -27,6 +29,15 @@ type TLS struct {
 	// HTTPS.
 	Plain  bool
 	Shared bool // served on a bridge HTTPS port of that domain (ADR 0011)
+	// OpenIP is "Only open Karvan on its domain" turned off: every name
+	// and the server's IP open the panel. Off, the default, only the
+	// domain's name opens it once Armed.
+	OpenIP bool
+	// Armed is set by the operator's first signed-in request through the
+	// domain since the domain or OpenIP last changed. Until then the IP
+	// stays open, so a domain that does not reach the panel locks no one
+	// out.
+	Armed bool
 }
 
 // Validate checks that a shared port goes with a domain.
@@ -43,7 +54,7 @@ func (t TLS) Validate() error {
 // rows are the stored values of t.
 func (t TLS) rows() map[string]string {
 	return map[string]string{keyTLSDomain: strconv.FormatInt(t.DomainID, 10), keyTLSPlain: strconv.FormatBool(t.Plain),
-		keyTLSShared: strconv.FormatBool(t.Shared)}
+		keyTLSShared: strconv.FormatBool(t.Shared), keyTLSOpenIP: strconv.FormatBool(t.OpenIP), keyTLSArmed: strconv.FormatBool(t.Armed)}
 }
 
 // tlsOf reads TLS from the stored values; missing ones mean no domain.
@@ -58,20 +69,25 @@ func tlsOf(vals map[string]string) (TLS, error) {
 	}
 	t.Plain = vals[keyTLSPlain] == "true"
 	t.Shared = vals[keyTLSShared] == "true"
+	t.OpenIP = vals[keyTLSOpenIP] == "true"
+	t.Armed = vals[keyTLSArmed] == "true"
 	if err := t.Validate(); err != nil {
 		return TLS{}, err
 	}
 	return t, nil
 }
 
-// SetKarvan stores the domain enabled for Karvan (0 for none) and whether
-// it answers plain HTTP for its name while it has no certificate, in one
-// transaction. The address stays as it is.
-func (s *Store) SetKarvan(ctx context.Context, domainID int64, plain bool) error {
-	if domainID < 0 {
-		return fmt.Errorf("tls domain %d is not a domain", domainID)
+// SetKarvan stores the domain enabled for Karvan (0 for none), whether it
+// answers plain HTTP for its name while it has no certificate, whether it
+// is the only way in and whether that is armed, in one transaction. The
+// address and Shared stay as they are.
+func (s *Store) SetKarvan(ctx context.Context, t TLS) error {
+	if t.DomainID < 0 {
+		return fmt.Errorf("tls domain %d is not a domain", t.DomainID)
 	}
-	return s.setAll(ctx, map[string]string{keyTLSDomain: strconv.FormatInt(domainID, 10), keyTLSPlain: strconv.FormatBool(plain)})
+	vals := t.rows()
+	delete(vals, keyTLSShared)
+	return s.setAll(ctx, vals)
 }
 
 // SelfCert is the panel's self-signed certificate (PEM) and its private

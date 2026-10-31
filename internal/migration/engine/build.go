@@ -200,9 +200,6 @@ func jobConflicts(in Inputs, stable bool) []Conflict {
 	if !stable {
 		out = append(out, Conflict{Type: Unsettled, Severity: Blocker})
 	}
-	if in.Source.Kind == panel.PasarGuard && !in.Source.GroupsRead {
-		out = append(out, Conflict{Type: GroupsUnknown, Severity: Info})
-	}
 	return out
 }
 

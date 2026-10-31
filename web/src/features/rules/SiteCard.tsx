@@ -4,6 +4,7 @@ import { MoveLabel } from '../../components/panels/PanelLabel';
 import { panelNames } from '../../components/panels/PanelLogo';
 import { useT } from '../../i18n/locale';
 import type { Domain } from '../../lib/api/domains';
+import { groupPath } from '../../lib/api/batches';
 import { pendingOf, type LinkSite } from '../../lib/api/rules';
 import { panelKind, type Panel } from '../../lib/api/panels';
 import { CertFactsView } from '../certificates/CertFactsView';
@@ -59,20 +60,21 @@ export function SiteCard({
   const names = site.domains ?? [];
   const tls = site.https;
   const facts = [
-    site.batches.length
-      ? {
-          label: t('batches'),
-          value: (
-            <span className="flex flex-col gap-0.5">
-              {site.batches.map((b) => (
-                <Link key={b.id} to={`/batches/${String(b.id)}`} className={linkClass}>
-                  <bdi>{b.name}</bdi>
-                </Link>
-              ))}
-            </span>
-          ),
-        }
-      : { label: t('oldPanel'), value: mono(site.sourceUrl) },
+    {
+      label: t('oldPanel'),
+      value:
+        site.mode === 'batches' && site.batchGroup ? (
+          // Every run of the old panel, later ones too, with no change to the rule.
+          <span className="flex flex-col items-end gap-0.5">
+            {mono(site.sourceUrl)}
+            <Link to={groupPath(site.batchGroup)} className={linkClass}>
+              {t('runs', { count: site.batches.length })}
+            </Link>
+          </span>
+        ) : (
+          mono(site.sourceUrl)
+        ),
+    },
     { label: t('domains'), value: names.length ? mono(names.join(', ')) : t('everyDomain') },
     { label: t('oldPath'), value: mono(`/${site.oldPath}/`) },
     { label: t('port'), value: mono(String(site.port)) },

@@ -49,19 +49,15 @@ export function CertFactsView({ facts }: { facts: CertFacts }) {
   return (
     <div className="flex flex-col gap-2">
       {rows.length > 0 ? <FactList facts={rows} /> : null}
-      <ul className="flex flex-col gap-1.5 text-sm">
-        {facts.warnings.length === 0 ? (
-          <li>
-            <StatusLabel tone="success">{t('certFine')}</StatusLabel>
-          </li>
-        ) : (
-          facts.warnings.map((w) => (
+      {facts.warnings.length > 0 ? (
+        <ul className="flex flex-col gap-1.5 text-sm">
+          {facts.warnings.map((w) => (
             <li key={w}>
               <StatusLabel tone={toneOf[w]}>{t(`warn_${w}`)}</StatusLabel>
             </li>
-          ))
-        )}
-      </ul>
+          ))}
+        </ul>
+      ) : null}
     </div>
   );
 }

@@ -72,6 +72,14 @@ const (
 	ActionAddressStart  = "settings.address_start"
 	ActionAddressChange = "settings.address"
 	ActionHTTPS         = "settings.https"
+	// ActionKarvanOnly: only the Karvan domain opens the panel from now
+	// on, after the operator's first sign-in through it or once its
+	// certificate serves again.
+	ActionKarvanOnly = "settings.karvan_only"
+	// ActionKarvanFallback: the Karvan domain's certificate stopped
+	// serving, so the server's IP opens the panel again.
+	ActionKarvanFallback = "settings.karvan_fallback"
+	ActionAccessOpenIP   = "cli.access_open_ip"
 )
 
 // ActorCLI is the actor for actions taken from the command line.

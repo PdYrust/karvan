@@ -58,6 +58,51 @@ export interface BatchUserPage {
 export interface BatchFilter {
   panel?: number;
   state?: Batch['state'];
+  /** Any batch of one old panel: the list keeps that old panel's runs. */
+  group?: number;
+  cursor?: string;
+  limit?: number;
+}
+
+/**
+ * One old panel moved onto one new panel: every run from it is its own
+ * batch, and a rule made from it serves them all, later runs too.
+ */
+export interface BatchGroup {
+  /** Its first batch, deleted ones included: it never changes. */
+  id: number;
+  /** Its newest batch that is not deleted. */
+  latestId: number;
+  panel: Batch['panel'];
+  source: Batch['source'];
+  counts: {
+    runs: number;
+    active: number;
+    inactive: number;
+    users: number;
+    verified: number;
+    closed: number;
+  };
+  /** The newest run that knows the path or the port gives it; the hosts of every run. */
+  oldLinks: Batch['oldLinks'];
+  /** The rules that serve its users. */
+  rules: Batch['rules'];
+  firstAt: string;
+  lastAt: string;
+  /** Its newest runs that match the state filter, as many as asked for. */
+  runs: Batch[];
+}
+
+export interface BatchGroupPage {
+  groups: BatchGroup[];
+  next?: string;
+}
+
+export interface BatchGroupFilter {
+  panel?: number;
+  state?: Batch['state'];
+  /** How many of each group's newest runs to read, 0 to 5. */
+  runs?: number;
   cursor?: string;
   limit?: number;
 }
@@ -77,11 +122,40 @@ function batchOf(b: Batch): Batch {
   };
 }
 
+/** A group with its lists, whatever the server wrote for an empty one. */
+function groupOf(g: BatchGroup): BatchGroup {
+  return {
+    ...g,
+    oldLinks: { ...g.oldLinks, hosts: list(g.oldLinks.hosts) },
+    rules: list(g.rules),
+    runs: list(g.runs).map(batchOf),
+  };
+}
+
+/** The old panels, the one with the latest run first, a page at a time. */
+export async function listBatchGroups(f: BatchGroupFilter = {}): Promise<BatchGroupPage> {
+  const q = new URLSearchParams();
+  if (f.panel) q.set('panel', String(f.panel));
+  if (f.state) q.set('state', f.state);
+  if (f.runs !== undefined) q.set('runs', String(f.runs));
+  if (f.cursor) q.set('cursor', f.cursor);
+  if (f.limit) q.set('limit', String(f.limit));
+  const page = await api<BatchGroupPage>('GET', withQuery('batch-groups', q));
+  return { ...page, groups: list(page.groups).map(groupOf) };
+}
+
+/** The old panel of any of its batches. */
+export async function getBatchGroup(id: number, runs = 0): Promise<BatchGroup> {
+  const q = new URLSearchParams({ runs: String(runs) });
+  return groupOf(await api<BatchGroup>('GET', withQuery(`batch-groups/${String(id)}`, q)));
+}
+
 /** Batches newest first, a page at a time, never deleted ones. */
 export async function listBatches(f: BatchFilter = {}): Promise<BatchPage> {
   const q = new URLSearchParams();
   if (f.panel) q.set('panel', String(f.panel));
   if (f.state) q.set('state', f.state);
+  if (f.group) q.set('group', String(f.group));
   if (f.cursor) q.set('cursor', f.cursor);
   if (f.limit) q.set('limit', String(f.limit));
   const page = await api<BatchPage>('GET', withQuery('batches', q));
@@ -128,9 +202,17 @@ export async function showBatchLink(id: number, ledgerId: number): Promise<strin
   return r.url;
 }
 
+/** One old panel's runs on the Batches page, by any of its batches. */
+export function groupPath(id: number, state?: Batch['state']): string {
+  const q = new URLSearchParams({ ...(state ? { state } : {}), group: String(id) });
+  return `/batches?${q.toString()}`;
+}
+
 export const batchKeys = {
   all: ['batches'] as const,
   list: (f: BatchFilter) => ['batches', 'list', f] as const,
+  groups: (f: BatchGroupFilter) => ['batches', 'groups', f] as const,
+  group: (id: number) => ['batches', 'group', id] as const,
   batch: (id: number) => ['batches', 'one', id] as const,
   users: (id: number, f: { q: string; cursor?: string }) =>
     ['batches', 'one', id, 'users', f] as const,

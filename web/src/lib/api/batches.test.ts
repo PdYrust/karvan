@@ -2,6 +2,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   deleteBatch,
   getBatch,
+  getBatchGroup,
+  groupPath,
+  listBatchGroups,
   listBatches,
   listBatchUsers,
   reactivateBatch,
@@ -116,5 +119,47 @@ describe('one batch', () => {
     const [url, init] = last();
     expect(url).toMatch(/batches\/3\/users\/1542\/link$/);
     expect(init.method).toBe('POST');
+  });
+});
+
+describe('an old panel', () => {
+  it('opens on Batches with the state it was filtered by', () => {
+    expect(groupPath(12)).toBe('/batches?group=12');
+    expect(groupPath(12, 'inactive')).toBe('/batches?state=inactive&group=12');
+  });
+});
+
+describe('the old panel list', () => {
+  it('sends the panel, the state, the runs, the cursor and the page size', async () => {
+    const last = stubFetch({ groups: [{ id: 1, oldLinks: { path: '', port: 0 }, runs: null }] });
+    const page = await listBatchGroups({
+      panel: 2,
+      state: 'active',
+      runs: 0,
+      cursor: 'c',
+      limit: 10,
+    });
+    const url = new URL(last()[0]);
+    expect(url.pathname).toMatch(/\/batch-groups$/);
+    expect(Object.fromEntries(url.searchParams)).toEqual({
+      panel: '2',
+      state: 'active',
+      runs: '0',
+      cursor: 'c',
+      limit: '10',
+    });
+    expect(page.groups[0]).toMatchObject({ rules: [], runs: [], oldLinks: { hosts: [] } });
+  });
+
+  it('reads one old panel by any of its batches', async () => {
+    const last = stubFetch({ id: 1, oldLinks: { path: '', hosts: null, port: 0 }, rules: null });
+    await expect(getBatchGroup(7, 2)).resolves.toMatchObject({ id: 1, rules: [], runs: [] });
+    expect(last()[0]).toMatch(/\/batch-groups\/7\?runs=2$/);
+  });
+
+  it('keeps the runs of one old panel in the batch list', async () => {
+    const last = stubFetch({ batches: [] });
+    await listBatches({ group: 4 });
+    expect(new URL(last()[0]).searchParams.get('group')).toBe('4');
   });
 });

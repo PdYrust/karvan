@@ -60,7 +60,13 @@ func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 		sendRedirect(w, q.redirect, q.rest) // nothing is fetched
 		return
 	}
-	held, err := b.st.ruleHeld(r.Context(), q.site)
+	d, err := b.dest(r.Context(), q.site.PanelID)
+	if err != nil {
+		b.Log.Warn("bridge: destination", "site", q.site.Name, "err", err)
+		answer(w, http.StatusServiceUnavailable)
+		return
+	}
+	held, err := b.st.ruleHeld(r.Context(), q.site, d.Key())
 	if err != nil {
 		b.Log.Warn("bridge: rule batches", "site", q.site.Name, "err", err)
 		answer(w, http.StatusServiceUnavailable)
@@ -68,12 +74,6 @@ func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 	}
 	if held {
 		answer(w, http.StatusNotFound)
-		return
-	}
-	d, err := b.dest(r.Context(), q.site.PanelID)
-	if err != nil {
-		b.Log.Warn("bridge: destination", "site", q.site.Name, "err", err)
-		answer(w, http.StatusServiceUnavailable)
 		return
 	}
 	q.dest, q.mac = d, mac(b.macKey, q.token)
@@ -161,7 +161,7 @@ func (b *Bridge) namesHeld(w http.ResponseWriter, r *http.Request, q request) bo
 		answer(w, http.StatusServiceUnavailable)
 		return true
 	}
-	if slices.ContainsFunc(rows, q.site.holds) {
+	if slices.ContainsFunc(rows, isHeld) {
 		answer(w, http.StatusNotFound)
 		return true
 	}
@@ -246,7 +246,7 @@ func (b *Bridge) candidates(ctx context.Context, q request, p subtoken.Payload) 
 	switch {
 	case err != nil:
 		return nil, http.StatusServiceUnavailable
-	case slices.ContainsFunc(rows, q.site.holds):
+	case slices.ContainsFunc(rows, isHeld):
 		return nil, http.StatusNotFound
 	}
 	var out []candidate

@@ -52,9 +52,13 @@ The image `ghcr.io/pdyrust/karvan:0.5.0-beta` holds only the binary. Volumes, po
 
 The panel always answers HTTPS on its port. On the server's IP it uses Karvan's own certificate.
 
-To open it on a domain with that domain's certificate, add the domain on the Domains page with its certificate (from Let's Encrypt, a file on the server, a pasted one, or one found in a panel), then choose Use for Karvan in the domain's "..." menu. A browser asking for that name gets the domain's certificate at once, and renewals reach it without a restart. Every other name and the server's IP keep Karvan's own certificate, so the IP address always opens. Karvan only reads the certificate, so other services that use it keep working. One domain at a time is used for Karvan; Stop using for Karvan goes back to the IP alone.
+To open it on a domain with that domain's certificate, add the domain on the Domains page with its certificate (from Let's Encrypt, a file on the server, a pasted one, or one found in a panel), then choose Use for Karvan in the domain's "..." menu. A browser asking for that name gets the domain's certificate at once, and renewals reach it without a restart. Karvan only reads the certificate, so other services that use it keep working. One domain at a time is used for Karvan; Stop using for Karvan goes back to the IP alone.
 
-Domain settings, on the same page, say what the Karvan domain does while it has no certificate: Karvan's own certificate (the default), or plain HTTP for that name only.
+Domain settings, on the same page, have two switches for the Karvan domain:
+- Plain HTTP for a Karvan domain without a certificate. Off, the default, its name gets Karvan's own certificate until it has one.
+- Only open Karvan on its domain, on by default. Once you have signed in through the domain, only that name opens the panel: the server's IP and every other name get no panel. Until that first sign-in the IP keeps working, so a domain that does not reach the panel locks no one out. If the domain's certificate ends or its files go missing, the IP opens again with Karvan's own certificate, and the panel says why. The subscription bridge is not affected.
+
+On the server itself, `https://127.0.0.1:<port>/<path>/` always opens the panel, so an SSH tunnel works (`ssh -L 8443:127.0.0.1:<port> root@server`, then `https://127.0.0.1:8443/<path>/`). Locked out by the domain? Run `karvan access open-ip` on the server: it turns Only open Karvan on its domain off, and the running panel takes it within a few seconds.
 
 ## Check a download (optional)
 
@@ -82,7 +86,7 @@ karvan init       # prints the address, username and password once
 karvan serve
 ```
 
-Lost access? `karvan reset -password` (also `-user`, `-path`, `-port`, `-totp`).
+Lost access? `karvan reset -password` (also `-user`, `-path`, `-port`, `-totp`). The Karvan domain does not open the panel? `karvan access open-ip`.
 
 ## Contributing
 

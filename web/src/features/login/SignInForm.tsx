@@ -14,11 +14,11 @@ import { useSignIn, type SignInError } from './use-sign-in';
 
 const inputClass = 'h-10 pointer-coarse:h-9';
 
-export function SignInForm() {
+export function SignInForm({ error = null }: { error?: SignInError | null }) {
   const t = useT(loginMessages);
   const ts = useT(sharedMessages);
   const { locale } = useLocale();
-  const s = useSignIn();
+  const s = useSignIn(error);
   const { clearLock } = s;
   const onUnlocked = useCallback(() => clearLock(), [clearLock]);
   const secondsLeft = useCountdown(s.lockedUntil, onUnlocked);

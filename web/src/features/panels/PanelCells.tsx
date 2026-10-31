@@ -37,6 +37,7 @@ export function PanelName({ panel, current }: { panel: Panel; current: boolean }
       )}
       <Link
         to={`/panels/${String(panel.id)}`}
+        dir="auto"
         className="truncate font-medium text-kumo-strong underline decoration-kumo-line underline-offset-4 hover:decoration-current"
       >
         <bdi>{panel.name}</bdi>

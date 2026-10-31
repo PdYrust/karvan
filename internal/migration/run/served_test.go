@@ -37,14 +37,11 @@ func TestOldPanelGroupsGiveC38(t *testing.T) {
 			t.Errorf("user %s: %+v, want C38", it.Key, it.Conflicts)
 		}
 	}
-	for _, c := range r.Conflicts {
-		if c.Type == engine.GroupsUnknown {
-			t.Error("groups were read")
-		}
-	}
 }
 
-func TestForbiddenGroupsSayUnknown(t *testing.T) {
+// A login that cannot read the old panel's groups skips C10 and C38
+// quietly: no conflict on a user and no job line.
+func TestForbiddenGroupsSkipTheChecks(t *testing.T) {
 	r := checkServed(t, http.StatusForbidden)
 	for _, it := range r.Items {
 		for _, c := range it.Conflicts {
@@ -53,11 +50,7 @@ func TestForbiddenGroupsSayUnknown(t *testing.T) {
 			}
 		}
 	}
-	found := false
-	for _, c := range r.Conflicts {
-		found = found || c.Type == engine.GroupsUnknown
-	}
-	if !found {
-		t.Errorf("job conflicts %+v, want %s", r.Conflicts, engine.GroupsUnknown)
+	if len(r.Conflicts) != 0 {
+		t.Errorf("job conflicts %+v, want none", r.Conflicts)
 	}
 }

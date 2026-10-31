@@ -75,7 +75,8 @@ type Counts struct {
 	Closed   int `json:"closed"`
 }
 
-// Rule is a panel rule that serves a batch.
+// Rule is a panel rule that serves a batch: a rule of batches of its old
+// panel, or a manual rule of the same old panel and destination panel.
 type Rule struct {
 	ID   int64  `json:"id"`
 	Name string `json:"name"`
@@ -92,6 +93,7 @@ type Ref struct {
 type Filter struct {
 	PanelID int64
 	State   string // active or inactive
+	Group   int64  // any batch of the group the list keeps
 }
 
 const batchColumns = `b.id, b.name, b.state, b.inactive_reason, b.inactive_at, b.job_id, b.panel_id, p.name, p.kind,
@@ -118,6 +120,10 @@ func (s *Store) List(ctx context.Context, f Filter, after string, limit int) ([]
 	if f.PanelID != 0 {
 		q += " AND b.panel_id = ?"
 		args = append(args, f.PanelID)
+	}
+	if f.Group != 0 {
+		q += " AND (b.panel_id, b.source_kind, b.source_origin) = (SELECT panel_id, source_kind, source_origin FROM batches WHERE id = ?)"
+		args = append(args, f.Group)
 	}
 	limit = min(max(limit, 1), MaxPage)
 	out, err := s.query(ctx, q+" ORDER BY b.created_at DESC, b.id DESC LIMIT ?", append(args, limit+1)...)
@@ -177,8 +183,15 @@ func (s *Store) query(ctx context.Context, q string, args ...any) ([]Batch, erro
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("read batches: %w", err)
 	}
+	if len(out) == 0 {
+		return out, nil
+	}
+	rules, err := readRuleIndex(ctx, s.db)
+	if err != nil {
+		return nil, err
+	}
 	for i := range out {
-		if err := s.details(ctx, &out[i]); err != nil {
+		if err := s.details(ctx, &out[i], rules); err != nil {
 			return nil, err
 		}
 	}
@@ -216,7 +229,7 @@ const adminOf = `LEFT JOIN ledger a ON a.id = (SELECT min(x.id) FROM ledger x WH
 	JOIN jobs j ON j.id = l.job_id`
 
 // details fills in a batch's admins, counts and rules.
-func (s *Store) details(ctx context.Context, b *Batch) error {
+func (s *Store) details(ctx context.Context, b *Batch, rules ruleIndex) error {
 	err := s.db.QueryRowContext(ctx, `SELECT count(*),
 		count(*) FILTER (WHERE EXISTS (SELECT 1 FROM legacy_tokens t WHERE t.ledger_id = l.id)),
 		count(*) FILTER (WHERE EXISTS (SELECT 1 FROM legacy_closed c WHERE c.ledger_id = l.id))
@@ -241,27 +254,8 @@ func (s *Store) details(ctx context.Context, b *Batch) error {
 	if err := rows.Err(); err != nil {
 		return err
 	}
-	b.Rules, err = readRules(ctx, s.db, `SELECT s.id, s.name FROM legacy_sites s JOIN legacy_site_batches sb ON sb.site_id = s.id
-		WHERE sb.batch_id = ? ORDER BY s.name, s.id`, b.ID)
-	return err
-}
-
-// readRules runs a query whose rows are a rule's id and name.
-func readRules(ctx context.Context, db querier, q string, args ...any) ([]Rule, error) {
-	rows, err := db.QueryContext(ctx, q, args...)
-	if err != nil {
-		return nil, fmt.Errorf("read the batch's rules: %w", err)
-	}
-	defer rows.Close()
-	out := []Rule{}
-	for rows.Next() {
-		var r Rule
-		if err := rows.Scan(&r.ID, &r.Name); err != nil {
-			return nil, err
-		}
-		out = append(out, r)
-	}
-	return out, rows.Err()
+	b.Rules = rules.of(groupKey{panel: b.Panel.ID, kind: b.Source.Kind, origin: b.Source.Origin}, false)
+	return nil
 }
 
 // cursor is where a page of batches ended: the last batch's creation

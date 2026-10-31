@@ -30,25 +30,10 @@ func fromBatches(name string, ids ...int64) Site {
 	return Site{Name: name, Mode: ModeBatches, BatchIDs: ids, Lazy: true, PlainHTTPOK: true}
 }
 
+// ruleBatchIDs lists the batches a rule serves, as its view shows them.
 func (e *env) ruleBatchIDs(siteID int64) []int64 {
 	e.t.Helper()
-	rows, err := e.b.DB.Query("SELECT batch_id FROM legacy_site_batches WHERE site_id = ? ORDER BY batch_id", siteID)
-	if err != nil {
-		e.t.Fatal(err)
-	}
-	defer rows.Close()
-	var out []int64
-	for rows.Next() {
-		var id int64
-		if err := rows.Scan(&id); err != nil {
-			e.t.Fatal(err)
-		}
-		out = append(out, id)
-	}
-	if err := rows.Err(); err != nil {
-		e.t.Fatal(err)
-	}
-	return out
+	return e.b.View(context.Background(), mustSite(e.t, e, siteID)).BatchIDs
 }
 
 func (e *env) domainNames() []string {
@@ -130,14 +115,11 @@ func reasonOf(err error) string {
 
 // Every refused batch rule names its field, and its reason for batchIds.
 func TestBatchRuleValidation(t *testing.T) {
-	e := newEnv(t, "ali", "bob", "cyrus", "dara")
+	e := newEnv(t, "ali", "cyrus")
 	ctx := context.Background()
 	a := e.batch("active", "", "ali")
 	e.factsOf(a, "sub", `[]`, 8443, "127.0.0.1", "")
-	inactive := e.batch("inactive", "rolled_back", "bob")
 	deleted := e.batch("deleted", "", "cyrus")
-	other := e.batch("active", "", "dara")
-	e.factsOf(other, "other", `[]`, 8443, "", "")
 	otherPanel := e.batch("active", "")
 	if _, err := e.b.DB.Exec("INSERT INTO panels (id, env_path, name, kind, scanned_at) VALUES (2, '/opt/b/.env', 'b', 'marzban', 0)"); err != nil {
 		t.Fatal(err)
@@ -162,8 +144,6 @@ func TestBatchRuleValidation(t *testing.T) {
 		"twice":           {func(s *Site) { s.BatchIDs = []int64{a, a} }, "batchIds", ""},
 		"unknown":         {func(s *Site) { s.BatchIDs = []int64{a, 999} }, "batchIds", "unknown"},
 		"deleted":         {func(s *Site) { s.BatchIDs = []int64{a, deleted} }, "batchIds", "unknown"},
-		"inactive":        {func(s *Site) { s.BatchIDs = []int64{a, inactive} }, "batchIds", "inactive"},
-		"other path":      {func(s *Site) { s.BatchIDs = []int64{a, other} }, "batchIds", "mixed"},
 		"other panel":     {func(s *Site) { s.BatchIDs = []int64{a, otherPanel} }, "batchIds", "mixed"},
 		"other old panel": {func(s *Site) { s.BatchIDs = []int64{a, otherOrigin} }, "batchIds", "mixed"},
 		"panelId":         {func(s *Site) { s.PanelID = 1 }, "panelId", ""},
@@ -187,9 +167,6 @@ func TestBatchRuleValidation(t *testing.T) {
 			t.Errorf("%s: %v (reason %q)", name, err, reasonOf(err))
 		}
 	}
-	if n := len(e.ruleBatchIDs(0)); n != 0 {
-		t.Fatalf("links of a refused rule: %d", n)
-	}
 	var sites int
 	_ = e.b.DB.QueryRow("SELECT count(*) FROM legacy_sites").Scan(&sites)
 	if sites != 1 {
@@ -197,8 +174,8 @@ func TestBatchRuleValidation(t *testing.T) {
 	}
 }
 
-// The mode is fixed after create; batches may change, and the derived
-// columns are read again from the batches on every save.
+// The mode is fixed after create; the old panel may change, and the
+// derived columns are read again from its batches on every save.
 func TestBatchRuleChanges(t *testing.T) {
 	e := newEnv(t, "ali", "bob")
 	ctx := context.Background()
@@ -222,8 +199,8 @@ func TestBatchRuleChanges(t *testing.T) {
 	edit := fromBatches("rule", b)
 	edit.ID, edit.Domains, edit.Port = s.ID, s.Domains, s.Port
 	got, err := e.b.st.Save(ctx, edit)
-	if err != nil || !slices.Equal(e.ruleBatchIDs(s.ID), []int64{b}) || got.SourceIP != "127.0.0.9" {
-		t.Fatalf("batches changed: %+v %v %v", got, err, e.ruleBatchIDs(s.ID))
+	if err != nil || !slices.Equal(e.ruleBatchIDs(s.ID), []int64{a, b}) || got.SourceIP != "127.0.0.9" {
+		t.Fatalf("saved again: %+v %v %v", got, err, e.ruleBatchIDs(s.ID))
 	}
 	if _, err := e.b.st.Save(ctx, Site{ID: 999, Name: "x", Mode: ModeBatches, BatchIDs: []int64{a}}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("unknown rule: %v", err)
@@ -231,14 +208,17 @@ func TestBatchRuleChanges(t *testing.T) {
 }
 
 // A token proven while its row was in the rule's scope stays stored when
-// the row leaves the scope, but the rule no longer serves it.
+// the rule moves to another old panel, but the rule no longer serves it.
 func TestTokenLeavingTheScopeStaysStored(t *testing.T) {
-	e := newEnv(t, "ali", "bob")
+	e := newEnv(t, "ali")
 	ctx := context.Background()
 	a := e.batch("active", "", "ali")
-	b := e.batch("active", "", "bob")
 	e.factsOf(a, "sub", `["old.example.com"]`, 0, "127.0.0.1", "")
-	e.factsOf(b, "sub", `["old.example.com"]`, 0, "127.0.0.1", "")
+	other := e.batch("active", "")
+	if _, err := e.b.DB.Exec("UPDATE batches SET source_origin = 'https://elsewhere.example.com', old_path = 'sub', source_ip = '127.0.0.1' "+
+		"WHERE id = ?", other); err != nil {
+		t.Fatal(err)
+	}
 	s := fromBatches("rule", a)
 	s.Port = 5
 	saved, err := e.b.SaveSite(ctx, s)
@@ -251,7 +231,7 @@ func TestTokenLeavingTheScopeStaysStored(t *testing.T) {
 	if code, _ := e.get("/sub/"+tok, "198.51.100.7"); code != http.StatusOK || e.tokens() != 1 {
 		t.Fatalf("in scope: %d, %d tokens", code, e.tokens())
 	}
-	saved.BatchIDs = []int64{b}
+	saved.BatchIDs = []int64{other}
 	saved.PanelID, saved.SourceKind, saved.SourceURL, saved.SourceIP, saved.OldPath = 0, "", "", "", ""
 	if _, err := e.b.SaveSite(ctx, saved); err != nil {
 		t.Fatal(err)
@@ -261,9 +241,9 @@ func TestTokenLeavingTheScopeStaysStored(t *testing.T) {
 	}
 }
 
-// A newer batch of the same old panel and destination joins the batch
-// rules of the older one by itself, and its users are served.
-func TestNewerBatchJoinsTheRule(t *testing.T) {
+// A newer batch of the same old panel and destination is served by the
+// rule with no change to it.
+func TestNewerBatchIsServedWithNoEdit(t *testing.T) {
 	e := newEnv(t, "ali", "bob")
 	ctx := context.Background()
 	a := e.batch("active", "", "ali")
@@ -291,16 +271,13 @@ func TestNewerBatchJoinsTheRule(t *testing.T) {
 	if err != nil || newer == 0 {
 		t.Fatalf("ensure: %d %v", newer, err)
 	}
-	if ids := e.ruleBatchIDs(saved.ID); !slices.Equal(ids, []int64{a, newer}) {
-		t.Fatalf("rule batches %v", ids)
-	}
 	if code, _ := e.get("/sub/"+tok, "198.51.100.7"); code != http.StatusOK {
-		t.Fatalf("bob after his batch joined: %d", code)
+		t.Fatalf("bob after his batch: %d", code)
 	}
 	v := e.b.View(ctx, mustSite(t, e, saved.ID))
 	if want := []BatchRef{{ID: a, Name: "job-1", State: "active"}, {ID: newer, Name: "batch", State: "active"}}; !slices.Equal(v.Batches, want) ||
-		!slices.Equal(v.BatchIDs, []int64{a, newer}) {
-		t.Fatalf("view batches %+v %v", v.Batches, v.BatchIDs)
+		!slices.Equal(v.BatchIDs, []int64{a, newer}) || v.BatchGroup != a {
+		t.Fatalf("view batches %+v %v %d", v.Batches, v.BatchIDs, v.BatchGroup)
 	}
 }
 
