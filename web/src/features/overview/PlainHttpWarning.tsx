@@ -1,10 +1,16 @@
-import { Link } from 'react-router';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { useT } from '../../i18n/locale';
 import { overviewMessages } from './messages';
 import { useOverview } from './use-overview';
 
-/** One line while the panel is served over plain HTTP, with the way to the HTTPS tab. */
+/** The same address over HTTPS: every panel port answers both. */
+function httpsHere(): string {
+  const url = new URL(window.location.href);
+  url.protocol = 'https:';
+  return url.toString();
+}
+
+/** One line while this page came over plain HTTP, with a link to it over HTTPS. */
 export function PlainHttpWarning() {
   const t = useT(overviewMessages);
   const overview = useOverview();
@@ -12,12 +18,12 @@ export function PlainHttpWarning() {
   return (
     <InlineAlert>
       {t('plainHttp')}{' '}
-      <Link
-        to="/settings/https"
+      <a
+        href={httpsHere()}
         className="font-medium text-kumo-link underline-offset-4 hover:underline"
       >
-        {t('turnOnHttps')}
-      </Link>
+        {t('openHttps')}
+      </a>
     </InlineAlert>
   );
 }

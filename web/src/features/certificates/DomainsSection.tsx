@@ -9,7 +9,7 @@ import { TypeToConfirm } from '../../components/dialogs/TypeToConfirm';
 import { useLocale, useT } from '../../i18n/locale';
 import { certificateKeys } from '../../lib/api/certificates';
 import { deleteDomain, domainKeys, type Domain } from '../../lib/api/domains';
-import { getHttps, httpsKeys } from '../../lib/api/https';
+import { getKarvanDomain, karvanKeys } from '../../lib/api/karvan';
 import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
 import { matchesTerm, sortRows, type ListSort } from '../../lib/lists/choices';
 import { useLingering } from '../../lib/motion/use-lingering';
@@ -19,7 +19,6 @@ import { DomainMenu } from './DomainMenu';
 import { DomainRowCard, useDomainColumns } from './DomainRows';
 import { ListFrame } from './ListFrame';
 import { certificatesMessages } from './messages';
-import { panelUseOf } from '../https/panel-use';
 
 const states = ['all', 'active', 'plain', 'attention', 'broken'] as const;
 type StateFilter = (typeof states)[number];
@@ -30,7 +29,7 @@ export function DomainsSection({
   actions,
 }: {
   domains: readonly Domain[];
-  /** After the search, as on the Migrations page: Let's Encrypt settings and add. */
+  /** After the search, as on the Migrations page: the domain settings and add. */
   actions: ReactNode;
 }) {
   const t = useT(certificatesMessages);
@@ -59,16 +58,13 @@ export function DomainsSection({
     remove.reset();
     setAsking(d);
   };
-  // Without the HTTPS settings (an address the server cannot change) the menu leaves the panel out.
-  const https = useQuery({ queryKey: httpsKeys.all, queryFn: getHttps });
+  // Without the Karvan domain (a server that cannot change it) the menu leaves Karvan out.
+  const karvan = useQuery({ queryKey: karvanKeys.all, queryFn: getKarvanDomain });
+  const karvanId = karvan.data?.domainId ?? 0;
   const menu = (d: Domain) => (
-    <DomainMenu
-      domain={d}
-      onDelete={() => ask(d)}
-      panel={https.data ? panelUseOf(d, https.data) : undefined}
-    />
+    <DomainMenu domain={d} onDelete={() => ask(d)} karvan={karvan.data} />
   );
-  const columns = useDomainColumns(now, menu);
+  const columns = useDomainColumns(now, menu, karvanId);
   const stateOf = (d: Domain): DomainState => domainStateOf(d, now).state;
   const is = (d: Domain, f: StateFilter) => f === 'all' || stateOf(d) === f;
   const terms = (d: Domain) => [d.name, d.certificate?.name, ...d.rules.map((r) => r.name)];
@@ -114,7 +110,9 @@ export function DomainsSection({
           rows={shown}
           rowKey={(d) => d.id}
           columns={columns}
-          card={(d) => <DomainRowCard domain={d} now={now} menu={menu(d)} />}
+          card={(d) => (
+            <DomainRowCard domain={d} now={now} menu={menu(d)} karvan={d.id === karvanId} />
+          )}
         />
       </ListFrame>
       <TypeToConfirm

@@ -59,7 +59,8 @@ type Deps struct {
 
 	// Address serves the panel; with it the address can be changed.
 	Address *address.Server
-	// PanelTLS gives the panel its certificate in HTTPS mode.
+	// PanelTLS gives the panel its certificate for each handshake and
+	// holds the domain enabled for Karvan; set with Address.
 	PanelTLS *paneltls.Manager
 }
 
@@ -111,7 +112,8 @@ func New(d Deps) (http.Handler, error) {
 }
 
 // accountRoutes are the operator's login, sessions, audit log and, when the
-// server can change it, the panel's address.
+// server can change them, the panel's address and the domain enabled for
+// it.
 func accountRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.HandlerFunc) http.Handler, address bool) {
 	routes := map[string]http.HandlerFunc{
 		"POST /api/v1/account/totp":            api.BeginTOTP,
@@ -129,8 +131,8 @@ func accountRoutes(rt *middleware.Router, api *handlers.API, signedIn func(http.
 		routes["GET /api/v1/settings/address"] = api.GetAddress
 		routes["POST /api/v1/settings/address"] = api.StartAddress
 		routes["POST /api/v1/settings/address/confirm"] = api.ConfirmAddress
-		routes["GET /api/v1/settings/https"] = api.GetHTTPS
-		routes["PUT /api/v1/settings/https"] = api.PutHTTPS
+		routes["GET /api/v1/settings/karvan-domain"] = api.KarvanDomain
+		routes["PUT /api/v1/settings/karvan-domain"] = api.PutKarvanDomain
 	}
 	for pattern, h := range routes {
 		rt.Handle(pattern, signedIn(h))

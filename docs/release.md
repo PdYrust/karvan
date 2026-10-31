@@ -40,6 +40,19 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - a native Persian speaker has read every Persian string.
 
+## Release notes 0.5.8-beta
+Karvan 0.5.8-beta picks the panel's certificate by the name the browser asks for, so the server's IP always opens.
+- Settings no longer has an HTTPS tab. A domain's "..." menu on the Domains list has Use for Karvan, or Stop using for Karvan while Karvan uses that domain, and the list marks it with Karvan. One domain is used at a time; using another switches to it. The change applies at once, without a restart or a confirm, and is audited.
+- The panel's port always answers HTTPS. A browser that asks for the Karvan domain's name gets that domain's certificate, of any kind: Let's Encrypt, a file on the server, a pasted one, one found in a panel, or a self-signed one given to the domain. Renewals reach it without a restart. Every other name and the server's IP get Karvan's own certificate.
+- In 0.5.7, a domain used for the panel had its certificate served to every visitor, the server's IP included, so the address by IP showed a certificate for another name. Now the IP keeps Karvan's own certificate.
+- Domain settings, the former Let's Encrypt settings, say next to Keep port 80 open what the Karvan domain does while it has no certificate: Karvan's own certificate (the default) or plain HTTP for that name only. HTTPS on the same port keeps working either way.
+- The panel no longer sends HSTS, so a domain name that falls back to Karvan's own certificate, and other services on the same name over plain HTTP, still open in the browser.
+- Plain HTTP on the panel's port is sent on to HTTPS on the same port, except for the Karvan domain with plain HTTP chosen, and for requests from the server itself or a trusted proxy, where TLS ends in front of the panel.
+- An update keeps what was set: a panel on a domain's certificate has that domain used for Karvan, one on Karvan's own certificate uses none, and one on plain HTTP answers HTTPS on the same port, where its old address is sent on.
+- The domain used for Karvan can be deleted once Karvan stops using it.
+- Install: `--https domain` adds the domain, gets its Let's Encrypt certificate and uses it for Karvan, also when the certificate comes later. `--https none` is gone.
+- The overview's plain HTTP warning links to the same address over HTTPS.
+
 ## Release notes 0.5.7-beta
 Karvan 0.5.7-beta can serve its own panel with a domain's certificate and copy certificates to a panel.
 - The "..." menu of a domain has Use for the Karvan panel, or Stop using for the Karvan panel while the panel uses that domain. It starts the same HTTPS change as the settings: the new address waits 10 minutes for a confirm from there. Karvan only reads the certificate, so other services that use it keep working, and renewals reach the panel as before. A domain without a certificate for its name cannot be picked, and the menu says why.

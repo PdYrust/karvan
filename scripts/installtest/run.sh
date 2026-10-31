@@ -312,14 +312,14 @@ sys '! [ -e /var/lib/karvan-backups ]' || fail "purge kept the backups"
 echo "ok   purge asked for the words, then removed Karvan, its data, config and backups"
 
 purge() { sys "echo delete karvan data | karvan uninstall --purge" >/dev/null 2>&1 || fail "purge"; }
-step "plain HTTP, with the address from the route when the address service fails"
-IP_URL=http://127.0.0.1:1/ip one_liner /root/plain.out "--version $VERSION --https none --yes"
+step "the address from the route when the address service fails"
+IP_URL=http://127.0.0.1:1/ip one_liner /root/route.out "--version $VERSION --https ip --yes"
 src=$(sys "ip route get 1.1.1.1 | sed -n 's/.* src \([0-9.]*\).*/\1/p'")
-sys "grep -q '^  Address  *http://$src:[0-9]*/' /root/plain.out && grep -q 'Plain HTTP: the password' /root/plain.out && ! grep -q Fingerprint /root/plain.out" ||
-	{ sys "grep -v 'Password ' /root/plain.out" >&2; fail "the plain HTTP install"; }
-signed_in /root/plain.out
+sys "grep -q '^  Address  *https://$src:[0-9]*/' /root/route.out && grep -q '^  Fingerprint ' /root/route.out" ||
+	{ sys "grep -v 'Password ' /root/route.out" >&2; fail "the address from the route"; }
+signed_in /root/route.out
 purge
-echo "ok   plain HTTP on $src, warned, sign-in answers"
+echo "ok   HTTPS on $src with the fingerprint, sign-in answers"
 step "a domain that does not point here falls back to Karvan's own certificate"
 one_liner /root/domain.out "--version $VERSION --https domain --domain panel.invalid --yes"
 sys "grep -q 'panel.invalid does not point at this server' /root/domain.out && grep -q '^  Address  *https://203.0.113.9:' /root/domain.out && grep -q '^  Fingerprint ' /root/domain.out" ||
@@ -338,7 +338,8 @@ expect_bad() {
 }
 expect_bad "--https domain --yes" "needs a domain name"
 expect_bad "--https ip --domain a.example --yes" "go with --https domain"
-expect_bad "--https tls --yes" "must be none, ip or domain"
+expect_bad "--https none --yes" "not an install choice"
+expect_bad "--https tls --yes" "must be ip or domain"
 nothing_installed "bad HTTPS flags"
 echo "ok   the domain check fell back with its reason; bad flags stop before any change"
 step "colour only on a terminal without NO_COLOR"

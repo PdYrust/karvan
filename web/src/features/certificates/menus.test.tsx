@@ -103,39 +103,6 @@ async function open(label: string): Promise<string[]> {
   return [...document.querySelectorAll('[role="menuitem"]')].map((m) => m.textContent ?? '');
 }
 
-describe('the domain menu', () => {
-  it('offers the Karvan panel, which opens the HTTPS change for the domain', async () => {
-    render(<DomainMenu domain={domain} onDelete={vi.fn()} panel={{ kind: 'use' }} />);
-    const items = await open('More for panel.example.com');
-    expect(items).toEqual(['Change certificate', 'Use for the Karvan panel', 'Delete']);
-    act(() =>
-      [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')]
-        .find((m) => m.textContent === 'Use for the Karvan panel')
-        ?.click(),
-    );
-    expect(at).toBe('/settings/https?domain=3&panel=use');
-  });
-
-  it('says Stop while the panel uses the domain, and why Use cannot be picked', async () => {
-    render(<DomainMenu domain={domain} onDelete={vi.fn()} panel={{ kind: 'stop' }} />);
-    expect(await open('More for panel.example.com')).toContain('Stop using for the Karvan panel');
-    act(() => root.render(<span />));
-    render(
-      <DomainMenu
-        domain={{ ...domain, certificate: null }}
-        onDelete={vi.fn()}
-        panel={{ kind: 'use', blocked: 'no_certificate' }}
-      />,
-    );
-    const items = await open('More for panel.example.com');
-    expect(items).toContain('Use for the Karvan panelGive it a certificate first.');
-    const use = [...document.querySelectorAll('[role="menuitem"]')].find((m) =>
-      m.textContent?.startsWith('Use for'),
-    );
-    expect(use?.getAttribute('aria-disabled')).toBe('true');
-  });
-});
-
 describe('the certificate menu', () => {
   it('has Copy to a panel and Delete, and no Edit', async () => {
     render(<CertMenu cert={cert} onDelete={vi.fn()} />);
@@ -157,5 +124,80 @@ describe('the certificate menu', () => {
     expect(items).toEqual(
       expect.arrayContaining(["Let's Encrypt live folder", 'marzban', 'pasarguard']),
     );
+  });
+});
+
+/** The menu item with these words. */
+const item = (words: string) =>
+  [...document.querySelectorAll<HTMLElement>('[role="menuitem"]')].find(
+    (m) => m.textContent === words,
+  );
+
+/** Answers PUT settings/karvan-domain with the domain it was sent, and records the bodies. */
+function serveKarvan(): unknown[] {
+  const sent: unknown[] = [];
+  vi.stubGlobal(
+    'fetch',
+    vi.fn((_url: string, init: RequestInit) => {
+      const body = JSON.parse(String(init.body)) as { domainId: number };
+      sent.push(body);
+      const out = { domainId: body.domainId, plain: false, shared: false };
+      return Promise.resolve(
+        new Response(JSON.stringify(out), { headers: { 'Content-Type': 'application/json' } }),
+      );
+    }),
+  );
+  return sent;
+}
+
+const none = { domainId: 0, plain: false, shared: false };
+
+describe('the domain menu', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('offers Use for Karvan, which enables the domain at once', async () => {
+    const sent = serveKarvan();
+    render(<DomainMenu domain={domain} onDelete={vi.fn()} karvan={none} />);
+    const items = await open('More for panel.example.com');
+    expect(items).toEqual(['Change certificate', 'Use for Karvan', 'Delete']);
+    await act(async () => {
+      item('Use for Karvan')?.click();
+      await vi.waitFor(() => expect(sent).toEqual([{ domainId: 3 }]));
+    });
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain('Karvan uses panel.example.com now'),
+    );
+    expect(at).toBe('/');
+  });
+
+  it('says Stop while Karvan uses the domain, which stops it, and keeps Delete off', async () => {
+    const sent = serveKarvan();
+    render(<DomainMenu domain={domain} onDelete={vi.fn()} karvan={{ ...none, domainId: 3 }} />);
+    const items = await open('More for panel.example.com');
+    expect(items).toEqual(['Change certificate', 'Stop using for Karvan', 'Delete']);
+    expect(item('Delete')?.getAttribute('aria-disabled')).toBe('true');
+    await act(async () => {
+      item('Stop using for Karvan')?.click();
+      await vi.waitFor(() => expect(sent).toEqual([{ domainId: 0 }]));
+    });
+    await vi.waitFor(() =>
+      expect(document.body.textContent).toContain('Karvan stopped using panel.example.com'),
+    );
+  });
+
+  it('can enable a domain without a certificate, and leaves Karvan out for an IP or when unknown', async () => {
+    render(
+      <DomainMenu domain={{ ...domain, certificate: null }} onDelete={vi.fn()} karvan={none} />,
+    );
+    expect(await open('More for panel.example.com')).toContain('Use for Karvan');
+    expect(item('Use for Karvan')?.getAttribute('aria-disabled')).toBeNull();
+    act(() => root.render(<span />));
+    render(
+      <DomainMenu domain={{ ...domain, name: '203.0.113.9' }} onDelete={vi.fn()} karvan={none} />,
+    );
+    expect(await open('More for 203.0.113.9')).toEqual(['Change certificate', 'Delete']);
+    act(() => root.render(<span />));
+    render(<DomainMenu domain={domain} onDelete={vi.fn()} />);
+    expect(await open('More for panel.example.com')).toEqual(['Change certificate', 'Delete']);
   });
 });

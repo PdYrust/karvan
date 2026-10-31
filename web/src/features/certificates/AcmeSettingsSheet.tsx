@@ -14,12 +14,28 @@ import {
   type AcmeSettings,
   type AcmeSettingsView,
 } from '../../lib/api/acme';
+import {
+  getKarvanDomain,
+  karvanKeys,
+  putKarvanDomain,
+  type KarvanDomain,
+} from '../../lib/api/karvan';
 import { errorOf } from '../../lib/errors/errors';
 import { useAcmeErrorText } from '../../lib/errors/acme';
 import { TextField } from '../rules/TextField';
 import { domainFormMessages } from './domain-messages';
+import { KarvanPlainChoice } from './KarvanPlainChoice';
 
-function SettingsForm({ view, onDone }: { view: AcmeSettingsView; onDone: () => void }) {
+function SettingsForm({
+  view,
+  karvan,
+  onDone,
+}: {
+  view: AcmeSettingsView;
+  /** Left out when the server cannot change the Karvan domain. */
+  karvan: KarvanDomain | undefined;
+  onDone: () => void;
+}) {
   const t = useT(domainFormMessages);
   const errorText = useAcmeErrorText();
   const toasts = useKumoToastManager();
@@ -29,8 +45,15 @@ function SettingsForm({ view, onDone }: { view: AcmeSettingsView; onDone: () => 
     email: view.email,
     keepPort80: view.keepPort80,
   });
+  const [plain, setPlain] = useState(karvan?.plain ?? false);
   const save = useMutation({
-    mutationFn: putAcmeSettings,
+    // The Karvan choice applies at once, so it goes first; the Let's Encrypt settings may be refused.
+    mutationFn: async (acme: AcmeSettings) => {
+      if (karvan && plain !== karvan.plain) {
+        qc.setQueryData(karvanKeys.all, await putKarvanDomain({ plain }));
+      }
+      return putAcmeSettings(acme);
+    },
     onSuccess: (next) => {
       qc.setQueryData(acmeKeys.settings, next);
       toasts.add({ title: t('settingsSaved') });
@@ -75,6 +98,9 @@ function SettingsForm({ view, onDone }: { view: AcmeSettingsView; onDone: () => 
         checked={v.keepPort80}
         onChange={(keepPort80) => setV({ ...v, keepPort80 })}
       />
+      {karvan ? (
+        <KarvanPlainChoice plain={plain} disabled={save.isPending} onChange={setPlain} />
+      ) : null}
       {save.isError && !emailRefused ? (
         <InlineAlert>{`${t('settingsFailed')} ${errorText(save.error)}`}</InlineAlert>
       ) : null}
@@ -95,7 +121,7 @@ function SettingsForm({ view, onDone }: { view: AcmeSettingsView; onDone: () => 
   );
 }
 
-/** The Let's Encrypt settings in a sheet on Domains and certificates. */
+/** The settings of Domains and certificates in a sheet: Let's Encrypt, and the Karvan domain. */
 export function AcmeSettingsSheet({
   open,
   onOpenChange,
@@ -106,10 +132,12 @@ export function AcmeSettingsSheet({
   const t = useT(domainFormMessages);
   const errorText = useAcmeErrorText();
   const view = useQuery({ queryKey: acmeKeys.settings, queryFn: getAcmeSettings, enabled: open });
+  // A server that cannot change the Karvan domain answers 404: the sheet leaves its choice out.
+  const karvan = useQuery({ queryKey: karvanKeys.all, queryFn: getKarvanDomain, enabled: open });
   let body;
   if (view.isError) {
     body = <InlineAlert>{`${t('settingsFailed')} ${errorText(view.error)}`}</InlineAlert>;
-  } else if (!view.data) {
+  } else if (!view.data || karvan.isPending) {
     body = (
       <div role="status" aria-label={t('settingsTitle')} className="flex flex-col gap-4">
         <Bone className="h-12 w-full" />
@@ -122,6 +150,7 @@ export function AcmeSettingsSheet({
       <SettingsForm
         key={open ? 'open' : 'closed'}
         view={view.data}
+        karvan={karvan.data}
         onDone={() => onOpenChange(false)}
       />
     );

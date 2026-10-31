@@ -89,8 +89,8 @@ const en = {
   orderCancelled: 'Order cancelled',
   backToDomains: 'Back to Domains',
   orderLoadFailed: "Couldn't read the order.",
-  settingsTitle: "Let's Encrypt settings",
-  settingsDescription: 'They apply to new orders and renewals.',
+  settingsTitle: 'Domain settings',
+  settingsDescription: "Let's Encrypt settings apply to new orders and renewals.",
   staging: "Use the Let's Encrypt test server",
   stagingHint: 'For trying things out. Browsers do not trust its certificates.',
   testCa: 'This server uses the test CA set in its config.',
@@ -98,7 +98,7 @@ const en = {
   emailHint: "Optional. Let's Encrypt writes here about your certificates.",
   keepPort: 'Keep port 80 open for renewals',
   keepPortHint: 'Off: Karvan opens it only while an order or a renewal needs it.',
-  settingsSaved: "Let's Encrypt settings saved",
+  settingsSaved: 'Settings saved',
   settingsFailed: "Couldn't save the settings.",
 };
 
@@ -194,8 +194,8 @@ const fa: Messages<DomainFormKey>['fa'] = {
   orderCancelled: 'سفارش لغو شد',
   backToDomains: 'بازگشت به دامنه ها',
   orderLoadFailed: 'سفارش خوانده نشد.',
-  settingsTitle: "تنظیمات Let's Encrypt",
-  settingsDescription: 'برای سفارش ها و تمدیدهای بعدی اعمال میشوند.',
+  settingsTitle: 'تنظیمات دامنه ها',
+  settingsDescription: "تنظیمات Let's Encrypt برای سفارش ها و تمدیدهای بعدی اعمال میشوند.",
   staging: "استفاده از سرور آزمایشی Let's Encrypt",
   stagingHint: 'برای امتحان کردن. مرورگرها گواهی های آن را قبول ندارند.',
   testCa: 'این سرور از CA آزمایشی تنظیم شده در کانفیگ خود استفاده میکند.',
@@ -203,7 +203,7 @@ const fa: Messages<DomainFormKey>['fa'] = {
   emailHint: "اختیاری است. Let's Encrypt درباره گواهی هایتان به این ایمیل مینویسد.",
   keepPort: 'پورت 80 برای تمدید همیشه باز بماند',
   keepPortHint: 'خاموش: کاروان فقط وقتی سفارش یا تمدیدی لازم دارد آن را باز میکند.',
-  settingsSaved: "تنظیمات Let's Encrypt ذخیره شد",
+  settingsSaved: 'تنظیمات ذخیره شد',
   settingsFailed: 'تنظیمات ذخیره نشد.',
 };
 

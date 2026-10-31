@@ -4,7 +4,7 @@ const en = {
   title: 'Domains and certificates',
   description: 'The domains rules answer, each with the certificate it uses for HTTPS.',
   addDomain: 'Add domain',
-  acmeSettings: "Let's Encrypt settings",
+  acmeSettings: 'Domain settings',
   loadFailed: "Couldn't load the domains and certificates.",
   emptyTitle: 'No domains yet',
   emptyBody: 'Add a domain with its certificate. Rules answer only the domains added here.',
@@ -94,7 +94,7 @@ const fa: Messages<CertificatesKey>['fa'] = {
   description:
     'دامنه هایی که قانون ها پاسخ میدهند، هر کدام با گواهی ای که برای HTTPS به کار میبرد.',
   addDomain: 'افزودن دامنه',
-  acmeSettings: "تنظیمات Let's Encrypt",
+  acmeSettings: 'تنظیمات دامنه ها',
   loadFailed: 'دامنه ها و گواهی ها بارگذاری نشدند.',
   emptyTitle: 'هنوز دامنه ای نیست',
   emptyBody: 'یک دامنه را با گواهی اش اضافه کنید. قانون ها فقط به دامنه های اینجا پاسخ میدهند.',

@@ -24,8 +24,8 @@ type Credentials struct {
 	BasePath string
 	Port     int
 	// HTTPS and Fingerprint say how the panel is served: the SHA-256 of
-	// the self-signed certificate, in self mode, to compare with what the
-	// browser shows.
+	// the self-signed certificate, when the address uses it, to compare
+	// with what the browser shows.
 	HTTPS       bool
 	Fingerprint string
 	// Host is the server's address or domain for the panel's address;
@@ -35,12 +35,20 @@ type Credentials struct {
 	Notice string
 }
 
+// How init sets up the panel: HTTPS with Karvan's own certificate, or
+// with a domain enabled for Karvan as well.
+const (
+	InitSelf   = "self"
+	InitDomain = "domain"
+)
+
 // InitOptions choose how a new installation serves its panel.
 type InitOptions struct {
 	Port int    // 0 picks a random one
-	TLS  string // settings.TLSOff, TLSSelf or TLSDomain; "" means TLSSelf
-	// Domain and Email are the domain to get a Let's Encrypt certificate
-	// for, in domain mode, and the optional contact for its account.
+	TLS  string // InitSelf or InitDomain; "" means InitSelf
+	// Domain and Email are the domain to enable for Karvan and get a
+	// Let's Encrypt certificate for, and the optional contact for its
+	// account.
 	Domain, Email string
 	// Host is shown in the address when the panel is not on a domain.
 	Host string
@@ -49,16 +57,16 @@ type InitOptions struct {
 // Validate checks the options before anything is created.
 func (o InitOptions) Validate() error {
 	switch o.TLS {
-	case "", settings.TLSOff, settings.TLSSelf:
+	case "", InitSelf:
 		if o.Domain != "" || o.Email != "" {
 			return errors.New("a domain and an email go with domain mode only")
 		}
-	case settings.TLSDomain:
+	case InitDomain:
 		if o.Domain == "" {
 			return errors.New("domain mode needs a domain")
 		}
 	default:
-		return fmt.Errorf("tls mode %q must be off, self or domain", o.TLS)
+		return fmt.Errorf("tls mode %q must be self or domain", o.TLS)
 	}
 	if o.Port < 0 || o.Port > 65535 {
 		return errors.New("the port must be 1 to 65535")
@@ -80,8 +88,8 @@ func InitializeOnPort(ctx context.Context, cfg config.Config, port int, logger *
 }
 
 // InitializeWith is Initialize with the options of the installer. When
-// domain mode cannot get its certificate, the panel stays on its own
-// self-signed one and Notice says why.
+// the domain cannot get its certificate, the panel uses its own
+// self-signed one until it does, and Notice says why.
 func InitializeWith(ctx context.Context, cfg config.Config, o InitOptions, logger *slog.Logger) (creds Credentials, err error) {
 	if err := o.Validate(); err != nil {
 		return Credentials{}, err
@@ -139,43 +147,49 @@ func InitializeWith(ctx context.Context, cfg config.Config, o InitOptions, logge
 	return creds, nil
 }
 
-// initHTTP stores the panel's address and how it is served. A new
-// installation starts on HTTPS with its own certificate, unless the
-// operator chose otherwise.
+// initHTTP stores the panel's address. A new installation answers HTTPS
+// with its own certificate, and with the domain's for the domain's name
+// when the operator gave one.
 func (a *App) initHTTP(ctx context.Context, o InitOptions, creds *Credentials) error {
-	h := settings.HTTP{Port: creds.Port, BasePath: creds.BasePath, TLS: settings.TLS{Mode: settings.TLSSelf}}
-	if o.TLS == settings.TLSOff {
-		h.TLS = settings.TLS{}
-	}
+	h := settings.HTTP{Port: creds.Port, BasePath: creds.BasePath}
 	if err := a.Settings.SetHTTP(ctx, h); err != nil {
 		return err
 	}
-	if o.TLS == settings.TLSDomain {
-		if err := a.initDomain(ctx, o, &h, creds); err != nil {
+	own := true
+	if o.TLS == InitDomain {
+		var err error
+		if own, err = a.initDomain(ctx, o, &h, creds); err != nil {
 			return err
 		}
 	}
-	return a.describeTLS(ctx, h.TLS, creds)
+	return a.describeTLS(ctx, own, creds)
 }
 
-// initDomain serves the panel on domain o.Domain once its certificate is
-// issued; otherwise h stays in self mode and creds.Notice says why.
-func (a *App) initDomain(ctx context.Context, o InitOptions, h *settings.HTTP, creds *Credentials) error {
+// initDomain enables domain o.Domain for Karvan, also when its order did
+// not finish: the domain's name gets its certificate as soon as it is
+// issued. The address names the domain once it has one; otherwise own is
+// true, the address keeps the server's and creds.Notice says why.
+func (a *App) initDomain(ctx context.Context, o InitOptions, h *settings.HTTP, creds *Credentials) (own bool, err error) {
 	id, err := a.panelDomain(ctx, o.Domain, o.Email, h.Port)
-	if err != nil {
-		if ctx.Err() != nil {
-			return ctx.Err()
+	if ctx.Err() != nil {
+		return true, ctx.Err()
+	}
+	if id > 0 {
+		h.TLS = settings.TLS{DomainID: id}
+		if serr := a.Settings.SetHTTP(ctx, *h); serr != nil {
+			return true, serr
 		}
+	}
+	if err != nil {
 		port := a.Config.ACMEHTTPPort
 		if port == 0 {
 			port = 80
 		}
 		creds.Notice = domainNotice(o.Domain, port, err)
-		return nil
+		return true, nil
 	}
-	h.TLS = settings.TLS{Mode: settings.TLSDomain, DomainID: id}
 	creds.Host = o.Domain
-	return a.Settings.SetHTTP(ctx, *h)
+	return false, nil
 }
 
 // removeInstallation deletes the files a failed Initialize created. Only
@@ -272,7 +286,7 @@ func (a *App) resetHTTP(ctx context.Context, o ResetOptions, gen Credentials, ou
 	if err != nil {
 		return err
 	}
-	if err := a.describeTLS(ctx, h.TLS, out); err != nil {
+	if err := a.describeTLS(ctx, h.TLS.DomainID == 0, out); err != nil {
 		return err
 	}
 	if !o.Path && o.Port == 0 {
@@ -293,11 +307,12 @@ func (a *App) resetHTTP(ctx context.Context, o ResetOptions, gen Credentials, ou
 	return a.Settings.SetHTTP(ctx, h)
 }
 
-// describeTLS fills in how the panel is served, making the self-signed
-// certificate when it does not exist yet.
-func (a *App) describeTLS(ctx context.Context, t settings.TLS, c *Credentials) error {
-	c.HTTPS = t.On()
-	if t.Mode != settings.TLSSelf {
+// describeTLS fills in how the panel is served: always HTTPS, and with
+// own, the fingerprint of the self-signed certificate, made when it does
+// not exist yet.
+func (a *App) describeTLS(ctx context.Context, own bool, c *Credentials) error {
+	c.HTTPS = true
+	if !own {
 		return nil
 	}
 	fp, err := a.panelTLS().Fingerprint(ctx)

@@ -1,3 +1,4 @@
+import { Badge } from '@cloudflare/kumo/components/badge';
 import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { Column } from '../../components/data/DataTable';
@@ -7,6 +8,7 @@ import { useT } from '../../i18n/locale';
 import type { Domain } from '../../lib/api/domains';
 import { useFormat } from '../../lib/preferences/region';
 import { daysLeft, domainStateOf, listLines, renewalOf } from './cert-view';
+import { karvanMessages } from './karvan-messages';
 import { certificatesMessages } from './messages';
 import { linkClass, Mono, RuleName, useAcmeErrorWords } from './parts';
 import { StateMenu } from './StateMenu';
@@ -83,22 +85,35 @@ export function Names({ links }: { links: readonly { key: string; node: ReactNod
 const rules = (d: Domain) =>
   d.rules.map((r) => ({ key: `${r.kind}:${String(r.id)}`, node: <RuleName rule={r} /> }));
 
-/** The domain's name as the row's link, to its page. */
-function DomainLink({ domain }: { domain: Domain }) {
+/** The domain's name as the row's link, to its page, marked when Karvan uses it. */
+function DomainLink({ domain, karvan }: { domain: Domain; karvan: boolean }) {
+  const t = useT(karvanMessages);
   return (
-    <Link to={domainPage(domain)} className={linkClass}>
-      <Mono text={domain.name} />
-    </Link>
+    <span className="flex min-w-0 items-center gap-2">
+      <Link to={domainPage(domain)} className={`${linkClass} min-w-0`}>
+        <Mono text={domain.name} />
+      </Link>
+      {karvan ? (
+        <Badge variant="info" className="shrink-0 text-kumo-default">
+          {t('karvanBadge')}
+        </Badge>
+      ) : null}
+    </span>
   );
 }
 
-export function useDomainColumns(now: Date, menu: (d: Domain) => ReactNode): Column<Domain>[] {
+/** The table's columns; karvanId is the domain Karvan uses, 0 for none. */
+export function useDomainColumns(
+  now: Date,
+  menu: (d: Domain) => ReactNode,
+  karvanId: number,
+): Column<Domain>[] {
   const t = useT(certificatesMessages);
   return [
     {
       key: 'domain',
       header: t('colDomain'),
-      cell: (d) => <DomainLink domain={d} />,
+      cell: (d) => <DomainLink domain={d} karvan={d.id === karvanId} />,
       className: 'max-w-64',
     },
     { key: 'state', header: t('colState'), cell: (d) => <DomainState domain={d} now={now} /> },
@@ -129,15 +144,18 @@ export function DomainRowCard({
   domain,
   now,
   menu,
+  karvan,
 }: {
   domain: Domain;
   now: Date;
   menu: ReactNode;
+  /** Karvan uses this domain. */
+  karvan: boolean;
 }) {
   const t = useT(certificatesMessages);
   return (
     <RowCard
-      lead={<DomainLink domain={domain} />}
+      lead={<DomainLink domain={domain} karvan={karvan} />}
       badge={<DomainState domain={domain} now={now} badge />}
       menu={menu}
     >

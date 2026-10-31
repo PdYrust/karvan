@@ -2,7 +2,7 @@
 # Installs, updates or removes Karvan. Run it from the repository the way
 # the README shows:
 #   sudo bash -c "$(curl -fsSL <raw get.sh address>)" @ install [--version V]
-#        [--https none|ip|domain] [--domain NAME] [--email ADDR] [--port N] [--yes]
+#        [--https ip|domain] [--domain NAME] [--email ADDR] [--port N] [--yes]
 #   ... @ update [--version V] | @ uninstall [--purge]
 # A bare run means install. With no version it takes the newest release,
 # pre-releases included. The download is checked against SHA256SUMS and on

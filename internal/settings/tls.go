@@ -9,73 +9,46 @@ import (
 )
 
 const (
-	keyTLSMode   = "http.tls"
 	keyTLSDomain = "http.tls_domain"
+	keyTLSPlain  = "http.tls_plain"
 	keyTLSShared = "http.tls_shared"
 	keySelfCert  = "http.tls_self_cert"
 	keySelfKey   = "http.tls_self_key"
 )
 
-// How the web panel is served.
-const (
-	TLSOff    = "off"    // plain HTTP
-	TLSSelf   = "self"   // HTTPS with Karvan's own self-signed certificate
-	TLSDomain = "domain" // HTTPS with a registered domain's certificate
-)
-
-// TLS is how the web panel is served. The zero value is plain HTTP, which
-// is what an installation made before HTTPS existed reads back.
+// TLS is how the web panel answers on its port (ADR 0010). Every TLS
+// handshake gets Karvan's own self-signed certificate, except one for the
+// name of the domain enabled for Karvan while that domain has a
+// certificate: it gets the domain's. The zero value is no domain.
 type TLS struct {
-	Mode     string // TLSOff, TLSSelf or TLSDomain; "" means off
-	DomainID int64  // the domain whose certificate is served, in domain mode
-	Shared   bool   // served on a bridge HTTPS port of that domain
+	DomainID int64 // the domain enabled for Karvan; 0 for none
+	// Plain answers a plain HTTP request for the enabled domain's name as
+	// is, while the domain has no certificate, instead of sending it on to
+	// HTTPS.
+	Plain  bool
+	Shared bool // served on a bridge HTTPS port of that domain (ADR 0011)
 }
 
-// On reports whether the panel is served over HTTPS.
-func (t TLS) On() bool { return t.Mode == TLSSelf || t.Mode == TLSDomain }
-
-// Normal is t with the fields its mode does not use cleared, and plain
-// HTTP as the zero value, so equal settings compare equal.
-func (t TLS) Normal() TLS {
-	switch t.Mode {
-	case TLSDomain:
-		return t
-	case TLSSelf:
-		return TLS{Mode: TLSSelf}
-	}
-	return TLS{}
-}
-
-// Validate checks the mode and that a domain goes with domain mode.
+// Validate checks that a shared port goes with a domain.
 func (t TLS) Validate() error {
-	switch t.Mode {
-	case "", TLSOff, TLSSelf:
-		if t.Shared {
-			return errors.New("a shared port needs domain mode")
-		}
-	case TLSDomain:
-		if t.DomainID < 1 {
-			return errors.New("domain mode needs a domain")
-		}
-	default:
-		return fmt.Errorf("tls mode %q must be off, self or domain", t.Mode)
+	switch {
+	case t.DomainID < 0:
+		return fmt.Errorf("tls domain %d is not a domain", t.DomainID)
+	case t.Shared && t.DomainID == 0:
+		return errors.New("a shared port needs a domain")
 	}
 	return nil
 }
 
-// tlsRows are the stored values of t.
+// rows are the stored values of t.
 func (t TLS) rows() map[string]string {
-	t = t.Normal()
-	if t.Mode == "" {
-		t.Mode = TLSOff
-	}
-	return map[string]string{keyTLSMode: t.Mode, keyTLSDomain: strconv.FormatInt(t.DomainID, 10),
+	return map[string]string{keyTLSDomain: strconv.FormatInt(t.DomainID, 10), keyTLSPlain: strconv.FormatBool(t.Plain),
 		keyTLSShared: strconv.FormatBool(t.Shared)}
 }
 
-// tlsOf reads TLS from the stored values; missing ones mean plain HTTP.
+// tlsOf reads TLS from the stored values; missing ones mean no domain.
 func tlsOf(vals map[string]string) (TLS, error) {
-	t := TLS{Mode: vals[keyTLSMode]}
+	var t TLS
 	if v := vals[keyTLSDomain]; v != "" {
 		id, err := strconv.ParseInt(v, 10, 64)
 		if err != nil {
@@ -83,11 +56,22 @@ func tlsOf(vals map[string]string) (TLS, error) {
 		}
 		t.DomainID = id
 	}
+	t.Plain = vals[keyTLSPlain] == "true"
 	t.Shared = vals[keyTLSShared] == "true"
 	if err := t.Validate(); err != nil {
 		return TLS{}, err
 	}
-	return t.Normal(), nil
+	return t, nil
+}
+
+// SetKarvan stores the domain enabled for Karvan (0 for none) and whether
+// it answers plain HTTP for its name while it has no certificate, in one
+// transaction. The address stays as it is.
+func (s *Store) SetKarvan(ctx context.Context, domainID int64, plain bool) error {
+	if domainID < 0 {
+		return fmt.Errorf("tls domain %d is not a domain", domainID)
+	}
+	return s.setAll(ctx, map[string]string{keyTLSDomain: strconv.FormatInt(domainID, 10), keyTLSPlain: strconv.FormatBool(plain)})
 }
 
 // SelfCert is the panel's self-signed certificate (PEM) and its private

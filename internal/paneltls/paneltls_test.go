@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"net"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -66,7 +67,7 @@ func wantSelfLeaf(t *testing.T, f *fixture, leaf *x509.Certificate) {
 func TestSelfSignedCertificate(t *testing.T) {
 	f := newFixture(t)
 	ctx := context.Background()
-	c, err := f.m.Certificate(ctx, settings.TLS{Mode: settings.TLSSelf})
+	c, err := f.m.Certificate(ctx, "")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,16 +77,13 @@ func TestSelfSignedCertificate(t *testing.T) {
 	if !ok || err != nil || strings.Contains(sc.SealedKey, "PRIVATE KEY") {
 		t.Fatalf("stored: %v, %v, key in the clear: %v", ok, err, strings.Contains(sc.SealedKey, "PRIVATE KEY"))
 	}
-	again, err := f.fresh().Certificate(ctx, settings.TLS{Mode: settings.TLSSelf})
+	again, err := f.fresh().Certificate(ctx, "203.0.113.7")
 	if err != nil || !bytes.Equal(again.Leaf.Raw, leaf.Raw) {
 		t.Fatalf("after a restart the certificate changed: %v", err)
 	}
 	fp, err := f.m.Fingerprint(ctx)
 	if err != nil || len(fp) != 95 || fp != Fingerprint(leaf.Raw) || strings.ToUpper(fp) != fp {
 		t.Fatalf("fingerprint %q, %v", fp, err)
-	}
-	if _, err := f.m.Certificate(ctx, settings.TLS{}); !errors.Is(err, ErrPlain) {
-		t.Fatalf("plain mode: %v", err)
 	}
 }
 
@@ -136,6 +134,7 @@ func TestDomainFallbackOrder(t *testing.T) {
 		t.Fatal(err)
 	}
 	domain := otherCert(t, f)
+	f.registry(map[int64]registered{4: {name: "panel.example.com", cert: domain}})
 	var fail error
 	f.m.Domain = func(_ context.Context, id int64) (*tls.Certificate, error) {
 		if id != 4 {
@@ -143,11 +142,11 @@ func TestDomainFallbackOrder(t *testing.T) {
 		}
 		return domain, fail
 	}
-	mode := settings.TLS{Mode: settings.TLSDomain, DomainID: 4}
+	f.m.Set(settings.TLS{DomainID: 4})
 	// Gone at start, nothing loaded yet: the self-signed one, logged once.
 	fail = errors.New("open /etc/letsencrypt/live/x/fullchain.pem: no such file")
 	for range 3 {
-		if c, err := f.m.Certificate(ctx, mode); err != nil || c != self {
+		if c, err := f.m.Certificate(ctx, "panel.example.com"); err != nil || c != self {
 			t.Fatalf("no certificate yet: %v, self %v", err, c == self)
 		}
 	}
@@ -156,12 +155,12 @@ func TestDomainFallbackOrder(t *testing.T) {
 	}
 	// Loads: the domain's.
 	fail = nil
-	if c, err := f.m.Certificate(ctx, mode); err != nil || c != domain {
+	if c, err := f.m.Certificate(ctx, "panel.example.com"); err != nil || c != domain {
 		t.Fatalf("domain certificate: %v", err)
 	}
 	// Gone again: the last good one.
 	fail = errors.New("tls: private key does not match public key")
-	if c, err := f.m.Certificate(ctx, mode); err != nil || c != domain {
+	if c, err := f.m.Certificate(ctx, "panel.example.com"); err != nil || c != domain {
 		t.Fatalf("last good certificate: %v", err)
 	}
 }
@@ -178,4 +177,146 @@ func otherCert(t *testing.T, f *fixture) *tls.Certificate {
 		t.Fatal(err)
 	}
 	return &c
+}
+
+// registered is a domain of the fake store: its name and its certificate,
+// nil for none.
+type registered struct {
+	name string
+	cert *tls.Certificate
+}
+
+// registry gives the manager a store with domains, by id, that answers
+// like the bridge: a name, or one label under a wildcard.
+func (f *fixture) registry(domains map[int64]registered) {
+	f.m.Answers = func(_ context.Context, id int64, host string) (bool, bool, error) {
+		d, ok := domains[id]
+		if !ok {
+			return false, false, errors.New("no such domain")
+		}
+		answers := d.name == host
+		if rest, ok := strings.CutPrefix(d.name, "*."); ok {
+			i := strings.IndexByte(host, '.')
+			answers = i > 0 && host[i+1:] == rest
+		}
+		return answers, d.cert != nil, nil
+	}
+	f.m.Domain = func(_ context.Context, id int64) (*tls.Certificate, error) {
+		if d := domains[id]; d.cert != nil {
+			return d.cert, nil
+		}
+		return nil, errors.New("no certificate")
+	}
+}
+
+// pick is which certificate a handshake for each name gets: "domain",
+// "self" or the error.
+func (f *fixture) pick(t *testing.T, domain *tls.Certificate, names ...string) []string {
+	t.Helper()
+	self, err := f.m.Self(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	out := make([]string, len(names))
+	for i, n := range names {
+		c, err := f.m.Certificate(context.Background(), n)
+		switch {
+		case err != nil:
+			out[i] = err.Error()
+		case c == domain:
+			out[i] = "domain"
+		case c == self:
+			out[i] = "self"
+		default:
+			out[i] = "other"
+		}
+	}
+	return out
+}
+
+// plain is which hosts are answered over plain HTTP.
+func (f *fixture) plain(hosts ...string) []string {
+	var out []string
+	for _, h := range hosts {
+		if f.m.Plain(context.Background(), h) {
+			out = append(out, h)
+		}
+	}
+	return out
+}
+
+// names are a handshake for the domain (in other cases too), for another
+// name, and for none: a browser sends none for an IP address.
+var names = []string{"panel.example.com", "PANEL.example.com.", "other.example.com", "", "203.0.113.7"}
+
+// The enabled domain with a certificate gets it for its name; every other
+// handshake gets the self-signed one, and nothing is plain HTTP.
+func TestEnabledDomainWithACertificate(t *testing.T) {
+	f := newFixture(t)
+	domain := otherCert(t, f)
+	f.registry(map[int64]registered{4: {name: "panel.example.com", cert: domain}})
+	for _, plain := range []bool{false, true} {
+		f.m.Set(settings.TLS{DomainID: 4, Plain: plain})
+		want := []string{"domain", "domain", "self", "self", "self"}
+		if got := f.pick(t, domain, names...); !slices.Equal(got, want) {
+			t.Fatalf("plain %v: picks %v, want %v", plain, got, want)
+		}
+		if got := f.plain(names...); len(got) != 0 {
+			t.Fatalf("plain %v: plain HTTP for %v", plain, got)
+		}
+	}
+}
+
+// A wildcard domain gets its certificate for one label under it.
+func TestEnabledWildcardDomain(t *testing.T) {
+	f := newFixture(t)
+	domain := otherCert(t, f)
+	f.registry(map[int64]registered{4: {name: "*.example.com", cert: domain}})
+	f.m.Set(settings.TLS{DomainID: 4})
+	want := []string{"domain", "domain", "self", "self"}
+	if got := f.pick(t, domain, "a.example.com", "b.example.com", "a.b.example.com", "example.com"); !slices.Equal(got, want) {
+		t.Fatalf("picks %v, want %v", got, want)
+	}
+}
+
+// The enabled domain without a certificate gets the self-signed one; with
+// plain HTTP chosen, a plain request for its name is answered as is.
+func TestEnabledDomainWithoutACertificate(t *testing.T) {
+	f := newFixture(t)
+	f.registry(map[int64]registered{4: {name: "panel.example.com"}})
+	all := []string{"self", "self", "self", "self", "self"}
+	f.m.Set(settings.TLS{DomainID: 4})
+	if got := f.pick(t, nil, names...); !slices.Equal(got, all) {
+		t.Fatalf("own certificate: picks %v", got)
+	}
+	if got := f.plain(names...); len(got) != 0 {
+		t.Fatalf("own certificate: plain HTTP for %v", got)
+	}
+	f.m.Set(settings.TLS{DomainID: 4, Plain: true})
+	if got := f.pick(t, nil, names...); !slices.Equal(got, all) {
+		t.Fatalf("plain HTTP: picks %v", got)
+	}
+	if got := f.plain(names...); !slices.Equal(got, []string{"panel.example.com", "PANEL.example.com."}) {
+		t.Fatalf("plain HTTP for %v", got)
+	}
+}
+
+// With no domain enabled, or one that is gone, every handshake gets the
+// self-signed certificate and nothing is plain HTTP.
+func TestNoDomainEnabled(t *testing.T) {
+	f := newFixture(t)
+	domain := otherCert(t, f)
+	f.registry(map[int64]registered{4: {name: "panel.example.com", cert: domain}})
+	for _, p := range []settings.TLS{{}, {Plain: true}, {DomainID: 9, Plain: true}} {
+		f.m.Set(p)
+		if got := f.pick(t, domain, names...); !slices.Equal(got, []string{"self", "self", "self", "self", "self"}) {
+			t.Fatalf("%+v: picks %v", p, got)
+		}
+		if got := f.plain(names...); len(got) != 0 {
+			t.Fatalf("%+v: plain HTTP for %v", p, got)
+		}
+	}
+	if f.m.Panel() != (settings.TLS{DomainID: 9, Plain: true}) {
+		t.Fatalf("Panel = %+v", f.m.Panel())
+	}
 }

@@ -4,6 +4,7 @@ import { FactList, type Fact } from '../../components/layout/FactList';
 import { useT } from '../../i18n/locale';
 import type { Certificate } from '../../lib/api/certificates';
 import type { Domain } from '../../lib/api/domains';
+import type { KarvanUse } from '../../lib/api/karvan';
 import { useFormat } from '../../lib/preferences/region';
 import { certOrigin } from './cert-view';
 import { domainPageMessages } from './domain-page-messages';
@@ -61,12 +62,12 @@ function RenewalBlock({ acme }: { acme: NonNullable<Domain['acme']> }) {
 export function DomainAside({
   domain,
   cert,
-  servesPanel,
+  karvan,
 }: {
   domain: Domain;
   cert: Certificate | undefined;
-  /** Undefined while the panel's HTTPS settings are not known. */
-  servesPanel: boolean | undefined;
+  /** How Karvan uses the domain; undefined while it is not known. */
+  karvan: KarvanUse | undefined;
 }) {
   const t = useT(domainPageMessages);
   return (
@@ -75,13 +76,15 @@ export function DomainAside({
       {domain.acme && domain.certificate?.origin === 'acme' ? (
         <RenewalBlock acme={domain.acme} />
       ) : null}
-      {servesPanel === undefined ? null : (
+      {karvan === undefined ? null : (
         <AsideBlock title={t('panel')}>
           <p className="text-sm">
-            {servesPanel ? (
-              <StatusLabel tone="success">{t('panelServes')}</StatusLabel>
-            ) : (
+            {karvan === 'none' ? (
               <span className="text-kumo-subtle">{t('panelNot')}</span>
+            ) : (
+              <StatusLabel tone={karvan === 'plain' ? 'warning' : 'success'}>
+                {t(`panel_${karvan}`)}
+              </StatusLabel>
             )}
           </p>
         </AsideBlock>

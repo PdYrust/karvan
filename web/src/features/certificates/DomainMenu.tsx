@@ -17,10 +17,17 @@ import { acmeKeys, startAcme, type AcmeMethod } from '../../lib/api/acme';
 import { domainKeys, type Domain } from '../../lib/api/domains';
 import { useAcmeErrorText } from '../../lib/errors/acme';
 import { renewMethod } from './cert-view';
-import { copyMessages } from './copy-messages';
+import {
+  isIpName,
+  karvanKeys,
+  karvanUseOf,
+  putKarvanDomain,
+  type KarvanDomain,
+} from '../../lib/api/karvan';
+import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
 import { acmeMethodsFor } from './domain-form';
+import { karvanMessages } from './karvan-messages';
 import { certificatesMessages } from './messages';
-import { panelLink, type PanelUse } from '../https/panel-use';
 
 /**
  * Renew now as a submenu, like the account menu's Language, that opens under its row:
@@ -73,52 +80,59 @@ function RenewSub({
   );
 }
 
-/**
- * Use or Stop using the domain for the Karvan panel, on the HTTPS tab where the change is made and
- * confirmed; without a certificate for the domain, why not.
- */
-function PanelItem({ domain, use }: { domain: Domain; use: PanelUse }) {
-  const t = useT(copyMessages);
-  const navigate = useNavigate();
-  const blocked = use.kind === 'use' ? use.blocked : undefined;
-  return (
-    <DropdownMenu.Item
-      className="gap-2"
-      disabled={blocked !== undefined}
-      onClick={() => void navigate(panelLink(domain, use.kind))}
-    >
-      <LockSimpleIcon size={16} />
-      <span className="flex min-w-0 flex-col">
-        <span>{t(use.kind === 'use' ? 'usePanel' : 'stopPanel')}</span>
-        {blocked ? (
-          <span className="text-xs whitespace-normal text-kumo-subtle">
-            {t(blocked === 'no_certificate' ? 'needsCert' : 'notCovered')}
-          </span>
-        ) : null}
-      </span>
-    </DropdownMenu.Item>
-  );
+/** Turns the domain on or off for Karvan at once, and says what the change does. */
+function useKarvanToggle(domain: Domain, on: boolean) {
+  const t = useT(karvanMessages);
+  const toasts = useKumoToastManager();
+  const errorText = useSubscriptionErrorText();
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => putKarvanDomain({ domainId: on ? 0 : domain.id }),
+    onSuccess: (next) => {
+      qc.setQueryData(karvanKeys.all, next);
+      const name = domain.name;
+      toasts.add(
+        on
+          ? { title: t('karvanOff', { name }), description: t('karvanOffHint') }
+          : {
+              title: t('karvanOn', { name }),
+              description: t(`karvanOn_${karvanUse(domain, next)}`),
+            },
+      );
+    },
+    onError: (e) =>
+      toasts.add({ title: t('karvanFailed'), description: errorText(e), variant: 'error' }),
+  });
 }
 
+/** How Karvan uses a domain it was just turned on for. */
+const karvanUse = (d: Domain, k: KarvanDomain) => {
+  const use = karvanUseOf(d, k);
+  return use === 'none' ? 'own' : use;
+};
+
 /**
- * The "..." menu: change the certificate, renew a Let's Encrypt one now, use it for the Karvan
- * panel, or delete while no rule holds the domain.
+ * The "..." menu: change the certificate, renew a Let's Encrypt one now, use it for Karvan or stop,
+ * or delete while no rule holds the domain and Karvan does not use it.
  */
 export function DomainMenu({
   domain,
   onDelete,
-  panel,
+  karvan,
 }: {
   domain: Domain;
   onDelete: () => void;
-  /** Left out when the panel's HTTPS cannot be changed from here. */
-  panel?: PanelUse;
+  /** Left out while the Karvan domain is not known, or the server cannot change it. */
+  karvan?: KarvanDomain;
 }) {
   const t = useT(certificatesMessages);
+  const tk = useT(karvanMessages);
   const navigate = useNavigate();
   const toasts = useKumoToastManager();
   const acmeError = useAcmeErrorText();
   const qc = useQueryClient();
+  const used = karvan?.domainId === domain.id;
+  const toggle = useKarvanToggle(domain, used);
   const label = t('moreFor', { name: domain.name });
   const page = `/domains/${String(domain.id)}/certificate`;
   const method = renewMethod(domain);
@@ -160,11 +174,20 @@ export function DomainMenu({
             onRenew={(m) => renew.mutate(m)}
           />
         ) : null}
-        {panel ? <PanelItem domain={domain} use={panel} /> : null}
+        {karvan && !isIpName(domain.name) ? (
+          <DropdownMenu.Item
+            className="gap-2"
+            disabled={toggle.isPending}
+            onClick={() => toggle.mutate()}
+          >
+            <LockSimpleIcon size={16} />
+            {tk(used ? 'stopKarvan' : 'useKarvan')}
+          </DropdownMenu.Item>
+        ) : null}
         <DropdownMenu.Item
           className="gap-2"
           variant="danger"
-          disabled={domain.rules.length > 0}
+          disabled={domain.rules.length > 0 || used}
           onClick={onDelete}
         >
           <TrashIcon size={16} />

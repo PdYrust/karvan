@@ -46,60 +46,22 @@ func TestPortsNameTheirOwners(t *testing.T) {
 	}
 }
 
-// GET /settings/https lists the ports where an HTTPS rule holds a domain,
-// for a shared panel address, and says when a new path waits too.
-func TestHTTPSListsSharedPorts(t *testing.T) {
-	a := newHTTPSEnv(t, 0)
-	cert, key := testCert(t, "panel.example.com")
-	a.addDomain(t, "panel.example.com", cert, key)
-	port := freePort(t)
-	body := map[string]any{"name": "go", "domains": []string{"panel.example.com"}, "port": port, "fromPath": "/go",
-		"match": "prefix", "toUrl": "https://new.example.com/", "https": true}
-	if res := a.do(http.MethodPost, api+"/link-redirects", body); res.status != http.StatusCreated {
-		t.Fatalf("add redirect: %d %s", res.status, res.body)
-	}
-	var h struct {
-		SharedPorts []struct {
-			Domain string `json:"domain"`
-			Port   int    `json:"port"`
-		} `json:"sharedPorts"`
-	}
-	res := a.do(http.MethodGet, api+"/settings/https", nil)
-	res.json(t, &h)
-	if len(h.SharedPorts) != 1 || h.SharedPorts[0].Domain != "panel.example.com" || h.SharedPorts[0].Port != port {
-		t.Fatalf("shared ports: %s", res.body)
-	}
-	var p portsOut
-	a.do(http.MethodGet, api+"/ports", nil).json(t, &p)
-	if o := p.owner(port); o != "" && o != "rule" {
-		t.Fatalf("rule port %d owner %q", port, o)
-	}
-	start := map[string]any{"newPath": true, "port": 0, "password": password}
-	if res := a.do(http.MethodPost, api+"/settings/address", start); res.status != http.StatusOK {
-		t.Fatalf("new path: %d %s", res.status, res.body)
-	}
-	var w struct {
-		Pending *struct {
-			PathChanged bool `json:"pathChanged"`
-		} `json:"pending"`
-	}
-	a.do(http.MethodGet, api+"/settings/https", nil).json(t, &w)
-	if w.Pending == nil || !w.Pending.PathChanged {
-		t.Fatalf("a new path waiting: %+v", w.Pending)
-	}
-}
-
-// The overview says how the panel is served, for its plain HTTP warning.
+// The overview says whether this page came over plain HTTP, for its
+// warning.
 func TestOverviewSaysHowThePanelIsServed(t *testing.T) {
 	a := newHTTPSEnv(t, 0)
-	var o struct {
-		Security struct {
-			TLS string `json:"tls"`
-		} `json:"security"`
-	}
-	res := a.do(http.MethodGet, api+"/overview", nil)
-	res.json(t, &o)
-	if res.status != http.StatusOK || o.Security.TLS != "off" {
-		t.Fatalf("overview: %d %s", res.status, res.body)
+	secure := a.atHTTPSFor(a.port, "")
+	secure.login("")
+	for want, e := range map[string]*env{"off": a.env, "on": secure} {
+		var o struct {
+			Security struct {
+				TLS string `json:"tls"`
+			} `json:"security"`
+		}
+		res := e.do(http.MethodGet, api+"/overview", nil)
+		res.json(t, &o)
+		if res.status != http.StatusOK || o.Security.TLS != want {
+			t.Fatalf("overview, want %s: %d %s", want, res.status, res.body)
+		}
 	}
 }

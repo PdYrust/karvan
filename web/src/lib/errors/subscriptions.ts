@@ -19,6 +19,13 @@ const en = {
   domain_invalid_certificate: 'Pick how this domain gets its certificate.',
   domain_invalid_plainOk: 'Confirm plain HTTP for this domain, or give it a certificate.',
   domain_in_use: 'A rule still uses this domain. Remove it from the rule first.',
+  domain_karvan: 'Karvan uses this domain. Choose Stop using for Karvan in its menu first.',
+  karvan_invalid: "Karvan can't use this domain. Pick one of the registered domains.",
+  karvan_invalid_unknown: "This domain doesn't exist anymore.",
+  karvan_invalid_ip:
+    "An IP address can't be the Karvan domain. The server's IP always gets Karvan's own certificate.",
+  karvan_shared:
+    'The panel is on a shared HTTPS port. Give it a port of its own in Settings, Access, first.',
   certificate_invalid:
     "A field of this certificate has a value Karvan can't use. Check the fields.",
   certificate_invalid_unreadable:
@@ -67,6 +74,14 @@ const fa: Messages<SubscriptionErrorKey>['fa'] = {
   domain_invalid_certificate: 'انتخاب کنید این دامنه گواهی اش را از کجا بگیرد.',
   domain_invalid_plainOk: 'HTTP ساده را برای این دامنه تایید کنید یا به آن گواهی بدهید.',
   domain_in_use: 'یک قانون هنوز از این دامنه استفاده میکند. اول آن را از قانون بردارید.',
+  domain_karvan:
+    'کاروان از این دامنه استفاده میکند. اول در منوی آن، توقف استفاده برای کاروان را انتخاب کنید.',
+  karvan_invalid:
+    'کاروان نمیتواند از این دامنه استفاده کند. یکی از دامنه های ثبت شده را انتخاب کنید.',
+  karvan_invalid_unknown: 'این دامنه دیگر وجود ندارد.',
+  karvan_invalid_ip: 'یک IP نمیتواند دامنه کاروان باشد. IP سرور همیشه گواهی خود کاروان را میگیرد.',
+  karvan_shared:
+    'پنل روی یک پورت HTTPS مشترک است. اول در تنظیمات، دسترسی، به آن یک پورت جداگانه بدهید.',
   certificate_invalid:
     'یکی از فیلدهای این گواهی مقداری دارد که کاروان نمیتواند استفاده کند. فیلدها را بررسی کنید.',
   certificate_invalid_unreadable:
@@ -129,6 +144,7 @@ const reasonKeys: Readonly<Record<string, Readonly<Record<string, SubscriptionEr
     reserved: 'redirect_invalid_reserved',
     ...domainReasons,
   },
+  karvan_invalid: { unknown: 'karvan_invalid_unknown', ip: 'karvan_invalid_ip' },
 };
 
 /** The sentences for a refused field that has no reason, by code and field. */
@@ -140,7 +156,8 @@ const isReason = (k: string) =>
   k.startsWith('certificate_invalid_') ||
   k.startsWith('site_invalid_') ||
   k.startsWith('redirect_invalid_') ||
-  k.startsWith('domain_invalid_');
+  k.startsWith('domain_invalid_') ||
+  k.startsWith('karvan_invalid_');
 
 /** Every code the server sends that this list words, for the words test. */
 export const subscriptionCodes = (Object.keys(en) as SubscriptionErrorKey[]).filter(

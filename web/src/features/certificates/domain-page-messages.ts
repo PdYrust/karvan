@@ -23,7 +23,9 @@ const en = {
   lastError: 'Last error',
   none: 'None',
   panel: 'Karvan panel',
-  panelServes: 'The Karvan panel is served with this certificate.',
+  panel_cert: 'Karvan uses this domain with this certificate.',
+  panel_own: "Karvan uses this domain with Karvan's own certificate until it has one.",
+  panel_plain: 'Karvan uses this domain over plain HTTP until it has a certificate.',
   panelNot: "The Karvan panel doesn't use this domain.",
 };
 
@@ -52,7 +54,9 @@ const fa: Messages<DomainPageKey>['fa'] = {
   lastError: 'خطای آخر',
   none: 'هیچ',
   panel: 'پنل کاروان',
-  panelServes: 'پنل کاروان با همین گواهی باز میشود.',
+  panel_cert: 'کاروان با همین گواهی از این دامنه استفاده میکند.',
+  panel_own: 'کاروان تا وقتی این دامنه گواهی ندارد، با گواهی خود کاروان از آن استفاده میکند.',
+  panel_plain: 'کاروان تا وقتی این دامنه گواهی ندارد، با HTTP ساده از آن استفاده میکند.',
   panelNot: 'پنل کاروان از این دامنه استفاده نمیکند.',
 };
 

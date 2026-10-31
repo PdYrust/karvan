@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 )
 
 // wantLists fails unless each named list field of the body is []: a
@@ -51,10 +50,4 @@ func TestNewDomainListsAreNotNull(t *testing.T) {
 	res.json(t, &d)
 	wantLists(t, "list", e.do(http.MethodGet, api+"/domains", nil), "certificates", "pins", "rules")
 	wantLists(t, "acme", e.do(http.MethodGet, api+"/domains/"+strconv.FormatInt(d.ID, 10)+"/acme", nil))
-}
-
-// The HTTPS settings of a fresh install have their lists as [].
-func TestEmptyHTTPSListsAreNotNull(t *testing.T) {
-	a := newHTTPSEnv(t, time.Minute)
-	wantLists(t, "https", a.do(http.MethodGet, api+"/settings/https", nil), "sharedPorts")
 }

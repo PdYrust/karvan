@@ -164,26 +164,49 @@ func TestTLSIsStoredWithTheAddress(t *testing.T) {
 	if err := s.SetHTTP(ctx, h); err != nil {
 		t.Fatal(err)
 	}
-	if got, err := s.HTTP(ctx); err != nil || got.TLS != (TLS{}) || got.TLS.On() {
-		t.Fatalf("before HTTPS: %+v, %v", got, err)
+	if got, err := s.HTTP(ctx); err != nil || got.TLS != (TLS{}) {
+		t.Fatalf("before a domain: %+v, %v", got, err)
 	}
-	for _, tl := range []TLS{{Mode: TLSSelf}, {Mode: TLSDomain, DomainID: 7, Shared: true}, {Mode: TLSOff}} {
+	for _, tl := range []TLS{{DomainID: 7}, {DomainID: 7, Plain: true, Shared: true}, {Plain: true}, {}} {
 		h.TLS = tl
 		if err := s.SetHTTP(ctx, h); err != nil {
 			t.Fatal(err)
 		}
-		if got, err := s.HTTP(ctx); err != nil || got.TLS != tl.Normal() {
-			t.Fatalf("HTTP = %+v, %v; want %+v", got.TLS, err, tl.Normal())
+		if got, err := s.HTTP(ctx); err != nil || got.TLS != tl {
+			t.Fatalf("HTTP = %+v, %v; want %+v", got.TLS, err, tl)
 		}
 	}
-	for _, bad := range []TLS{{Mode: "maybe"}, {Mode: TLSDomain}, {Mode: TLSSelf, Shared: true}} {
+	for _, bad := range []TLS{{DomainID: -1}, {Shared: true}} {
 		h.TLS = bad
 		if err := s.SetHTTP(ctx, h); err == nil {
 			t.Errorf("SetHTTP took %+v", bad)
 		}
 	}
-	if (TLS{Mode: TLSSelf, DomainID: 3}).Normal() != (TLS{Mode: TLSSelf}) {
-		t.Error("self mode kept a domain")
+}
+
+// The domain, the plain HTTP choice and the address are stored on their
+// own, so one never undoes another.
+func TestKarvanDomainAndAddressAreStoredApart(t *testing.T) {
+	s := newStore(t)
+	ctx := context.Background()
+	if err := s.SetHTTP(ctx, HTTP{Port: 34567, BasePath: "abcDEF2345ghijkm"}); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetKarvan(ctx, 4, true); err != nil {
+		t.Fatal(err)
+	}
+	if err := s.SetAddress(ctx, 41000, "otherPath234567", false); err != nil {
+		t.Fatal(err)
+	}
+	want := HTTP{Port: 41000, BasePath: "otherPath234567", TLS: TLS{DomainID: 4, Plain: true}}
+	if got, err := s.HTTP(ctx); err != nil || got != want {
+		t.Fatalf("HTTP = %+v, %v; want %+v", got, err, want)
+	}
+	if err := s.SetKarvan(ctx, -2, false); err == nil {
+		t.Error("SetKarvan took -2")
+	}
+	if err := s.SetAddress(ctx, 0, "otherPath234567", false); err == nil {
+		t.Error("SetAddress took port 0")
 	}
 }
 

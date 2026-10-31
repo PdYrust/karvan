@@ -20,7 +20,7 @@ import { CertificatesSection } from './CertificatesSection';
 import { DomainsSection } from './DomainsSection';
 import { certificatesMessages } from './messages';
 
-/** The list toolbar's actions: Let's Encrypt settings, then add, as on the Migrations page. */
+/** The list toolbar's actions: the domain settings, then add, as on the Migrations page. */
 function ToolbarActions({ onSettings }: { onSettings: () => void }) {
   const t = useT(certificatesMessages);
   const navigate = useNavigate();

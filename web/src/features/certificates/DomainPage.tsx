@@ -12,7 +12,7 @@ import { usePageTitle } from '../../components/layout/use-page-title';
 import { useT } from '../../i18n/locale';
 import { certificateKeys, getCertificates, type Certificate } from '../../lib/api/certificates';
 import { domainKeys, getDomains, type Domain } from '../../lib/api/domains';
-import { getHttps, httpsKeys } from '../../lib/api/https';
+import { getKarvanDomain, karvanKeys, karvanUseOf, type KarvanUse } from '../../lib/api/karvan';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
 import { useNow } from '../overview/use-now';
 import { CertFactsView } from './CertFactsView';
@@ -77,12 +77,12 @@ function Main({ domain }: { domain: Domain }) {
 function Loaded({
   domain,
   cert,
-  servesPanel,
+  karvan,
   reveal,
 }: {
   domain: Domain;
   cert: Certificate | undefined;
-  servesPanel: boolean | undefined;
+  karvan: KarvanUse | undefined;
   reveal: boolean;
 }) {
   const tc = useT(certificatesMessages);
@@ -106,7 +106,7 @@ function Loaded({
             aria-label={tc('colCert')}
             className="border-t border-kumo-hairline p-4 sm:p-8 lg:col-start-2 lg:row-start-1 lg:border-s lg:border-t-0"
           >
-            <DomainAside domain={domain} cert={cert} servesPanel={servesPanel} />
+            <DomainAside domain={domain} cert={cert} karvan={karvan} />
           </aside>
         </div>
       </Reveal>
@@ -126,7 +126,7 @@ function Eyebrow() {
   );
 }
 
-/** One domain, read only: its certificate, renewal, rules and whether it serves the Karvan panel. */
+/** One domain, read only: its certificate, renewal, rules and whether Karvan uses it. */
 export function DomainPage() {
   const { id = '' } = useParams();
   const t = useT(domainPageMessages);
@@ -139,7 +139,7 @@ export function DomainPage() {
     queryFn: getCertificates,
     enabled: valid,
   });
-  const https = useQuery({ queryKey: httpsKeys.all, queryFn: getHttps, enabled: valid });
+  const karvan = useQuery({ queryKey: karvanKeys.all, queryFn: getKarvanDomain, enabled: valid });
   const both =
     domains.data && certs.data
       ? { domain: domains.data.domains.find((d) => d.id === num), certs: certs.data.certificates }
@@ -148,13 +148,12 @@ export function DomainPage() {
   const domain = load.data?.domain;
   usePageTitle(domain?.name ?? tc('title'));
   if (domain) {
-    const h = https.data;
     return (
       <div className="flex flex-col">
         <Loaded
           domain={domain}
           cert={load.data?.certs.find((c) => c.id === domain.certificate?.id)}
-          servesPanel={h ? h.tls === 'domain' && h.domainId === domain.id : undefined}
+          karvan={karvan.data ? karvanUseOf(domain, karvan.data) : undefined}
           reveal={load.reveal}
         />
       </div>

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/netip"
 	"os"
+	"slices"
 	"strconv"
 	"time"
 
@@ -19,7 +20,6 @@ import (
 	"github.com/PdYrust/karvan/internal/httpapi"
 	"github.com/PdYrust/karvan/internal/httpapi/address"
 	"github.com/PdYrust/karvan/internal/paneltls"
-	"github.com/PdYrust/karvan/internal/settings"
 )
 
 const janitorInterval = 10 * time.Minute
@@ -41,16 +41,15 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 	svc := a.startServices(ctx, panelPorts(srv))
 	defer func() { cancel(); svc.stop() }()
 	tlsm := a.panelTLS()
-	tlsm.Domain = svc.bridge.PanelCertificate
-	srv.Certificate = tlsm.Certificate
-	srv.Share = shareWith(ctx, svc.bridge)
+	tlsm.Domain, tlsm.Answers = svc.bridge.PanelCertificate, svc.bridge.PanelAnswers
+	tlsm.Set(h.TLS)
+	srv.Certificate, srv.Plain = tlsm.Certificate, tlsm.Plain
+	srv.Share = shareWith(ctx, svc.bridge, tlsm)
 	go tlsm.Run(ctx)
 	go a.monitor(h.Bind, srv).Run(ctx)
-	if h.TLS.On() {
-		// A certificate that cannot be loaded is logged now, not at the first visit.
-		if _, err := tlsm.Certificate(ctx, h.TLS); err != nil {
-			a.Logger.Error("the panel certificate cannot be loaded", "err", err)
-		}
+	// The self-signed certificate is made now, not at the first visit.
+	if _, err := tlsm.Self(ctx); err != nil {
+		a.Logger.Error("the panel certificate cannot be made", "err", err)
 	}
 	deps := httpapi.Deps{
 		TrustedProxies: a.Config.Proxies(),
@@ -83,15 +82,21 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 			return fmt.Errorf("listen on %s: %w", h.Addr(), err)
 		}
 	}
-	return a.serveOn(ctx, srv, address.Site{Port: h.Port, BasePath: h.BasePath, TLS: h.TLS}, ln)
+	return a.serveOn(ctx, srv, address.Site{Port: h.Port, BasePath: h.BasePath, Shared: h.TLS.Shared}, ln)
 }
 
-// shareWith hands the panel addresses on shared ports to br.
-func shareWith(ctx context.Context, br *bridge.Bridge) func([]address.Shared) {
+// loopback is this server: plain HTTP from it is answered as is, as from a
+// trusted proxy, so a proxy here that ends TLS in front of the panel keeps
+// working.
+var loopback = []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8"), netip.MustParsePrefix("::1/128")}
+
+// shareWith hands the panel addresses on shared ports, for the Karvan
+// domain, to br.
+func shareWith(ctx context.Context, br *bridge.Bridge, tlsm *paneltls.Manager) func([]address.Shared) {
 	return func(sites []address.Shared) {
 		out := make([]bridge.PanelSite, len(sites))
 		for i, s := range sites {
-			out[i] = bridge.PanelSite{Port: s.Port, DomainID: s.TLS.DomainID, BasePath: s.BasePath, Handler: s.Handler}
+			out[i] = bridge.PanelSite{Port: s.Port, DomainID: tlsm.Panel().DomainID, BasePath: s.BasePath, Handler: s.Handler}
 		}
 		br.SharePanel(context.WithoutCancel(ctx), out)
 	}
@@ -101,9 +106,10 @@ func shareWith(ctx context.Context, br *bridge.Bridge) func([]address.Shared) {
 // address in the settings.
 func (a *App) addressServer(bind string, onShutdown func()) *address.Server {
 	return &address.Server{
-		Bind: bind,
+		Bind:      bind,
+		PlainFrom: append(slices.Clone(a.Config.Proxies()), loopback...),
 		Save: func(ctx context.Context, s address.Site) error {
-			return a.Settings.SetHTTP(ctx, settings.HTTP{Bind: bind, Port: s.Port, BasePath: s.BasePath, TLS: s.TLS})
+			return a.Settings.SetAddress(ctx, s.Port, s.BasePath, s.Shared)
 		},
 		HTTP:       a.httpServer,
 		OnShutdown: onShutdown,
@@ -148,7 +154,7 @@ func (a *App) monitor(bind string, srv *address.Server) *health.Monitor {
 }
 
 // panelTLS gives the panel its self-signed certificate; serve adds the
-// domains' certificates.
+// Karvan domain's.
 func (a *App) panelTLS() *paneltls.Manager {
 	return &paneltls.Manager{Settings: a.Settings, Key: a.Key, Log: a.Logger}
 }
@@ -160,10 +166,10 @@ func panelPorts(srv *address.Server) func() []int {
 	return func() []int {
 		st := srv.Status()
 		var ports []int
-		if !st.Current.TLS.Shared {
+		if !st.Current.Shared {
 			ports = append(ports, st.Current.Port)
 		}
-		if p := st.Pending; p != nil && !p.TLS.Shared {
+		if p := st.Pending; p != nil && !p.Shared {
 			ports = append(ports, p.Port)
 		}
 		return ports

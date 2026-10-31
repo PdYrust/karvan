@@ -25,10 +25,6 @@ const en = {
   reason_no_key: "Karvan can't read this certificate or its key.",
   reason_no_name: 'The certificate names no domain for the folder.',
   reason_write_failed: "Karvan couldn't write {path}.",
-  usePanel: 'Use for the Karvan panel',
-  stopPanel: 'Stop using for the Karvan panel',
-  needsCert: 'Give it a certificate first.',
-  notCovered: "Its certificate doesn't cover it.",
 };
 
 export type CopyKey = keyof typeof en;
@@ -58,10 +54,6 @@ const fa: Messages<CopyKey>['fa'] = {
   reason_no_key: 'کاروان نمیتواند این گواهی یا کلید آن را بخواند.',
   reason_no_name: 'گواهی دامنه ای برای نام پوشه ندارد.',
   reason_write_failed: 'کاروان نتوانست {path} را بنویسد.',
-  usePanel: 'استفاده برای پنل کاروان',
-  stopPanel: 'توقف استفاده برای پنل کاروان',
-  needsCert: 'اول به آن گواهی بدهید.',
-  notCovered: 'گواهی آن، این دامنه را پوشش نمیدهد.',
 };
 
 export const copyMessages: Messages<CopyKey> = { en, fa };

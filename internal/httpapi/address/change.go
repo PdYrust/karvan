@@ -47,7 +47,7 @@ func (s *Server) Start(c Change) (Pending, error) {
 	switch {
 	case c.Port < 0:
 		next.Port, ln, err = s.randomPort()
-	case !next.TLS.Shared && s.ports[next.Port] == nil:
+	case !next.Shared && s.ports[next.Port] == nil:
 		if ln, err = s.listen(next.Port); err != nil {
 			err = fmt.Errorf("%w: %w", ErrPortUnavailable, err)
 		}
@@ -58,16 +58,13 @@ func (s *Server) Start(c Change) (Pending, error) {
 	return s.serveNew(next, ln)
 }
 
-// next is s with the port and the mode of c; the path is changed later.
+// next is s with the port of c; the path is changed later.
 func (s Site) next(c Change) Site {
 	if c.Port > 0 {
 		s.Port = c.Port
 	}
-	switch {
-	case c.TLS != nil:
-		s.TLS = c.TLS.Normal()
-	case c.Port != 0:
-		s.TLS.Shared = false // a new port is the panel's own
+	if c.Port != 0 {
+		s.Shared = false // a new port is the panel's own
 	}
 	return s
 }
@@ -88,7 +85,7 @@ func (s *Server) serveNew(next Site, ln net.Listener) (Pending, error) {
 	}
 	p := &pending{site: site{Site: next, h: h}, expires: time.Now().Add(s.ttl())}
 	switch {
-	case next.TLS.Shared:
+	case next.Shared:
 	case ln != nil:
 		s.start(next.Port, ln, p.site)
 	default:
@@ -97,7 +94,7 @@ func (s *Server) serveNew(next Site, ln net.Listener) (Pending, error) {
 	p.timer = time.AfterFunc(s.ttl(), func() { s.expire(p) })
 	s.pending = p
 	s.share()
-	s.log().Info("serving a new address until it is confirmed", "port", next.Port, "tls", next.TLS.On(), "minutes", int(s.ttl().Minutes()))
+	s.log().Info("serving a new address until it is confirmed", "port", next.Port, "minutes", int(s.ttl().Minutes()))
 	return Pending{Site: next, Expires: p.expires}, nil
 }
 
@@ -131,13 +128,13 @@ func (s *Server) Confirm(ctx context.Context, via Site) (Site, error) {
 	old := s.current
 	s.current, s.pending = p.site, nil
 	switch {
-	case old.TLS.Shared:
-	case p.TLS.Shared || old.Port != p.Port:
+	case old.Shared:
+	case p.Shared || old.Port != p.Port:
 		s.drop(old.Port)
 	default:
 		s.ports[p.Port].serve(p.site)
 	}
 	s.share()
-	s.log().Info("the new address is confirmed", "port", p.Port, "tls", p.TLS.On())
+	s.log().Info("the new address is confirmed", "port", p.Port)
 	return old.Site, nil
 }

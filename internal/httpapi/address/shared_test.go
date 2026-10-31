@@ -2,6 +2,7 @@ package address
 
 import (
 	"context"
+	"crypto/tls"
 	"fmt"
 	"log/slog"
 	"net"
@@ -9,17 +10,53 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
-
-	"github.com/PdYrust/karvan/internal/settings"
 )
-
-var sharedTLS = settings.TLS{Mode: settings.TLSDomain, DomainID: 3, Shared: true}
 
 // sharedSites is what the bridge holds now.
 func (f *fixture) sharedSites() []Shared {
 	f.mu.Lock()
 	defer f.mu.Unlock()
 	return append([]Shared(nil), f.shared...)
+}
+
+// sharedFixture serves oldPath on a shared bridge port, as an install
+// that had one before 0.5.8 does: no listener of its own.
+func sharedFixture(t *testing.T) (*fixture, Site) {
+	t.Helper()
+	f := &fixture{t: t, done: make(chan error, 1)}
+	cert := testCert(t)
+	f.srv = &Server{
+		Bind:        "127.0.0.1",
+		Certificate: func(context.Context, string) (*tls.Certificate, error) { return cert, nil },
+		Handler: func(base string) (http.Handler, error) {
+			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				via := From(r.Context())
+				fmt.Fprintf(w, "%s via %d/%s", base, via.Port, via.BasePath)
+			}), nil
+		},
+		Save: func(_ context.Context, s Site) error {
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			f.saved = append(f.saved, s)
+			return nil
+		},
+		HTTP: func(h http.Handler) *http.Server { return &http.Server{Handler: h, ReadHeaderTimeout: time.Second} },
+		Share: func(sites []Shared) {
+			f.mu.Lock()
+			defer f.mu.Unlock()
+			f.shared = sites
+		},
+		Log: slog.New(slog.DiscardHandler),
+	}
+	current := Site{Port: holdPort(t), BasePath: oldPath, Shared: true}
+	ctx, cancel := context.WithCancel(context.Background())
+	f.cancel = cancel
+	go func() { f.done <- f.srv.Serve(ctx, current, nil) }()
+	t.Cleanup(func() { _ = f.stop() })
+	for f.srv.Status().Current != current {
+		time.Sleep(5 * time.Millisecond)
+	}
+	return f, current
 }
 
 // viaBridge is the answer of the one shared site to an HTTPS request, with
@@ -46,64 +83,50 @@ func holdPort(t *testing.T) int {
 	return ln.Addr().(*net.TCPAddr).Port
 }
 
-// A shared address opens no listener of its own; the bridge gets it
-// next to the old address until it is confirmed, and a later change of
-// port goes back to a listener of the panel's own.
-func TestSharedChangeGoesToTheBridge(t *testing.T) {
-	f := newFixture(t, 0)
-	bridgePort := holdPort(t)
-	p, err := f.srv.Start(Change{Port: bridgePort, TLS: &sharedTLS})
-	if err != nil {
-		t.Fatalf("Start = %v", err)
+// A shared address stays with the bridge until a change of port gives the
+// panel a listener of its own; a new path there stays shared.
+func TestSharedAddressMovesToItsOwnPort(t *testing.T) {
+	f, current := sharedFixture(t)
+	if want := fmt.Sprintf("%s via %d/%s ", oldPath, current.Port, oldPath); f.viaBridge(current) != want {
+		t.Fatalf("via the bridge: %s", f.viaBridge(current))
 	}
-	next := Site{Port: bridgePort, BasePath: oldPath, TLS: sharedTLS}
-	if want := fmt.Sprintf("%s via %d/%s %s", oldPath, bridgePort, oldPath, hsts); f.viaBridge(next) != want {
-		t.Fatalf("via the bridge: %s", f.viaBridge(next))
+	own := freePort(t)
+	p, err := f.srv.Start(Change{Port: own})
+	if err != nil || p.Shared || p.Port != own {
+		t.Fatalf("port change from the shared address = %+v, %v", p, err)
 	}
-	if got := f.get(f.port, oldPath); got != fmt.Sprintf("%s via %d/%s", oldPath, f.port, oldPath) {
-		t.Fatalf("old address: %s", got)
+	f.viaBridge(current)
+	if got := f.get(own, oldPath); got != fmt.Sprintf("%s via %d/%s", oldPath, own, oldPath) {
+		t.Fatalf("the new port: %s", got)
 	}
 	if _, err := f.srv.Confirm(context.Background(), p.Site); err != nil {
 		t.Fatal(err)
 	}
-	f.confirmed(next)
-	if got := f.get(f.port, oldPath); got != "refused" {
-		t.Fatalf("old port after the confirm: %s", got)
+	f.confirmed(p.Site)
+	if s := f.sharedSites(); len(s) != 0 {
+		t.Fatalf("shared after the confirm: %+v", s)
 	}
-	f.viaBridge(next)
+}
 
-	own := freePort(t)
-	p, err = f.srv.Start(Change{Port: own})
-	if err != nil || p.TLS.Shared || p.Port != own {
-		t.Fatalf("port change from the shared address = %+v, %v", p, err)
+// A new path on a shared port is shared too, next to the old one.
+func TestNewPathOnASharedPortStaysShared(t *testing.T) {
+	f, current := sharedFixture(t)
+	p, err := f.srv.Start(Change{NewPath: true})
+	if err != nil || !p.Shared || p.Port != current.Port {
+		t.Fatalf("new path = %+v, %v", p, err)
 	}
-	f.viaBridge(next)
+	if s := f.sharedSites(); len(s) != 2 {
+		t.Fatalf("shared %+v", s)
+	}
+	if _, err := f.srv.Confirm(context.Background(), p.Site); err != nil {
+		t.Fatal(err)
+	}
+	f.viaBridge(p.Site)
 	if err := f.stop(); err != nil {
 		t.Fatal(err)
 	}
 	if s := f.sharedSites(); len(s) != 0 {
 		t.Fatalf("shared after the shutdown: %+v", s)
-	}
-}
-
-// A shared change that is not confirmed in time leaves the bridge.
-func TestUnconfirmedSharedChangeGoesAway(t *testing.T) {
-	f := newFixture(t, 100*time.Millisecond)
-	if _, err := f.srv.Start(Change{Port: holdPort(t), TLS: &sharedTLS}); err != nil {
-		t.Fatal(err)
-	}
-	if len(f.sharedSites()) != 1 {
-		t.Fatalf("shared %+v", f.sharedSites())
-	}
-	deadline := time.Now().Add(5 * time.Second)
-	for f.srv.Status().Pending != nil && time.Now().Before(deadline) {
-		time.Sleep(10 * time.Millisecond)
-	}
-	if s := f.sharedSites(); len(s) != 0 || f.srv.Status().Pending != nil {
-		t.Fatalf("after the TTL: shared %+v, status %+v", s, f.srv.Status())
-	}
-	if got := f.get(f.port, oldPath); got != fmt.Sprintf("%s via %d/%s", oldPath, f.port, oldPath) {
-		t.Fatalf("old address: %s", got)
 	}
 }
 
@@ -119,7 +142,7 @@ func TestSharedCurrentServesWithoutAListener(t *testing.T) {
 	}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	current := Site{Port: 443, BasePath: oldPath, TLS: sharedTLS}
+	current := Site{Port: 443, BasePath: oldPath, Shared: true}
 	go func() { done <- srv.Serve(ctx, current, nil) }()
 	for srv.Status().Current != current {
 		time.Sleep(5 * time.Millisecond)

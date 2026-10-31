@@ -12,6 +12,9 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/PdYrust/karvan/internal/settings"
+	"github.com/PdYrust/karvan/internal/store"
 )
 
 var passwordLine = regexp.MustCompile(`Password  (\S+)`)
@@ -129,20 +132,16 @@ func TestBadFlags(t *testing.T) {
 	}
 }
 
-// The installer's HTTPS choices: plain HTTP, the server's own address in
-// the panel's address, and checks of the flags before anything is made.
+// The installer's HTTPS choices: the server's own address in the panel's
+// address, and checks of the flags before anything is made. Plain HTTP is
+// no choice: the panel always answers HTTPS on the server's IP.
 func TestInitHTTPSChoices(t *testing.T) {
-	code, out, errOut := doInit(t, t.TempDir(), "-tls", "off", "-host", "203.0.113.7", "-port", "31234")
-	if code != 0 || !strings.Contains(out, "Address   http://203.0.113.7:31234/") || !strings.Contains(out, "plain HTTP") ||
-		fingerprintLine.MatchString(out) {
-		t.Fatalf("-tls off: %d %q %s", code, out, errOut)
-	}
-	code, out, errOut = doInit(t, t.TempDir(), "-host", "2001:db8::1", "-port", "31234")
+	code, out, errOut := doInit(t, t.TempDir(), "-host", "2001:db8::1", "-port", "31234")
 	if code != 0 || !strings.Contains(out, "Address   https://[2001:db8::1]:31234/") || !fingerprintLine.MatchString(out) {
 		t.Fatalf("-host IPv6: %d %q %s", code, out, errOut)
 	}
 	for _, bad := range [][]string{
-		{"-tls", "ip"}, {"-tls", "domain"}, {"-domain", "a.example"}, {"-tls", "off", "-email", "a@b.example"},
+		{"-tls", "off"}, {"-tls", "ip"}, {"-tls", "domain"}, {"-domain", "a.example"}, {"-tls", "self", "-email", "a@b.example"},
 		{"-tls", "domain", "-domain", "a.example", "-email", "Me <a@b.example>"}, {"-host", "a/b"}, {"-host", "x y"},
 	} {
 		dir := t.TempDir()
@@ -185,8 +184,26 @@ func TestInitDomainFallsBack(t *testing.T) {
 				!strings.Contains(out, "Address   https://203.0.113.7:31234/") || !fingerprintLine.MatchString(out) {
 				t.Fatalf("init: %d %q %s", code, out, errOut)
 			}
+			if id := karvanDomain(t, dir); id < 1 {
+				t.Fatalf("the domain is not enabled for Karvan: %d", id)
+			}
 		})
 	}
+}
+
+// karvanDomain is the domain enabled for Karvan in the installation in dir.
+func karvanDomain(t *testing.T, dir string) int64 {
+	t.Helper()
+	db, err := store.Open(context.Background(), filepath.Join(dir, "data"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	h, err := settings.New(db).HTTP(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	return h.TLS.DomainID
 }
 
 func freeTCPPort(t *testing.T) int {
@@ -201,13 +218,14 @@ func freeTCPPort(t *testing.T) int {
 
 // The installer reads the details as name=value lines and shows them itself.
 func TestInitForTheInstaller(t *testing.T) {
-	code, out, errOut := doInit(t, t.TempDir(), "-installer", "-tls", "off", "-host", "203.0.113.7", "-port", "31234")
-	for _, want := range []string{"scheme=http\n", "host=203.0.113.7\n", "port=31234\n", "fingerprint=\n", "notice=\n"} {
+	code, out, errOut := doInit(t, t.TempDir(), "-installer", "-host", "203.0.113.7", "-port", "31234")
+	for _, want := range []string{"scheme=https\n", "host=203.0.113.7\n", "port=31234\n", "notice=\n"} {
 		if !strings.Contains(out, want) {
 			t.Fatalf("missing %q: %d %q %s", want, code, out, errOut)
 		}
 	}
-	if !regexp.MustCompile(`(?m)^path=\w{16}$`).MatchString(out) || !regexp.MustCompile(`(?m)^password=\S+$`).MatchString(out) {
+	if !regexp.MustCompile(`(?m)^path=\w{16}$`).MatchString(out) || !regexp.MustCompile(`(?m)^password=\S+$`).MatchString(out) ||
+		!regexp.MustCompile(`(?m)^fingerprint=[0-9A-F:]{95}$`).MatchString(out) {
 		t.Fatalf("stdout = %q", out)
 	}
 }

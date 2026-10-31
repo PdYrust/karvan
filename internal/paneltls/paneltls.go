@@ -1,7 +1,7 @@
-// Package paneltls gives the web panel its certificate (ADR
-// 0010): Karvan's own self-signed one, or a registered domain's from the
-// certificate store, with a fallback so a moved file never locks the
-// operator out.
+// Package paneltls gives the web panel its certificate for each handshake
+// (ADR 0010): the domain enabled for Karvan gets its own certificate for
+// its name, and every other handshake, the server's IP included, gets
+// Karvan's self-signed one, so the operator is never locked out.
 package paneltls
 
 import (
@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
@@ -22,14 +23,14 @@ import (
 // RenewEvery is how often Run checks the self-signed certificate.
 const RenewEvery = time.Hour
 
-// ErrPlain means the panel is served over plain HTTP: no certificate.
-var ErrPlain = errors.New("the panel is served over plain HTTP")
-
 // Manager picks the panel's certificate. Set the exported fields, then use
 // it from any goroutine.
 type Manager struct {
 	Settings *settings.Store
 	Key      *secret.Key
+	// Answers says whether registered domain id answers host (lower case,
+	// no port) and whether it has a certificate; an error when it is gone.
+	Answers func(ctx context.Context, id int64, host string) (answers, hasCert bool, err error)
 	// Domain is the certificate of a registered domain, read on each
 	// handshake through the certificate store's cache.
 	Domain func(ctx context.Context, id int64) (*tls.Certificate, error)
@@ -38,23 +39,85 @@ type Manager struct {
 	Now func() time.Time
 	IPs func() []net.IP
 
+	changeMu sync.Mutex // one Change at a time
+
 	mu      sync.Mutex
+	panel   settings.TLS // the domain enabled for Karvan and the plain HTTP choice
 	self    *tls.Certificate
 	retry   time.Time                  // no new self-signed certificate is tried before this
 	good    map[int64]*tls.Certificate // the last certificate each domain loaded
 	failing map[int64]bool             // domains whose last load failed, logged once
 }
 
-// Certificate is the certificate the panel serves in mode t.
-func (m *Manager) Certificate(ctx context.Context, t settings.TLS) (*tls.Certificate, error) {
-	switch t.Mode {
-	case settings.TLSSelf:
-		return m.Self(ctx)
-	case settings.TLSDomain:
-		return m.domain(ctx, t.DomainID)
-	}
-	return nil, ErrPlain
+// Set is the domain enabled for Karvan and the plain HTTP choice from now
+// on, for the next handshake and request.
+func (m *Manager) Set(t settings.TLS) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.panel = t
 }
+
+// Panel is the domain enabled for Karvan and the plain HTTP choice.
+func (m *Manager) Panel() settings.TLS {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return m.panel
+}
+
+// Change makes fn's answer current unless it fails. fn gets the current
+// value and stores the new one; changes run one at a time, so two of them
+// never undo each other. Handshakes go on meanwhile.
+func (m *Manager) Change(fn func(cur settings.TLS) (settings.TLS, error)) error {
+	m.changeMu.Lock()
+	defer m.changeMu.Unlock()
+	next, err := fn(m.Panel())
+	if err != nil {
+		return err
+	}
+	m.Set(next)
+	return nil
+}
+
+// Certificate is the certificate for a handshake that asks for name: the
+// enabled domain's for a name it answers, while it has a certificate;
+// Karvan's self-signed one for every other name and for none (a browser
+// sends no name for an IP address).
+func (m *Manager) Certificate(ctx context.Context, name string) (*tls.Certificate, error) {
+	id := m.Panel().DomainID
+	if answers, has := m.lookup(ctx, id, name); answers && has {
+		return m.domain(ctx, id)
+	}
+	return m.Self(ctx)
+}
+
+// Plain reports whether a plain HTTP request for host is answered as is:
+// host is the enabled domain's name, the domain has no certificate, and
+// plain HTTP is chosen for it. Any other one is sent on to HTTPS.
+func (m *Manager) Plain(ctx context.Context, host string) bool {
+	p := m.Panel()
+	if !p.Plain {
+		return false
+	}
+	answers, has := m.lookup(ctx, p.DomainID, host)
+	return answers && !has
+}
+
+// lookup says whether domain id answers name and whether it has a
+// certificate; a domain that cannot be read answers nothing.
+func (m *Manager) lookup(ctx context.Context, id int64, name string) (answers, hasCert bool) {
+	host := hostOf(name)
+	if id < 1 || m.Answers == nil || host == "" {
+		return false, false
+	}
+	answers, hasCert, err := m.Answers(ctx, id, host)
+	if err != nil {
+		return false, false
+	}
+	return answers, hasCert
+}
+
+// hostOf is name in lower case without a trailing dot.
+func hostOf(name string) string { return strings.ToLower(strings.TrimSuffix(name, ".")) }
 
 // domain is the domain's certificate; when it cannot be loaded, the last
 // one it loaded, else the self-signed one. A failure is logged once,

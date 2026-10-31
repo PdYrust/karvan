@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"strconv"
 	"strings"
 	"testing"
@@ -25,20 +26,27 @@ type addressEnv struct {
 }
 
 // newAddressEnv serves the test panel through an address.Server on a free
-// local port, the way karvan serve does.
+// local port, the way karvan serve does: plain HTTP from this server is
+// answered as is.
 func newAddressEnv(t *testing.T, ttl time.Duration) *addressEnv {
+	return newAddressEnvWith(t, ttl, []netip.Prefix{netip.MustParsePrefix("127.0.0.0/8")})
+}
+
+// newAddressEnvWith is newAddressEnv with plain HTTP answered as is from
+// the peers in plainFrom only.
+func newAddressEnvWith(t *testing.T, ttl time.Duration, plainFrom []netip.Prefix) *addressEnv {
 	t.Helper()
 	e, d := newEnvDeps(t)
 	srv := &address.Server{
-		Bind: "127.0.0.1", TTL: ttl, Log: d.Logger,
+		Bind: "127.0.0.1", TTL: ttl, Log: d.Logger, PlainFrom: plainFrom,
 		HTTP: func(h http.Handler) *http.Server { return &http.Server{Handler: h, ReadHeaderTimeout: 5 * time.Second} },
 		Save: func(ctx context.Context, s address.Site) error {
-			return settings.New(e.db).SetHTTP(ctx, settings.HTTP{Bind: "127.0.0.1", Port: s.Port, BasePath: s.BasePath, TLS: s.TLS})
+			return settings.New(e.db).SetAddress(ctx, s.Port, s.BasePath, s.Shared)
 		},
 	}
 	d.Address = srv
 	d.PanelTLS = panelTLS(t, e)
-	srv.Certificate = d.PanelTLS.Certificate
+	srv.Certificate, srv.Plain = d.PanelTLS.Certificate, d.PanelTLS.Plain
 	srv.Handler = func(b string) (http.Handler, error) {
 		dd := d
 		dd.BasePath = b
@@ -72,11 +80,9 @@ func (a *addressEnv) at(port int, basePath string) *env {
 type addressBody struct {
 	Port    int `json:"port"`
 	Pending *struct {
-		Port        int    `json:"port"`
-		PathChanged bool   `json:"pathChanged"`
-		FromNew     bool   `json:"fromNew"`
-		TLS         string `json:"tls"`
-		Host        string `json:"host"`
+		Port        int  `json:"port"`
+		PathChanged bool `json:"pathChanged"`
+		FromNew     bool `json:"fromNew"`
 	} `json:"pending"`
 }
 

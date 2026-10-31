@@ -17,7 +17,6 @@ import {
   GeneralTab,
   SafeModeTab,
   AccessTab,
-  HttpsTab,
   TwoStepTab,
   SessionsTab,
   AuditTab,
@@ -223,7 +222,6 @@ export function App() {
                         <Route index element={<GeneralTab />} />
                         <Route path="safe-mode" element={<SafeModeTab />} />
                         <Route path="access" element={<AccessTab />} />
-                        <Route path="https" element={<HttpsTab />} />
                         <Route path="two-step" element={<TwoStepTab />} />
                         <Route path="sessions" element={<SessionsTab />} />
                         <Route path="audit-log" element={<AuditTab />} />

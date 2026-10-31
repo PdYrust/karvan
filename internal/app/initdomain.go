@@ -27,8 +27,8 @@ func (e *orderFailed) Error() string { return "the Let's Encrypt order failed: "
 
 // panelDomain registers domain name and gets its certificate from Let's
 // Encrypt by HTTP-01, the way the Domains page does, with the bridge and
-// the order service run only for this. It returns the domain's id once
-// the certificate is stored.
+// the order service run only for this. It returns the domain's id once it
+// is registered, also with the error of an order that did not finish.
 func (a *App) panelDomain(ctx context.Context, name, email string, panelPort int) (int64, error) {
 	if email != "" {
 		if err := a.Settings.SetACME(ctx, settings.ACME{Email: email}); err != nil {
@@ -108,7 +108,7 @@ func domainNotice(name string, port int, err error) string {
 	case errors.Is(err, bridge.ErrPortDenied):
 		why = fmt.Sprintf("Karvan may not listen on port %d, so Let's Encrypt cannot check %s.", port, name)
 	case errors.Is(err, errOrderSlow):
-		why = fmt.Sprintf("Let's Encrypt has not issued the certificate for %s yet. Karvan keeps trying; once it is issued, choose the domain in Settings, HTTPS.", name)
+		why = fmt.Sprintf("Let's Encrypt has not issued the certificate for %s yet. Karvan keeps trying; once it is issued, the panel uses it for %s.", name, name)
 	case errors.As(err, &failed):
 		why = fmt.Sprintf("Let's Encrypt did not issue a certificate for %s: %s. Check that the domain points at this server and port %d is open, then try again on the Domains page.", name, failed.detail, port)
 	default:

@@ -1,11 +1,13 @@
 package handlers
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/PdYrust/karvan/internal/audit"
 	"github.com/PdYrust/karvan/internal/bridge"
 	"github.com/PdYrust/karvan/internal/httpapi/respond"
+	"github.com/PdYrust/karvan/internal/settings"
 )
 
 // Domains lists the domains with the certificates that cover them, the
@@ -80,20 +82,41 @@ func (a *API) SetDomainCertificate(w http.ResponseWriter, r *http.Request) {
 	respond.Lists(w, status, d)
 }
 
-// DeleteDomain removes a domain no rule holds; its orders go with it.
+// errDomainKarvan means the domain to delete is the one enabled for Karvan.
+var errDomainKarvan = errors.New("the domain is enabled for Karvan")
+
+// DeleteDomain removes a domain no rule holds and Karvan does not use; its
+// orders go with it.
 func (a *API) DeleteDomain(w http.ResponseWriter, r *http.Request) {
 	id, ok := domainID(w, r)
 	if !ok {
 		return
 	}
-	err := a.Bridge.DeleteDomain(r.Context(), id)
-	if err == nil {
-		a.Orders.Forget(id)
+	del := func() error {
+		err := a.Bridge.DeleteDomain(r.Context(), id)
+		if err == nil {
+			a.Orders.Forget(id)
+		}
+		return err
+	}
+	var err error
+	if a.PanelTLS == nil {
+		err = del()
+	} else {
+		err = a.PanelTLS.Change(func(cur settings.TLS) (settings.TLS, error) {
+			if cur.DomainID == id {
+				return cur, errDomainKarvan
+			}
+			return cur, del()
+		})
 	}
 	a.record(r, audit.ActionDomainDelete, outcomeOf(err), map[string]string{"domain": r.PathValue("id")})
-	if err != nil {
+	switch {
+	case errors.Is(err, errDomainKarvan):
+		respond.Error(w, respond.APIError{Status: http.StatusConflict, Code: codeDomainKarvan})
+	case err != nil:
 		writeCertError(w, r, err)
-		return
+	default:
+		respond.NoContent(w)
 	}
-	respond.NoContent(w)
 }

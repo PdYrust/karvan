@@ -6,7 +6,6 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
-	"slices"
 )
 
 // ErrNoPanelCertificate means the domain the panel is served for has no
@@ -33,19 +32,19 @@ func (b *Bridge) PanelCertificate(ctx context.Context, id int64) (*tls.Certifica
 	})
 }
 
-// ServesHTTPS reports whether an HTTPS rule on port holds the domain name
-// (a shared panel port must be one).
-func (b *Bridge) ServesHTTPS(ctx context.Context, port int, name string) (bool, error) {
-	rules, err := b.st.rules(ctx)
-	if err != nil {
-		return false, err
+// PanelAnswers says whether domain id answers host (lower case, no port):
+// its name, or one label under its wildcard, like a rule. hasCert is
+// whether it has a certificate. ErrNotFound when the domain is gone.
+func (b *Bridge) PanelAnswers(ctx context.Context, id int64, host string) (answers, hasCert bool, err error) {
+	var name string
+	err = b.st.db.QueryRowContext(ctx, "SELECT name, certificate_id IS NOT NULL FROM domains WHERE id = ?", id).Scan(&name, &hasCert)
+	switch {
+	case errors.Is(err, sql.ErrNoRows):
+		return false, false, ErrNotFound
+	case err != nil:
+		return false, false, fmt.Errorf("read the panel domain: %w", err)
 	}
-	for _, r := range rules {
-		if r.tls && r.port == port && slices.Contains(r.domains, name) {
-			return true, nil
-		}
-	}
-	return false, nil
+	return matches(name, host), hasCert, nil
 }
 
 // RulePort is a port one rule answers on, with the domain names it holds
@@ -56,8 +55,7 @@ type RulePort struct {
 	Domains []string
 }
 
-// RulePorts lists the port of every rule (for the port proposal, and the
-// ports a shared panel address can use).
+// RulePorts lists the port of every rule, for the port proposal.
 func (b *Bridge) RulePorts(ctx context.Context) ([]RulePort, error) {
 	rules, err := b.st.rules(ctx)
 	if err != nil {

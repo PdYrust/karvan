@@ -13,9 +13,6 @@ export const SafeModeTab = lazy(() =>
 export const AccessTab = lazy(() =>
   import('../features/settings/access/AccessTab').then((m) => ({ default: m.AccessTab })),
 );
-export const HttpsTab = lazy(() =>
-  import('../features/https/HttpsTab').then((m) => ({ default: m.HttpsTab })),
-);
 export const TwoStepTab = lazy(() =>
   import('../features/settings/two-step/TwoStepTab').then((m) => ({ default: m.TwoStepTab })),
 );

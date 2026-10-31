@@ -19,15 +19,15 @@ HERE=$(cd "$(dirname "$0")" && pwd)
 
 usage() {
 	cat <<-EOF
-		Usage: install.sh [--https none|ip|domain] [--domain NAME] [--email ADDR] [--port N] [--yes]
+		Usage: install.sh [--https ip|domain] [--domain NAME] [--email ADDR] [--port N] [--yes]
 		       install.sh --update
 		       install.sh --rollback [--yes]
 		       install.sh --uninstall [--purge]
 
-		  --https none    plain HTTP, no certificate
 		  --https ip      HTTPS on this server's IP with Karvan's own certificate (default)
-		  --https domain  HTTPS on --domain NAME with a Let's Encrypt certificate, checked
-		                  on port 80; --email ADDR is an optional contact for Let's Encrypt
+		  --https domain  the same, and --domain NAME used for Karvan with a Let's Encrypt
+		                  certificate, checked on port 80; --email ADDR is an optional
+		                  contact for Let's Encrypt
 		  --port N        serve the panel on port N (default: a free port from 20000 to 60000)
 		  --yes           do not ask: take the defaults, or restore the backup on a rollback
 		  --update        update an installed Karvan to the version of this folder
@@ -56,8 +56,9 @@ choose_port() {
 	[ "$port" -le 65535 ] || die "The port must be a number from 1 to 65535."
 }
 
-# choose_https sets https (none, ip or domain), and domain and email for
-# a domain, from the flags or the menu.
+# choose_https sets https (ip or domain), and domain and email for a
+# domain, from the flags or the menu. The panel always answers HTTPS on the
+# IP with Karvan's own certificate; a domain is used for Karvan as well.
 choose_https() {
 	if [ -z "$https" ] && [ -n "$domain" ]; then
 		https=domain
@@ -66,25 +67,24 @@ choose_https() {
 		{
 			echo
 			echo "How should the panel be served?"
-			echo "  1) Plain HTTP, no certificate"
-			echo "  2) HTTPS on this server's IP, with Karvan's own certificate"
-			echo "  3) HTTPS on a domain, with a Let's Encrypt certificate"
+			echo "  1) HTTPS on this server's IP, with Karvan's own certificate"
+			echo "  2) The same, and a domain used for Karvan, with a Let's Encrypt certificate"
 		} >/dev/tty
-		case $(ask "Choose" 2) in
-		1) https=none ;;
-		2) https=ip ;;
-		3) https=domain ;;
-		*) die "Choose 1, 2 or 3." ;;
+		case $(ask "Choose" 1) in
+		1) https=ip ;;
+		2) https=domain ;;
+		*) die "Choose 1 or 2." ;;
 		esac
 	fi
 	https=${https:-ip}
 	case $https in
-	none | ip)
+	ip)
 		[ -z "$domain$email" ] || die "--domain and --email go with --https domain."
 		return 0
 		;;
 	domain) ;;
-	*) die "--https must be none, ip or domain." ;;
+	none) die "Plain HTTP is not an install choice any more: the panel always answers HTTPS." "Use --https ip." ;;
+	*) die "--https must be ip or domain." ;;
 	esac
 	if [ -z "$domain" ] && can_ask; then
 		domain=$(ask "Domain name, for example panel.example.com" "")
@@ -156,22 +156,20 @@ do_install() {
 }
 
 # set_up runs karvan init with the HTTPS choice and keeps its output, the
-# sign-in details, in memory for show_result.
+# sign-in details, in memory for show_result. With a domain, init uses it
+# for Karvan.
 set_up() {
 	flags="-tls self"
 	label="Setting up the panel"
-	case $https in
-	none) flags="-tls off" ;;
-	domain)
+	if [ "$https" = domain ]; then
 		if points_here "$domain" "$host"; then
 			flags="-tls domain -domain $domain${email:+ -email $email}"
 			label="Getting a Let's Encrypt certificate for $domain"
 		else
 			warn "$domain does not point at this server ($host), so Let's Encrypt cannot check it."
-			detail "The panel uses Karvan's own certificate. Point the domain here, then get its certificate on the Domains page."
+			detail "The panel uses Karvan's own certificate. Point the domain here, add it on the Domains page with its certificate, then choose Use for Karvan in its menu."
 		fi
-		;;
-	esac
+	fi
 	# shellcheck disable=SC2086 # flags are separate words, checked by choose_https
 	creds=$(spin "$label" "$BIN_LINK" init -installer -log-level error -port "$port" -host "$host" $flags) ||
 		die "Karvan could not set up the panel." "See the error above. Nothing is running yet; to try again, run: karvan uninstall --purge, then install."
@@ -179,11 +177,11 @@ set_up() {
 	if [ -n "$notice" ]; then
 		warn "$notice"
 	fi
-	case $(cred scheme):$(cred fingerprint) in
-	http:*) ok "Set up the panel on plain HTTP" ;;
-	https:) ok "Set up the panel on HTTPS with a Let's Encrypt certificate for $domain" ;;
-	*) ok "Set up the panel on HTTPS with Karvan's own certificate" ;;
-	esac
+	if [ -z "$(cred fingerprint)" ]; then
+		ok "Set up the panel on HTTPS with a Let's Encrypt certificate for $domain"
+	else
+		ok "Set up the panel on HTTPS with Karvan's own certificate"
+	fi
 }
 
 # cred prints value $1 of the init output.
@@ -205,9 +203,7 @@ show_result() {
 	[ -z "$fp" ] || field Fingerprint "$fp"
 	rule
 	creds=
-	if [ "$scheme" = http ]; then
-		warn "Plain HTTP: the password crosses the network unencrypted. Turn on HTTPS in Settings when you can."
-	elif [ -n "$fp" ]; then
+	if [ -n "$fp" ]; then
 		detail "The browser warns about Karvan's own certificate. Go on only if it shows the SHA-256 fingerprint above."
 	fi
 	hint=$(firewall_hint "$port")

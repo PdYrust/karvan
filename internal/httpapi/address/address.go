@@ -1,7 +1,9 @@
-// Package address serves the web panel on its address (a port, a hidden
-// path and HTTP or HTTPS) and, while a change of address waits for its confirmation, on the
-// new one next to it. Nothing is saved until the operator confirms from
-// the new address; otherwise the new one goes away (ADR 0009).
+// Package address serves the web panel on its address (a port and a
+// hidden path) and, while a change of address waits for its confirmation,
+// on the new one next to it. Nothing is saved until the operator confirms
+// from the new address; otherwise the new one goes away (ADR 0009). Every
+// port answers HTTPS, with the certificate the server name picks, and
+// plain HTTP only where it is allowed (ADR 0010).
 package address
 
 import (
@@ -12,7 +14,9 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"net/netip"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -44,26 +48,21 @@ var (
 type Site struct {
 	Port     int
 	BasePath string
-	TLS      settings.TLS // normal form (settings.TLS.Normal)
+	// Shared is a bridge HTTPS port of the Karvan domain (ADR 0011): the
+	// bridge listens there, the panel has no listener of its own.
+	Shared bool
 }
 
-// Change says what Start changes: a new random hidden path, the port (0
-// keeps it, -1 picks a random one) and how the panel is served (nil keeps
-// it).
+// Change says what Start changes: a new random hidden path and the port
+// (0 keeps it, -1 picks a random one).
 type Change struct {
 	NewPath bool
 	Port    int
-	TLS     *settings.TLS
 }
 
-// hsts is sent in domain mode only: a self-signed certificate under
-// HSTS cannot be clicked through, and a day is short enough that going
-// back to plain HTTP does not lock a browser out.
-const hsts = "max-age=86400"
-
-// Shared is an address on a bridge HTTPS port (settings.TLS.Shared): the
-// bridge listens there and hands Handler the requests for the domain
-// under the hidden path.
+// Shared is an address on a bridge HTTPS port (Site.Shared): the bridge
+// listens there and hands Handler the requests for the domain under the
+// hidden path.
 type Shared struct {
 	Site
 	Handler http.Handler
@@ -90,8 +89,16 @@ type Server struct {
 	Save func(ctx context.Context, s Site) error
 	// HTTP makes the server of each listener (timeouts, error log).
 	HTTP func(h http.Handler) *http.Server
-	// Certificate is the certificate of an HTTPS address.
-	Certificate func(ctx context.Context, t settings.TLS) (*tls.Certificate, error)
+	// Certificate is the certificate for a TLS handshake that asks for
+	// a server name ("" when it asks for none, as for an IP address).
+	Certificate func(ctx context.Context, name string) (*tls.Certificate, error)
+	// Plain reports whether a plain HTTP request for host (lower case, no
+	// port) is answered as is; every other one is sent on to HTTPS.
+	Plain func(ctx context.Context, host string) bool
+	// PlainFrom are the peers whose plain HTTP requests are answered as
+	// is: this server and the trusted proxies, where TLS ends in front of
+	// the panel.
+	PlainFrom []netip.Prefix
 	// Share hands the addresses served on a bridge HTTPS port to the
 	// bridge (ADR 0011), each time they change; nil means none.
 	Share func(sites []Shared)
@@ -129,7 +136,7 @@ type listener struct {
 	ln        net.Listener
 	srv       *http.Server
 	sites     atomic.Pointer[[]site]
-	certs     func(ctx context.Context, t settings.TLS) (*tls.Certificate, error)
+	plain     func(r *http.Request) bool
 	tlsConfig *tls.Config
 }
 
@@ -141,32 +148,48 @@ func From(ctx context.Context) Site {
 	return s
 }
 
+// ServeHTTP serves a request under a hidden path of the port. A plain HTTP
+// one is served only when l.plain allows it; otherwise a GET or HEAD is
+// sent on to HTTPS and anything else gets the plain 404.
 func (l *listener) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	secure := r.TLS != nil
-	var match []site
 	for _, s := range *l.sites.Load() {
-		if s.TLS.On() == secure && middleware.UnderBase(r.URL.Path, s.BasePath) {
-			match = append(match, s)
+		if !middleware.UnderBase(r.URL.Path, s.BasePath) {
+			continue
 		}
-	}
-	if len(match) > 1 && secure {
-		s, _ := l.byName(r.Context(), match, r.TLS.ServerName)
-		s.ServeHTTP(w, r)
+		switch {
+		case r.TLS != nil || l.plain(r):
+			s.ServeHTTP(w, r)
+		case r.Method == http.MethodGet || r.Method == http.MethodHead:
+			toHTTPS(w, r)
+		default:
+			middleware.NotFound(w, r)
+		}
 		return
 	}
-	if len(match) > 0 {
-		match[0].ServeHTTP(w, r)
-		return
-	}
-	if !secure && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
-		for _, s := range *l.sites.Load() {
-			if s.TLS.On() && middleware.UnderBase(r.URL.Path, s.BasePath) {
-				toHTTPS(w, r)
-				return
+	middleware.NotFound(w, r)
+}
+
+// plainOK reports whether plain HTTP request r is answered as is: it comes
+// from a peer in PlainFrom, or Plain allows its host.
+func (s *Server) plainOK(r *http.Request) bool {
+	if ip, err := netip.ParseAddrPort(r.RemoteAddr); err == nil {
+		for _, p := range s.PlainFrom {
+			if p.Contains(ip.Addr().Unmap()) {
+				return true
 			}
 		}
 	}
-	middleware.NotFound(w, r)
+	return s.Plain != nil && s.Plain(r.Context(), requestHost(r))
+}
+
+// requestHost is the host a request names, in lower case, without the
+// port.
+func requestHost(r *http.Request) string {
+	host := r.Host
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	return strings.ToLower(strings.TrimSuffix(strings.Trim(host, "[]"), "."))
 }
 
 // toHTTPS sends a plain HTTP request for an HTTPS address on to the same
@@ -181,11 +204,11 @@ func toHTTPS(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 }
 
-// ServeHTTP serves a request that came through s.
+// ServeHTTP serves a request that came through s. No HSTS is sent: the
+// Karvan domain's name falls back to the self-signed certificate when its
+// own is gone or the domain is stopped, and other services may share the
+// name over plain HTTP.
 func (s site) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.TLS != nil && s.TLS.Mode == settings.TLSDomain {
-		w.Header().Set("Strict-Transport-Security", hsts)
-	}
 	s.h.ServeHTTP(w, r.WithContext(context.WithValue(r.Context(), ctxKey{}, s.Site)))
 }
 
@@ -196,7 +219,7 @@ func (s *Server) share() {
 	}
 	var out []Shared
 	for _, st := range []*site{&s.current, s.pendingSite()} {
-		if st != nil && st.TLS.Shared {
+		if st != nil && st.Shared {
 			out = append(out, Shared{Site: st.Site, Handler: *st})
 		}
 	}
@@ -244,9 +267,9 @@ func (s *Server) Serve(ctx context.Context, current Site, ln net.Listener) error
 
 // start serves sites on ln. Callers hold mu.
 func (s *Server) start(port int, ln net.Listener, sites ...site) {
-	l := &listener{certs: s.Certificate}
+	l := &listener{plain: s.plainOK}
 	l.ln = newConnListener(ln, l)
-	l.tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12, NextProtos: []string{"http/1.1"}, GetCertificate: l.certificate}
+	l.tlsConfig = &tls.Config{MinVersion: tls.VersionTLS12, NextProtos: []string{"http/1.1"}, GetCertificate: s.certificate}
 	l.serve(sites...)
 	l.srv = s.HTTP(l)
 	s.ports[port] = l
@@ -336,8 +359,8 @@ func (s *Server) dropPending() {
 	s.pending = nil
 	p.timer.Stop()
 	switch {
-	case p.TLS.Shared:
-	case p.Port == s.current.Port && !s.current.TLS.Shared:
+	case p.Shared:
+	case p.Port == s.current.Port && !s.current.Shared:
 		if l := s.ports[p.Port]; l != nil {
 			l.serve(s.current)
 		}

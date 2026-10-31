@@ -72,6 +72,9 @@ describe('area word lists', () => {
         'certificate_not_adopted',
         'domain_in_use',
         'domain_invalid',
+        'domain_karvan',
+        'karvan_invalid',
+        'karvan_shared',
         'plain_http_off',
         'port_mixed',
         'port_taken',
@@ -115,6 +118,14 @@ describe('area word lists', () => {
       'redirect_invalid',
     );
     expect(subscriptionErrorKey('redirect_invalid_loop')).toBeUndefined();
+    expect(subscriptionErrorKey('karvan_invalid', { field: 'domainId', reason: 'ip' })).toBe(
+      'karvan_invalid_ip',
+    );
+    expect(subscriptionErrorKey('karvan_invalid', { field: 'domainId', reason: 'unknown' })).toBe(
+      'karvan_invalid_unknown',
+    );
+    expect(subscriptionErrorKey('karvan_invalid', { reason: 'other' })).toBe('karvan_invalid');
+    expect(subscriptionErrorKey('karvan_invalid_ip')).toBeUndefined();
     expect(subscriptionErrorKey('certificate_invalid', { reason: 'not_covered' })).toBe(
       'certificate_invalid_not_covered',
     );

@@ -17,7 +17,7 @@ sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/
 ```sh
 sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/get.sh)" @ install --version 0.5.0-beta
 ```
-**Without questions** (the installer asks how the panel is served; `--https none`, `ip` or `domain` answers it):
+**Without questions** (the installer asks how the panel is served; `--https ip` or `domain` answers it):
 ```sh
 sudo bash -c "$(curl -fsSL https://github.com/PdYrust/karvan/raw/main/packaging/get.sh)" @ install --https domain --domain panel.example.com --yes
 ```
@@ -50,7 +50,11 @@ The image `ghcr.io/pdyrust/karvan:0.5.0-beta` holds only the binary. Volumes, po
 
 ## HTTPS for the panel
 
-Settings, HTTPS: keep the self-signed certificate, pick one of your domains with a certificate (uploaded, from Let's Encrypt or found in a panel), or turn HTTPS off. The panel can also share a port with your subscription links, such as 443. Every change is tried at the new address first and saved only after you confirm it there, so a wrong choice does not lock you out.
+The panel always answers HTTPS on its port. On the server's IP it uses Karvan's own certificate.
+
+To open it on a domain with that domain's certificate, add the domain on the Domains page with its certificate (from Let's Encrypt, a file on the server, a pasted one, or one found in a panel), then choose Use for Karvan in the domain's "..." menu. A browser asking for that name gets the domain's certificate at once, and renewals reach it without a restart. Every other name and the server's IP keep Karvan's own certificate, so the IP address always opens. Karvan only reads the certificate, so other services that use it keep working. One domain at a time is used for Karvan; Stop using for Karvan goes back to the IP alone.
+
+Domain settings, on the same page, say what the Karvan domain does while it has no certificate: Karvan's own certificate (the default), or plain HTTP for that name only.
 
 ## Check a download (optional)
 

@@ -11,7 +11,6 @@ import (
 
 	"github.com/PdYrust/karvan/internal/app"
 	"github.com/PdYrust/karvan/internal/config"
-	"github.com/PdYrust/karvan/internal/settings"
 )
 
 func loadConfig(name string, streams IO, args []string, extra func(*flagSetter)) (config.Config, error) {
@@ -42,8 +41,8 @@ func runInit(ctx context.Context, streams IO, args []string) error {
 	installer := false
 	cfg, err := loadConfig("init", streams, args, func(fs *flagSetter) {
 		fs.IntVar(&o.Port, "port", 0, "panel port, 1 to 65535 (default 0: a random one)")
-		fs.StringVar(&o.TLS, "tls", settings.TLSSelf, "how the panel is served: off (plain HTTP), self (Karvan's own certificate) or domain")
-		fs.StringVar(&o.Domain, "domain", "", "with -tls domain: the domain to get a Let's Encrypt certificate for, by HTTP-01 on port 80")
+		fs.StringVar(&o.TLS, "tls", app.InitSelf, "how the panel is served: self (HTTPS with Karvan's own certificate) or domain (and the -domain enabled for Karvan)")
+		fs.StringVar(&o.Domain, "domain", "", "with -tls domain: the domain to enable for Karvan and get a Let's Encrypt certificate for, by HTTP-01 on port 80")
 		fs.StringVar(&o.Email, "email", "", "with -tls domain: an optional contact address for Let's Encrypt")
 		fs.StringVar(&o.Host, "host", "", "this server's address, shown in the panel's address")
 		fs.BoolVar(&installer, "installer", false, "print name=value lines for the installer, which shows them once")

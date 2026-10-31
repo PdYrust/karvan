@@ -1,25 +1,26 @@
-# ADR 0010: The web panel serves HTTPS with its own certificate or a domain's
-
+# ADR 0010: The web panel answers HTTPS, with the certificate the server name picks
 ## Context
 The panel served plain HTTP only. Its sign-in, session cookie and every secret it shows crossed the network in the clear unless the operator put a proxy in front. Many installs have no domain, only an IP address. Others already have a domain with a certificate in Karvan's store (uploaded, from Let's Encrypt, or found in a panel's ENV). A wrong certificate or a closed port must never lock the operator out.
-
+A first design had three modes for the whole port (`off`, `self`, `domain`), each change tried at a new address and confirmed there (ADR 0009). In domain mode every handshake got the domain's certificate, the server's IP included, so the address by IP showed a certificate for another name, and HSTS for the domain's name made any later fallback to the self-signed certificate impossible to click through. The settings tab for it did not scroll on phones.
 ## Decision
-- Three modes, stored in the settings table next to the address (`http.tls`, `http.tls_domain`, `http.tls_shared`), never in `config.json`: `off` (plain HTTP), `self` and `domain`. An installation made before this reads back `off`. `karvan init` starts a new one in `self`.
-- `self`: Karvan makes an ECDSA P-256 certificate for this server's addresses (no link-local ones) and `localhost`, valid 397 days, and makes a new one 30 days before the end. Its key is sealed with the key file (AAD `settings/http.tls_self_key`). `init` and `reset` print its SHA-256 fingerprint so the operator can compare it with the browser's warning. A new one that cannot be stored leaves the old one in use and is tried again an hour later.
-- `domain`: the operator picks a registered domain whose certificate covers its name. Each handshake reads the domain's certificates row and serves it through the bridge's certificate cache, which reads it again when the row or its file changes, so a renewal needs no restart.
-- When the domain's certificate cannot be loaded (file gone, key mismatch), the error is logged once and the panel serves the last certificate it loaded for that domain; with none, its self-signed one, with a warning. A failed handshake is a debug line.
-- A change of mode or port is an address change (ADR 0009): `PUT /api/v1/settings/https` asks for the password and code again, serves the new address next to the old one for 10 minutes, and only a confirm from the new address saves it. On the same port both schemes are served while the change waits: the first byte of each connection (0x16 for TLS) picks HTTP or TLS, and a connection silent for 10 seconds is closed without holding up others.
-- HSTS (`max-age=86400`, no `includeSubDomains`) is sent only in `domain` mode, by the listener, for the panel's own paths. A trusted proxy that says `https` no longer brings HSTS.
-- The listener speaks TLS 1.2 and up, HTTP/1.1 only.
-
+- The panel's port always answers HTTPS. Each handshake gets a certificate by its server name (SNI): the domain enabled for Karvan gets that domain's certificate for its name (one label under a wildcard too), while the domain has one. Every other handshake, another name or none (a browser sends none for an IP address), gets Karvan's own self-signed certificate. Access by the IP never depends on a domain.
+- At most one domain is enabled for Karvan, stored in the settings table as `http.tls_domain` (`0` for none), never in `config.json`. The Domains page turns it on and off from each domain's "..." menu: Use for Karvan, Stop using for Karvan. Enabling another domain switches to it. `PUT /api/v1/settings/karvan-domain` applies the change to the next handshake without a restart and audits it as `settings.https`. It is no address change: the IP keeps working, so there is nothing to confirm. An IP address cannot be enabled, and the enabled domain cannot be deleted until it is stopped.
+- Any certificate the domain has counts: from Let's Encrypt, a file pair on the server, pasted, found in a panel, or a self-signed one attached to it. Each handshake reads it through the bridge's certificate cache, which reads it again when the row or its file changes, so a renewal or a new upload is served without a restart. Karvan only reads it, so other services that use the same files keep working.
+- When the domain's certificate cannot be loaded (file gone, key mismatch), the error is logged once and its name gets the last certificate it loaded; with none, Karvan's own, with a warning. A failed handshake is a debug line.
+- A domain enabled without a certificate gets Karvan's own certificate for its name, or, with `http.tls_plain` set (Domain settings, next to the port 80 option), plain HTTP for its name only. One port carries both: the first byte of each connection (0x16 for TLS) picks TLS or plain HTTP, and a connection silent for 10 seconds is closed without holding up others. So with plain HTTP chosen, HTTPS for that name and for the IP keeps working on the same port.
+- Any other plain HTTP request under the hidden path is sent on to HTTPS on the same port (GET and HEAD, `307`, never cached); anything else gets the plain 404. Plain HTTP from this server (loopback) and from a trusted proxy is answered as is: TLS ends at that proxy.
+- No HSTS. The Karvan domain's name falls back to the self-signed certificate whenever its own is gone or the domain is stopped, and other services may share the name over plain HTTP; HSTS would lock browsers out of both for its lifetime.
+- Karvan's own certificate: ECDSA P-256 for this server's addresses (no link-local ones) and `localhost`, valid 397 days, made again 30 days before the end. Its key is sealed with the key file (AAD `settings/http.tls_self_key`). `init` and `reset` print its SHA-256 fingerprint so the operator can compare it with the browser's warning. A new one that cannot be stored leaves the old one in use and is tried again an hour later.
+- Port and path changes keep the confirm of ADR 0009. The listener speaks TLS 1.2 and up, HTTP/1.1 only.
+- Store migration 0014 maps the old modes: `domain` keeps its domain enabled (and a shared port, ADR 0011); `self` enables none; `off`, and an install from before HTTPS, enable none and take plain HTTP for a future Karvan domain without a certificate. Their old plain HTTP address is sent on to HTTPS on the same port, so it still opens.
+- `karvan init -tls domain -domain NAME`, and the installer's `--https domain`, register the domain, start its Let's Encrypt order and enable it for Karvan, also when the order does not finish: the name gets its certificate as soon as it is issued. Plain HTTP is no install choice.
 ## Alternatives considered
+- **Modes for the whole port, changed through a confirmed address (the first design).** The IP lost its certificate in domain mode, and the change needed a second address, a sign-in there and a confirm, for something that cannot lock the operator out once the IP always works.
 - **Certificate files named in `config.json`.** A second certificate system next to the store, and a restart for every change.
-- **Only domain mode.** IP-only installs would stay on plain HTTP.
-- **A new port for every change of scheme.** The operator's firewall often has only the panel's port open; the first-byte check keeps the same port usable.
-- **HSTS for a year in every HTTPS mode.** A self-signed certificate under HSTS cannot be clicked through, and going back to HTTP would lock browsers out.
-
+- **A new port for the plain HTTP choice.** The operator's firewall often has only the panel's port open; the first-byte check keeps one port for both.
+- **HSTS for the domain's name.** It turns the self-signed fallback into a hard failure and reaches other ports and services of the same name.
 ## Consequences
-- New installs get encryption from the first sign-in, with a browser warning the fingerprint answers.
-- Cookies follow the scheme (`__Host-s` over HTTPS), so the operator signs in again on the new address before confirming.
-- A domain whose certificate breaks still reaches the panel, with a browser warning, instead of not at all.
-- The shared bridge port (`shared`) is checked here (`port_mixed`) and served by the bridge (ADR 0011).
+- New installs get encryption from the first sign-in, with a browser warning the fingerprint answers. A Karvan domain with a certificate opens without a warning.
+- Cookies follow the scheme (`__Host-s` over HTTPS), so a sign-in over plain HTTP does not carry over to HTTPS, and the other way round.
+- A domain whose certificate breaks still reaches the panel, with a browser warning, instead of not at all, and the IP is never affected.
+- A shared bridge port (ADR 0011) stays only for installs that had one; it cannot be chosen any more.

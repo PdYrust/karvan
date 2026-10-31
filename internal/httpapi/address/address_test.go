@@ -2,6 +2,7 @@ package address
 
 import (
 	"context"
+	"crypto/tls"
 	"errors"
 	"fmt"
 	"io"
@@ -30,14 +31,21 @@ type fixture struct {
 	cancel context.CancelFunc
 }
 
-// newFixture serves oldPath on a free local port. Each hidden path answers
-// with its own name and the address the request came through.
-func newFixture(t *testing.T, ttl time.Duration) *fixture {
+// newFixture serves oldPath on a free local port, with one certificate for
+// every handshake. Each hidden path answers with its own name and the
+// address the request came through.
+func newFixture(t *testing.T, ttl time.Duration) *fixture { return newFixtureWith(t, ttl, nil) }
+
+// newFixtureWith is newFixture with set changing the server before it
+// serves.
+func newFixtureWith(t *testing.T, ttl time.Duration, set func(*Server)) *fixture {
 	t.Helper()
 	f := &fixture{t: t, done: make(chan error, 1)}
+	cert := testCert(t)
 	f.srv = &Server{
-		Bind: "127.0.0.1",
-		TTL:  ttl,
+		Certificate: func(context.Context, string) (*tls.Certificate, error) { return cert, nil },
+		Bind:        "127.0.0.1",
+		TTL:         ttl,
 		Handler: func(base string) (http.Handler, error) {
 			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				via := From(r.Context())
@@ -58,6 +66,9 @@ func newFixture(t *testing.T, ttl time.Duration) *fixture {
 		},
 		OnShutdown: func() { f.closed.Add(1) },
 		Log:        slog.New(slog.DiscardHandler),
+	}
+	if set != nil {
+		set(f.srv)
 	}
 	ln, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -86,11 +97,13 @@ func (f *fixture) stop() error {
 	}
 }
 
-// get returns the body at port and path, or "refused" when nothing listens.
+// get returns the body at port and path over HTTPS, or "refused" when
+// nothing listens.
 func (f *fixture) get(port int, path string) string {
 	f.t.Helper()
-	c := &http.Client{Timeout: 5 * time.Second, Transport: &http.Transport{DisableKeepAlives: true}}
-	res, err := c.Get(fmt.Sprintf("http://127.0.0.1:%d/%s/", port, path))
+	c := &http.Client{Timeout: 5 * time.Second, Transport: &http.Transport{DisableKeepAlives: true,
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}}}
+	res, err := c.Get(fmt.Sprintf("https://127.0.0.1:%d/%s/", port, path))
 	if err != nil {
 		return "refused"
 	}

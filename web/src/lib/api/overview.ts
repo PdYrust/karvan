@@ -29,8 +29,8 @@ export interface Overview {
   security: {
     totpEnabled: boolean;
     previousSignIn: { at: string; ip: string } | null;
-    /** How the panel is served. */
-    tls: 'off' | 'self' | 'domain';
+    /** Off when this page came over plain HTTP. */
+    tls: 'off' | 'on';
   };
   migrations: MigrationTotals;
   activity: ActivityEntry[];

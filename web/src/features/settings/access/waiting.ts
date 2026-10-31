@@ -9,12 +9,10 @@ export interface WaitingLink {
 }
 
 /**
- * The link to a waiting address. `started` is what this page's own start
- * answered; the path is in that answer only (shown once), so a new path
- * started elsewhere or before a reload cannot be linked again. A port-only
- * change keeps this page's path. The link takes the waiting scheme and,
- * in domain mode, the domain's name; the session stays behind on another
- * host or when HTTPS turns into HTTP.
+ * The link to a waiting address, on this page's scheme and host. `started`
+ * is what this page's own start answered; the path is in that answer only
+ * (shown once), so a new path started elsewhere or before a reload cannot
+ * be linked again. A port-only change keeps this page's path.
  */
 export function waitingLink(
   pending: PendingAddress,
@@ -22,17 +20,9 @@ export function waitingLink(
   base: string,
 ): WaitingLink {
   const here = new URL(base);
-  const scheme = pending.tls === 'off' ? 'http:' : 'https:';
-  const host = pending.host || here.hostname;
-  const moved = host !== here.hostname || (here.protocol === 'https:' && scheme === 'http:');
-  const signInFirst = moved || (pending.pathChanged && here.protocol === 'http:');
+  const signInFirst = pending.pathChanged && here.protocol === 'http:';
   const page = signInFirst ? '' : 'settings/access';
-  const at = (to: NewAddress) => {
-    const url = new URL(newAddressURL(base, to, page));
-    url.protocol = scheme;
-    url.hostname = host;
-    return url.toString();
-  };
+  const at = (to: NewAddress) => newAddressURL(base, to, page);
   if (started && started.port === pending.port && started.expiresAt === pending.expiresAt) {
     return { url: at(started), signInFirst };
   }

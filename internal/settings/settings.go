@@ -1,5 +1,5 @@
 // Package settings stores the values Karvan changes at runtime: the listen
-// address, the hidden base path and how the panel is served (HTTP or HTTPS).
+// address, the hidden base path and the domain enabled for the panel.
 package settings
 
 import (
@@ -74,7 +74,7 @@ func New(db *sql.DB) *Store { return &Store{db: db} }
 func (s *Store) HTTP(ctx context.Context) (HTTP, error) {
 	vals := map[string]string{}
 	rows, err := s.db.QueryContext(ctx, `SELECT key, value FROM settings WHERE key IN (?, ?, ?, ?, ?, ?)`,
-		keyBind, keyPort, keyBasePath, keyTLSMode, keyTLSDomain, keyTLSShared)
+		keyBind, keyPort, keyBasePath, keyTLSDomain, keyTLSPlain, keyTLSShared)
 	if err != nil {
 		return HTTP{}, fmt.Errorf("read settings: %w", err)
 	}
@@ -116,6 +116,16 @@ func (s *Store) SetHTTP(ctx context.Context, h HTTP) error {
 	vals := h.TLS.rows()
 	vals[keyBind], vals[keyPort], vals[keyBasePath] = h.Bind, strconv.Itoa(h.Port), h.BasePath
 	return s.setAll(ctx, vals)
+}
+
+// SetAddress stores a confirmed address: the port, the hidden path and
+// whether it is a shared bridge port. The domain enabled for Karvan and
+// the plain HTTP choice stay as they are.
+func (s *Store) SetAddress(ctx context.Context, port int, basePath string, shared bool) error {
+	if err := (HTTP{Port: port, BasePath: basePath}).Validate(); err != nil {
+		return err
+	}
+	return s.setAll(ctx, map[string]string{keyPort: strconv.Itoa(port), keyBasePath: basePath, keyTLSShared: strconv.FormatBool(shared)})
 }
 
 // NewBasePath returns a random hidden path (about 93 bits). Look-alike

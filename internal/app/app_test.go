@@ -205,14 +205,14 @@ func TestResetPortLeavesASharedPort(t *testing.T) {
 	}
 	defer a.Close()
 	h, _ := a.Settings.HTTP(ctx)
-	h.Port, h.TLS = 443, settings.TLS{Mode: settings.TLSDomain, DomainID: 7, Shared: true}
+	h.Port, h.TLS = 443, settings.TLS{DomainID: 7, Shared: true}
 	if err := a.Settings.SetHTTP(ctx, h); err != nil {
 		t.Fatal(err)
 	}
 	if _, err := a.Reset(ctx, ResetOptions{Port: 41000}); err != nil {
 		t.Fatal(err)
 	}
-	if h, _ = a.Settings.HTTP(ctx); h.Port != 41000 || h.TLS != (settings.TLS{Mode: settings.TLSDomain, DomainID: 7}) {
+	if h, _ = a.Settings.HTTP(ctx); h.Port != 41000 || h.TLS != (settings.TLS{DomainID: 7}) {
 		t.Fatalf("after the reset %+v", h)
 	}
 }
@@ -222,7 +222,7 @@ func TestPanelPortsLeaveOutASharedPort(t *testing.T) {
 	srv := &address.Server{Handler: func(string) (http.Handler, error) { return http.NotFoundHandler(), nil }, Log: quiet()}
 	ctx, cancel := context.WithCancel(context.Background())
 	done := make(chan error, 1)
-	current := address.Site{Port: 443, BasePath: "hiddenPath1234", TLS: settings.TLS{Mode: settings.TLSDomain, DomainID: 7, Shared: true}}
+	current := address.Site{Port: 443, BasePath: "hiddenPath1234", Shared: true}
 	go func() { done <- srv.Serve(ctx, current, nil) }()
 	for srv.Status().Current != current {
 		time.Sleep(5 * time.Millisecond)

@@ -59,20 +59,32 @@ func TestPanelCertificateFollowsARenewedFile(t *testing.T) {
 	}
 }
 
-func TestServesHTTPS(t *testing.T) {
-	e, _, _ := newRuleCertEnv(t)
+// PanelAnswers matches a domain's name like a rule does and says whether
+// it has a certificate.
+func TestPanelAnswers(t *testing.T) {
+	e := newEnv(t)
 	ctx := context.Background()
-	port := freePort(t)
-	if _, err := e.b.SaveSite(ctx, e.rule("tls", port, nil, "a.example.com")); err != nil {
-		t.Fatal(err)
-	}
+	dir := t.TempDir()
+	cf, kf := longCertFiles(t, dir, "*.example.com")
+	wild := e.addDomainWith("*.example.com", CertChoice{Kind: ChoiceFile, CertFile: cf, KeyFile: kf})
+	plain := e.addDomain("panel.example.org")
 	for _, c := range []struct {
-		port int
-		name string
-		want bool
-	}{{port, "a.example.com", true}, {port, "b.example.com", false}, {e.port, "old.example.com", false}, {port + 1, "a.example.com", false}} {
-		if got, err := e.b.ServesHTTPS(ctx, c.port, c.name); err != nil || got != c.want {
-			t.Errorf("ServesHTTPS(%d, %s) = %v, %v", c.port, c.name, got, err)
+		id            int64
+		host          string
+		answers, cert bool
+	}{
+		{wild.ID, "a.example.com", true, true},
+		{wild.ID, "a.b.example.com", false, true},
+		{wild.ID, "example.com", false, true},
+		{plain.ID, "panel.example.org", true, false},
+		{plain.ID, "other.example.org", false, false},
+	} {
+		answers, cert, err := e.b.PanelAnswers(ctx, c.id, c.host)
+		if err != nil || answers != c.answers || cert != c.cert {
+			t.Errorf("PanelAnswers(%d, %s) = %v, %v, %v", c.id, c.host, answers, cert, err)
 		}
+	}
+	if _, _, err := e.b.PanelAnswers(ctx, 9999, "a.example.com"); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("a domain that is gone: %v", err)
 	}
 }
