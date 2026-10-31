@@ -40,6 +40,17 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - a native Persian speaker has read every Persian string.
 
+## Release notes 0.5.7-beta
+Karvan 0.5.7-beta can serve its own panel with a domain's certificate and copy certificates to a panel.
+- The "..." menu of a domain has Use for the Karvan panel, or Stop using for the Karvan panel while the panel uses that domain. It starts the same HTTPS change as the settings: the new address waits 10 minutes for a confirm from there. Karvan only reads the certificate, so other services that use it keep working, and renewals reach the panel as before. A domain without a certificate for its name cannot be picked, and the menu says why.
+- A domain's name on the Domains list opens its own page: the certificate (issuer, names, end date, problems and where it came from), the next renewal and the last error for Let's Encrypt, the rules that use it, and whether it serves the Karvan panel. Renew and Change certificate stay in the "..." menu of the list.
+- The "..." menu of a certificate no longer has Edit; Change certificate on its domain does the same. It has Copy to a panel: the Let's Encrypt live folder or a Marzban or PasarGuard panel. Karvan copies (never moves) fullchain.pem and privkey.pem into a new folder named after the main domain, /var/lib/<panel folder>/certs/<domain>/ or /etc/letsencrypt/live/<domain>/, then shows the two paths. The panel's own settings must point to them; Karvan never changes a panel's ENV.
+- After each renewal or change of the certificate, Karvan copies it to the same folders again, and logs and audits each copy. Each copy is listed on its certificate with Stop copying. Karvan replaces only files it wrote itself and refuses links, so a certbot folder or a file of the panel stays as it is.
+- The systemd unit lets Karvan write to /etc/letsencrypt, for copies to the live folder.
+- During a change between two HTTPS modes on the same port, a browser asking for the domain's name reaches the address with that domain's certificate, so the change can be confirmed there.
+- A ready panel card shows only Ready. Panel control shows as a warning only when it is not available.
+- Safe Mode now puts a backup back on TimescaleDB reliably.
+
 ## Release notes 0.5.6-beta
 - Migrations and Batches no longer show the search and filters for a moment before the empty card. They show the loading skeleton until the list arrives, as Domains and Rules do.
 - A panel's page no longer has a "..." menu. Its actions are in the "..." menu on the panel's card on the Panels list.

@@ -1,13 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import type { Domain } from '../../lib/api/domains';
-import type { ScanResult } from '../../lib/api/certificates';
+import type { Certificate, ScanResult } from '../../lib/api/certificates';
 import {
+  certOrigin,
   daysLeft,
   domainLines,
   certStateOf,
   domainStateOf,
   domainWarningTone,
   notScanned,
+  ownLines,
   renewalOf,
   renewMethod,
   sortedWarnings,
@@ -215,5 +217,31 @@ describe("a domain's state", () => {
       state: 'broken',
       tone: 'danger',
     });
+  });
+});
+
+describe('the domain page', () => {
+  const now = new Date('2026-10-28T12:00:00Z');
+  it("names a certificate's origin", () => {
+    const c = (over: Partial<Certificate>) =>
+      ({ kind: 'file', origin: '', found: false, ...over }) as Certificate;
+    expect(certOrigin(c({ origin: 'acme', kind: 'pasted' }))).toBe('acme');
+    expect(certOrigin(c({ kind: 'pasted' }))).toBe('pasted');
+    expect(certOrigin(c({ found: true }))).toBe('found');
+    expect(certOrigin(c({}))).toBe('file');
+  });
+
+  it("lists only the problems its certificate section doesn't show", () => {
+    const facts = { domains: ['a.example.com'], issuer: 'R11', warnings: ['expired' as const] };
+    const d = {
+      id: 1,
+      name: 'a.example.com',
+      certificate: { id: 2, name: 'a', origin: '', facts },
+      pins: [{ port: 8443, certificate: { id: 3, name: 'old' } }],
+      warnings: ['expired', 'cert_conflict'],
+    } as unknown as Domain;
+    expect(ownLines(d, now).map((l) => l.key)).toEqual(['pin:8443']);
+    const plain = { ...d, certificate: null, pins: [], warnings: ['no_certificate'] } as Domain;
+    expect(ownLines(plain, now)).toEqual([]);
   });
 });

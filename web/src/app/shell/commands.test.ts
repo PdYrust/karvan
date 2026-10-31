@@ -110,6 +110,8 @@ describe('certificateKeywords', () => {
       facts: { domains: ['a.example.com', '*.cdn.example.com'], issuer: 'R11', warnings: [] },
       domains: [],
       rules: [],
+      found: false,
+      copies: [],
     });
     for (const w of ['le-main', '*.cdn.example.com', '/etc/letsencrypt/live/a.example.com']) {
       expect(words).toContain(w);

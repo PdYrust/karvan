@@ -32,6 +32,8 @@ describe('the certificate form', () => {
       facts,
       domains: [],
       rules: [],
+      found: false,
+      copies: [],
     };
     expect(certFormOf(c)).toMatchObject({
       name: 'le',
@@ -52,6 +54,8 @@ describe('the certificate form', () => {
       facts,
       domains: [],
       rules: [],
+      found: false,
+      copies: [],
     };
     expect(certFormOf(c)).toMatchObject({ certMode: 'paste', certPem: 'CERT', keyPem: '' });
   });

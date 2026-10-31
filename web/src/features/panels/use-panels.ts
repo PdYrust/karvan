@@ -14,8 +14,8 @@ export const panelsKey = ['panels'] as const;
 const scanFindsKey = ['panel-scan-finds'] as const;
 
 /** Registered panels with a fresh look at each. The server probes every database, so it is not polled. */
-export function usePanels() {
-  return useQuery({ queryKey: panelsKey, queryFn: () => getPanels(), staleTime: 60_000 });
+export function usePanels(enabled = true) {
+  return useQuery({ queryKey: panelsKey, queryFn: () => getPanels(), staleTime: 60_000, enabled });
 }
 
 /** "Check again": inspects every panel and probes panel control again. */

@@ -41,6 +41,7 @@ func (b *Bridge) Run(ctx context.Context) error {
 			} else if n > 0 {
 				b.Log.Info("bridge: sweep closed users", "count", n)
 			}
+			b.recopy(ctx) // certificate files renewed on disk reach their copies
 		}
 	}
 }
@@ -54,8 +55,16 @@ func siteRules(sites []Site) []rule {
 }
 
 // Reload reads the panel and redirect rules again and listens on exactly
-// their ports.
+// their ports, then copies each changed certificate to its copy folders.
 func (b *Bridge) Reload(ctx context.Context) error {
+	if err := b.reload(ctx); err != nil {
+		return err
+	}
+	b.recopy(context.WithoutCancel(ctx)) // a changed certificate reaches its copies
+	return nil
+}
+
+func (b *Bridge) reload(ctx context.Context) error {
 	b.reloadMu.Lock()
 	defer b.reloadMu.Unlock()
 	sites, err := b.st.Sites(ctx)

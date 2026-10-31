@@ -7,6 +7,7 @@ Wants=network-online.target
 [Service]
 # Runs as root. /usr, /boot and /etc are read
 # only to the service, so a flaw cannot replace the binary or system files.
+# /etc/letsencrypt stays writable for certificates copied to its live folder.
 Type=notify
 ExecStart=/usr/local/bin/karvan serve
 Restart=on-failure
@@ -15,6 +16,7 @@ WatchdogSec=30
 NoNewPrivileges=yes
 PrivateTmp=yes
 ProtectSystem=full
+ReadWritePaths=-/etc/letsencrypt
 
 [Install]
 WantedBy=multi-user.target

@@ -98,6 +98,9 @@ const DomainsPage = lazy(() =>
 const DomainFormPage = lazy(() =>
   import('../features/certificates/DomainFormPage').then((m) => ({ default: m.DomainFormPage })),
 );
+const DomainPage = lazy(() =>
+  import('../features/certificates/DomainPage').then((m) => ({ default: m.DomainPage })),
+);
 const CertificateFormPage = lazy(() =>
   import('../features/certificates/CertificateFormPage').then((m) => ({
     default: m.CertificateFormPage,
@@ -207,6 +210,7 @@ export function App() {
                       <Route path="backups" element={<BackupsPage />} />
                       <Route path="domains" element={<DomainsPage />} />
                       <Route path="domains/new" element={<DomainFormPage />} />
+                      <Route path="domains/:id" element={<DomainPage />} />
                       <Route path="domains/:id/certificate" element={<DomainFormPage />} />
                       <Route path="domains/certificates/:id" element={<CertificateFormPage />} />
                       <Route path="rules" element={<RulesPage />} />

@@ -1,6 +1,8 @@
 import { DataTable, type Column } from '../../components/data/DataTable';
+import { StatusLabel } from '../../components/feedback/StatusBadge';
 import { useT } from '../../i18n/locale';
 import type { Panel } from '../../lib/api/panels';
+import { controlMessages, controlText } from './control';
 import { useCurrentPanel } from './current-panel';
 import { panelsMessages } from './messages';
 import { ControlState, PanelDatabase, PanelName, PanelVersion } from './PanelCells';
@@ -9,7 +11,6 @@ import { PanelStatus } from './PanelStatus';
 
 /** On a phone a panel is a card: name first, then version and database, status at the foot. */
 function PanelCard({ panel, current }: { panel: Panel; current: boolean }) {
-  const t = useT(panelsMessages);
   return (
     <article className="rounded-lg bg-kumo-base ring ring-kumo-hairline">
       <div className="flex items-center gap-2 ps-4 pe-2 pt-2">
@@ -22,14 +23,25 @@ function PanelCard({ panel, current }: { panel: Panel; current: boolean }) {
         <PanelVersion panel={panel} />
         <PanelDatabase panel={panel} />
       </div>
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-kumo-hairline px-4 py-2.5 text-sm">
-        <PanelStatus panel={panel} />
-        <span className="flex items-center gap-2">
-          <span className="text-kumo-subtle">{t('colControl')}</span>
-          <ControlState control={panel.control} />
-        </span>
-      </div>
+      <PanelCardFoot panel={panel} />
     </article>
+  );
+}
+
+/** One status at the card's foot; panel control shows only when Karvan can't use it. */
+export function PanelCardFoot({ panel }: { panel: Panel }) {
+  const t = useT(panelsMessages);
+  const tc = useT(controlMessages);
+  const control = panel.control;
+  return (
+    <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 border-t border-kumo-hairline px-4 py-2.5 text-sm">
+      <PanelStatus panel={panel} />
+      {control && !control.available ? (
+        <StatusLabel tone="warning">
+          {t('colControl')}: {tc(controlText(control).label)}
+        </StatusLabel>
+      ) : null}
+    </div>
   );
 }
 

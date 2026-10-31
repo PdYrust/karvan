@@ -5,6 +5,7 @@ package safemode
 import (
 	"context"
 	"os/exec"
+	"slices"
 	"testing"
 	"time"
 
@@ -61,5 +62,54 @@ func TestMySQLBackupAndRestore(t *testing.T) {
 				mysqlRoundTrip(t, tg)
 			}
 		})
+	}
+}
+
+// restoring reports whether new sessions on tg start in TimescaleDB's
+// restore mode, in which its background workers stay stopped.
+func restoring(t *testing.T, tg paneldb.Target) bool {
+	t.Helper()
+	out, err := (Restorer{Run: DefaultRunner}).psql(context.Background(), tg,
+		"SELECT count(*) FROM pg_db_role_setting s JOIN pg_database d ON d.oid = s.setdatabase WHERE d.datname = current_database() AND 'timescaledb.restoring=on' = ANY (s.setconfig)")
+	if err != nil {
+		t.Fatal(err)
+	}
+	return out != "0"
+}
+
+// TimescaleDB's background workers write their own rows into
+// _timescaledb_catalog.metadata, racing the dump's COPY of the same rows.
+// Every put-back, including a second one into the same database, must run
+// with the workers stopped and start them again afterwards.
+func TestTimescaleRestoresTwice(t *testing.T) {
+	ctx := context.Background()
+	tg := paneldbtest.Load(t, paneldbtest.Fixture{Flavor: "timescale", Path: "../panel/pasarguarddb/testdata/" + pasarguarddb.Revision + ".timescale.sql"})
+	k, srv := key(t), server(t, tg)
+	before := paneldbtest.Checksum(t, tg)
+	b, err := Taker{Dir: t.TempDir(), Key: k, Run: DefaultRunner, Now: time.Now}.Take(ctx, tg, srv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	stopped := 0
+	run := func(ctx context.Context, name string, args ...string) *exec.Cmd {
+		if name == "psql" && !slices.Contains(args, "-c") && restoring(t, tg) {
+			stopped++
+		}
+		return DefaultRunner(ctx, name, args...)
+	}
+	for i := range 2 {
+		scribble(t, tg)
+		if err := (Restorer{Key: k, Run: run}).Restore(ctx, tg, srv, b); err != nil {
+			t.Fatalf("restore %d: %v", i+1, err)
+		}
+		if stopped != i+1 {
+			t.Fatalf("restore %d ran with the TimescaleDB workers running", i+1)
+		}
+		if restoring(t, tg) {
+			t.Fatalf("restore %d left the database in restore mode", i+1)
+		}
+		if paneldbtest.Checksum(t, tg) != before {
+			t.Fatalf("restore %d did not bring the database back", i+1)
+		}
 	}
 }

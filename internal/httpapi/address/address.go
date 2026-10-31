@@ -143,11 +143,20 @@ func From(ctx context.Context) Site {
 
 func (l *listener) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	secure := r.TLS != nil
+	var match []site
 	for _, s := range *l.sites.Load() {
 		if s.TLS.On() == secure && middleware.UnderBase(r.URL.Path, s.BasePath) {
-			s.ServeHTTP(w, r)
-			return
+			match = append(match, s)
 		}
+	}
+	if len(match) > 1 && secure {
+		s, _ := l.byName(r.Context(), match, r.TLS.ServerName)
+		s.ServeHTTP(w, r)
+		return
+	}
+	if len(match) > 0 {
+		match[0].ServeHTTP(w, r)
+		return
 	}
 	if !secure && (r.Method == http.MethodGet || r.Method == http.MethodHead) {
 		for _, s := range *l.sites.Load() {

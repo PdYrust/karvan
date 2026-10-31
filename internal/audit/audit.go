@@ -56,6 +56,8 @@ const (
 	ActionCertSave         = "certificate.save"
 	ActionCertDelete       = "certificate.delete"
 	ActionCertScan         = "certificate.scan"
+	ActionCertCopy         = "certificate.copy"
+	ActionCertCopyStop     = "certificate.copy_stop"
 	ActionRedirectSave     = "redirect.save"
 	ActionRedirectDelete   = "redirect.delete"
 	ActionACMEOrder        = "acme.order"

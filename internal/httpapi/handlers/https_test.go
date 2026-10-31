@@ -70,9 +70,13 @@ func (a *addressEnv) putHTTPS(body map[string]any) response {
 }
 
 // atHTTPS is this browser on the HTTPS address of port.
-func (a *addressEnv) atHTTPS(port int) *env {
+func (a *addressEnv) atHTTPS(port int) *env { return a.atHTTPSFor(port, "") }
+
+// atHTTPSFor is this browser on the HTTPS address of port, asking for
+// the server name name.
+func (a *addressEnv) atHTTPSFor(port int, name string) *env {
 	b := *a.env
-	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12}}
+	tr := &http.Transport{TLSClientConfig: &tls.Config{InsecureSkipVerify: true, MinVersion: tls.VersionTLS12, ServerName: name}}
 	c := *a.client
 	c.Transport = tr
 	b.client, b.url, b.csrf = &c, "https://127.0.0.1:"+strconv.Itoa(port), ""
@@ -176,6 +180,52 @@ func TestHTTPSChangeIsChecked(t *testing.T) {
 	}
 	if p := a.address(base).Pending; p == nil || p.TLS != "domain" || p.Host != "panel.example.com" {
 		t.Fatalf("address waiting = %+v", p)
+	}
+}
+
+// confirmAt confirms the waiting change from b, an HTTPS browser.
+func confirmAt(t *testing.T, b *env) {
+	t.Helper()
+	b.login("")
+	if res := b.do(http.MethodPost, api+"/settings/address/confirm", nil); res.status != http.StatusNoContent {
+		t.Fatalf("confirm: %d %s", res.status, res.body)
+	}
+}
+
+// Use for the Karvan panel serves a domain's certificate once it is
+// confirmed from the new address, and Stop goes back to the self-signed
+// one the same way; each change waits for its confirm.
+func TestPanelDomainModeTurnsOnAndOff(t *testing.T) {
+	a := newHTTPSEnv(t, 0)
+	a.startSelf()
+	confirmAt(t, a.atHTTPS(a.port))
+	at := a.atHTTPS(a.port)
+	at.login("")
+	cert, key := testCert(t, "panel.example.com")
+	id := (&addressEnv{env: at}).addDomain(t, "panel.example.com", cert, key)
+	use := at.do(http.MethodPut, api+"/settings/https", map[string]any{"tls": "domain", "domainId": id, "password": password})
+	if use.status != http.StatusOK {
+		t.Fatalf("use: %d %s", use.status, use.body)
+	}
+	if h, _ := a.saved(); h.TLS.Mode != settings.TLSSelf {
+		t.Fatalf("saved before the confirm = %+v", h)
+	}
+	confirmAt(t, a.atHTTPSFor(a.port, "panel.example.com"))
+	if h, err := a.saved(); err != nil || h.TLS != (settings.TLS{Mode: settings.TLSDomain, DomainID: id}) {
+		t.Fatalf("saved = %+v, %v", h, err)
+	}
+	on := a.atHTTPSFor(a.port, "panel.example.com")
+	on.login("")
+	stop := on.do(http.MethodPut, api+"/settings/https", map[string]any{"tls": "self", "password": password})
+	if stop.status != http.StatusOK {
+		t.Fatalf("stop: %d %s", stop.status, stop.body)
+	}
+	confirmAt(t, a.atHTTPS(a.port))
+	if h, err := a.saved(); err != nil || h.TLS != (settings.TLS{Mode: settings.TLSSelf}) {
+		t.Fatalf("saved after stop = %+v, %v", h, err)
+	}
+	if got := len(auditRows(t, a.env, "settings.https")); got != 3 {
+		t.Fatalf("settings.https audited %d times", got)
 	}
 }
 

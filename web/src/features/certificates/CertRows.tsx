@@ -1,74 +1,25 @@
-import { Button } from '@cloudflare/kumo/components/button';
-import { DropdownMenu } from '@cloudflare/kumo/components/dropdown';
-import { Link, useNavigate } from 'react-router';
+import { Link } from 'react-router';
 import type { Column } from '../../components/data/DataTable';
 import { RowCard } from '../../components/data/RowCard';
 import { StatusLabel } from '../../components/feedback/StatusBadge';
-import { DotsThreeIcon, PencilSimpleIcon, TrashIcon } from '../../components/icons/regular';
 import { useT } from '../../i18n/locale';
 import type { Certificate } from '../../lib/api/certificates';
 import { useFormat } from '../../lib/preferences/region';
 import { certProblems, certStateOf, daysLeft, domainWarningTone } from './cert-view';
-import { Names } from './DomainRows';
+import { CertMenu } from './CertMenu';
+import { copyMessages } from './copy-messages';
+import { CopyTargets } from './CopyTargets';
+import { domainPage, Names } from './DomainRows';
 import { certFactMessages } from './fact-messages';
 import { certificatesMessages } from './messages';
 import { linkClass, Mono, RuleName } from './parts';
 import { StateMenu } from './StateMenu';
 
-/** Nothing uses it, so it can go; Karvan refuses the delete otherwise. */
-const isUnused = (c: Certificate) => c.domains.length === 0 && c.rules.length === 0;
 /** How it is kept: files, pasted, or from Let's Encrypt, which Karvan renews itself. */
 export const kindOf = (c: Certificate) =>
   c.origin === 'acme' ? 'kind_acme' : (`kind_${c.kind}` as const);
-/** Where a certificate is fixed: its edit page, or its first domain's for a Let's Encrypt one. */
-const pageOf = (c: Certificate) =>
-  c.origin !== 'acme'
-    ? `/domains/certificates/${String(c.id)}`
-    : c.domains[0]
-      ? `/domains/${String(c.domains[0].id)}/certificate`
-      : undefined;
-
-function CertMenu({ cert, onDelete }: { cert: Certificate; onDelete: () => void }) {
-  const t = useT(certificatesMessages);
-  const navigate = useNavigate();
-  const label = t('moreFor', { name: cert.name });
-  return (
-    <DropdownMenu>
-      <DropdownMenu.Trigger
-        render={
-          <Button
-            variant="ghost"
-            shape="square"
-            aria-label={label}
-            title={label}
-            icon={<DotsThreeIcon size={20} />}
-            className="shrink-0 pointer-coarse:size-9"
-          />
-        }
-      />
-      <DropdownMenu.Content align="end" className="min-w-44">
-        {cert.origin === 'acme' ? null : (
-          <DropdownMenu.Item
-            className="gap-2"
-            onClick={() => void navigate(`/domains/certificates/${String(cert.id)}`)}
-          >
-            <PencilSimpleIcon size={16} />
-            {t('edit')}
-          </DropdownMenu.Item>
-        )}
-        <DropdownMenu.Item
-          className="gap-2"
-          variant="danger"
-          disabled={!isUnused(cert)}
-          onClick={onDelete}
-        >
-          <TrashIcon size={16} />
-          {t('delete')}
-        </DropdownMenu.Item>
-      </DropdownMenu.Content>
-    </DropdownMenu>
-  );
-}
+/** Where a certificate's problems are fixed: its first domain's page, where Change certificate is. */
+const pageOf = (c: Certificate) => (c.domains[0] ? domainPage(c.domains[0]) : undefined);
 
 function CertState({ cert, badge }: { cert: Certificate; badge?: boolean }) {
   const t = useT(certificatesMessages);
@@ -110,12 +61,12 @@ function Ends({ cert, now }: { cert: Certificate; now: Date }) {
   );
 }
 
-/** The domains (each a link to its certificate page) and the rules that use it. */
+/** The domains (each a link to its page) and the rules that use it. */
 const users = (c: Certificate) => [
   ...c.domains.map((d) => ({
     key: `d:${String(d.id)}`,
     node: (
-      <Link to={`/domains/${String(d.id)}/certificate`} className={linkClass}>
+      <Link to={domainPage(d)} className={linkClass}>
         <Mono text={d.name} />
       </Link>
     ),
@@ -130,6 +81,7 @@ export function useCertColumns(
   onDelete: (c: Certificate) => void,
 ): Column<Certificate>[] {
   const t = useT(certificatesMessages);
+  const tc = useT(copyMessages);
   return [
     {
       key: 'name',
@@ -152,6 +104,12 @@ export function useCertColumns(
       className: 'max-w-56',
     },
     {
+      key: 'copies',
+      header: tc('colCopies'),
+      cell: (c) => <CopyTargets cert={c} />,
+      className: 'max-w-64',
+    },
+    {
       key: 'menu',
       header: t('colMenu'),
       hideHeader: true,
@@ -172,6 +130,7 @@ export function CertRowCard({
   onDelete: () => void;
 }) {
   const t = useT(certificatesMessages);
+  const tc = useT(copyMessages);
   const fmt = useFormat();
   const end = cert.facts.notAfter;
   const soon = end && cert.facts.warnings.includes('expires_soon') ? daysLeft(end, now) : undefined;
@@ -188,6 +147,12 @@ export function CertRowCard({
           <StatusLabel tone="warning">{t('expiresIn', { count: soon })}</StatusLabel>
         )}
       </p>
+      {cert.copies.length > 0 ? (
+        <div className="flex flex-col gap-1 text-sm">
+          <span className="text-kumo-subtle">{tc('colCopies')}</span>
+          <CopyTargets cert={cert} />
+        </div>
+      ) : null}
     </RowCard>
   );
 }

@@ -1,5 +1,5 @@
 import { useKumoToastManager } from '@cloudflare/kumo/components/toast';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState, type ReactNode } from 'react';
 import { DataTable } from '../../components/data/DataTable';
 import { ListToolbar } from '../../components/data/ListToolbar';
@@ -9,14 +9,17 @@ import { TypeToConfirm } from '../../components/dialogs/TypeToConfirm';
 import { useLocale, useT } from '../../i18n/locale';
 import { certificateKeys } from '../../lib/api/certificates';
 import { deleteDomain, domainKeys, type Domain } from '../../lib/api/domains';
+import { getHttps, httpsKeys } from '../../lib/api/https';
 import { useSubscriptionErrorText } from '../../lib/errors/subscriptions';
 import { matchesTerm, sortRows, type ListSort } from '../../lib/lists/choices';
 import { useLingering } from '../../lib/motion/use-lingering';
 import { useNow } from '../overview/use-now';
 import { domainStateOf, type DomainState } from './cert-view';
+import { DomainMenu } from './DomainMenu';
 import { DomainRowCard, useDomainColumns } from './DomainRows';
 import { ListFrame } from './ListFrame';
 import { certificatesMessages } from './messages';
+import { panelUseOf } from '../https/panel-use';
 
 const states = ['all', 'active', 'plain', 'attention', 'broken'] as const;
 type StateFilter = (typeof states)[number];
@@ -56,7 +59,16 @@ export function DomainsSection({
     remove.reset();
     setAsking(d);
   };
-  const columns = useDomainColumns(now, ask);
+  // Without the HTTPS settings (an address the server cannot change) the menu leaves the panel out.
+  const https = useQuery({ queryKey: httpsKeys.all, queryFn: getHttps });
+  const menu = (d: Domain) => (
+    <DomainMenu
+      domain={d}
+      onDelete={() => ask(d)}
+      panel={https.data ? panelUseOf(d, https.data) : undefined}
+    />
+  );
+  const columns = useDomainColumns(now, menu);
   const stateOf = (d: Domain): DomainState => domainStateOf(d, now).state;
   const is = (d: Domain, f: StateFilter) => f === 'all' || stateOf(d) === f;
   const terms = (d: Domain) => [d.name, d.certificate?.name, ...d.rules.map((r) => r.name)];
@@ -102,7 +114,7 @@ export function DomainsSection({
           rows={shown}
           rowKey={(d) => d.id}
           columns={columns}
-          card={(d) => <DomainRowCard domain={d} now={now} onDelete={() => ask(d)} />}
+          card={(d) => <DomainRowCard domain={d} now={now} menu={menu(d)} />}
         />
       </ListFrame>
       <TypeToConfirm

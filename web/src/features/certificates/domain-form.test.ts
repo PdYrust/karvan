@@ -80,6 +80,8 @@ const cert = (id: number, name: string, f: CertFacts, used = false): Certificate
   facts: f,
   domains: used ? [{ id: 9, name: 'other.test', warnings: [] }] : [],
   rules: [],
+  found: false,
+  copies: [],
 });
 
 describe('the certificates on this server', () => {

@@ -2,6 +2,7 @@ import { Button } from '@cloudflare/kumo/components/button';
 import { useKumoToastManager } from '@cloudflare/kumo/components/toast';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router';
 import { ErrorState } from '../../components/feedback/ErrorState';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { Bone } from '../../components/feedback/PageSkeleton';
@@ -22,6 +23,7 @@ import { useSecondsLeft } from '../settings/access/use-seconds-left';
 import { WaitingCard } from '../settings/access/WaitingCard';
 import { certifiedDomains, formOf, httpsLink, httpsStart, type HttpsForm } from './https-form';
 import { HttpsFields } from './HttpsFields';
+import { askedForm } from './panel-form';
 import { httpsMessages } from './messages';
 
 /** The current mode as a sentence: HTTP, self-signed, or a domain's certificate, and the port. */
@@ -46,7 +48,17 @@ export function HttpsTab() {
   const queryClient = useQueryClient();
   const https = useQuery({ queryKey: httpsKeys.all, queryFn: getHttps });
   const domains = useQuery({ queryKey: domainKeys.all, queryFn: getDomains });
-  const [form, setForm] = useState<HttpsForm | null>(null);
+  const [edited, setEdited] = useState<HttpsForm | null>(null);
+  // A domain's Use or Stop for the Karvan panel opens the dialog with its change, until it closes.
+  const [query, setQuery] = useSearchParams();
+  const [dismissed, setDismissed] = useState(false);
+  const close = () => {
+    setEdited(null);
+    if (query.has('panel')) {
+      setDismissed(true);
+      setQuery({}, { replace: true });
+    }
+  };
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: httpsKeys.all });
     void queryClient.invalidateQueries({ queryKey: accountKeys.address });
@@ -60,7 +72,7 @@ export function HttpsTab() {
       reauth: Reauth;
     }) => startHttps(f, reauth),
     onSuccess: () => {
-      setForm(null);
+      close();
       refresh();
     },
   });
@@ -98,10 +110,12 @@ export function HttpsTab() {
   const all = domains.data?.domains ?? [];
   const usable = certifiedDomains(all);
   const name = all.find((d) => d.id === h.domainId)?.name ?? '';
+  const asked = dismissed || pending ? null : askedForm(query, all, h);
+  const form = edited ?? asked;
   const change = form ? httpsStart(form, h) : null;
   const open = () => {
     start.reset();
-    setForm(formOf(h));
+    setEdited(formOf(h));
   };
   return (
     <Reveal on={load.reveal}>
@@ -135,9 +149,11 @@ export function HttpsTab() {
       </SettingsCard>
       <ReauthDialog
         open={form !== null}
-        onOpenChange={(o) => (o ? open() : setForm(null))}
+        onOpenChange={(o) => (o ? open() : close())}
         title={t('dialogTitle')}
-        description={t('dialogBody')}
+        description={
+          form?.tls === 'domain' ? `${t('dialogBody')} ${t('readsOnly')}` : t('dialogBody')
+        }
         action={t('action')}
         ready={change !== null}
         pending={start.isPending}
@@ -151,7 +167,7 @@ export function HttpsTab() {
             https={h}
             domains={usable}
             disabled={start.isPending}
-            onChange={setForm}
+            onChange={setEdited}
           />
         ) : null}
       </ReauthDialog>

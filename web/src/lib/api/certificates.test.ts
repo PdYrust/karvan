@@ -1,9 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  copyCertificate,
   deleteCertificate,
   getCertificates,
   saveCertificate,
   scanCertificates,
+  stopCertificateCopy,
 } from './certificates';
 
 afterEach(() => vi.unstubAllGlobals());
@@ -22,7 +24,18 @@ describe('stored certificates', () => {
   it('are listed with their facts and rules', async () => {
     const facts = { domains: ['old.example.com'], issuer: 'R3', warnings: [] };
     const body = {
-      certificates: [{ id: 1, name: 'old', kind: 'file', facts, domains: [], rules: [] }],
+      certificates: [
+        {
+          id: 1,
+          name: 'old',
+          kind: 'file',
+          facts,
+          domains: [],
+          rules: [],
+          found: true,
+          copies: [],
+        },
+      ],
     };
     const last = stubFetch(body);
     await expect(getCertificates()).resolves.toEqual(body);
@@ -42,6 +55,8 @@ describe('stored certificates', () => {
           facts: { domains: [], issuer: '', warnings: [] },
           domains: [],
           rules: [{ id: 2, warnings: [] }],
+          found: false,
+          copies: [],
         },
       ],
     });
@@ -93,5 +108,22 @@ describe('the certificate scan', () => {
   it('reads null lists as empty', async () => {
     stubFetch({ found: null, skipped: null });
     await expect(scanCertificates()).resolves.toEqual({ found: [], skipped: [] });
+  });
+});
+
+describe('certificate copies', () => {
+  it('copy to a target with POST and stop with DELETE', async () => {
+    const copy = { id: 3, target: 'letsencrypt', dir: '/etc/letsencrypt/live/a.example.com' };
+    let last = stubFetch(copy);
+    await expect(copyCertificate(4, { target: 'panel', panelId: 2 })).resolves.toEqual(copy);
+    let [url, init] = last();
+    expect(url).toMatch(/api\/v1\/certificates\/4\/copies$/);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body as string)).toEqual({ target: 'panel', panelId: 2 });
+    last = stubFetch(undefined, 204);
+    await stopCertificateCopy(4, 3);
+    [url, init] = last();
+    expect(url).toMatch(/api\/v1\/certificates\/4\/copies\/3$/);
+    expect(init.method).toBe('DELETE');
   });
 });

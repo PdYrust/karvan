@@ -103,7 +103,8 @@ func newEnvOn(t *testing.T, challengePort int, ca func(e *orderEnv)) *orderEnv {
 	e := &orderEnv{t: t, db: db, key: key, clock: &clock{t: time.Now().UTC().Truncate(time.Second)}, logs: &logBuffer{},
 		txt: map[string][]string{}}
 	log := slog.New(slog.NewTextHandler(e.logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
-	e.br = bridge.New(bridge.Deps{DB: db, Key: key, Now: e.clock.now, Log: log, ChallengePort: challengePort})
+	e.br = bridge.New(bridge.Deps{DB: db, Key: key, Now: e.clock.now, Log: log, ChallengePort: challengePort,
+		CopyBase: filepath.Join(dir, "copies"), Audit: audit.New(db)})
 	ca(e)
 	runCtx, stop := context.WithCancel(ctx)
 	done := make(chan struct{})

@@ -83,7 +83,10 @@ type Certificate struct {
 	Facts    CertFacts    `json:"facts"`
 	Domains  []CertDomain `json:"domains"`
 	Rules    []CertRule   `json:"rules"`
-	leaf     *x509.Certificate
+	// Found is a file pair in one of the places the certificate scan reads.
+	Found  bool       `json:"found"`
+	Copies []CertCopy `json:"copies"`
+	leaf   *x509.Certificate
 }
 
 // rule is a panel or redirect rule as the router and the certificate

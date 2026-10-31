@@ -73,7 +73,7 @@ type services struct {
 // panelPorts are the web panel's ports, which no rule may take.
 func (a *App) startServices(ctx context.Context, panelPorts func() []int) *services {
 	br := bridge.New(bridge.Deps{DB: a.DB, Key: a.Key, Log: a.Logger, DataDir: a.Config.DataDir, KeyFile: a.Config.KeyFile,
-		EnvRoots: scanRoots(), PanelPorts: panelPorts, ChallengePort: a.Config.ACMEHTTPPort})
+		EnvRoots: scanRoots(), PanelPorts: panelPorts, ChallengePort: a.Config.ACMEHTTPPort, Audit: a.Audit})
 	s := &services{runs: a.newRuns(), bridge: br, orders: a.newOrders(br), hostStore: hoststats.NewStore(a.DB)}
 	s.host = &hoststats.Sampler{Reader: hoststats.System, Store: s.hostStore, Log: a.Logger}
 	s.dbstats = &dbstats.Sampler{Store: dbstats.NewStore(a.DB), Log: a.Logger, Panels: s.panelRefs}

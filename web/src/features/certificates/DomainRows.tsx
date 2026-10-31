@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { Column } from '../../components/data/DataTable';
 import { CardFacts, RowCard } from '../../components/data/RowCard';
@@ -6,12 +7,12 @@ import { useT } from '../../i18n/locale';
 import type { Domain } from '../../lib/api/domains';
 import { useFormat } from '../../lib/preferences/region';
 import { daysLeft, domainStateOf, listLines, renewalOf } from './cert-view';
-import { DomainMenu } from './DomainMenu';
 import { certificatesMessages } from './messages';
 import { linkClass, Mono, RuleName, useAcmeErrorWords } from './parts';
 import { StateMenu } from './StateMenu';
 
-const pageOf = (d: Domain) => `/domains/${String(d.id)}/certificate`;
+/** A domain's own page. */
+export const domainPage = (d: { id: number }) => `/domains/${String(d.id)}`;
 
 /** The domain's state, its problems behind it. */
 function DomainState({ domain, now, badge }: { domain: Domain; now: Date; badge?: boolean }) {
@@ -31,7 +32,7 @@ function DomainState({ domain, now, badge }: { domain: Domain; now: Date; badge?
       tone={tone}
       problems={problems}
       label={t('showProblems', { name: domain.name, state: word })}
-      to={pageOf(domain)}
+      to={domainPage(domain)}
       badge={badge}
     />
   );
@@ -65,7 +66,7 @@ function CertCell({ domain, now }: { domain: Domain; now: Date }) {
 }
 
 /** Names in a column, or a quiet "None". */
-export function Names({ links }: { links: readonly { key: string; node: React.ReactNode }[] }) {
+export function Names({ links }: { links: readonly { key: string; node: ReactNode }[] }) {
   const t = useT(certificatesMessages);
   if (links.length === 0) return <span className="text-kumo-subtle">{t('none')}</span>;
   return (
@@ -82,16 +83,16 @@ export function Names({ links }: { links: readonly { key: string; node: React.Re
 const rules = (d: Domain) =>
   d.rules.map((r) => ({ key: `${r.kind}:${String(r.id)}`, node: <RuleName rule={r} /> }));
 
-/** The domain's name as the row's link, to its certificate page. */
+/** The domain's name as the row's link, to its page. */
 function DomainLink({ domain }: { domain: Domain }) {
   return (
-    <Link to={pageOf(domain)} className={linkClass}>
+    <Link to={domainPage(domain)} className={linkClass}>
       <Mono text={domain.name} />
     </Link>
   );
 }
 
-export function useDomainColumns(now: Date, onDelete: (d: Domain) => void): Column<Domain>[] {
+export function useDomainColumns(now: Date, menu: (d: Domain) => ReactNode): Column<Domain>[] {
   const t = useT(certificatesMessages);
   return [
     {
@@ -117,7 +118,7 @@ export function useDomainColumns(now: Date, onDelete: (d: Domain) => void): Colu
       key: 'menu',
       header: t('colMenu'),
       hideHeader: true,
-      cell: (d) => <DomainMenu domain={d} onDelete={() => onDelete(d)} />,
+      cell: menu,
       className: 'w-12 text-end',
     },
   ];
@@ -127,18 +128,18 @@ export function useDomainColumns(now: Date, onDelete: (d: Domain) => void): Colu
 export function DomainRowCard({
   domain,
   now,
-  onDelete,
+  menu,
 }: {
   domain: Domain;
   now: Date;
-  onDelete: () => void;
+  menu: ReactNode;
 }) {
   const t = useT(certificatesMessages);
   return (
     <RowCard
       lead={<DomainLink domain={domain} />}
       badge={<DomainState domain={domain} now={now} badge />}
-      menu={<DomainMenu domain={domain} onDelete={onDelete} />}
+      menu={menu}
     >
       <CardFacts
         className="grid-cols-2"

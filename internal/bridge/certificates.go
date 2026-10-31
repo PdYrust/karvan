@@ -163,7 +163,7 @@ func (b *Bridge) Certificates(ctx context.Context) ([]Certificate, error) {
 			c.Rules = append(c.Rules, CertRule{RuleRef: r.ref, Warnings: w})
 		}
 	}
-	return certs, nil
+	return certs, b.withCopies(ctx, certs)
 }
 
 // SaveCertificate adds (id 0) or changes a certificate, then reloads the

@@ -37,6 +37,7 @@ const en = {
   portInvalid: 'Use a number from 1 to 65535.',
   rulePort: 'Rule port',
   action: 'Serve the new address',
+  readsOnly: 'Karvan only reads the certificate, so other services that use it keep working.',
   signInThere: 'Sign in there first: this session does not carry over to the new address.',
 };
 
@@ -78,6 +79,8 @@ const fa: Messages<HttpsKey>['fa'] = {
   portInvalid: 'عددی از ۱ تا ۶۵۵۳۵ وارد کنید.',
   rulePort: 'پورت قانون',
   action: 'باز کردن آدرس جدید',
+  readsOnly:
+    'کاروان فقط گواهی را میخواند، پس سرویس های دیگری که از آن استفاده میکنند به کار خود ادامه میدهند.',
   signInThere: 'اول آنجا وارد شوید: این نشست به آدرس جدید منتقل نمیشود.',
 };
 

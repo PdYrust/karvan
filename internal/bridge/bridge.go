@@ -33,6 +33,11 @@ type Deps struct {
 	// ChallengePort is where Let's Encrypt asks for HTTP-01 tokens
 	// (acmeHttpPort); 0 means 80.
 	ChallengePort int
+	// CopyBase goes before every folder a certificate is copied to;
+	// empty outside tests.
+	CopyBase string
+	// Audit records the copies Karvan makes by itself; nil records none.
+	Audit Recorder
 }
 
 // destTTL is how long an opened destination is reused before its ENV is
@@ -78,6 +83,9 @@ type Bridge struct {
 	scanMu sync.Mutex // held while a certificate scan runs
 	scanT  scanTest
 
+	copyMu  sync.Mutex // held while certificates are copied
+	copyKey []byte     // keys the sums of what was copied
+
 	started     chan struct{} // closed once Run has filled the domains and listens
 	startedOnce sync.Once
 }
@@ -109,7 +117,7 @@ func New(d Deps) *Bridge {
 		lim: newLimits(d.Now), neg: newNegative(d.Now), dests: map[int64]*openDest{}, olds: map[int64]OldPanel{},
 		servers: map[int]*listener{}, errs: map[int]error{}, bg: bg, stopBg: stop, ups: map[int64]*UploadProgress{},
 		chal: challenges{holders: map[string]bool{}, tokens: map[string]challenge{}}, started: make(chan struct{}),
-		panelCerts: certCache{m: map[string]cachedCert{}}}
+		panelCerts: certCache{m: map[string]cachedCert{}}, copyKey: d.Key.Derive("bridge/copy-sum")}
 	b.st.challengeOpen = b.challengeOpen
 	return b
 }

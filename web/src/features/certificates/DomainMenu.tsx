@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router';
 import {
   ArrowClockwiseIcon,
   DotsThreeIcon,
+  LockSimpleIcon,
   SealCheckIcon,
   TrashIcon,
 } from '../../components/icons/regular';
@@ -16,8 +17,10 @@ import { acmeKeys, startAcme, type AcmeMethod } from '../../lib/api/acme';
 import { domainKeys, type Domain } from '../../lib/api/domains';
 import { useAcmeErrorText } from '../../lib/errors/acme';
 import { renewMethod } from './cert-view';
+import { copyMessages } from './copy-messages';
 import { acmeMethodsFor } from './domain-form';
 import { certificatesMessages } from './messages';
+import { panelLink, type PanelUse } from '../https/panel-use';
 
 /**
  * Renew now as a submenu, like the account menu's Language, that opens under its row:
@@ -71,10 +74,46 @@ function RenewSub({
 }
 
 /**
- * The "..." menu: change the certificate, renew a Let's Encrypt one now, or delete while no rule
- * holds the domain.
+ * Use or Stop using the domain for the Karvan panel, on the HTTPS tab where the change is made and
+ * confirmed; without a certificate for the domain, why not.
  */
-export function DomainMenu({ domain, onDelete }: { domain: Domain; onDelete: () => void }) {
+function PanelItem({ domain, use }: { domain: Domain; use: PanelUse }) {
+  const t = useT(copyMessages);
+  const navigate = useNavigate();
+  const blocked = use.kind === 'use' ? use.blocked : undefined;
+  return (
+    <DropdownMenu.Item
+      className="gap-2"
+      disabled={blocked !== undefined}
+      onClick={() => void navigate(panelLink(domain, use.kind))}
+    >
+      <LockSimpleIcon size={16} />
+      <span className="flex min-w-0 flex-col">
+        <span>{t(use.kind === 'use' ? 'usePanel' : 'stopPanel')}</span>
+        {blocked ? (
+          <span className="text-xs whitespace-normal text-kumo-subtle">
+            {t(blocked === 'no_certificate' ? 'needsCert' : 'notCovered')}
+          </span>
+        ) : null}
+      </span>
+    </DropdownMenu.Item>
+  );
+}
+
+/**
+ * The "..." menu: change the certificate, renew a Let's Encrypt one now, use it for the Karvan
+ * panel, or delete while no rule holds the domain.
+ */
+export function DomainMenu({
+  domain,
+  onDelete,
+  panel,
+}: {
+  domain: Domain;
+  onDelete: () => void;
+  /** Left out when the panel's HTTPS cannot be changed from here. */
+  panel?: PanelUse;
+}) {
   const t = useT(certificatesMessages);
   const navigate = useNavigate();
   const toasts = useKumoToastManager();
@@ -108,7 +147,7 @@ export function DomainMenu({ domain, onDelete }: { domain: Domain; onDelete: () 
           />
         }
       />
-      <DropdownMenu.Content align="end" className="min-w-44">
+      <DropdownMenu.Content align="end" className="max-w-[min(20rem,calc(100vw-2rem))] min-w-44">
         <DropdownMenu.Item className="gap-2" onClick={() => void navigate(page)}>
           <SealCheckIcon size={16} />
           {t('changeCert')}
@@ -121,6 +160,7 @@ export function DomainMenu({ domain, onDelete }: { domain: Domain; onDelete: () 
             onRenew={(m) => renew.mutate(m)}
           />
         ) : null}
+        {panel ? <PanelItem domain={domain} use={panel} /> : null}
         <DropdownMenu.Item
           className="gap-2"
           variant="danger"

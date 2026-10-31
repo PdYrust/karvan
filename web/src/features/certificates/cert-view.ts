@@ -1,6 +1,6 @@
 import type { StatusTone } from '../../components/feedback/StatusBadge';
 import type { AcmeMethod, AcmeState } from '../../lib/api/acme';
-import type { ScanResult } from '../../lib/api/certificates';
+import type { Certificate, ScanResult } from '../../lib/api/certificates';
 import type { Domain, DomainWarning } from '../../lib/api/domains';
 import type { CertWarning } from '../../lib/api/rules';
 
@@ -123,6 +123,22 @@ export function domainStateOf(d: Domain, now: Date): { state: DomainState; tone:
   if (lines.length === 0) return { state: 'active', tone: 'success' };
   if (lines.every((l) => l.word === 'no_certificate')) return { state: 'plain', tone: 'neutral' };
   return { state: 'attention', tone: 'warning' };
+}
+
+/** Where a certificate came from: Let's Encrypt, a paste, files the scan found, or files named by hand. */
+export function certOrigin(c: Certificate): 'acme' | 'pasted' | 'found' | 'file' {
+  if (c.origin === 'acme') return 'acme';
+  if (c.kind === 'pasted') return 'pasted';
+  return c.found ? 'found' : 'file';
+}
+
+/**
+ * The domain's lines its certificate section does not show already: neither its certificate's
+ * own warnings nor that it has none.
+ */
+export function ownLines(d: Domain, now: Date): DomainLine[] {
+  const shown: readonly string[] = [...(d.certificate?.facts.warnings ?? []), 'no_certificate'];
+  return domainLines(d, now).filter((l) => !shown.includes(l.word));
 }
 
 export type CertState = 'active' | 'attention' | 'broken';

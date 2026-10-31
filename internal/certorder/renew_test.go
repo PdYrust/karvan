@@ -4,6 +4,8 @@ import (
 	"context"
 	"crypto/x509"
 	"errors"
+	"os"
+	"path/filepath"
 	"slices"
 	"strconv"
 	"testing"
@@ -81,6 +83,37 @@ func TestRenewalServesTheNewCertificate(t *testing.T) {
 	fresh := handshake(t, e.httpsRule("r.example.com"), "r.example.com")
 	if after == before || fresh != after {
 		t.Fatalf("before %s, warm %s, fresh %s", before, after, fresh)
+	}
+}
+
+// A renewal copies the new certificate to every folder it is copied to,
+// and audits the copy.
+func TestRenewalCopiesAgain(t *testing.T) {
+	e := newOrderEnv(t)
+	d := e.addACME("c.example.com", HTTP01)
+	e.waitState(d.ID, "done")
+	base := e.br.CopyBase
+	if err := os.MkdirAll(filepath.Join(base, "etc/letsencrypt"), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	c, err := e.br.CopyCertificate(t.Context(), e.domain(d.ID).Certificate.ID, bridge.CopyTarget{Target: bridge.CopyLetsEncrypt})
+	if err != nil {
+		t.Fatal(err)
+	}
+	read := func() string {
+		b, err := os.ReadFile(filepath.Join(base, c.CertFile))
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(b)
+	}
+	first := read()
+	e.clock.add(61 * 24 * time.Hour)
+	e.svc.renewDue(t.Context())
+	e.waitState(d.ID, "done")
+	e.waitCount("SELECT count(*) FROM audit_events WHERE action = 'certificate.copy' AND outcome = 'success'", 1)
+	if read() == first {
+		t.Fatal("the copy still holds the first certificate")
 	}
 }
 

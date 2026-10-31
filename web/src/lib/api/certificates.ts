@@ -1,4 +1,5 @@
 import { api } from './client';
+import type { PanelKind } from './panels';
 import { factsOf, list } from './lists';
 import type { CertFacts } from './rules';
 
@@ -27,6 +28,37 @@ export interface Certificate {
   domains: { id: number; name: string; warnings: string[] }[];
   /** The rules that use it, each with its domain_mismatch. */
   rules: (RuleRef & { warnings: string[] })[];
+  /** Files in one of the places the scan reads. */
+  found: boolean;
+  /** The folders Karvan keeps it copied to. */
+  copies: CertCopy[];
+}
+
+/** Why a copy was refused or failed. */
+export type CopyReason =
+  | 'not_found'
+  | 'link'
+  | 'outside'
+  | 'foreign_file'
+  | 'taken'
+  | 'no_key'
+  | 'no_name'
+  | 'write_failed';
+
+/** Where a certificate is copied: Let's Encrypt live, or a panel's certificate folder. */
+export type CopyTarget = { target: 'letsencrypt' } | { target: 'panel'; panelId: number };
+
+/** A folder Karvan keeps a certificate copied to, again after each change. */
+export interface CertCopy {
+  id: number;
+  target: 'letsencrypt' | 'panel';
+  panel: { id: number; name: string; kind: PanelKind | '' } | null;
+  dir: string;
+  certFile: string;
+  keyFile: string;
+  copiedAt: string | null;
+  /** The last copy failed. */
+  error: { reason: CopyReason; path: string } | null;
 }
 
 export const certificateKeys = {
@@ -39,6 +71,8 @@ function certificateOf(c: Certificate): Certificate {
     facts: factsOf(c.facts),
     domains: list(c.domains).map((d) => ({ ...d, warnings: list(d.warnings) })),
     rules: list(c.rules).map((r) => ({ ...r, warnings: list(r.warnings) })),
+    found: c.found === true,
+    copies: list(c.copies),
   };
 }
 
@@ -67,6 +101,19 @@ export async function saveCertificate(input: CertificateInput, id?: number): Pro
 /** 409 certificate_in_use while a domain, a pin or a rule uses it. */
 export function deleteCertificate(id: number): Promise<void> {
   return api('DELETE', `certificates/${String(id)}`);
+}
+
+/**
+ * Copies fullchain.pem and privkey.pem into a new folder named after the main domain, and again
+ * after each change; 409 copy_refused names the reason and the path.
+ */
+export function copyCertificate(id: number, target: CopyTarget): Promise<CertCopy> {
+  return api('POST', `certificates/${String(id)}/copies`, target);
+}
+
+/** Stops copying there; the files stay. */
+export function stopCertificateCopy(id: number, copyId: number): Promise<void> {
+  return api('DELETE', `certificates/${String(id)}/copies/${String(copyId)}`);
 }
 
 /** A certificate found in a known place, with the paths it was walked by. */

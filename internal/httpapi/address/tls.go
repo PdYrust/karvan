@@ -2,11 +2,14 @@ package address
 
 import (
 	"bufio"
+	"context"
 	"crypto/tls"
 	"errors"
 	"net"
 	"sync"
 	"time"
+
+	"github.com/PdYrust/karvan/internal/settings"
 )
 
 // sniffTimeout is how long a new connection gets to send its first byte
@@ -123,18 +126,52 @@ func (l *listener) secure() bool {
 	return false
 }
 
-// certificate is the certificate of the port's HTTPS addresses: the first
-// one the client supports, the current address first.
+// byName is the HTTPS address of sites (two during a change of mode on one
+// port) that a client asking for name reaches, so each can be reached and
+// the new one confirmed: the one whose certificate covers name, the new
+// one first; else the one not served with a domain's certificate; else
+// the current one. c is its certificate, nil when it cannot be loaded.
+func (l *listener) byName(ctx context.Context, sites []site, name string) (site, *tls.Certificate) {
+	certs := make([]*tls.Certificate, len(sites))
+	for i, s := range sites {
+		if c, err := l.certs(ctx, s.TLS); err == nil {
+			certs[i] = c
+		}
+	}
+	for i := len(sites) - 1; i >= 0; i-- {
+		if c := certs[i]; name != "" && c != nil && c.Leaf != nil && c.Leaf.VerifyHostname(name) == nil {
+			return sites[i], c
+		}
+	}
+	for i := len(sites) - 1; i >= 0; i-- {
+		if sites[i].TLS.Mode != settings.TLSDomain {
+			return sites[i], certs[i]
+		}
+	}
+	return sites[0], certs[0]
+}
+
+// certificate is the certificate of the port's HTTPS addresses: during a
+// change of mode the one byName picks, else the first one the client
+// supports, the current address first.
 func (l *listener) certificate(hello *tls.ClientHelloInfo) (*tls.Certificate, error) {
 	var last *tls.Certificate
 	lastErr := errors.New("no HTTPS address on this port")
 	if l.certs == nil {
 		return nil, lastErr
 	}
+	var on []site
 	for _, s := range *l.sites.Load() {
-		if !s.TLS.On() {
-			continue
+		if s.TLS.On() {
+			on = append(on, s)
 		}
+	}
+	if len(on) > 1 {
+		if _, c := l.byName(hello.Context(), on, hello.ServerName); c != nil {
+			return c, nil
+		}
+	}
+	for _, s := range on {
 		c, err := l.certs(hello.Context(), s.TLS)
 		if err != nil {
 			lastErr = err

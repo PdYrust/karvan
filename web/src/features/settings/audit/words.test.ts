@@ -37,6 +37,8 @@ const serverActions = [
   'certificate.save',
   'certificate.delete',
   'certificate.scan',
+  'certificate.copy',
+  'certificate.copy_stop',
   'redirect.save',
   'redirect.delete',
   'sessions.end',
