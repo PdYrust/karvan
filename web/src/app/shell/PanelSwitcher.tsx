@@ -81,7 +81,7 @@ export function PanelSwitcher({ collapsed = false }: { collapsed?: boolean }) {
             value={panel ? String(panel.id) : 'all'}
             onValueChange={(v: string) => select(v === 'all' ? null : Number(v))}
           >
-            {list.length > 1 || panel ? (
+            {list.length > 0 ? (
               <DropdownMenu.RadioItem value="all" closeOnClick>
                 <span className="flex w-full items-center gap-2">
                   <StackIcon size={16} aria-hidden="true" className="text-kumo-subtle" />

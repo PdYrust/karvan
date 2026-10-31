@@ -40,6 +40,8 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - a native Persian speaker has read every Persian string.
 
+## Release notes 0.5.10-beta
+Karvan 0.5.10-beta fixes the panel switcher at the top of the sidebar, which left out All panels when it was the current choice and only one panel was added; it now always lists All panels and every panel, with the current one checked.
 ## Release notes 0.5.9-beta
 Karvan 0.5.9-beta can make the Karvan domain the only way into the panel, serves every run from one old panel with one rule, opens without a flash of the sign-in page, and tidies the domain page and the panel cards on phones.
 - Domain settings have a new switch, Only open Karvan on its domain, on by default. While a domain is used for Karvan, only that name opens the panel, with whatever certificate the domain has: a handshake for another name or for the server's IP is refused, and a request for another host gets the plain 404. The subscription bridge is not affected.
