@@ -215,6 +215,34 @@ func TestRedirectServing(t *testing.T) {
 	}
 }
 
+// A saved redirect takes a new port and path at once, under the same id:
+// the old port stops listening and the old path answers 404.
+func TestRedirectEditMovesItsPortAndPath(t *testing.T) {
+	e := newEnv(t)
+	r := e.redirectFor("go", "/go", MatchPrefix, "https://new.example.com/")
+	r.Port = freePort(t)
+	first := e.saveRedirect(r)
+	t.Cleanup(e.b.stopAll)
+	if code, err := fetch(t, first.Port, "/go/a"); code != http.StatusFound {
+		t.Fatalf("before the edit: %d %v", code, err)
+	}
+	edit := first.Redirect
+	edit.Port, edit.FromPath = freePort(t), "/away"
+	moved := e.saveRedirect(edit)
+	if moved.ID != first.ID || moved.Port != edit.Port || moved.FromPath != "/away" {
+		t.Fatalf("edit %+v", moved.Redirect)
+	}
+	if code, err := fetch(t, moved.Port, "/away/a"); code != http.StatusFound {
+		t.Fatalf("new port and path: %d %v", code, err)
+	}
+	if code, err := fetch(t, moved.Port, "/go/a"); code != http.StatusNotFound {
+		t.Fatalf("old path on the new port: %d %v", code, err)
+	}
+	if _, err := fetch(t, first.Port, "/go/a"); err == nil {
+		t.Fatal("the old port still listens")
+	}
+}
+
 // The Location never takes its scheme or host from the request: random
 // tails and hosts all land on the stored host or get 404.
 func TestRedirectNeverLeavesItsHost(t *testing.T) {

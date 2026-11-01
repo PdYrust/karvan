@@ -135,8 +135,9 @@ func checkBatches(bs []ruleBatch, n int) error {
 
 // takeFacts sets the derived fields from bs, the old panel's batches
 // sorted by id: the newest batch that knows a fact gives it, and the
-// domains default to every old host. The old path and address come from
-// the body only when no batch knows them.
+// domains default to every old host. An old path in the body wins over
+// the batches', so a saved rule can change it; the address comes from
+// the body only when no batch knows it.
 func (s *Site) takeFacts(bs []ruleBatch) error {
 	f := bs[0]
 	s.PanelID, s.SourceKind, s.SourceURL = f.panelID, panel.Kind(f.kind), f.origin
@@ -152,13 +153,10 @@ func (s *Site) takeFacts(bs []ruleBatch) error {
 		}
 		hosts = append(hosts, b.hosts...)
 	}
-	switch {
-	case path != "" && s.OldPath != "":
-		return invalid("oldPath")
-	case ip != "" && s.SourceIP != "":
+	if ip != "" && s.SourceIP != "" {
 		return invalid("sourceIp")
 	}
-	if path != "" {
+	if s.OldPath == "" {
 		s.OldPath = path
 	}
 	if ip != "" {

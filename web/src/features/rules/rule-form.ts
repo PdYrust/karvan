@@ -176,7 +176,7 @@ export function groupDefaults(g: BatchGroup | undefined, domains: readonly Domai
   };
 }
 
-/** A picked old panel: a new rule takes its registered old hosts and its old port. */
+/** A picked old panel: a new rule takes its registered old hosts, its old port and its old path. */
 export function withGroup(
   v: RuleValues,
   id: number,
@@ -187,7 +187,11 @@ export function withGroup(
     all.find((g) => g.id === id),
     domains,
   );
-  return withDomains({ ...v, groupId: id, port: d.port || v.port }, d.domains, domains);
+  return withDomains(
+    { ...v, groupId: id, port: d.port || v.port, oldPath: d.oldPath || v.oldPath },
+    d.domains,
+    domains,
+  );
 }
 
 /** A typed single link: its host is the domain once it is registered. */
@@ -207,7 +211,7 @@ const httpsOf = (v: RuleValues) => (v.domains.length > 0 ? { https: v.https } : 
 
 /**
  * A panel rule as sent. A rule of batches names its old panel by the newest batch of it, and
- * sends only what that old panel's batches do not know.
+ * sends its old path, which wins over the batches', and the address only when typed.
  */
 export function siteInputOf(v: RuleValues, group: BatchGroup | undefined): SiteInput {
   const common = {
@@ -224,7 +228,7 @@ export function siteInputOf(v: RuleValues, group: BatchGroup | undefined): SiteI
       mode: 'batches',
       batchIds: group ? [group.latestId] : [],
       plainHttpOk: !!group && isPlainHttp(group.source.origin) && v.plainHttpOk,
-      ...(group?.oldLinks.path ? {} : { oldPath: v.oldPath.trim() }),
+      oldPath: v.oldPath.trim(),
       ...(ip ? { sourceIp: ip } : {}),
     };
   }

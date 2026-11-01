@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"reflect"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -150,7 +151,6 @@ func TestBatchRuleValidation(t *testing.T) {
 		"sourceKind":      {func(s *Site) { s.SourceKind = panel.Marzban }, "sourceKind", ""},
 		"sourceUrl":       {func(s *Site) { s.SourceURL = e.old.URL }, "sourceUrl", ""},
 		"sourcePin":       {func(s *Site) { s.SourcePin = strings.Repeat("ab", 32) }, "sourcePin", ""},
-		"known oldPath":   {func(s *Site) { s.OldPath = "sub" }, "oldPath", ""},
 		"known sourceIp":  {func(s *Site) { s.SourceIP = "127.0.0.1" }, "sourceIp", ""},
 		"mode":            {func(s *Site) { s.Mode = "both" }, "mode", ""},
 		"manual batches":  {func(s *Site) { s.Mode = ModeManual }, "batchIds", ""},
@@ -204,6 +204,92 @@ func TestBatchRuleChanges(t *testing.T) {
 	}
 	if _, err := e.b.st.Save(ctx, Site{ID: 999, Name: "x", Mode: ModeBatches, BatchIDs: []int64{a}}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("unknown rule: %v", err)
+	}
+}
+
+// fetch requests path on the bridge's listener on port, as a client of
+// old.example.com would; err is set when nothing listens there.
+func fetch(t *testing.T, port int, path string) (int, error) {
+	t.Helper()
+	req, err := http.NewRequest(http.MethodGet, "http://127.0.0.1:"+strconv.Itoa(port)+path, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req.Host = "old.example.com"
+	c := &http.Client{Transport: &http.Transport{DisableKeepAlives: true},
+		CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}
+	resp, err := c.Do(req)
+	if err != nil {
+		return 0, err
+	}
+	_ = resp.Body.Close()
+	return resp.StatusCode, nil
+}
+
+// A saved rule of batches takes a new old path and port: the bridge
+// serves them at once, under the same id and batches, the old port stops
+// listening and the old path answers 404. On the port only the rule's
+// path is served.
+func TestRuleEditMovesItsPortAndPath(t *testing.T) {
+	e := newEnv(t, "ali")
+	ctx := context.Background()
+	e.dest.path = "pg"
+	a := e.batch("active", "", "ali")
+	e.factsOf(a, "sub", `["old.example.com"]`, 0, "127.0.0.1", "")
+	s := fromBatches("rule", a)
+	s.Port = freePort(t)
+	saved, err := e.b.SaveSite(ctx, s)
+	if err != nil || saved.OldPath != "sub" {
+		t.Fatalf("save %+v %v", saved, err)
+	}
+	t.Cleanup(e.b.stopAll)
+	tok := e.oldToken("ali", e.clock.now())
+	if code, err := fetch(t, saved.Port, "/sub/"+tok); code != http.StatusOK {
+		t.Fatalf("before the edit: %d %v", code, err)
+	}
+	edit := fromBatches("renamed", a)
+	edit.ID, edit.Domains, edit.Port, edit.OldPath = saved.ID, saved.Domains, freePort(t), "/s2/"
+	moved, err := e.b.SaveSite(ctx, edit)
+	if err != nil || moved.ID != saved.ID || moved.OldPath != "s2" || moved.Port != edit.Port || moved.Name != "renamed" {
+		t.Fatalf("edit %+v %v", moved, err)
+	}
+	if ids := e.ruleBatchIDs(saved.ID); !slices.Equal(ids, []int64{a}) {
+		t.Fatalf("batches after the edit %v", ids)
+	}
+	if code, err := fetch(t, moved.Port, "/s2/"+tok); code != http.StatusOK {
+		t.Fatalf("new port and path: %d %v", code, err)
+	}
+	for _, p := range []string{"/sub/" + tok, "/dash/", "/", "/" + tok, "/s2x/" + tok} {
+		if code, err := fetch(t, moved.Port, p); code != http.StatusNotFound {
+			t.Errorf("%s on the new port: %d %v", p, code, err)
+		}
+	}
+	if _, err := fetch(t, saved.Port, "/sub/"+tok); err == nil {
+		t.Fatal("the old port still listens")
+	}
+}
+
+// A changed path and port of a rule of batches are checked as on create.
+func TestRuleEditIsCheckedAsOnCreate(t *testing.T) {
+	e := newEnv(t, "ali")
+	ctx := context.Background()
+	a := e.batch("active", "", "ali")
+	e.factsOf(a, "sub", `["old.example.com"]`, 9000, "127.0.0.1", "")
+	saved, err := e.b.st.Save(ctx, fromBatches("rule", a))
+	if err != nil {
+		t.Fatal(err)
+	}
+	edit := fromBatches("rule", a)
+	edit.ID, edit.Domains, edit.Port, edit.OldPath = saved.ID, saved.Domains, saved.Port, "a/b"
+	if _, err := e.b.st.Save(ctx, edit); FieldOf(err) != "oldPath" {
+		t.Fatalf("a path with a slash: %v", err)
+	}
+	edit.OldPath, edit.Port = "sub", e.site.Port
+	if _, err := e.b.st.Save(ctx, edit); !errors.Is(err, ErrOverlap) {
+		t.Fatalf("onto the other rule's port, domain and path: %v", err)
+	}
+	if got := mustSite(t, e, saved.ID); got.Port != 9000 || got.OldPath != "sub" {
+		t.Fatalf("refused edits changed the rule: %+v", got)
 	}
 }
 

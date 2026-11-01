@@ -139,7 +139,7 @@ export function RuleForm({
               isNew ? setV((old) => withGroup(old, id, groups, domains)) : set({ groupId: id })
             }
           />
-          <AnswerFields {...fields} path={!facts.oldPath} />
+          <AnswerFields {...fields} />
           {v.sourceIp || refused === 'sourceIp' ? (
             <TextField
               id="site-ip"

@@ -25,8 +25,9 @@ type Site struct {
 	Name string `json:"name"`
 	// Mode is ModeManual (the default) or ModeBatches, fixed when the rule
 	// is made. A rule of batches takes PanelID, SourceKind, SourceURL,
-	// SourcePin, and OldPath and SourceIP when they know them, from
-	// BatchIDs; the body may not send them.
+	// SourcePin, and SourceIP when they know it, from BatchIDs; the body
+	// may not send them. Its OldPath is the body's when sent, else the
+	// batches'.
 	Mode        string     `json:"mode"`
 	BatchIDs    []int64    `json:"batchIds,omitempty"`
 	PanelID     int64      `json:"panelId"` // the destination panel

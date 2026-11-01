@@ -40,6 +40,11 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - a native Persian speaker has read every Persian string.
 
+## Release notes 0.5.13-beta
+Karvan 0.5.13-beta lets you change every field of a saved rule. A rule made from an old panel's batches now shows its old subscription path when you edit it, so its path and port can both change without deleting the rule and adding it again.
+- A changed port or path is served as soon as the rule is saved: the bridge stops listening on the old port when no other rule uses it, and the old path answers 404. The rule keeps its id, its batches and the links it already checked.
+- The same checks as for a new rule apply: a port Karvan's own panel uses, a port shared with rules that answer the other way (HTTPS or plain HTTP), a path another rule already answers on the same port and domain, and a path that is not letters, digits, `-` and `_`.
+- On a rule's port, only the rule's path is served, such as `/sub/` for links like `https://host:4433/sub/...`; other paths such as `/dash/` or `/` answer 404. A link the new panel issued on its own subscription path, when that differs from the rule's path, still works there as before.
 ## Release notes 0.5.12-beta
 Karvan 0.5.12-beta mirrors the on and off switches in Persian: the knob now sits on the left when a switch is on and on the right when it is off, as right to left text expects, while English keeps on to the right.
 - Safe Mode backups of a panel whose database runs in a Docker container on the same server now use that container's own dump and restore tools through docker exec, so they match the server's version and nothing needs installing on the host. Karvan finds the container through the panel's compose project, or the container that publishes the database port, and uses the tools on the host when there is none. This fixes migrations with Safe Mode on that stopped because the backup tool was not installed.

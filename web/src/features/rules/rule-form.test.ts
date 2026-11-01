@@ -150,6 +150,15 @@ describe('a saved rule', () => {
     expect(valuesOfSite({ ...site, sourceIp: '203.0.113.9' }).sourceIp).toBe('203.0.113.9');
   });
 
+  it('sends a changed old path and port of a rule of batches', () => {
+    const v = valuesOfSite({ ...site, mode: 'batches', batchGroup: 4 });
+    expect(siteInputOf({ ...v, oldPath: 'dl', port: '4433' }, group(4))).toMatchObject({
+      mode: 'batches',
+      oldPath: 'dl',
+      port: 4433,
+    });
+  });
+
   it('opens a redirect with its path and target', () => {
     const r: Redirect = {
       id: 5,
@@ -215,19 +224,34 @@ describe('the old panel picker', () => {
   });
 
   it('picks the registered old hosts with HTTPS when they all have certificates', () => {
-    const v = withGroup(values({}), 4, [group(4), group(5)], domains);
-    expect(v).toMatchObject({ groupId: 4, domains: ['a.example.com'], port: '8443', https: true });
-    expect(withGroup(values({ port: '2053' }), 10, [noFacts], domains).port).toBe('2053');
+    const v = withGroup(values({ oldPath: 'typed' }), 4, [group(4), group(5)], domains);
+    expect(v).toMatchObject({
+      groupId: 4,
+      domains: ['a.example.com'],
+      port: '8443',
+      oldPath: 'sub',
+      https: true,
+    });
+    expect(
+      withGroup(values({ port: '2053', oldPath: 'typed' }), 10, [noFacts], domains),
+    ).toMatchObject({ port: '2053', oldPath: 'typed' });
   });
 
-  it('names the old panel by its newest batch and sends only what it does not know', () => {
-    const v = values({ groupId: 4, domains: ['a.example.com'], oldPath: 'typed', https: true });
+  it('names the old panel by its newest batch and sends its old path and port as typed', () => {
+    const v = values({
+      groupId: 4,
+      domains: ['a.example.com'],
+      oldPath: ' typed ',
+      port: '2096',
+      https: true,
+    });
     expect(siteInputOf(v, group(4))).toEqual({
       name: '',
       mode: 'batches',
       batchIds: [24],
       domains: ['a.example.com'],
-      port: 443,
+      port: 2096,
+      oldPath: 'typed',
       lazy: true,
       plainHttpOk: false,
       https: true,

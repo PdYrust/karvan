@@ -74,29 +74,20 @@ export function OldPanelFields({ values, set, errorOf }: FieldsProps) {
   );
 }
 
-/** The old path (unless the batches know it) and the port the rule answers on. */
-export function AnswerFields({
-  values,
-  set,
-  errorOf,
-  path = true,
-}: FieldsProps & { path?: boolean }) {
+/** The old path and the port the rule answers on. */
+export function AnswerFields({ values, set, errorOf }: FieldsProps) {
   const t = useT(siteFormMessages);
   return (
     <div className="grid gap-5 sm:grid-cols-[1fr_10rem]">
-      {path ? (
-        <TextField
-          id="site-path"
-          label={t('pathLabel')}
-          hint={<CodeText text={t('pathHint')} />}
-          error={errorOf('oldPath')}
-          value={values.oldPath}
-          onChange={(oldPath) => set({ oldPath })}
-          machine
-        />
-      ) : (
-        <span aria-hidden="true" className="hidden sm:block" />
-      )}
+      <TextField
+        id="site-path"
+        label={t('pathLabel')}
+        hint={<CodeText text={t('pathHint')} />}
+        error={errorOf('oldPath')}
+        value={values.oldPath}
+        onChange={(oldPath) => set({ oldPath })}
+        machine
+      />
       <PortField id="site-port" values={values} set={set} errorOf={errorOf} />
     </div>
   );
