@@ -15,7 +15,7 @@ function targetHost(url: string): string {
   }
 }
 
-/** One redirect rule: what it matches and where it sends the old links. */
+/** One custom redirect rule: what it matches and where it sends matching links. */
 export function RedirectCard({
   redirect: r,
   domains,
@@ -27,6 +27,8 @@ export function RedirectCard({
 }) {
   const t = useT(rulesMessages);
   const names = r.domains ?? [];
+  const paths = r.fromPaths && r.fromPaths.length > 0 ? r.fromPaths : [r.fromPath];
+  const pathText = paths.join(', ');
   const tls = r.https ? t('https') : t('plainHttp');
   const facts = [
     { label: t('domains'), value: names.length ? mono(names.join(', ')) : t('everyDomain') },
@@ -35,7 +37,7 @@ export function RedirectCard({
       label: t('path'),
       value: (
         <span>
-          {mono(r.fromPath)} {r.match === 'prefix' ? t('andBelow') : t('exact')}
+          {mono(pathText)} {r.match === 'prefix' ? t('andBelow') : t('exact')}
         </span>
       ),
     },
@@ -56,7 +58,7 @@ export function RedirectCard({
           <span className="min-w-0 truncate">
             {names.length ? mono(names.join(', ')) : t('everyDomain')}
           </span>
-          <span>{mono(`:${String(r.port)}${r.fromPath}`)}</span>
+          <span>{mono(`:${String(r.port)} ${pathText}`)}</span>
           <span>{tls}</span>
         </p>
       }

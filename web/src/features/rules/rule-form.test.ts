@@ -4,23 +4,27 @@ import { ApiError } from '../../lib/api/client';
 import type { Domain } from '../../lib/api/domains';
 import type { LinkSite, Redirect } from '../../lib/api/rules';
 import {
-  groupDefaults,
+  canContinueDomain,
   canSubmit,
+  cleanPaths,
   domainState,
+  groupDefaults,
   httpsAllowed,
   isPlainHttp,
   newRuleValues,
-  parseOldLink,
+  normalizeTargetUrl,
   redirectInputOf,
   refusedField,
+  ruleKinds,
   rulePrefill,
   siteInputOf,
+  stepForRefused,
+  stepsForRule,
   unregistered,
   valuesOfRedirect,
   valuesOfSite,
-  withGroup,
   withDomains,
-  withLink,
+  withGroup,
   type RuleValues,
 } from './rule-form';
 
@@ -82,8 +86,9 @@ function group(id: number, extra: Partial<BatchGroup> = {}): BatchGroup {
 const site: LinkSite = {
   id: 3,
   name: 'old-443',
-  mode: 'manual',
-  batches: [],
+  mode: 'batches',
+  batches: [{ id: 7, name: 'b', state: 'active' }],
+  batchGroup: 4,
   panelId: 2,
   sourceKind: 'pasarguard',
   sourceUrl: 'https://old.example.com:8443',
@@ -100,9 +105,19 @@ const site: LinkSite = {
 const values = (patch: Partial<RuleValues>): RuleValues => ({ ...newRuleValues({}, 1), ...patch });
 
 describe('a new rule', () => {
-  it('starts from batches, on 443 with lazy checks on', () => {
+  it('offers only from an old panel and custom', () => {
+    expect(ruleKinds).toEqual(['batches', 'custom']);
+  });
+
+  it('starts from batches, on 443 with lazy checks on and sub as initial custom path', () => {
     const v = newRuleValues({}, 1);
-    expect(v).toMatchObject({ kind: 'batches', panelId: 1, port: '443', lazy: true });
+    expect(v).toMatchObject({
+      kind: 'batches',
+      panelId: 1,
+      port: '443',
+      lazy: true,
+      fromPaths: ['sub'],
+    });
     expect(v.domains).toEqual([]);
   });
 
@@ -113,45 +128,53 @@ describe('a new rule', () => {
     expect(newRuleValues({ ...p, groupId: 4 }, 1)).toMatchObject({ kind: 'batches', groupId: 4 });
   });
 
-  it('starts manual when a migration fills in the old panel', () => {
-    const p = rulePrefill(new URLSearchParams('panel=2&kind=marzban&from=https://old'));
-    expect(newRuleValues(p, 1)).toMatchObject({
-      kind: 'manual',
-      panelId: 2,
-      sourceUrl: 'https://old',
-    });
-  });
-
-  it('takes a kind from the address and drops one it does not know', () => {
-    expect(newRuleValues(rulePrefill(new URLSearchParams('kind=redirect')), 1).kind).toBe(
-      'redirect',
-    );
+  it('takes custom or redirect from the address and drops unknown kinds', () => {
+    expect(newRuleValues(rulePrefill(new URLSearchParams('kind=custom')), 1).kind).toBe('custom');
+    expect(newRuleValues(rulePrefill(new URLSearchParams('kind=redirect')), 1).kind).toBe('custom');
+    expect(newRuleValues(rulePrefill(new URLSearchParams('kind=batches')), 1).kind).toBe('batches');
     expect(rulePrefill(new URLSearchParams('kind=other&batch=x')).kind).toBeUndefined();
     expect(rulePrefill(new URLSearchParams('batch=-1')).batchId).toBeUndefined();
   });
 });
 
-describe('a saved rule', () => {
-  it('opens a manual site with its domains picked', () => {
-    expect(valuesOfSite(site)).toMatchObject({ kind: 'manual', domains: ['a.example.com'] });
-    expect(valuesOfSite({ ...site, domains: null }).domains).toEqual([]);
+describe('rule wizard steps', () => {
+  it('walks kind, domain, https and details for a new rule, and skips kind on edit', () => {
+    expect(stepsForRule(true)).toEqual(['kind', 'domain', 'https', 'details']);
+    expect(stepsForRule(false)).toEqual(['domain', 'https', 'details']);
   });
 
-  it('opens a rule of batches with its old panel picked', () => {
-    const v = valuesOfSite({
-      ...site,
-      mode: 'batches',
-      batches: [{ id: 7, name: 'b', state: 'active' }],
-      batchGroup: 4,
-    });
-    expect(v).toMatchObject({ kind: 'batches', groupId: 4 });
-    // The batches gave the IP; sending it back would be refused.
+  it('continues from the domain step once named and, for batches, an old panel is picked', () => {
+    expect(canContinueDomain(values({ kind: 'batches', name: 'r', groupId: 0 }))).toBe(false);
+    expect(canContinueDomain(values({ kind: 'batches', name: 'r', groupId: 4 }))).toBe(true);
+    expect(canContinueDomain(values({ kind: 'custom', name: '' }))).toBe(false);
+    expect(canContinueDomain(values({ kind: 'custom', name: 'r' }))).toBe(true);
+  });
+
+  it('maps a refused field to the step that holds it', () => {
+    expect(stepForRefused(undefined)).toBeUndefined();
+    expect(stepForRefused('name')).toBe('domain');
+    expect(stepForRefused('domains')).toBe('domain');
+    expect(stepForRefused('batchIds')).toBe('domain');
+    expect(stepForRefused('https')).toBe('https');
+    expect(stepForRefused('port')).toBe('details');
+    expect(stepForRefused('fromPath')).toBe('details');
+    expect(stepForRefused('toUrl')).toBe('details');
+  });
+});
+
+describe('a saved rule', () => {
+  it('opens a rule of batches with its old panel and domains picked', () => {
+    const v = valuesOfSite(site);
+    expect(v).toMatchObject({ kind: 'batches', groupId: 4, domains: ['a.example.com'] });
+    expect(valuesOfSite({ ...site, domains: null }).domains).toEqual([]);
     expect(valuesOfSite({ ...site, mode: 'batches', sourceIp: '203.0.113.9' }).sourceIp).toBe('');
-    expect(valuesOfSite({ ...site, sourceIp: '203.0.113.9' }).sourceIp).toBe('203.0.113.9');
+    expect(valuesOfSite({ ...site, mode: 'manual', sourceIp: '203.0.113.9' }).sourceIp).toBe(
+      '203.0.113.9',
+    );
   });
 
   it('sends a changed old path and port of a rule of batches', () => {
-    const v = valuesOfSite({ ...site, mode: 'batches', batchGroup: 4 });
+    const v = valuesOfSite(site);
     expect(siteInputOf({ ...v, oldPath: 'dl', port: '4433' }, group(4))).toMatchObject({
       mode: 'batches',
       oldPath: 'dl',
@@ -159,25 +182,28 @@ describe('a saved rule', () => {
     });
   });
 
-  it('opens a redirect with its path and target', () => {
+  it('opens a custom redirect with all its allowed paths and target', () => {
     const r: Redirect = {
       id: 5,
       name: 'r',
       domains: null,
       port: 80,
-      fromPath: '/sub/abc',
+      fromPath: '/sub',
+      fromPaths: ['/sub', '/dashboard'],
       match: 'prefix',
-      toUrl: 'https://new.example.com/sub/xyz',
+      toUrl: 'http://127.0.0.1:8080',
       https: false,
       certificate: null,
       warnings: [],
     };
     expect(valuesOfRedirect(r)).toMatchObject({
-      kind: 'redirect',
+      kind: 'custom',
       domains: [],
       port: '80',
-      fromPath: '/sub/abc',
+      fromPath: '/sub',
+      fromPaths: ['sub', 'dashboard'],
       match: 'prefix',
+      toUrl: 'http://127.0.0.1:8080',
       https: false,
     });
   });
@@ -264,6 +290,8 @@ describe('the old panel picker', () => {
   });
 
   it('accepts a plain http old panel only when turned on', () => {
+    expect(isPlainHttp(' HTTP://old')).toBe(true);
+    expect(isPlainHttp('https://old')).toBe(false);
     const plain = group(4, { source: { kind: 'marzban', origin: 'http://old' } });
     const v = values({ groupId: 4, plainHttpOk: true });
     expect(siteInputOf(v, plain).plainHttpOk).toBe(true);
@@ -271,108 +299,42 @@ describe('the old panel picker', () => {
   });
 });
 
-describe('a manual rule', () => {
-  it('sends the old panel, the domains and HTTPS', () => {
-    const input = siteInputOf(valuesOfSite({ ...site, port: 8443 }), undefined);
-    expect(input).toMatchObject({
-      mode: 'manual',
-      panelId: 2,
-      sourceUrl: 'https://old.example.com:8443',
-      domains: ['a.example.com'],
-      port: 8443,
-      https: true,
-    });
-    expect(input).not.toHaveProperty('batchIds');
+describe('a custom rule', () => {
+  it('cleans and deduplicates allowed source paths', () => {
+    expect(cleanPaths([' sub ', '/dashboard/', 'sub', '', ' /api/v1 '])).toEqual([
+      '/sub',
+      '/dashboard',
+      '/api/v1',
+    ]);
   });
 
-  it('leaves HTTPS to the port when no domain is picked', () => {
-    expect(siteInputOf(values({ kind: 'manual', domains: [] }), undefined)).not.toHaveProperty(
-      'https',
-    );
+  it('normalizes bare domains and local IPs with ports into target URLs', () => {
+    expect(normalizeTargetUrl('new.example.com:2096')).toBe('https://new.example.com:2096');
+    expect(normalizeTargetUrl('127.0.0.1:8080')).toBe('http://127.0.0.1:8080');
+    expect(normalizeTargetUrl('192.168.1.10:2096')).toBe('http://192.168.1.10:2096');
+    expect(normalizeTargetUrl('https://new.example.com:8443')).toBe('https://new.example.com:8443');
+    expect(normalizeTargetUrl('http://10.0.0.2:3000')).toBe('http://10.0.0.2:3000');
   });
 
-  it('accepts a plain http old panel only for an http address', () => {
-    expect(isPlainHttp(' HTTP://old')).toBe(true);
-    expect(isPlainHttp('https://old')).toBe(false);
-    const v = values({ kind: 'manual', plainHttpOk: true, sourceUrl: 'https://old' });
-    expect(siteInputOf(v, undefined).plainHttpOk).toBe(false);
-    expect(siteInputOf({ ...v, sourceUrl: 'http://old' }, undefined).plainHttpOk).toBe(true);
-  });
-});
-
-describe('the single link parser', () => {
-  it('reads the host, the port and the path of an old link', () => {
-    expect(parseOldLink(' https://Old.Example.com:8443/sub/abcDEF/?x=1#y ')).toEqual({
-      host: 'old.example.com',
-      port: 8443,
-      path: '/sub/abcDEF',
-    });
-    expect(parseOldLink('http://203.0.113.9/sub/abc')).toEqual({
-      host: '203.0.113.9',
-      port: 80,
-      path: '/sub/abc',
-    });
-    expect(parseOldLink('https://[2001:db8::1]/s/t')?.host).toBe('2001:db8::1');
-    expect(parseOldLink('https://old.example.com/sub')?.port).toBe(443);
-  });
-
-  it('picks the link host as the domain once it is registered', () => {
-    const v = withLink(values({ kind: 'link' }), 'https://a.example.com/sub/t', domains);
-    expect(v).toMatchObject({ domains: ['a.example.com'], https: true });
-    const other = withLink(v, 'https://old.example.com/sub/t', domains);
-    expect(other).toMatchObject({
-      link: 'https://old.example.com/sub/t',
-      domains: [],
-      https: false,
-    });
-  });
-
-  it('reads nothing from a value that is not an old link', () => {
-    expect(parseOldLink('')).toBeUndefined();
-    expect(parseOldLink('old.example.com/sub/abc')).toBeUndefined();
-    expect(parseOldLink('ftp://old.example.com/sub/abc')).toBeUndefined();
-    expect(parseOldLink('https://old.example.com/')).toBeUndefined();
-  });
-});
-
-describe('a redirect', () => {
-  it('sends its path, how it matches and its target', () => {
+  it('sends its allowed paths, port, domains and target URL', () => {
     const v = values({
-      kind: 'redirect',
-      name: ' r ',
+      kind: 'custom',
+      name: ' custom-rule ',
       domains: ['a.example.com'],
-      port: '80',
-      fromPath: ' /go ',
-      match: 'exact',
-      toUrl: ' https://new.example.com/x ',
-      https: true,
-    });
-    expect(redirectInputOf(v)).toEqual({
-      name: 'r',
-      domains: ['a.example.com'],
-      port: 80,
-      fromPath: '/go',
-      match: 'exact',
-      toUrl: 'https://new.example.com/x',
-      https: true,
-    });
-  });
-
-  it('saves a single link as a redirect of its path and below', () => {
-    const v = values({
-      kind: 'link',
-      name: 'one',
-      link: 'https://a.example.com:2096/sub/abc',
-      toUrl: 'https://new.example.com/sub/xyz',
-      https: true,
-    });
-    expect(redirectInputOf(v)).toEqual({
-      name: 'one',
-      domains: ['a.example.com'],
-      port: 2096,
-      fromPath: '/sub/abc',
+      port: '8443',
+      fromPaths: [' sub ', '/dashboard/'],
       match: 'prefix',
-      toUrl: 'https://new.example.com/sub/xyz',
+      toUrl: ' 127.0.0.1:8080 ',
+      https: true,
+    });
+    expect(redirectInputOf(v)).toEqual({
+      name: 'custom-rule',
+      domains: ['a.example.com'],
+      port: 8443,
+      fromPath: '/sub',
+      fromPaths: ['/sub', '/dashboard'],
+      match: 'prefix',
+      toUrl: 'http://127.0.0.1:8080',
       https: true,
     });
   });
@@ -380,31 +342,27 @@ describe('a redirect', () => {
 
 describe('the save button', () => {
   it('waits for what each kind needs', () => {
-    expect(canSubmit(values({ name: 'x' }), domains)).toBe(false);
-    expect(canSubmit(values({ name: 'x', groupId: 7 }), domains)).toBe(true);
-    expect(canSubmit(values({ kind: 'manual', name: 'x', sourceUrl: 'https://o' }), domains)).toBe(
-      true,
-    );
-    const redirect = values({ kind: 'redirect', name: 'x', fromPath: '/a', toUrl: 'https://n' });
-    expect(canSubmit(redirect, domains)).toBe(true);
-    expect(canSubmit({ ...redirect, toUrl: ' ' }, domains)).toBe(false);
-    expect(canSubmit({ ...redirect, name: '' }, domains)).toBe(false);
-  });
-
-  it('waits for a single link whose host is registered', () => {
-    const v = values({ kind: 'link', name: 'x', toUrl: 'https://n' });
-    expect(canSubmit({ ...v, link: 'https://a.example.com/sub/t' }, domains)).toBe(true);
-    expect(canSubmit({ ...v, link: 'https://old.example.com/sub/t' }, domains)).toBe(false);
-    expect(canSubmit({ ...v, link: 'not a link' }, domains)).toBe(false);
+    expect(canSubmit(values({ name: 'x' }))).toBe(false);
+    expect(canSubmit(values({ name: 'x', groupId: 7 }))).toBe(true);
+    const custom = values({
+      kind: 'custom',
+      name: 'x',
+      fromPaths: ['sub', 'dashboard'],
+      toUrl: 'https://new.example.com:2096',
+    });
+    expect(canSubmit(custom)).toBe(true);
+    expect(canSubmit({ ...custom, fromPaths: [' '] })).toBe(false);
+    expect(canSubmit({ ...custom, toUrl: ' ' })).toBe(false);
+    expect(canSubmit({ ...custom, name: '' })).toBe(false);
   });
 });
 
 describe('a refused save', () => {
   it('names the field of a panel rule or a redirect', () => {
-    const site = new ApiError(400, 'site_invalid', undefined, { field: 'batchIds' });
-    expect(refusedField(site)).toBe('batchIds');
-    const redirect = new ApiError(400, 'redirect_invalid', undefined, { field: 'toUrl' });
-    expect(refusedField(redirect)).toBe('toUrl');
+    const siteErr = new ApiError(400, 'site_invalid', undefined, { field: 'batchIds' });
+    expect(refusedField(siteErr)).toBe('batchIds');
+    const redirectErr = new ApiError(400, 'redirect_invalid', undefined, { field: 'toUrl' });
+    expect(refusedField(redirectErr)).toBe('toUrl');
     expect(
       refusedField(new ApiError(400, 'site_invalid', undefined, { field: 'other' })),
     ).toBeUndefined();

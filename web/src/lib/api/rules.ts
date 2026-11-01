@@ -154,6 +154,8 @@ export interface Redirect {
   port: number;
   /** With one leading slash. */
   fromPath: string;
+  /** Every allowed path, each with one leading slash. */
+  fromPaths?: string[];
   match: 'exact' | 'prefix';
   toUrl: string;
   https: boolean;
@@ -165,6 +167,7 @@ export type RedirectInput = Omit<
   'id' | 'domains' | 'https' | 'certificate' | 'warnings'
 > & {
   domains: string[];
+  fromPaths?: string[];
   https?: boolean;
 };
 export const redirectKeys = {
@@ -175,6 +178,7 @@ function redirectOf(r: Redirect): Redirect {
   return {
     ...r,
     domains: list(r.domains),
+    ...(r.fromPaths !== undefined ? { fromPaths: list(r.fromPaths) } : {}),
     certificate: certOf(r.certificate),
     warnings: list(r.warnings),
   };

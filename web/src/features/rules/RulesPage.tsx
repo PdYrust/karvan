@@ -59,7 +59,12 @@ type Rule = { kind: 'panel'; rule: LinkSite } | { kind: 'redirect'; rule: Redire
 const terms = (r: Rule) =>
   r.kind === 'panel'
     ? [r.rule.name, r.rule.sourceUrl, ...(r.rule.domains ?? [])]
-    : [r.rule.name, r.rule.toUrl, ...(r.rule.domains ?? [])];
+    : [
+        r.rule.name,
+        r.rule.toUrl,
+        ...(r.rule.fromPaths ?? [r.rule.fromPath]),
+        ...(r.rule.domains ?? []),
+      ];
 
 /** One card per rule, panel rules and redirects, with ports that could not open first. */
 export function RulesPage() {

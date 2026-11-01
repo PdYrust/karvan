@@ -40,6 +40,10 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - a native Persian speaker has read every Persian string.
 
+## Release notes 0.5.14-beta
+Karvan 0.5.14-beta walks through adding and editing a rule one step at a time, like Add domain, with two rule kinds: From an old panel and Custom.
+- The rule form asks one question per step: the kind (From an old panel or Custom), the rule name and source domains from the domains in Karvan (plus the old panel when made from an old panel), whether to answer over HTTPS, and the port and path details. Manual and single-link choices are removed from the form.
+- A Custom rule accepts multiple allowed source paths (such as `sub` and `dashboard`), each matching its path and everything under it, and redirects matching requests with a 302 to a destination domain, IP address or local IP with an optional port while keeping the matched path.
 ## Release notes 0.5.13-beta
 Karvan 0.5.13-beta lets you change every field of a saved rule. A rule made from an old panel's batches now shows its old subscription path when you edit it, so its path and port can both change without deleting the rule and adding it again.
 - A changed port or path is served as soon as the rule is saved: the bridge stops listening on the old port when no other rule uses it, and the old path answers 404. The rule keeps its id, its batches and the links it already checked.

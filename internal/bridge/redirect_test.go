@@ -347,3 +347,39 @@ func (e *env) redirectServesItsDomainCertificate(r Redirect, id int64, certPEM s
 		t.Fatalf("second delete: %v", err)
 	}
 }
+
+// A custom redirect with multiple allowed paths sends each path and its
+// tail to the target (domain, IP or local IP with a port) and refuses loops.
+func TestCustomMultiPathRedirect(t *testing.T) {
+	e := newEnv(t)
+	v := e.saveRedirect(Redirect{
+		Name:      "custom",
+		Domains:   []string{"old.example.com"},
+		Port:      e.port,
+		FromPaths: []string{"dashboard", "/api/v1", "dashboard"},
+		ToURL:     "http://127.0.0.1:8080",
+	})
+	if !slices.Equal(v.FromPaths, []string{"/dashboard", "/api/v1"}) || v.FromPath != "/dashboard" || v.Match != MatchPrefix {
+		t.Fatalf("stored %+v", v.Redirect)
+	}
+	for path, want := range map[string]string{
+		"/dashboard":       "http://127.0.0.1:8080/dashboard",
+		"/dashboard/users": "http://127.0.0.1:8080/dashboard/users",
+		"/api/v1":          "http://127.0.0.1:8080/api/v1",
+		"/api/v1/status":   "http://127.0.0.1:8080/api/v1/status",
+	} {
+		w := e.send(http.MethodGet, path)
+		if w.Code != http.StatusFound || w.Header().Get("Location") != want {
+			t.Fatalf("%s: %d %q, want %q", path, w.Code, w.Header().Get("Location"), want)
+		}
+	}
+	if w := e.send(http.MethodGet, "/other"); w.Code != http.StatusNotFound {
+		t.Fatalf("/other: %d", w.Code)
+	}
+	loop := v.Redirect
+	loop.ToURL = "http://old.example.com:" + strconv.Itoa(e.port)
+	var invalid *RedirectInvalidError
+	if _, err := e.b.SaveRedirect(t.Context(), loop); !errors.As(err, &invalid) || invalid.Field != "toUrl" || invalid.Reason != ReasonLoop {
+		t.Fatalf("self loop on multi-path redirect: %v", err)
+	}
+}

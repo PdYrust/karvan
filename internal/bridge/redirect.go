@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 	"unicode"
@@ -25,10 +26,11 @@ const ReasonLoop = "loop"
 
 // Limits of a redirect rule.
 const (
-	maxRedirectPath = 2048
-	maxRedirectURL  = 2048
-	maxSegments     = 8
-	maxRuleName     = 64
+	maxRedirectPath  = 2048
+	maxRedirectPaths = 32
+	maxRedirectURL   = 2048
+	maxSegments      = 8
+	maxRuleName      = 64
 )
 
 // segmentRe is one segment of a from path or a tail. Matching runs on the
@@ -56,16 +58,17 @@ func (e *RedirectInvalidError) Is(target error) bool { return target == ErrInval
 
 func redirectInvalid(field string) error { return &RedirectInvalidError{Field: field} }
 
-// Redirect is a redirect rule: a request on its port, domains and path is
+// Redirect is a redirect rule: a request on its port, domains and paths is
 // sent to ToURL with a 302. Karvan never fetches the target.
 type Redirect struct {
-	ID       int64    `json:"id"`
-	Name     string   `json:"name"`
-	Domains  []string `json:"domains"`
-	Port     int      `json:"port"`
-	FromPath string   `json:"fromPath"`
-	Match    string   `json:"match"`
-	ToURL    string   `json:"toUrl"`
+	ID        int64    `json:"id"`
+	Name      string   `json:"name"`
+	Domains   []string `json:"domains"`
+	Port      int      `json:"port"`
+	FromPath  string   `json:"fromPath"`
+	FromPaths []string `json:"fromPaths"`
+	Match     string   `json:"match"`
+	ToURL     string   `json:"toUrl"`
 	// HTTPS is whether the rule answers over HTTPS, as for panel rules: nil
 	// in a body keeps the stored value on PATCH and on POST is on only when
 	// every domain has a certificate.
@@ -84,11 +87,37 @@ type RedirectView struct {
 	Warnings    []string         `json:"warnings"`
 }
 
-// rule is the redirect as the router sees it.
-func (d *Redirect) rule() rule {
-	return rule{ref: RuleRef{Kind: RuleRedirect, ID: d.ID, Name: d.Name}, domains: d.Domains, port: d.Port,
-		certID: d.CertificateID, tls: d.CertificateID != 0, path: strings.Trim(d.FromPath, "/"), exact: d.Match == MatchExact,
-		redirect: d}
+// paths returns the redirect's allowed paths, from FromPaths or FromPath.
+func (d *Redirect) paths() []string {
+	if len(d.FromPaths) == 1 && d.FromPath != "" && d.FromPaths[0] != d.FromPath {
+		return []string{d.FromPath}
+	}
+	if len(d.FromPaths) > 0 {
+		return d.FromPaths
+	}
+	if d.FromPath != "" {
+		return []string{d.FromPath}
+	}
+	return nil
+}
+
+// preservesPath reports whether a redirect keeps the matched source path on
+// the target URL: when it answers multiple paths, or when the target has no
+// path of its own.
+func (d *Redirect) preservesPath() bool {
+	return len(d.paths()) > 1 || d.target != nil && d.target.EscapedPath() == ""
+}
+
+// rules are the redirect's routes as the router sees them.
+func (d *Redirect) rules() []rule {
+	ps := d.paths()
+	out := make([]rule, 0, len(ps))
+	for _, p := range ps {
+		out = append(out, rule{ref: RuleRef{Kind: RuleRedirect, ID: d.ID, Name: d.Name}, domains: d.Domains, port: d.Port,
+			certID: d.CertificateID, tls: d.CertificateID != 0, path: strings.Trim(p, "/"), exact: d.Match == MatchExact,
+			redirect: d})
+	}
+	return out
 }
 
 // normalize checks d and puts it in the stored form.
@@ -103,20 +132,41 @@ func (d *Redirect) normalize() error {
 		return redirectInvalid("domains")
 	}
 	d.Domains = append([]string{}, s.Domains...)
+	if d.Match == "" {
+		d.Match = MatchPrefix
+	}
 	switch {
 	case d.Port < 1 || d.Port > 65535:
 		return redirectInvalid("port")
-	case len(d.FromPath) > maxRedirectPath || !validSegments(strings.TrimPrefix(d.FromPath, "/")):
+	case d.normalizePaths() != nil:
 		return redirectInvalid("fromPath")
 	case d.Match != MatchExact && d.Match != MatchPrefix:
 		return redirectInvalid("match")
 	}
-	d.FromPath = "/" + strings.TrimPrefix(d.FromPath, "/")
 	u, ok := parseTarget(d.ToURL)
 	if !ok {
 		return redirectInvalid("toUrl")
 	}
 	d.ToURL, d.target = u.String(), u
+	return nil
+}
+
+func (d *Redirect) normalizePaths() error {
+	raw := d.paths()
+	if len(raw) == 0 || len(raw) > maxRedirectPaths {
+		return redirectInvalid("fromPath")
+	}
+	out := make([]string, 0, len(raw))
+	for _, p := range raw {
+		if len(p) > maxRedirectPath || !validSegments(strings.TrimPrefix(p, "/")) {
+			return redirectInvalid("fromPath")
+		}
+		norm := "/" + strings.TrimPrefix(p, "/")
+		if !slices.Contains(out, norm) {
+			out = append(out, norm)
+		}
+	}
+	d.FromPaths, d.FromPath = out, out[0]
 	return nil
 }
 
@@ -198,6 +248,24 @@ func sendRedirect(w http.ResponseWriter, d *Redirect, tail string) {
 
 // loops reports whether a request for target would reach a redirect rule
 // in rules, by its host, port and escaped path. Nothing is looked up.
+func (d *Redirect) loops(rules []rule) bool {
+	if loops(d.target, rules) {
+		return true
+	}
+	if !d.preservesPath() {
+		return false
+	}
+	for _, p := range d.paths() {
+		u := *d.target
+		u.Path = strings.TrimSuffix(u.Path, "/") + p
+		u.RawPath = ""
+		if loops(&u, rules) {
+			return true
+		}
+	}
+	return false
+}
+
 func loops(target *url.URL, rules []rule) bool {
 	port := 443
 	if target.Scheme == "http" {

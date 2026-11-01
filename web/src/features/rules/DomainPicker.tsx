@@ -1,10 +1,9 @@
 import { Checkbox } from '@cloudflare/kumo/components/checkbox';
 import { Link } from 'react-router';
-import { InlineAlert } from '../../components/feedback/InlineAlert';
-import { SwitchRow } from '../../components/form/SwitchRow';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
 import type { Domain } from '../../lib/api/domains';
+import { ChoiceList } from '../certificates/ChoiceList';
 import { siteFormMessages } from './form-messages';
 import { domainState, httpsAllowed } from './rule-form';
 
@@ -31,59 +30,76 @@ export function AddFirst({ host }: { host: string }) {
 }
 
 /**
- * Answer over HTTPS: locked off while a picked domain has no certificate,
- * with the plain HTTP warning whenever it is off. No domain: the port decides.
+ * The HTTPS step question: with HTTPS (locked when picked domains lack a
+ * certificate) or plain HTTP; a press answers and advances immediately.
  */
-export function HttpsField({
+export function RuleHttpsQuestion({
   domains,
   picked,
-  https,
-  onHttps,
+  chosen,
+  error,
+  onChoose,
 }: {
   domains: readonly Domain[];
   picked: readonly string[];
-  https: boolean;
-  onHttps: (on: boolean) => void;
+  chosen?: 'with' | 'without';
+  error?: string;
+  onChoose: (https: boolean) => void;
 }) {
   const t = useT(siteFormMessages);
   const allowed = httpsAllowed(picked, domains);
-  if (picked.length === 0) return <p className="text-sm text-kumo-subtle">{t('portCert')}</p>;
+  const noDomains = picked.length === 0;
+  const withHint = noDomains
+    ? t('httpsHint_port')
+    : allowed
+      ? t('httpsHint_with')
+      : t('httpsHint_missing');
   return (
-    <>
-      <SwitchRow
-        id="rule-https"
-        label={t('httpsLabel')}
-        hint={t('httpsHint')}
-        checked={https && allowed}
-        disabled={!allowed}
-        onChange={onHttps}
+    <div className="flex flex-col gap-3">
+      <ChoiceList<'with' | 'without'>
+        label={t('step_https')}
+        chosen={chosen}
+        rows={[
+          {
+            value: 'with',
+            title: t('https_with'),
+            hint: withHint,
+            badge: allowed ? t('recommended') : undefined,
+            disabled: !noDomains && !allowed,
+          },
+          {
+            value: 'without',
+            title: t('https_without'),
+            hint: t('httpsHint_without'),
+          },
+        ]}
+        onChoose={(choice) => onChoose(choice === 'with')}
       />
-      {https && allowed ? null : <InlineAlert tone="warning">{t('plainWarning')}</InlineAlert>}
-    </>
+      {error ? (
+        <p className="text-sm text-kumo-danger">
+          <CodeText text={error} />
+        </p>
+      ) : null}
+    </div>
   );
 }
 
 /**
- * The registered domains as checkboxes, each with its certificate state, then
- * the HTTPS switch.
+ * The registered domains as checkboxes, each with its certificate state.
  */
 export function DomainPicker({
   domains,
   picked,
   missing = [],
-  https,
   error,
   onPick,
-  onHttps,
 }: {
   domains: readonly Domain[];
   picked: readonly string[];
-  /** Hosts the batches or the link name that are not registered. */
+  /** Hosts the batches name that are not registered. */
   missing?: readonly string[];
-  https: boolean;
   error?: string;
   onPick: (names: string[]) => void;
-  onHttps: (on: boolean) => void;
 }) {
   const t = useT(siteFormMessages);
   const toggle = (name: string, on: boolean) =>
@@ -93,7 +109,7 @@ export function DomainPicker({
       ? t('state_https', { cert: d.certificate.name })
       : t(`state_${domainState(d)}` as 'state_plain');
   return (
-    <fieldset className="flex flex-col gap-5">
+    <fieldset className="flex flex-col gap-3">
       <legend className="mb-1 flex flex-col gap-1">
         <span className="font-medium text-kumo-strong">{t('domainsLabel')}</span>
         <span className="text-sm text-kumo-subtle">{t('domainsHint')}</span>
@@ -132,7 +148,6 @@ export function DomainPicker({
           <CodeText text={error} />
         </p>
       ) : null}
-      <HttpsField domains={domains} picked={picked} https={https} onHttps={onHttps} />
     </fieldset>
   );
 }

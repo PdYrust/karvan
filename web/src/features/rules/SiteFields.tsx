@@ -1,12 +1,52 @@
-import { Radio } from '@cloudflare/kumo/components/radio';
-import { panelNames } from '../../components/panels/PanelLogo';
+import type { ReactNode } from 'react';
+import { SwitchRow } from '../../components/form/SwitchRow';
 import { CodeText } from '../../components/text/CodeText';
 import { useT } from '../../i18n/locale';
-import type { PanelKind } from '../../lib/api/panels';
+import { ChoiceList } from '../certificates/ChoiceList';
 import { siteFormMessages } from './form-messages';
-import type { RuleField, RuleValues } from './rule-form';
 import { PortField } from './PortField';
+import {
+  ruleKinds,
+  type RuleField,
+  type RuleKind,
+  type RuleStep,
+  type RuleValues,
+} from './rule-form';
 import { TextField } from './TextField';
+
+export const action = 'flex-1 justify-center sm:flex-none pointer-coarse:h-9';
+
+/** The bar at the bottom of a wizard step. */
+export function Footer({ children }: { children: ReactNode }) {
+  return (
+    <div className="flex flex-col gap-3 border-t border-kumo-hairline pt-5 sm:flex-row sm:items-center sm:justify-end">
+      <div className="flex gap-2 sm:justify-end">{children}</div>
+    </div>
+  );
+}
+
+/** The first step: choose From an old panel or Custom. */
+export function KindQuestion({
+  chosen,
+  onChoose,
+}: {
+  chosen?: RuleKind;
+  onChoose: (k: RuleKind) => void;
+}) {
+  const t = useT(siteFormMessages);
+  return (
+    <ChoiceList<RuleKind>
+      label={t('step_kind')}
+      chosen={chosen}
+      rows={ruleKinds.map((k) => ({
+        value: k,
+        title: t(`kind_${k}`),
+        hint: t(`kind_${k}_hint`),
+      }))}
+      onChoose={onChoose}
+    />
+  );
+}
 
 export interface FieldsProps {
   values: RuleValues;
@@ -15,63 +55,36 @@ export interface FieldsProps {
   errorOf: (f: RuleField) => string | undefined;
 }
 
-function Legend({ title, hint }: { title: string; hint?: string }) {
+const mark = '\u0000';
+
+/** The HTTPS question's heading, the rule name kept isolated inside it. */
+function HttpsTitle({ name }: { name: string }) {
+  const t = useT(siteFormMessages);
+  const [before, after] = t('httpsTitle', { name: mark }).split(mark);
   return (
-    <legend className="mb-1 flex flex-col gap-1">
-      <span className="font-medium text-kumo-strong">{title}</span>
-      {hint ? <span className="text-sm text-kumo-subtle">{hint}</span> : null}
-    </legend>
+    <>
+      {before}
+      <bdi>{name.trim()}</bdi>
+      {after}
+    </>
   );
 }
 
-/** The old panel: its kind, its address, the address Karvan reaches it by and its fingerprint. */
-export function OldPanelFields({ values, set, errorOf }: FieldsProps) {
+/** The heading of each step in the rule wizard. */
+export function StepHeading({
+  step,
+  kind,
+  name,
+}: {
+  step: RuleStep;
+  kind: RuleKind;
+  name: string;
+}) {
   const t = useT(siteFormMessages);
-  return (
-    <fieldset className="flex flex-col gap-5">
-      <Legend title={t('oldTitle')} hint={t('oldHint')} />
-      {/* Two kinds: a radio pair reads faster than a menu. */}
-      <Radio.Group
-        legend={t('kindLabel')}
-        value={values.sourceKind}
-        onValueChange={(sourceKind: PanelKind) => set({ sourceKind })}
-      >
-        {(['marzban', 'pasarguard'] as const).map((k) => (
-          <Radio.Item key={k} value={k} label={panelNames[k]} />
-        ))}
-      </Radio.Group>
-      <TextField
-        id="site-url"
-        label={t('urlLabel')}
-        hint={<CodeText text={t('urlHint')} />}
-        error={errorOf('sourceUrl')}
-        value={values.sourceUrl}
-        onChange={(sourceUrl) => set({ sourceUrl })}
-        machine
-        inputMode="url"
-      />
-      <div className="grid gap-5 sm:grid-cols-2">
-        <TextField
-          id="site-ip"
-          label={t('ipLabel')}
-          hint={t('ipHint')}
-          error={errorOf('sourceIp')}
-          value={values.sourceIp}
-          onChange={(sourceIp) => set({ sourceIp })}
-          machine
-        />
-        <TextField
-          id="site-pin"
-          label={t('pinLabel')}
-          hint={<CodeText text={t('pinHint')} />}
-          error={errorOf('sourcePin')}
-          value={values.sourcePin}
-          onChange={(sourcePin) => set({ sourcePin })}
-          machine
-        />
-      </div>
-    </fieldset>
-  );
+  if (step === 'kind') return t('kindTitle');
+  if (step === 'domain') return t(`domainTitle_${kind}`);
+  if (step === 'https') return <HttpsTitle name={name} />;
+  return t(`detailsTitle_${kind}`);
 }
 
 /** The old path and the port the rule answers on. */
@@ -90,5 +103,50 @@ export function AnswerFields({ values, set, errorOf }: FieldsProps) {
       />
       <PortField id="site-port" values={values} set={set} errorOf={errorOf} />
     </div>
+  );
+}
+
+/** Details of a rule of batches: path, port, optional IP, and lazy/plain switches. */
+export function BatchesDetailsFields({
+  values,
+  set,
+  errorOf,
+  refused,
+  plainSource,
+}: FieldsProps & { refused: RuleField | undefined; plainSource: boolean }) {
+  const t = useT(siteFormMessages);
+  return (
+    <>
+      <AnswerFields values={values} set={set} errorOf={errorOf} />
+      {values.sourceIp || refused === 'sourceIp' ? (
+        <TextField
+          id="site-ip"
+          label={t('ipLabel')}
+          hint={t('ipHint')}
+          error={errorOf('sourceIp')}
+          value={values.sourceIp}
+          onChange={(sourceIp) => set({ sourceIp })}
+          machine
+        />
+      ) : null}
+      <div className="flex flex-col gap-5">
+        <SwitchRow
+          id="site-lazy"
+          label={t('lazyLabel')}
+          hint={t('lazyHint')}
+          checked={values.lazy}
+          onChange={(lazy) => set({ lazy })}
+        />
+        {plainSource ? (
+          <SwitchRow
+            id="site-plain"
+            label={t('plainLabel')}
+            hint={t('plainHint')}
+            checked={values.plainHttpOk}
+            onChange={(plainHttpOk) => set({ plainHttpOk })}
+          />
+        ) : null}
+      </div>
+    </>
   );
 }

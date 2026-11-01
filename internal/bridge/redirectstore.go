@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"slices"
+	"strings"
 )
 
 // redirectColumns read a redirect with the certificates row it uses.
@@ -16,14 +17,24 @@ const redirectColumns = "SELECT r.id, r.name, r.domains, r.listen_port, r.from_p
 
 func scanRedirect(row interface{ Scan(...any) error }) (Redirect, error) {
 	var d Redirect
-	var domains string
-	err := row.Scan(&d.ID, &d.Name, &domains, &d.Port, &d.FromPath, &d.Match, &d.ToURL, &d.CertificateID, &d.cert.name,
+	var domains, rawPath string
+	err := row.Scan(&d.ID, &d.Name, &domains, &d.Port, &rawPath, &d.Match, &d.ToURL, &d.CertificateID, &d.cert.name,
 		&d.cert.certFile, &d.cert.keyFile, &d.cert.pem, &d.cert.sealed)
 	if err != nil {
 		return d, err
 	}
 	if err := json.Unmarshal([]byte(domains), &d.Domains); err != nil {
 		return d, fmt.Errorf("redirect %d domains: %w", d.ID, err)
+	}
+	if strings.HasPrefix(rawPath, "[") {
+		if err := json.Unmarshal([]byte(rawPath), &d.FromPaths); err != nil {
+			return d, fmt.Errorf("redirect %d paths: %w", d.ID, err)
+		}
+		if len(d.FromPaths) > 0 {
+			d.FromPath = d.FromPaths[0]
+		}
+	} else {
+		d.FromPath, d.FromPaths = rawPath, []string{rawPath}
 	}
 	d.cert.id = d.CertificateID
 	https := d.CertificateID != 0
@@ -55,9 +66,9 @@ func (st *store) redirects(ctx context.Context) ([]Redirect, error) {
 // redirectRules reads every redirect rule by id, as the router sees them.
 func (st *store) redirectRules(ctx context.Context) ([]rule, error) {
 	list, err := st.redirects(ctx)
-	out := make([]rule, len(list))
+	out := make([]rule, 0, len(list))
 	for i := range list {
-		out[i] = list[i].rule()
+		out = append(out, list[i].rules()...)
 	}
 	return out, err
 }
@@ -78,19 +89,21 @@ func (st *store) saveRedirect(ctx context.Context, d Redirect) (Redirect, error)
 	st.saveMu.Lock()
 	defer st.saveMu.Unlock()
 	in := ruleCert{self: RuleRef{Kind: RuleRedirect, ID: d.ID}, https: d.HTTPS}
-	storedFrom := ""
+	var storedPaths []string
 	if d.ID != 0 {
 		stored, err := st.redirect(ctx, d.ID)
 		if err != nil {
 			return d, err
 		}
-		in.stored, storedFrom = stored.HTTPS, stored.FromPath
+		in.stored, storedPaths = stored.HTTPS, stored.paths()
 	}
 	if err := d.normalize(); err != nil {
 		return d, err
 	}
-	if d.FromPath != storedFrom && reservedPath(d.FromPath) { // a stored one stays editable
-		return d, &RedirectInvalidError{Field: "fromPath", Reason: ReasonReserved}
+	for _, p := range d.FromPaths {
+		if !slices.Contains(storedPaths, p) && reservedPath(p) { // a stored one stays editable
+			return d, &RedirectInvalidError{Field: "fromPath", Reason: ReasonReserved}
+		}
 	}
 	in.port, in.domains = d.Port, d.Domains
 	id, err := st.derive(ctx, in)
@@ -122,18 +135,20 @@ func (st *store) checkRedirect(ctx context.Context, d Redirect) error {
 	if err != nil {
 		return err
 	}
-	self := d.rule()
+	own := d.rules()
 	others := []rule{}
 	for _, o := range all {
 		if o.ref.Kind == RuleRedirect && o.ref.ID == d.ID {
 			continue
 		}
-		if err := self.conflict(o); err != nil {
-			return err
+		for _, self := range own {
+			if err := self.conflict(o); err != nil {
+				return err
+			}
 		}
 		others = append(others, o)
 	}
-	if loops(d.target, append(others, self)) {
+	if d.loops(append(others, own...)) {
 		return &RedirectInvalidError{Field: "toUrl", Reason: ReasonLoop}
 	}
 	return nil
@@ -143,6 +158,11 @@ func (st *store) checkRedirect(ctx context.Context, d Redirect) error {
 // holds any more, in one transaction.
 func (st *store) writeRedirect(ctx context.Context, d *Redirect) error {
 	domains, _ := json.Marshal(d.Domains)
+	rawPath := d.FromPath
+	if len(d.FromPaths) > 1 {
+		b, _ := json.Marshal(d.FromPaths)
+		rawPath = string(b)
+	}
 	now := st.now().Unix()
 	certID := nullID(d.CertificateID)
 	tx, err := st.db.BeginTx(ctx, nil)
@@ -150,7 +170,7 @@ func (st *store) writeRedirect(ctx context.Context, d *Redirect) error {
 		return err
 	}
 	defer tx.Rollback() //nolint:errcheck // a no-op after Commit
-	args := []any{d.Name, string(domains), d.Port, d.FromPath, d.Match, d.ToURL, certID, now}
+	args := []any{d.Name, string(domains), d.Port, rawPath, d.Match, d.ToURL, certID, now}
 	if d.ID == 0 {
 		res, err := tx.ExecContext(ctx, "INSERT INTO link_redirects (name, domains, listen_port, from_path, match, to_url, "+
 			"certificate_id, updated_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)", append(args, now)...)

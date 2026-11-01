@@ -115,7 +115,11 @@ func (b *Bridge) route(port int, r *http.Request) (request, bool) {
 		return request{}, false
 	case rt.panel == nil:
 		d := rt.redirect
-		return request{redirect: d, rest: rest}, d != nil && d.target != nil && validTail(rest)
+		ok := d != nil && d.target != nil && validTail(rest)
+		if ok && d.preservesPath() {
+			rest = "/" + rt.path + rest
+		}
+		return request{redirect: d, rest: rest}, ok
 	}
 	return splitToken(*rt.panel, rest)
 }

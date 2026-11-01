@@ -12,9 +12,12 @@ import {
   type SitePrefill,
 } from '../../lib/api/rules';
 
-/** What a rule is made from: an old panel's batches, an old panel typed by hand, a redirect, or one old link. */
-export type RuleKind = 'batches' | 'manual' | 'redirect' | 'link';
-export const ruleKinds: readonly RuleKind[] = ['batches', 'manual', 'redirect', 'link'];
+/** What a rule is made from: an old panel's batches, or a custom redirect rule. */
+export type RuleKind = 'batches' | 'custom';
+export const ruleKinds: readonly RuleKind[] = ['batches', 'custom'];
+
+/** The steps of the rule wizard: kind (on create), source domain, HTTPS, then details. */
+export type RuleStep = 'kind' | 'domain' | 'https' | 'details';
 
 /** The rule form as typed. Domains are names picked from the registered ones. */
 export interface RuleValues {
@@ -34,10 +37,9 @@ export interface RuleValues {
   lazy: boolean;
   plainHttpOk: boolean;
   fromPath: string;
+  fromPaths: string[];
   match: 'exact' | 'prefix';
   toUrl: string;
-  /** The pasted old link of a single link rule. */
-  link: string;
 }
 
 /** The fields the server can name in a site_invalid or redirect_invalid answer. */
@@ -70,17 +72,18 @@ export interface RulePrefill extends SitePrefill {
 
 export function rulePrefill(q: URLSearchParams): RulePrefill {
   const out: RulePrefill = sitePrefill(q);
-  const kind = ruleKinds.find((k) => k === q.get('kind'));
-  if (kind) out.kind = kind;
+  const rawKind = q.get('kind');
+  if (rawKind === 'batches') out.kind = 'batches';
+  else if (rawKind === 'custom' || rawKind === 'redirect') out.kind = 'custom';
   const batch = Number(q.get('batch'));
   if (Number.isInteger(batch) && batch > 0) out.batchId = batch;
   return out;
 }
 
-/** A new rule: from batches unless the address names an old panel, on 443 with lazy checks on. */
+/** A new rule: from batches unless custom is picked, on 443 with lazy checks on. */
 export function newRuleValues(p: RulePrefill, panelId: number): RuleValues {
   return {
-    kind: p.kind ?? (p.sourceUrl ? 'manual' : 'batches'),
+    kind: p.kind ?? 'batches',
     name: '',
     groupId: p.groupId ?? 0,
     panelId: p.panelId ?? panelId,
@@ -94,10 +97,10 @@ export function newRuleValues(p: RulePrefill, panelId: number): RuleValues {
     https: false,
     lazy: true,
     plainHttpOk: false,
-    fromPath: '',
+    fromPath: '/sub',
+    fromPaths: ['sub'],
     match: 'prefix',
     toUrl: '',
-    link: '',
   };
 }
 
@@ -106,7 +109,7 @@ export function valuesOfSite(s: LinkSite): RuleValues {
   const batches = s.mode === 'batches';
   return {
     ...newRuleValues({}, s.panelId),
-    kind: batches ? 'batches' : 'manual',
+    kind: 'batches',
     name: s.name,
     groupId: s.batchGroup ?? 0,
     sourceKind: s.sourceKind,
@@ -123,17 +126,39 @@ export function valuesOfSite(s: LinkSite): RuleValues {
 }
 
 export function valuesOfRedirect(r: Redirect): RuleValues {
+  const raw = r.fromPaths && r.fromPaths.length > 0 ? r.fromPaths : [r.fromPath];
+  const fromPaths = raw.map((p) => p.replace(/^\/+/, '')).filter(Boolean);
   return {
     ...newRuleValues({}, 0),
-    kind: 'redirect',
+    kind: 'custom',
     name: r.name,
     domains: r.domains ?? [],
     port: String(r.port),
     https: r.https,
     fromPath: r.fromPath,
+    fromPaths: fromPaths.length > 0 ? fromPaths : [''],
     match: r.match,
     toUrl: r.toUrl,
   };
+}
+
+/** The steps the rule form walks: editing skips the kind step. */
+export function stepsForRule(isNew: boolean): RuleStep[] {
+  return isNew ? ['kind', 'domain', 'https', 'details'] : ['domain', 'https', 'details'];
+}
+
+/** Whether the source domain step has what it needs to continue to HTTPS. */
+export function canContinueDomain(v: RuleValues): boolean {
+  if (!v.name.trim()) return false;
+  return v.kind === 'custom' || v.groupId > 0 || v.sourceUrl.trim() !== '';
+}
+
+/** The step that owns a refused field, so the wizard jumps back to it when needed. */
+export function stepForRefused(field: RuleField | undefined): RuleStep | undefined {
+  if (!field) return undefined;
+  if (field === 'name' || field === 'domains' || field === 'batchIds') return 'domain';
+  if (field === 'https') return 'https';
+  return 'details';
 }
 
 /** A domain's certificate as the picker shows it. */
@@ -194,16 +219,37 @@ export function withGroup(
   );
 }
 
-/** A typed single link: its host is the domain once it is registered. */
-export function withLink(v: RuleValues, text: string, domains: readonly Domain[]): RuleValues {
-  const host = parseOldLink(text)?.host;
-  const names = host && unregistered([host], domains).length === 0 ? [host] : [];
-  return withDomains({ ...v, link: text }, names, domains);
-}
-
 /** An old panel on plain http: the switch that accepts it shows only then. */
 export function isPlainHttp(url: string): boolean {
   return /^http:\/\//i.test(url.trim());
+}
+
+/** Normalizes one source path to start with a single leading slash, or empty string. */
+export function normalizePath(raw: string): string {
+  const trimmed = raw.trim().replace(/^\/+|\/+$/g, '');
+  return trimmed ? `/${trimmed}` : '';
+}
+
+/** Deduplicates and normalizes all non-empty source paths. */
+export function cleanPaths(paths: readonly string[]): string[] {
+  const out: string[] = [];
+  for (const raw of paths) {
+    const p = normalizePath(raw);
+    if (p && !out.includes(p)) out.push(p);
+  }
+  return out;
+}
+
+const localHostRe = /^(localhost|127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|\[::1\])/i;
+
+/** Ensures a target address has http:// or https:// when a bare domain or IP with port is typed. */
+export function normalizeTargetUrl(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed || /^[a-z][a-z0-9+.-]*:\/\//i.test(trimmed) || trimmed.startsWith('/')) {
+    return trimmed;
+  }
+  const scheme = localHostRe.test(trimmed) ? 'http://' : 'https://';
+  return `${scheme}${trimmed}`;
 }
 
 /** HTTPS goes only with domains; with none the port's certificate decides. */
@@ -221,7 +267,7 @@ export function siteInputOf(v: RuleValues, group: BatchGroup | undefined): SiteI
     lazy: v.lazy,
     ...httpsOf(v),
   };
-  if (v.kind === 'batches') {
+  if (v.groupId > 0 || group) {
     const ip = v.sourceIp.trim();
     return {
       ...common,
@@ -245,60 +291,31 @@ export function siteInputOf(v: RuleValues, group: BatchGroup | undefined): SiteI
   };
 }
 
-/** The parts of an old subscription link a single link rule answers. */
-export function parseOldLink(
-  text: string,
-): { host: string; port: number; path: string } | undefined {
-  let u: URL;
-  try {
-    u = new URL(text.trim());
-  } catch {
-    return undefined;
-  }
-  if (u.protocol !== 'https:' && u.protocol !== 'http:') return undefined;
-  const path = u.pathname.replace(/\/+$/, '');
-  if (!path) return undefined;
-  const port = u.port ? Number(u.port) : u.protocol === 'https:' ? 443 : 80;
-  return { host: u.hostname.replace(/^\[(.*)\]$/, '$1').toLowerCase(), port, path };
-}
-
-/** A redirect as sent; a single link is a redirect of its path and below. */
+/** A custom redirect rule as sent, with all allowed source paths and normalized target URL. */
 export function redirectInputOf(v: RuleValues): RedirectInput {
-  const common = { name: v.name.trim(), toUrl: v.toUrl.trim() };
-  const link = v.kind === 'link' ? parseOldLink(v.link) : undefined;
-  if (link) {
-    return {
-      ...common,
-      domains: [link.host],
-      port: link.port,
-      fromPath: link.path,
-      match: 'prefix',
-      https: v.https,
-    };
-  }
+  const paths = cleanPaths(v.fromPaths.length > 0 ? v.fromPaths : [v.fromPath]);
+  const first = paths[0] ?? normalizePath(v.fromPath);
   return {
-    ...common,
+    name: v.name.trim(),
     ...httpsOf(v),
     domains: v.domains,
     port: Number(v.port),
-    fromPath: v.fromPath.trim(),
+    fromPath: first,
+    fromPaths: paths,
     match: v.match,
+    toUrl: normalizeTargetUrl(v.toUrl),
   };
 }
 
 /** The form can save once the kind has what it needs; the server checks the rest. */
-export function canSubmit(v: RuleValues, domains: readonly Domain[]): boolean {
+export function canSubmit(v: RuleValues): boolean {
   if (!v.name.trim()) return false;
   switch (v.kind) {
     case 'batches':
-      return v.groupId > 0;
-    case 'manual':
-      return v.sourceUrl.trim() !== '';
-    case 'redirect':
-      return v.fromPath.trim() !== '' && v.toUrl.trim() !== '';
-    case 'link': {
-      const link = parseOldLink(v.link);
-      return !!link && unregistered([link.host], domains).length === 0 && v.toUrl.trim() !== '';
+      return v.groupId > 0 || v.sourceUrl.trim() !== '';
+    case 'custom': {
+      const paths = cleanPaths(v.fromPaths.length > 0 ? v.fromPaths : [v.fromPath]);
+      return paths.length > 0 && v.toUrl.trim() !== '';
     }
   }
 }

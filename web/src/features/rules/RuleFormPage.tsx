@@ -106,7 +106,7 @@ export function RuleFormPage({ redirect = false }: { redirect?: boolean }) {
   usePageTitle(name ? t('editTitle', { name }) : t('newTitle'));
   const save = useMutation({
     mutationFn: ({ v, group }: { v: RuleValues; group?: BatchGroup }): Promise<unknown> =>
-      v.kind === 'redirect' || v.kind === 'link'
+      v.kind === 'custom'
         ? saveRedirect(redirectInputOf(v), ruleId)
         : saveSite(siteInputOf(v, group), ruleId),
     onSuccess: () => {
