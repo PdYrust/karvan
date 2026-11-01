@@ -46,7 +46,8 @@ type fakeDest struct {
 	srv   *httptest.Server
 	last  *http.Request
 	hits  int
-	reads int // Rows calls
+	reads int    // Rows calls
+	path  string // its subscription path; "sub" when empty
 }
 
 func newFakeDest(t *testing.T) *fakeDest {
@@ -55,9 +56,14 @@ func newFakeDest(t *testing.T) *fakeDest {
 		f.mu.Lock()
 		f.last, f.hits = r.Clone(context.Background()), f.hits+1
 		f.mu.Unlock()
+		own := "/" + f.SubPath() + "/"
+		native := own + "native-token-0123456789"
 		switch {
-		case strings.HasPrefix(r.URL.Path, "/sub/dest-"), r.URL.Path == "/sub/native-token-0123456789":
+		case strings.HasPrefix(r.URL.Path, own+"dest-"), r.URL.Path == native,
+			strings.HasPrefix(r.URL.Path, native+"/"):
 			w.Header().Set("Subscription-Userinfo", "upload=0; download=1")
+			w.Header().Set("Profile-Title", "new panel")
+			w.Header().Set("Content-Disposition", `attachment; filename="sub"`)
 			w.Header().Set("Connection", "X-Secret-Hop")
 			w.Header().Set("X-Secret-Hop", "drop me")
 			_, _ = io.WriteString(w, "config "+r.URL.Path)
@@ -69,8 +75,13 @@ func newFakeDest(t *testing.T) *fakeDest {
 	return f
 }
 
-func (f *fakeDest) Key() string          { return "fake-dest" }
-func (f *fakeDest) SubPath() string      { return "sub" }
+func (f *fakeDest) Key() string { return "fake-dest" }
+func (f *fakeDest) SubPath() string {
+	if f.path == "" {
+		return "sub"
+	}
+	return f.path
+}
 func (f *fakeDest) BaseURL() string      { return f.srv.URL }
 func (f *fakeDest) Client() *http.Client { return f.srv.Client() }
 func (f *fakeDest) Close()               {}

@@ -289,6 +289,15 @@ describe('log sentences', () => {
       key: 'code_undo_incomplete',
       params: { count: 3 },
     });
+    expect(codeSentence('backup_tool_missing', { tool: 'mysqldump' })).toEqual({
+      from: 'live',
+      key: 'code_backup_tool_missing_named',
+      params: { tool: 'mysqldump' },
+    });
+    expect(codeSentence('backup_tool_missing')).toEqual({
+      from: 'live',
+      key: 'code_backup_tool_missing',
+    });
     expect(codeSentence('cancelled')).toEqual({ from: 'error', key: 'cancelled' });
     expect(codeSentence('destination_locked')).toEqual({
       from: 'error',

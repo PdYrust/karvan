@@ -1,10 +1,12 @@
 package bridge
 
 import (
+	"errors"
 	"io"
 	"net"
 	"net/http"
 	"net/textproto"
+	"net/url"
 	"strings"
 )
 
@@ -47,6 +49,9 @@ func forward(r *http.Request, d Destination, token, rest string) (*http.Response
 		return nil, err
 	}
 	copyHeaders(out.Header, r.Header)
+	// The client's credentials are for this host, not for the panel.
+	out.Header.Del("Cookie")
+	out.Header.Del("Authorization")
 	out.Host = r.Host
 	if ip, _, err := net.SplitHostPort(r.RemoteAddr); err == nil {
 		if prior := out.Header.Get("X-Forwarded-For"); prior != "" {
@@ -57,13 +62,30 @@ func forward(r *http.Request, d Destination, token, rest string) (*http.Response
 	return d.Client().Do(out) //nolint:gosec // G704: the panel's own listener
 }
 
+// maxRelay bounds one panel answer passed to a client.
+const maxRelay = 32 << 20
+
 // relay writes the panel's answer to the client unchanged, minus
-// hop-by-hop headers.
+// hop-by-hop headers, up to maxRelay bytes. A larger declared body is a
+// 502.
 func relay(w http.ResponseWriter, resp *http.Response) {
 	defer resp.Body.Close()
+	if resp.ContentLength > maxRelay {
+		answer(w, http.StatusBadGateway)
+		return
+	}
 	copyHeaders(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
-	_, _ = io.Copy(w, resp.Body)
+	_, _ = io.Copy(w, io.LimitReader(resp.Body, maxRelay))
+}
+
+// plainErr drops the request URL, which holds the token, from a client
+// error.
+func plainErr(err error) error {
+	if u, ok := errors.AsType[*url.Error](err); ok {
+		return u.Err
+	}
+	return err
 }
 
 // answer writes the panels' own error shape.

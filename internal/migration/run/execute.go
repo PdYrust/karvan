@@ -216,7 +216,7 @@ func (s *Service) execute(ctx context.Context, j *Job, hash string, o Options) {
 	}
 	if err != nil {
 		rep.Error = errorCode(err)
-		s.emit(j, StageExecute, EventLog, map[string]any{"code": rep.Error})
+		s.emit(j, StageExecute, EventLog, errorDetail(rep.Error, err))
 	}
 	rep.State, rep.EndedAt, rep.BackupID = j.state, s.now(), j.backupID
 	facts := oldLinkFacts(j)
@@ -348,6 +348,17 @@ func (s *Service) stage(j *Job, rep *Report, name string, fn func() error) error
 	rep.stage(name, start, err == nil, s.now())
 	s.emit(j, name, EventStage, map[string]any{"state": state})
 	return err
+}
+
+// errorDetail is the log line of a run that failed with code: a missing
+// dump tool is named.
+func errorDetail(code string, err error) map[string]any {
+	d := map[string]any{"code": code}
+	var tool *safemode.ToolError
+	if errors.As(err, &tool) {
+		d["tool"] = tool.Tool
+	}
+	return d
 }
 
 func errorCode(err error) string {

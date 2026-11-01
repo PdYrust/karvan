@@ -1,11 +1,11 @@
 import { Button } from '@cloudflare/kumo/components/button';
 import { Radio } from '@cloudflare/kumo/components/radio';
-import { Switch } from '@cloudflare/kumo/components/switch';
 import { useKumoToastManager } from '@cloudflare/kumo/components/toast';
 import { useState } from 'react';
 import { TypeToConfirm } from '../../components/dialogs/TypeToConfirm';
 import { InlineAlert } from '../../components/feedback/InlineAlert';
 import { Bone } from '../../components/feedback/PageSkeleton';
+import { Switch } from '../../components/form/Switch';
 import { SettingRow, SettingsCard } from '../../components/layout/SettingRow';
 import { useLocale, useT } from '../../i18n/locale';
 import { turnOffConfirm, type Rollback, type SafeMode } from '../../lib/api/safemode';
@@ -85,8 +85,6 @@ export function SafeModeTab() {
               // The thumb moves on the press; a failed save slides it back.
               checked={set.isPending ? set.variables.next.enabled : s.enabled}
               disabled={saving}
-              // The switch is 18 px high; the hit area reaches 44 px on touch screens.
-              className="relative pointer-coarse:before:absolute pointer-coarse:before:-inset-x-[9px] pointer-coarse:before:-inset-y-[13px] pointer-coarse:before:content-['']"
               onCheckedChange={(on) =>
                 on ? save({ ...s, enabled: true }, t('turnedOn')) : setConfirming(true)
               }

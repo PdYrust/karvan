@@ -27,6 +27,7 @@ type restoreTask struct {
 	ctl    PanelControl // nil: the caller stopped the panel
 	w      *paneldb.Writer
 	target paneldb.Target
+	env    string // the panel's ENV file
 	unlock func()
 	rep    *Report
 	hold   *batch.Restore // the batches the backup takes back
@@ -83,7 +84,7 @@ func (s *Service) prepareRestore(ctx context.Context, id string, stopped bool) (
 	if err != nil {
 		return nil, err
 	}
-	t := &restoreTask{backup: b, job: &Job{ID: jobID}, target: d.Target}
+	t := &restoreTask{backup: b, job: &Job{ID: jobID}, target: d.Target, env: env}
 	if !stopped {
 		if t.ctl, err = s.control(ctx, env); err != nil {
 			return nil, err
@@ -144,7 +145,8 @@ func (s *Service) runRestore(ctx context.Context, t *restoreTask) error {
 	err := s.stage(j, rep, StageRestore, func() error {
 		put := func() error {
 			started = true
-			return safemode.Restorer{Key: s.Key, Run: s.Tools}.Restore(ctx, t.target, t.w.Server(), t.backup)
+			tools, tg := s.tools(ctx, t.env, t.target, t.w.Server())
+			return safemode.Restorer{Key: s.Key, Run: tools}.Restore(ctx, tg, t.w.Server(), t.backup)
 		}
 		var err error
 		if t.ctl != nil {

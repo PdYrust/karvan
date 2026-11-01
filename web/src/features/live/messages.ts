@@ -90,6 +90,7 @@ const en = {
   code_plan_stale: 'The panels changed since your check, so Karvan wrote nothing.',
   code_verify_failed: 'Some users read back different from what Karvan wrote.',
   code_backup_tool_missing: "The tool that backs up this database isn't installed.",
+  code_backup_tool_missing_named: "The tool that backs up this database isn't installed: {tool}.",
   code_backup_no_space: "There isn't enough disk space for the backup.",
   code_run_failed: "Karvan couldn't write to the new panel.",
   code_links_unavailable:
@@ -263,6 +264,7 @@ const fa: Messages<LiveKey>['fa'] = {
   code_plan_stale: 'پنل ها از بررسی شما تغییر کرده اند، پس کاروان چیزی ننوشت.',
   code_verify_failed: 'بعضی کاربرها با آنچه کاروان نوشت فرق دارند.',
   code_backup_tool_missing: 'ابزار پشتیبان گیری این دیتابیس نصب نیست.',
+  code_backup_tool_missing_named: 'ابزار پشتیبان گیری این دیتابیس نصب نیست: {tool}.',
   code_backup_no_space: 'فضای دیسک برای پشتیبان کافی نیست.',
   code_run_failed: 'کاروان نتوانست در پنل جدید بنویسد.',
   code_links_unavailable:

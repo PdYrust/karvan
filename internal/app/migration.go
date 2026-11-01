@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
@@ -23,6 +24,7 @@ import (
 	"github.com/PdYrust/karvan/internal/migration/run"
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 	"github.com/PdYrust/karvan/internal/panelctl"
+	"github.com/PdYrust/karvan/internal/safemode"
 )
 
 // ErrDataDirInUse means another Karvan process works on the data directory.
@@ -53,7 +55,23 @@ func (a *App) newRuns() *run.Service {
 				return nil, err
 			}
 			return c, nil
-		}})
+		},
+		DBContainer: a.dbContainer})
+}
+
+// dbContainer finds the container of a panel's database through the
+// Docker socket. The tools run there with docker exec, so the Docker CLI
+// must be on this host too.
+func (a *App) dbContainer(ctx context.Context, envPath string, t paneldb.Target, flavor string) (safemode.Container, bool) {
+	if _, err := exec.LookPath("docker"); err != nil {
+		return safemode.Container{}, false
+	}
+	c, ok, err := panelctl.FindDB(ctx, "", filepath.Dir(envPath), flavor, t.Host, t.Port)
+	if err != nil {
+		a.Logger.Info("database container not looked up, the tools run on this host", "err", err)
+		return safemode.Container{}, false
+	}
+	return safemode.Container{Name: c.Name, Port: c.Port}, ok
 }
 
 // services are the migration service, the bridge and the analytics

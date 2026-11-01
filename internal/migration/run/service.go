@@ -8,6 +8,7 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"sync"
 	"time"
@@ -62,6 +63,10 @@ type Deps struct {
 	DataDir string
 	Now     func() time.Time
 	Tools   safemode.Runner // runs dump tools
+	// DBContainer finds the container of the database at t (flavor
+	// "mysql", "mariadb" or "postgres") for the panel whose ENV is at
+	// envPath, so the dump tools run there. Nil or not found: on this host.
+	DBContainer func(ctx context.Context, envPath string, t paneldb.Target, flavor string) (safemode.Container, bool)
 	// Control returns the control for the panel whose ENV is at envPath,
 	// or why Karvan cannot stop and start it. Nil: never.
 	Control func(ctx context.Context, envPath string) (PanelControl, error)
@@ -125,6 +130,20 @@ func (s *Service) control(ctx context.Context, envPath string) (PanelControl, er
 		return nil, fmt.Errorf("%w: %w", ErrNoPanelControl, err)
 	}
 	return c, nil
+}
+
+// tools is where the dump tools for t run, and t as they see it: in the
+// database's own container when it has one, else Tools on this host.
+func (s *Service) tools(ctx context.Context, envPath string, t paneldb.Target, srv paneldb.Server) (safemode.Runner, paneldb.Target) {
+	if s.DBContainer == nil || t.Dialect == paneldb.SQLite {
+		return s.Tools, t
+	}
+	c, ok := s.DBContainer(ctx, envPath, t, srv.Flavor)
+	if !ok {
+		return s.Tools, t
+	}
+	slog.Info("database tools run in the database's container", "container", c.Name)
+	return safemode.InContainer(c, s.Tools, t)
 }
 
 // SafeModeDir is where Safe Mode backups live, outside any rotation.

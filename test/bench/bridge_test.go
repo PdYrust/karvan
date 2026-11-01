@@ -91,17 +91,33 @@ func TestBridgeLoad(t *testing.T) {
 	defer func() { _ = get(controlURL("/stop")) }()
 	h := serverHost()
 	tg := target{bridge: fmt.Sprintf("%s:%d", h, bridgePort), panel: fmt.Sprintf("http://%s:%d", h, panelPort)}
+	moved := paths{bridge: func(id int64) string { return "/sub/" + oldToken(id) },
+		direct: func(id int64) string { return "/sub/dest-" + strconv.FormatInt(id, 10) }}
 	t.Run("steady", func(t *testing.T) {
 		d := time.Duration(float64(steadyFor) * scale)
-		tg.compare(t, steadyRate, d, func(int) int64 { return rand.Int64N(int64(tokens)) + 1 })
+		tg.compare(t, steadyRate, d, func(int) int64 { return rand.Int64N(int64(tokens)) + 1 }, moved)
 	})
 	t.Run("burst", func(t *testing.T) {
 		users := min(int(burstUsers*scale), tokens)
 		d := time.Duration(float64(burstFor) * scale)
 		perm := rand.Perm(tokens)[:users] // distinct users, each once
-		tg.compare(t, float64(users)/d.Seconds(), d, func(i int) int64 { return int64(perm[i%users]) + 1 })
+		tg.compare(t, float64(users)/d.Seconds(), d, func(i int) int64 { return int64(perm[i%users]) + 1 }, moved)
+	})
+	// Links Karvan does not know, such as users made on the new panel
+	// itself: the bridge passes them to the panel.
+	t.Run("passthrough", func(t *testing.T) {
+		d := time.Duration(float64(steadyFor) * scale)
+		native := func(id int64) string { return "/sub/" + newToken(id) }
+		tg.compare(t, steadyRate, d, func(int) int64 { return rand.Int64N(int64(tokens)) + 1 }, paths{bridge: native, direct: native})
 	})
 }
+
+// paths are the request paths of user id, through the bridge and
+// straight to the panel.
+type paths struct{ bridge, direct func(id int64) string }
+
+// newToken is a token of user id that only the new panel knows.
+func newToken(id int64) string { return fmt.Sprintf("newtoken%016d", id) }
 
 func benchScale(t *testing.T) float64 {
 	s := os.Getenv("KARVAN_BENCH_SCALE")
@@ -157,8 +173,8 @@ func get(url string) error {
 type target struct{ bridge, panel string }
 
 // compare loads the bridge and the panel for d at rate each and checks
-// the target. pick gives the user of the i-th request.
-func (tg target) compare(t *testing.T, rate float64, d time.Duration, pick func(i int) int64) {
+// the target. pick gives the user of the i-th request, p its paths.
+func (tg target) compare(t *testing.T, rate float64, d time.Duration, pick func(i int) int64, p paths) {
 	client := &http.Client{Timeout: 10 * time.Second, Transport: &http.Transport{MaxIdleConnsPerHost: 1024, IdleConnTimeout: time.Minute}}
 	var bridged, direct result
 	var wg sync.WaitGroup
@@ -166,7 +182,7 @@ func (tg target) compare(t *testing.T, rate float64, d time.Duration, pick func(
 	go func() {
 		defer wg.Done()
 		bridged = openLoop(client, rate, d, func(i int) *http.Request {
-			req, _ := http.NewRequest(http.MethodGet, "http://"+tg.bridge+"/sub/"+oldToken(pick(i)), nil)
+			req, _ := http.NewRequest(http.MethodGet, "http://"+tg.bridge+p.bridge(pick(i)), nil)
 			req.Host = oldDomain
 			req.Header.Set("User-Agent", "v2rayNG/1.9")
 			return req
@@ -175,7 +191,7 @@ func (tg target) compare(t *testing.T, rate float64, d time.Duration, pick func(
 	go func() {
 		defer wg.Done()
 		direct = openLoop(client, rate, d, func(i int) *http.Request {
-			req, _ := http.NewRequest(http.MethodGet, tg.panel+"/sub/dest-"+strconv.FormatInt(pick(i), 10), nil)
+			req, _ := http.NewRequest(http.MethodGet, tg.panel+p.direct(pick(i)), nil)
 			req.Header.Set("User-Agent", "v2rayNG/1.9")
 			return req
 		})

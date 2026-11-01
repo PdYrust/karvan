@@ -1,4 +1,4 @@
-import { Switch } from '@cloudflare/kumo/components/switch';
+import { Switch } from './Switch';
 import type { ReactNode } from 'react';
 
 /** A labelled switch with one line under its label, as the forms use them. */
@@ -34,8 +34,6 @@ export function SwitchRow({
         checked={checked}
         disabled={disabled}
         onCheckedChange={onChange}
-        // The switch is 18 px high; the hit area reaches 44 px on touch screens.
-        className="relative shrink-0 pointer-coarse:before:absolute pointer-coarse:before:-inset-x-[9px] pointer-coarse:before:-inset-y-[13px] pointer-coarse:before:content-['']"
       />
     </div>
   );

@@ -57,6 +57,9 @@ export function codeSentence(
   if (key === 'code_undo_incomplete') {
     return { from: 'live', key, params: { count: Number(detail.left) || 0 } };
   }
+  if (key === 'code_backup_tool_missing' && typeof detail.tool === 'string' && detail.tool) {
+    return { from: 'live', key: 'code_backup_tool_missing_named', params: { tool: detail.tool } };
+  }
   if (key) return { from: 'live', key };
   return { from: 'error', key: errorKey(code, detail) };
 }

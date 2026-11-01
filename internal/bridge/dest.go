@@ -54,7 +54,7 @@ func openPanel(ctx context.Context, env string) (Destination, error) {
 		return nil, err
 	}
 	local := d.Local()
-	t, err := local.Transport(16)
+	t, err := local.Transport(64) // one pool per panel, kept alive across bursts
 	if err != nil {
 		return nil, err
 	}

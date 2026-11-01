@@ -38,14 +38,14 @@ sh run.sh ./bench.test 2>&1 | tee bench-result.txt
 - It refuses to start with fewer than 4 cores or less than 2560 MB available, so 2 cores stay with the server's other work. It uses at most 2 cores and 2 GB: run it at a quiet hour.
 - It writes nothing on the host outside `/tmp/karvan-bench` (the binary, mounted read only, and the database), and removes that folder, both containers, the network and the base image (when it pulled it) at the end, also on Ctrl-C.
 - It needs no Marzban or PasarGuard, and the server container stops by itself after 60 minutes at the latest.
-- It takes about 15 minutes: storing the tokens (about 70 s on the server above), 60 s steady, 10 minutes burst.
+- It takes about 16 minutes: storing the tokens (about 70 s on the server above), 60 s steady, 10 minutes burst, then 60 s pass-through.
 - `KARVAN_BENCH_TOKENS` (1000 to 1000000) stores fewer tokens; `KARVAN_BENCH_SCALE=0.05` shortens the load for a one minute try.
 
-The last line says `RESULT: PASS` or `RESULT: FAIL`. Above it, each of the two runs prints `p99 added by the bridge`, and both lines before it must say 0 errors.
+The last line says `RESULT: PASS` or `RESULT: FAIL`. Above it, each of the three runs prints `p99 added by the bridge`, and both lines before it must say 0 errors. The third run, pass-through, sends the same steady 500/s with tokens Karvan does not know, as for users made on the new panel itself; the bridge passes them to the panel, and the target is the same 5 ms. The server result above predates it.
 
 ### Host unsuitable: the development laptop
 
-The same test on the development laptop (Intel Pentium 2117U, 2 cores, load average 6 to 11 from other desktop programs) does not measure the bridge: the direct requests alone reached a p99 of 913 ms at 500/s. Its numbers, with the generator first inside the bridge's container: steady, the bridge added 463 ms at p99, 0 errors; burst, 8.5 ms, 0 errors. They are recorded only to show why the gate needs a real server. The CPU profiles from this host still led to two fixes: the bridge prepares its two per-request queries once, and the database keeps 16 idle connections instead of 2. Together they cut the bridge's CPU from 1.6 ms to 0.5 ms per request.
+The same test on the development laptop (Intel Pentium 2117U, 2 cores, load average 6 to 11 from other desktop programs) does not measure the bridge: the direct requests alone reached a p99 of 913 ms at 500/s. Its numbers, with the generator first inside the bridge's container: steady, the bridge added 463 ms at p99, 0 errors; burst, 8.5 ms, 0 errors. They are recorded only to show why the gate needs a real server. A pass-through run for 0.5.12-beta on the same laptop (load average 7.9, generator and bridge both on the host, 10,000 tokens, `KARVAN_BENCH_SCALE=0.1`, 6 s at 500/s each, 0 errors): moved users' links added 150.6 ms at p99 (bridge 365.5 ms, direct 214.9 ms), and links Karvan does not know added 92.5 ms (bridge 254.9 ms, direct 162.4 ms). Pass-through costs no more than serving a moved user here; the 5 ms target needs the server run. The CPU profiles from this host still led to two fixes: the bridge prepares its two per-request queries once, and the database keeps 16 idle connections instead of 2. Together they cut the bridge's CPU from 1.6 ms to 0.5 ms per request.
 
 ## Development laptop numbers
 

@@ -20,7 +20,8 @@ import (
 // backup takes the Safe Mode backup and records it.
 func (s *Service) backup(ctx context.Context, j *Job, p *prepared) error {
 	srv := p.db.Server()
-	if err := safemode.Probe(ctx, srv, s.Tools); err != nil {
+	tools, tg := s.tools(ctx, j.envPath, p.target, srv)
+	if err := safemode.Probe(ctx, srv, tools); err != nil {
 		return err
 	}
 	r, err := paneldb.OpenReader(ctx, p.target)
@@ -44,7 +45,7 @@ func (s *Service) backup(ctx context.Context, j *Job, p *prepared) error {
 	if err := safemode.CheckSpace(size, free); err != nil {
 		return err
 	}
-	b, err := safemode.Taker{Dir: s.SafeModeDir(), Key: s.Key, Run: s.Tools, Now: s.now}.Take(ctx, p.target, srv)
+	b, err := safemode.Taker{Dir: s.SafeModeDir(), Key: s.Key, Run: tools, Now: s.now}.Take(ctx, tg, srv)
 	if err != nil {
 		return err
 	}

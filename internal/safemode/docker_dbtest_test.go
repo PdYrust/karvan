@@ -13,38 +13,30 @@ import (
 	"github.com/PdYrust/karvan/internal/panel/paneldb"
 	"github.com/PdYrust/karvan/internal/panel/paneldb/paneldbtest"
 	"github.com/PdYrust/karvan/internal/panel/pasarguarddb"
+	"github.com/PdYrust/karvan/internal/panelctl"
 )
 
-// containerRunner runs the MySQL and MariaDB client tools inside the test
-// containers, since the test host has none. Inside, the server listens on
-// 3306; the password comes through the environment like on a real host.
-func containerRunner(port int) Runner {
-	container := map[int]string{33061: "karvan-testdb-mysql-1", 33062: "karvan-testdb-mariadb-1"}[port]
-	return func(ctx context.Context, name string, args ...string) *exec.Cmd {
-		for i := range args {
-			if args[i] == "-P" && i+1 < len(args) {
-				args[i+1] = "3306"
-			}
-		}
-		full := append([]string{"exec", "-i", "-e", "MYSQL_PWD", container, name}, args...)
-		return exec.CommandContext(ctx, "docker", full...)
-	}
-}
-
+// mysqlRoundTrip backs up and restores through the client tools of the
+// server's own container, found through the Docker socket by the port it
+// publishes, as for a panel's database (the test host has no MySQL tools).
 func mysqlRoundTrip(t *testing.T, tg paneldb.Target) {
 	ctx := context.Background()
 	k, srv := key(t), server(t, tg)
-	run := containerRunner(tg.Port)
+	c, ok, err := panelctl.FindDB(ctx, "", "", srv.Flavor, tg.Host, tg.Port)
+	if err != nil || !ok {
+		t.Fatalf("no container for %s: %v", tg, err)
+	}
+	run, in := InContainer(Container{Name: c.Name, Port: c.Port}, DefaultRunner, tg)
 	if err := Probe(ctx, srv, run); err != nil {
 		t.Fatalf("probe: %v", err)
 	}
 	before := paneldbtest.Checksum(t, tg)
-	b, err := Taker{Dir: t.TempDir(), Key: k, Run: run, Now: time.Now}.Take(ctx, tg, srv)
+	b, err := Taker{Dir: t.TempDir(), Key: k, Run: run, Now: time.Now}.Take(ctx, in, srv)
 	if err != nil {
 		t.Fatal(err)
 	}
 	scribble(t, tg)
-	if err := (Restorer{Key: k, Run: run}).Restore(ctx, tg, srv, b); err != nil {
+	if err := (Restorer{Key: k, Run: run}).Restore(ctx, in, srv, b); err != nil {
 		t.Fatal(err)
 	}
 	if paneldbtest.Checksum(t, tg) != before {

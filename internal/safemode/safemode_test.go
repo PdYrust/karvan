@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -131,6 +132,36 @@ func TestDumpToolsAreProbed(t *testing.T) {
 	}
 	if err := Probe(ctx, pg, fakeVersion("pg_dump (PostgreSQL) 17.2")); err != nil {
 		t.Fatalf("current pg_dump: %v", err)
+	}
+}
+
+// A dump in the server's container runs docker exec against the
+// container's loopback, with the password in the environment only.
+func TestDumpInContainer(t *testing.T) {
+	var got []string
+	var cmd *exec.Cmd
+	fake := func(ctx context.Context, name string, args ...string) *exec.Cmd {
+		got = append([]string{name}, args...)
+		cmd = exec.CommandContext(ctx, "echo", "dump")
+		return cmd
+	}
+	tg := paneldb.Target{Dialect: paneldb.MySQL, Host: "10.1.2.3", Port: 33061, Socket: "/run/mysqld/mysqld.sock", User: "pasarguard",
+		Password: secret.NewValue("s3cret-pw"), Database: "pasarguard"}
+	run, in := InContainer(Container{Name: "pasarguard-mysql-1", Port: 3306}, fake, tg)
+	if in.Host != "127.0.0.1" || in.Port != 3306 || in.Socket != "" || in.User != tg.User || in.Database != tg.Database {
+		t.Fatalf("target inside the container: %+v", in)
+	}
+	srv := paneldb.Server{Dialect: paneldb.MySQL, Flavor: "mysql", Version: "9.7.4"}
+	if _, err := (Taker{Dir: t.TempDir(), Key: key(t), Run: run, Now: time.Now}).Take(context.Background(), in, srv); err != nil {
+		t.Fatal(err)
+	}
+	line := strings.Join(got, " ")
+	want := "docker exec -i -e MYSQL_PWD -e PGPASSWORD pasarguard-mysql-1 mysqldump --single-transaction --quick --no-tablespaces --routines -u pasarguard -h 127.0.0.1 -P 3306 --protocol=TCP pasarguard"
+	if line != want {
+		t.Fatalf("command:\n got %s\nwant %s", line, want)
+	}
+	if !slices.Contains(cmd.Env, "MYSQL_PWD=s3cret-pw") {
+		t.Fatal("the password is not in the environment")
 	}
 }
 

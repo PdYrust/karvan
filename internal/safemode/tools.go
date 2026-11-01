@@ -1,6 +1,7 @@
 // Package safemode takes the destination backup before a migration writes
 // anything: SQLite through VACUUM INTO, MySQL and MariaDB through
-// their dump tool, PostgreSQL through pg_dump. Backups are encrypted as
+// their dump tool, PostgreSQL through pg_dump, run in the server's own
+// container when it has one, else on this host. Backups are encrypted as
 // they are written and kept outside any rotation.
 package safemode
 
@@ -32,6 +33,25 @@ type Runner func(ctx context.Context, name string, args ...string) *exec.Cmd
 // DefaultRunner runs commands from PATH.
 func DefaultRunner(ctx context.Context, name string, args ...string) *exec.Cmd {
 	return exec.CommandContext(ctx, name, args...) //nolint:gosec // tool names are fixed; arguments are built here
+}
+
+// Container is the database server's own container, whose dump tools
+// match the server's version exactly.
+type Container struct {
+	Name string
+	Port int // the server's port inside the container
+}
+
+// InContainer runs the tools inside c with docker exec, through run, and
+// returns the target as the tools see it there: the server on the
+// container's loopback at its inner port. The passwords go into the
+// container by name only (-e MYSQL_PWD), so their values stay in the
+// environment, off every command line.
+func InContainer(c Container, run Runner, t paneldb.Target) (Runner, paneldb.Target) {
+	t.Host, t.Port, t.Socket = "127.0.0.1", c.Port, ""
+	return func(ctx context.Context, name string, args ...string) *exec.Cmd {
+		return run(ctx, "docker", append([]string{"exec", "-i", "-e", "MYSQL_PWD", "-e", "PGPASSWORD", c.Name, name}, args...)...)
+	}, t
 }
 
 // dumpTool picks the dump command for a server.

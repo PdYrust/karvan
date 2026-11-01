@@ -188,7 +188,8 @@ func (s *Service) restore(ctx context.Context, j *Job, p *prepared, rep *Report)
 		}
 		return restoreStopped(ctx, ctl, func() error {
 			started = true
-			return safemode.Restorer{Key: s.Key, Run: s.Tools}.Restore(ctx, p.target, p.db.Server(), b)
+			tools, tg := s.tools(ctx, j.envPath, p.target, p.db.Server())
+			return safemode.Restorer{Key: s.Key, Run: tools}.Restore(ctx, tg, p.db.Server(), b)
 		}, s.noter(j, StageRestore))
 	})
 	if hold != nil && endRestore(ctx, hold, err, started) != nil {

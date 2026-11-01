@@ -27,6 +27,9 @@ type request struct {
 	token    string
 	rest     string
 	mac      []byte
+	// own is a request on the destination's own subscription path,
+	// when it differs from the rule's old path: only the panel judges it.
+	own bool
 }
 
 // Handler serves the sites on one port.
@@ -37,7 +40,8 @@ func (b *Bridge) Handler(port int) http.Handler {
 // serve hands the web panel's requests on a shared port to it, then
 // runs this order: verified set, then the panel itself, then
 // one lazy check against the old panel. Users in an inactive or deleted
-// batch get the plain 404 before the panel is asked.
+// batch get the plain 404 before the panel is asked. A link on the
+// destination's own subscription path goes to the panel only.
 func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 	if h := b.panelFor(port, r); h != nil {
 		h.ServeHTTP(w, r)
@@ -52,6 +56,9 @@ func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 		return
 	}
 	q, ok := b.route(port, r)
+	if !ok {
+		q, ok = b.routeOwn(r.Context(), port, r)
+	}
 	switch {
 	case !ok:
 		answer(w, http.StatusNotFound)
@@ -60,6 +67,11 @@ func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 		sendRedirect(w, q.redirect, q.rest) // nothing is fetched
 		return
 	}
+	b.serveRule(w, r, q)
+}
+
+// serveRule answers a request routed to a panel rule.
+func (b *Bridge) serveRule(w http.ResponseWriter, r *http.Request, q request) {
 	d, err := b.dest(r.Context(), q.site.PanelID)
 	if err != nil {
 		b.Log.Warn("bridge: destination", "site", q.site.Name, "err", err)
@@ -77,6 +89,12 @@ func (b *Bridge) serve(w http.ResponseWriter, r *http.Request, port int) {
 		return
 	}
 	q.dest, q.mac = d, mac(b.macKey, q.token)
+	if q.own {
+		if !b.namesHeld(w, r, q) && !b.passThrough(w, r, q) {
+			answer(w, http.StatusNotFound)
+		}
+		return
+	}
 	if b.fromVerified(w, r, q) || b.namesHeld(w, r, q) || b.passThrough(w, r, q) {
 		return
 	}
@@ -99,6 +117,11 @@ func (b *Bridge) route(port int, r *http.Request) (request, bool) {
 		d := rt.redirect
 		return request{redirect: d, rest: rest}, d != nil && d.target != nil && validTail(rest)
 	}
+	return splitToken(*rt.panel, rest)
+}
+
+// splitToken splits a panel rule's rest, /{token}{tail}.
+func splitToken(s Site, rest string) (request, bool) {
 	token, tail, _ := strings.Cut(rest[1:], "/") // a panel rule's rest starts with its slash
 	if tail != "" {
 		tail = "/" + tail
@@ -106,7 +129,43 @@ func (b *Bridge) route(port int, r *http.Request) (request, bool) {
 	if !tokenRe.MatchString(token) || !restRe.MatchString(tail) {
 		return request{}, false
 	}
-	return request{site: *rt.panel, token: token, rest: tail}, true
+	return request{site: s, token: token, rest: tail}, true
+}
+
+// routeOwn finds, for a request no rule matched, the panel rule on port
+// that answers its host and whose destination's own subscription path
+// differs from the rule's old path and starts the request's path, so a
+// link the new panel issued works on the same host and port. The best
+// host fit wins, then the lowest id.
+func (b *Bridge) routeOwn(ctx context.Context, port int, r *http.Request) (request, bool) {
+	host, path := requestHost(r), r.URL.EscapedPath()
+	b.mu.Lock()
+	if _, _, ok := b.routes.match(port, host, path); ok {
+		b.mu.Unlock()
+		return request{}, false // a rule took it and refused it
+	}
+	var cands []route
+	for _, rt := range b.routes[port] {
+		if rt.panel != nil && rt.hostRank(host) != hostNone {
+			cands = append(cands, rt)
+		}
+	}
+	b.mu.Unlock()
+	slices.SortStableFunc(cands, func(a, c route) int { return c.hostRank(host) - a.hostRank(host) })
+	for _, rt := range cands {
+		d, err := b.dest(ctx, rt.panel.PanelID)
+		if err != nil {
+			continue
+		}
+		own := d.SubPath()
+		if !pathRe.MatchString(own) || own == rt.panel.OldPath || !strings.HasPrefix(path, "/"+own+"/") {
+			continue
+		}
+		q, ok := splitToken(*rt.panel, path[len(own)+1:])
+		q.own = true
+		return q, ok
+	}
+	return request{}, false
 }
 
 // fromVerified serves a token proven earlier, if the user still passes.
@@ -173,10 +232,11 @@ func (b *Bridge) namesHeld(w http.ResponseWriter, r *http.Request, q request) bo
 func (b *Bridge) passThrough(w http.ResponseWriter, r *http.Request, q request) bool {
 	resp, err := forward(r, q.dest, q.token, q.rest)
 	if err != nil {
-		b.Log.Warn("bridge: panel", "site", q.site.Name, "err", err)
+		b.Log.Debug("bridge: panel", "site", q.site.Name, "err", plainErr(err))
 		answer(w, http.StatusServiceUnavailable)
 		return true
 	}
+	b.Log.Debug("bridge: passed to the panel", "site", q.site.Name, "status", resp.StatusCode)
 	if resp.StatusCode == http.StatusNotFound {
 		_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 1<<16))
 		_ = resp.Body.Close()
