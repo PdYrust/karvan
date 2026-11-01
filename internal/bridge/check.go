@@ -71,10 +71,16 @@ func (b *Bridge) apply(ctx context.Context, e ledger.Entry, v verdict) bool {
 // sameUser reports whether the old panel's answer is the user the ledger
 // recorded: same name (and id), same creation time, same credentials. A
 // new user reusing a name or id on the old panel fails here.
+// PasarGuard 5.5 leaves the credentials out of /info; then the id, name
+// and creation time decide. The time is compared at the ledger's
+// microsecond precision.
 func sameUser(kind panel.Kind, u panel.User, e ledger.Entry) bool {
 	if kind == panel.PasarGuard && strconv.FormatInt(u.SourceID, 10) != e.SourceKey {
 		return false
 	}
-	return u.Username == e.SourceUsername && u.CreatedAt.Equal(e.SourceCreated) &&
-		ledger.Fingerprint(u.Credentials) == e.CredPrint
+	if u.Username != e.SourceUsername || !u.CreatedAt.Truncate(time.Microsecond).Equal(e.SourceCreated) {
+		return false
+	}
+	withheld := kind == panel.PasarGuard && len(u.Credentials.Keys()) == 0
+	return withheld || ledger.Fingerprint(u.Credentials) == e.CredPrint
 }

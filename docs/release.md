@@ -40,6 +40,8 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - a native Persian speaker has read every Persian string.
 
+## Release notes 0.5.11-beta
+Karvan 0.5.11-beta fixes old links from a PasarGuard 5.5 old panel, which the bridge answered with 404. PasarGuard 5.5 no longer sends a user's credentials on the subscription info page, so the bridge's check that the old panel names the moved user always failed. For such a panel the bridge now matches the user by id, username and creation time; when the old panel does send credentials, they must still match. A link resolves to exactly one moved user, as before, and every new link the old panel issues for that user is served.
 ## Release notes 0.5.10-beta
 Karvan 0.5.10-beta fixes the panel switcher at the top of the sidebar, which left out All panels when it was the current choice and only one panel was added; it now always lists All panels and every panel, with the current one checked.
 ## Release notes 0.5.9-beta

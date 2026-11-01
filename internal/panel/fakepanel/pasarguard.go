@@ -16,6 +16,9 @@ type PasarGuard struct {
 	// /api/inbounds/details; nil answers 404, as an older panel does.
 	groups, inbounds []map[string]any
 	groupsStatus     int
+	// sub55 makes /info answer as PasarGuard 5.5 does, without the
+	// credentials.
+	sub55 bool
 }
 
 // PasarGuardAdmin is the reseller. APIKey enables X-Api-Key sign-in;
@@ -53,7 +56,7 @@ func NewPasarGuard(admin PasarGuardAdmin, users []map[string]any, f Faults) *Pas
 				writeJSON(w, http.StatusOK, p.page(r, func(u map[string]any) map[string]any { return g.response(u, loadSub) }))
 			}
 		},
-		"GET /sub/{token}/info": p.subInfo(func(u map[string]any) map[string]any { return g.response(u, false) }),
+		"GET /sub/{token}/info": p.subInfo(g.subResponse),
 		"GET /api/groups": func(w http.ResponseWriter, r *http.Request) {
 			if g.groupsGate(w, r, g.groups) {
 				writeJSON(w, http.StatusOK, map[string]any{"groups": g.groups, "total": len(g.groups)})
@@ -99,6 +102,26 @@ func (g *PasarGuard) response(u map[string]any, loadSub bool) map[string]any {
 		out["subscription_url"] = fmt.Sprintf("%s/sub/%v-%d", g.URL, u["id"], g.mints)
 	}
 	return out
+}
+
+// subResponse is SubscriptionUserResponse. 5.5 excludes proxy_settings,
+// note, auto_delete_in_days and subscription_url, and adds ip.
+func (g *PasarGuard) subResponse(u map[string]any) map[string]any {
+	out := g.response(u, false)
+	if g.sub55 {
+		for _, k := range []string{"proxy_settings", "note", "auto_delete_in_days", "subscription_url"} {
+			delete(out, k)
+		}
+		out["ip"] = "203.0.113.9"
+	}
+	return out
+}
+
+// AnswerSubAs55 makes /info answer as PasarGuard 5.5 does.
+func (g *PasarGuard) AnswerSubAs55() {
+	g.state.mu.Lock()
+	defer g.state.mu.Unlock()
+	g.sub55 = true
 }
 
 // PasarGuardUser is a UserResponse with sensible defaults.
