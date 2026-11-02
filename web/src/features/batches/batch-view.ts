@@ -62,3 +62,11 @@ export function matchesGroup(g: BatchGroup, term: string): boolean {
 }
 
 export const batchPath = (id: number) => `/batches/${String(id)}`;
+
+/**
+ * Batches newest first by the date they were made, as the table's Made column
+ * shows. A stable sort, so batches made at the same time keep their page order.
+ */
+export function newestBatches(batches: readonly Batch[]): Batch[] {
+  return [...batches].sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt));
+}

@@ -40,6 +40,12 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - a native Persian speaker has read every Persian string.
 
+## Release notes 0.5.15-beta
+Karvan 0.5.15-beta shows every batch in one table, newest first, with the old panels as a filter above it.
+- The Batches page no longer repeats a heading for each old panel: each row names its move, destination panel, admins, users, state, rules and when it was made, and the newest runs are at the top.
+- The toolbar's old panel filter lists each old panel once with its runs, even when one address moved onto more than one new panel, and narrows the table to that address. Search works together with it.
+- An old panel's own page still lists all of its runs, now without the repeated heading, and the pager appears only when there is another page.
+- On a phone each batch stays a card with the same facts.
 ## Release notes 0.5.14-beta
 Karvan 0.5.14-beta walks through adding and editing a rule one step at a time, like Add domain, with two rule kinds: From an old panel and Custom.
 - The rule form asks one question per step: the kind (From an old panel or Custom), the rule name and source domains from the domains in Karvan (plus the old panel when made from an old panel), whether to answer over HTTPS, and the port and path details. Manual and single-link choices are removed from the form.

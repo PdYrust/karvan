@@ -55,18 +55,6 @@ export function BatchName({ batch }: { batch: Batch }) {
   );
 }
 
-/** A run under its old panel's heading: its name as the link; on a phone card, the card's link. */
-export function RunName({ batch, card = false }: { batch: Batch; card?: boolean }) {
-  return (
-    <Link
-      to={batchPath(batch.id)}
-      className={card ? cn('truncate font-medium text-kumo-strong', cardLink) : link}
-    >
-      <bdi>{batch.name}</bdi>
-    </Link>
-  );
-}
-
 /** On a phone card: the name as the card's link, then the host and the new panel. */
 export function BatchCardName({ batch }: { batch: Batch }) {
   return (

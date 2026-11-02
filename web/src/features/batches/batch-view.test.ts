@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Batch, BatchGroup } from '../../lib/api/batches';
-import { batchActions, batchLook, matchesBatch, matchesGroup } from './batch-view';
+import { batchActions, batchLook, matchesBatch, matchesGroup, newestBatches } from './batch-view';
 
 function batch(edit: Partial<Batch> = {}): Batch {
   return {
@@ -86,6 +86,20 @@ function group(edit: Partial<BatchGroup> = {}): BatchGroup {
     ...edit,
   };
 }
+
+describe('the one-table order', () => {
+  it('orders batches newest first by the date they were made', () => {
+    const older = batch({ id: 1, createdAt: '2026-10-25T02:14:13Z' });
+    const newer = batch({ id: 2, createdAt: '2026-10-26T02:14:13Z' });
+    expect(newestBatches([older, newer]).map((b) => b.id)).toEqual([2, 1]);
+  });
+
+  it('keeps the page order for batches made at the same time', () => {
+    const first = batch({ id: 1 });
+    const second = batch({ id: 2 });
+    expect(newestBatches([first, second]).map((b) => b.id)).toEqual([1, 2]);
+  });
+});
 
 describe('the old panel list', () => {
   it('finds an old panel by its address, its panels, its rules and its runs', () => {

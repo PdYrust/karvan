@@ -18,9 +18,10 @@ import { ListSkeleton } from '../../components/feedback/PageSkeleton';
 import { useNow } from '../overview/use-now';
 import { useCurrentPanel } from '../panels/current-panel';
 import { newMigrationPath } from '../wizard/steps';
-import { GroupSection } from './GroupHeading';
 import { GroupView } from './GroupView';
-import { matchesGroup } from './batch-view';
+import { matchesGroup, newestBatches } from './batch-view';
+import { BatchesTable } from './BatchesTable';
+import { useOldPanelChoice } from './old-panel-choice';
 import { batchesMessages } from './messages';
 import { useStateChoice } from './state-choice';
 import { useBatchStateFilter, useGroupList, type BatchStateFilter } from './use-batches';
@@ -47,7 +48,7 @@ function Empty() {
   );
 }
 
-/** Every old panel, the latest run first, each with its newest runs; one old panel alone with `?group=`. */
+/** Batches newest first in one table; one old panel alone with `?group=`. */
 export function BatchesPage() {
   const t = useT(batchesMessages);
   usePageTitle(t('title'));
@@ -76,14 +77,18 @@ function GroupList({
   const t = useT(batchesMessages);
   const now = useNow();
   const [search, setSearch] = useState('');
+  const [oldPanel, setOldPanel] = useState('all');
   const { panel, settled } = useCurrentPanel();
-  const searching = search.trim() !== '';
+  // An old-panel filter reads the searched page (the latest 100 groups), not
+  // just the first page of 10, so an address is not missed for paging alone.
+  const searching = search.trim() !== '' || oldPanel !== 'all';
   const filter = state === 'all' ? undefined : state;
   const list = useGroupList(filter, panel?.id, searching, settled);
   const { query } = list;
   const load = useFirstLoad(query.data);
   const stateChoice = useStateChoice(state, setState);
   const panelChoice = usePanelChoice();
+  const oldPanelChoice = useOldPanelChoice(query.data?.groups ?? [], oldPanel, setOldPanel);
   // The skeleton until the first page, then the empty card alone or the toolbar with the list.
   const view = listView(
     load.data?.groups,
@@ -100,13 +105,20 @@ function GroupList({
       <ListSkeleton label={t('title')} />
     );
   }
-  const shown = load.data.groups.filter((g) => matchesGroup(g, search));
+  const shownGroups = load.data.groups.filter(
+    (g) => (oldPanel === 'all' || g.source.origin === oldPanel) && matchesGroup(g, search),
+  );
+  // One table, not one per old panel: every shown group's newest runs, newest
+  // first by the date they were made, in the table's usual column order.
+  // No footer links under it: the full runs of an old panel stay reachable
+  // from any batch's page, through its old-panel link.
+  const shown = newestBatches(shownGroups.flatMap((g) => g.runs));
   return (
     <Reveal on={load.reveal}>
       {view === 'list' ? (
         <ListToolbar
           search={{ label: t('search'), value: search, onChange: setSearch }}
-          choices={[stateChoice, panelChoice]}
+          choices={[stateChoice, panelChoice, oldPanelChoice]}
           refresh={
             <ToolbarRefresh
               label={t('refresh')}
@@ -117,11 +129,7 @@ function GroupList({
         />
       ) : null}
       {shown.length > 0 ? (
-        <div className="flex flex-col gap-10">
-          {shown.map((g) => (
-            <GroupSection key={g.id} group={g} state={filter} now={now} />
-          ))}
-        </div>
+        <BatchesTable batches={shown} now={now} />
       ) : list.filtered || searching ? (
         <p className="rounded-lg bg-kumo-base px-4 py-8 text-center text-kumo-subtle ring ring-kumo-hairline">
           {t('noGroupMatch')}
@@ -133,15 +141,18 @@ function GroupList({
         <p className="text-sm text-kumo-subtle" aria-live="polite">
           {list.hasNext ? t('searchDepthGroups', { count: load.data.groups.length }) : null}
         </p>
-      ) : (
+      ) : list.offset > 0 || list.hasNext ? (
+        // The pager only when there is another page to go to: on a single
+        // page its "showing all" text says nothing and counts old panels,
+        // not the table's rows.
         <CursorPager
           offset={list.offset}
-          shown={shown.length}
+          shown={shownGroups.length}
           hasNext={list.hasNext}
           onPrevious={list.previous}
           onNext={list.next}
         />
-      )}
+      ) : null}
     </Reveal>
   );
 }

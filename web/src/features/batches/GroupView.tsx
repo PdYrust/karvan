@@ -14,7 +14,6 @@ import { errorOf } from '../../lib/errors/errors';
 import { useFirstLoad } from '../../lib/motion/use-first-load';
 import { useNow } from '../overview/use-now';
 import { BatchesTable } from './BatchesTable';
-import { GroupHeading } from './GroupHeading';
 import { matchesBatch } from './batch-view';
 import { batchesMessages } from './messages';
 import { useStateChoice } from './state-choice';
@@ -33,7 +32,7 @@ function Back() {
   );
 }
 
-/** One old panel alone: its heading, then every run of it, a page at a time. */
+/** One old panel alone: every run of it, a page at a time. */
 export function GroupView({
   id,
   state,
@@ -74,7 +73,6 @@ export function GroupView({
   return (
     <Reveal on={load.reveal}>
       <Back />
-      <GroupHeading group={group.data} now={now} />
       <ListToolbar
         search={{ label: t('search'), value: search, onChange: setSearch }}
         choices={[stateChoice]}
@@ -90,7 +88,7 @@ export function GroupView({
         }
       />
       {shown.length > 0 ? (
-        <BatchesTable batches={shown} now={now} inGroup />
+        <BatchesTable batches={shown} now={now} />
       ) : (
         <p className="rounded-lg bg-kumo-base px-4 py-8 text-center text-kumo-subtle ring ring-kumo-hairline">
           {t('noMatch')}

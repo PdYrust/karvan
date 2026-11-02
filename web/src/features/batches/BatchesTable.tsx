@@ -14,22 +14,17 @@ import {
   BatchState,
   BatchStateBadge,
   BatchUserCount,
-  RunName,
 } from './BatchCells';
 import { batchLook } from './batch-view';
 import { batchesMessages } from './messages';
 
-/**
- * On a phone a batch is a card: the move and its state, the name, the admins and rules, then the
- * users and when. Under its old panel's heading the move and rules are the heading's, so the card
- * leads with the name.
- */
-function BatchCard({ batch, now, inGroup }: { batch: Batch; now: Date; inGroup: boolean }) {
+/** On a phone a batch is a card: the move and its state, the name, the admins and rules, then the users and when. */
+function BatchCard({ batch, now }: { batch: Batch; now: Date }) {
   const t = useT(batchesMessages);
   const reason = batchLook(batch).reason;
   return (
     <RowCard
-      lead={inGroup ? <RunName batch={batch} card /> : <BatchMove batch={batch} size={20} />}
+      lead={<BatchMove batch={batch} size={20} />}
       badge={<BatchStateBadge batch={batch} />}
       footer={
         <>
@@ -44,51 +39,36 @@ function BatchCard({ batch, now, inGroup }: { batch: Batch; now: Date; inGroup: 
         </>
       }
     >
-      {inGroup ? null : <BatchCardName batch={batch} />}
+      <BatchCardName batch={batch} />
       {reason ? <p className="text-sm text-kumo-subtle">{t(reason)}</p> : null}
       <CardFacts
         className="grid-cols-2"
         facts={[
           { label: t('colAdmins'), value: <BatchAdmins batch={batch} /> },
-          ...(inGroup ? [] : [{ label: t('colRules'), value: <BatchRules batch={batch} /> }]),
+          { label: t('colRules'), value: <BatchRules batch={batch} /> },
         ]}
       />
     </RowCard>
   );
 }
 
-/**
- * Batches newest first: the move and name, the new panel, admins, users, state, rules and when.
- * `inGroup` lists one old panel's runs under its heading, which already names the panels and rules.
- */
-export function BatchesTable({
-  batches,
-  now,
-  inGroup = false,
-}: {
-  batches: readonly Batch[];
-  now: Date;
-  inGroup?: boolean;
-}) {
+/** Batches newest first: the move and name, the new panel, admins, users, state, rules and when. */
+export function BatchesTable({ batches, now }: { batches: readonly Batch[]; now: Date }) {
   const t = useT(batchesMessages);
   const tl = useT(listMessages);
   const columns: Column<Batch>[] = [
     {
       key: 'batch',
       header: t('colBatch'),
-      cell: (b) => (inGroup ? <RunName batch={b} /> : <BatchName batch={b} />),
+      cell: (b) => <BatchName batch={b} />,
       className: 'max-w-72',
     },
-    ...(inGroup
-      ? []
-      : [
-          {
-            key: 'panel',
-            header: tl('colDestination'),
-            cell: (b: Batch) => <BatchDestination batch={b} />,
-            className: 'max-w-56',
-          },
-        ]),
+    {
+      key: 'panel',
+      header: tl('colDestination'),
+      cell: (b: Batch) => <BatchDestination batch={b} />,
+      className: 'max-w-56',
+    },
     {
       key: 'admins',
       header: t('colAdmins'),
@@ -97,25 +77,21 @@ export function BatchesTable({
     },
     { key: 'users', header: t('colUsers'), cell: (b) => <BatchUserCount batch={b} /> },
     { key: 'state', header: t('colState'), cell: (b) => <BatchState batch={b} /> },
-    ...(inGroup
-      ? []
-      : [
-          {
-            key: 'rules',
-            header: t('colRules'),
-            cell: (b: Batch) => <BatchRules batch={b} />,
-            className: 'max-w-48',
-          },
-        ]),
+    {
+      key: 'rules',
+      header: t('colRules'),
+      cell: (b: Batch) => <BatchRules batch={b} />,
+      className: 'max-w-48',
+    },
     { key: 'made', header: t('colMade'), cell: (b) => <BatchMade batch={b} now={now} /> },
   ];
   return (
     <DataTable
-      caption={inGroup ? t('runsTable') : t('table')}
+      caption={t('table')}
       rows={batches}
       rowKey={(b) => b.id}
       columns={columns}
-      card={(b) => <BatchCard batch={b} now={now} inGroup={inGroup} />}
+      card={(b) => <BatchCard batch={b} now={now} />}
     />
   );
 }
