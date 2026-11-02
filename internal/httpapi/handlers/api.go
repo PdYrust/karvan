@@ -33,10 +33,11 @@ const (
 
 // API holds what the JSON endpoints need.
 type API struct {
-	Auth    *auth.Service
-	Audit   *audit.Log
-	Cookies middleware.Cookies
-	Version string
+	Auth     *auth.Service
+	Audit    *audit.Log
+	Cookies  middleware.Cookies
+	Version  string
+	Releases *ReleaseChecker
 
 	Runs      *run.Service
 	Bridge    *bridge.Bridge

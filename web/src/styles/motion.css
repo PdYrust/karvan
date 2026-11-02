@@ -192,12 +192,13 @@
     height 150ms ease-out;
 }
 
-/* The mobile sheet slides in from the start edge while its backdrop fades. */
+/* The mobile sheet slides in from the start edge while its backdrop blurs. */
 .k-sheet,
 .k-sheet::backdrop {
   transition:
     transform 220ms ease-out,
     opacity 220ms ease-out,
+    backdrop-filter 220ms ease-out,
     overlay 220ms ease-out allow-discrete,
     display 220ms ease-out allow-discrete;
 }
@@ -217,10 +218,12 @@
 
 .k-sheet::backdrop {
   opacity: 0;
+  backdrop-filter: blur(0px);
 }
 
 .k-sheet[open]::backdrop {
   opacity: 1;
+  backdrop-filter: blur(6px);
 }
 
 @starting-style {
@@ -230,6 +233,7 @@
 
   .k-sheet[open]::backdrop {
     opacity: 0;
+    backdrop-filter: blur(0px);
   }
 }
 

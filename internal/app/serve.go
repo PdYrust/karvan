@@ -19,6 +19,7 @@ import (
 	"github.com/PdYrust/karvan/internal/hoststats"
 	"github.com/PdYrust/karvan/internal/httpapi"
 	"github.com/PdYrust/karvan/internal/httpapi/address"
+	"github.com/PdYrust/karvan/internal/httpapi/handlers"
 	"github.com/PdYrust/karvan/internal/paneltls"
 )
 
@@ -57,6 +58,7 @@ func (a *App) Serve(ctx context.Context, web fs.FS) error {
 		Audit:          a.Audit,
 		Web:            web,
 		Version:        buildinfo.Version,
+		Releases:       handlers.NewReleaseChecker(handlers.DefaultReleasesURL),
 		Logger:         a.Logger,
 		Runs:           svc.runs,
 		Bridge:         svc.bridge,

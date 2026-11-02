@@ -40,6 +40,11 @@ After the first release, open the `karvan` package on GitHub (your profile, Pack
 - `docs/benchmarks.md` holds a passing bridge run on a real server,
 - a native Persian speaker has read every Persian string.
 
+## Release notes 0.5.16-beta
+Karvan 0.5.16-beta moves the version and update check into the account menu, puts the Telegram channel in the top bar next to GitHub, and blurs the page behind the phone menu.
+- The account menu shows a version card under the username with the running version and whether Karvan is up to date. When a newer release (pre-release or stable) is published on GitHub, the profile button in the top bar shows a green dot and the card shows the new version under the current one, linking to the release.
+- The Telegram channel link sits in the top bar next to the GitHub icon, and the page footer is removed.
+- On phones, opening the sidebar blurs the page behind it instead of darkening or brightening it.
 ## Release notes 0.5.15-beta
 Karvan 0.5.15-beta shows every batch in one table, newest first, with the old panels as a filter above it.
 - The Batches page no longer repeats a heading for each old panel: each row names its move, destination panel, admins, users, state, rules and when it was made, and the newest runs are at the top.

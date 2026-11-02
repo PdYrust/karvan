@@ -39,6 +39,7 @@ type Deps struct {
 	Audit          *audit.Log
 	Web            fs.FS
 	Version        string
+	Releases       *handlers.ReleaseChecker
 	Logger         *slog.Logger
 
 	// Migrations, Safe Mode and the subscription bridge.
@@ -71,7 +72,7 @@ func New(d Deps) (http.Handler, error) {
 		return nil, err
 	}
 	cookies := middleware.Cookies{Path: "/" + d.BasePath + "/"}
-	api := &handlers.API{Auth: d.Auth, Audit: d.Audit, Cookies: cookies, Version: d.Version,
+	api := &handlers.API{Auth: d.Auth, Audit: d.Audit, Cookies: cookies, Version: d.Version, Releases: d.Releases,
 		Runs: d.Runs, Bridge: d.Bridge, Orders: d.Orders, Settings: d.Settings, ScanRoots: d.ScanRoots, Closing: d.Closing,
 		Host: d.Host, HostStore: d.HostStore, HostReader: d.HostReader, DBStats: d.DBStats, Address: d.Address,
 		PanelTLS: d.PanelTLS}

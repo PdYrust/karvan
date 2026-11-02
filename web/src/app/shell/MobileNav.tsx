@@ -47,7 +47,7 @@ export function MobileNav({
       // Light dismiss: a click on the backdrop closes the sheet, like Escape.
       {...{ closedby: 'any' }}
       aria-label={t('mainNav')}
-      className="k-sheet m-0 h-dvh overflow-visible max-h-none w-[min(16rem,69vw)] max-w-none bg-kumo-canvas p-0 text-kumo-default shadow-xl backdrop:bg-kumo-contrast/40 me-auto lg:hidden"
+      className="k-sheet m-0 h-dvh overflow-visible max-h-none w-[min(16rem,69vw)] max-w-none bg-kumo-canvas p-0 text-kumo-default shadow-xl backdrop:bg-transparent me-auto lg:hidden"
     >
       <KumoPortalProvider container={ref}>
         <div className="flex h-full flex-col overflow-x-hidden overflow-y-auto overscroll-contain pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)] ltr:pl-[env(safe-area-inset-left)] rtl:pr-[env(safe-area-inset-right)]">

@@ -25,6 +25,8 @@ export interface MigrationTotals {
 
 export interface Overview {
   version: string;
+  /** The newest published release when it is newer than `version`. */
+  latestVersion?: string;
   safeMode: boolean;
   security: {
     totpEnabled: boolean;

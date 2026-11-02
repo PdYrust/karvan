@@ -8,7 +8,6 @@ import { useSession } from '../../features/session/use-session';
 import { useT } from '../../i18n/locale';
 import { readSidebarCollapsed, saveSidebarCollapsed } from '../../lib/preferences/preferences';
 import { CommandMenu } from './CommandMenu';
-import { Footer } from './Footer';
 import { shellMessages } from './messages';
 import { MobileNav } from './MobileNav';
 import type { ShellOutlet } from './outlet';
@@ -113,7 +112,6 @@ export function AppShell() {
                 </Suspense>
               </PageBoundary>
             </main>
-            <Footer />
           </div>
 
           {searchUsed ? (

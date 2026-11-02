@@ -27,9 +27,10 @@ type activityJSON struct {
 }
 
 type overviewJSON struct {
-	Version  string `json:"version"`
-	SafeMode bool   `json:"safeMode"`
-	Security struct {
+	Version       string `json:"version"`
+	LatestVersion string `json:"latestVersion,omitempty"`
+	SafeMode      bool   `json:"safeMode"`
+	Security      struct {
 		TOTPEnabled    bool        `json:"totpEnabled"`
 		PreviousSignIn *signInJSON `json:"previousSignIn"`
 		// TLS is "off" when this page came over plain HTTP, else "on".
@@ -76,7 +77,13 @@ func (a *API) Overview(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
-	out := overviewJSON{Version: a.Version, SafeMode: safe, Migrations: totals, Activity: []activityJSON{}}
+	out := overviewJSON{
+		Version:       a.Version,
+		LatestVersion: a.Releases.Latest(ctx, a.Version),
+		SafeMode:      safe,
+		Migrations:    totals,
+		Activity:      []activityJSON{},
+	}
 	out.Security.TOTPEnabled = op.TOTPEnabled
 	out.Security.TLS = "on"
 	if !middleware.IsHTTPS(r) {
